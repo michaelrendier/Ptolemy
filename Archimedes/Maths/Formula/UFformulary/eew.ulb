@@ -1,0 +1,343 @@
+class DivergentBox(common.ulb:DivergentFormula) {
+;
+; Object version of Mandelbox Formula by Tom Lowe
+; Found in the fractalforums ~2010
+; https://sites.google.com/site/mandelbox/what-is-a-mandelbox
+; Erik Wahl, August 2014
+; Generalized to provide availability of Julia mode aka
+; "JulieBox" as well as original Mandelbrot mode aka "MandelBox
+public:
+import "Common.ulb"
+import "Standard.ulb"
+
+complex func Init(complex pz)
+IF @mode == "MandelBox"
+   fc = @initf(pz)
+   IF @mflav == "Classic"
+     return @start
+   ELSE
+     return @initf(pz)
+   ENDIF
+ELSE
+   fc = @seed
+   return @initf(pz)
+ENDIF
+endfunc
+;
+complex func Iterate(complex pz)
+; boxfold
+float tempreal = real(pz )
+float tempimag = imag(pz )
+
+IF     tempreal > @sizex
+     tempreal = 2*@sizex-tempreal
+ELSEIF tempreal < -@sizex
+     tempreal = -2*@sizex-tempreal
+ENDIF
+
+IF   tempimag > @sizey
+     tempimag = 2*@sizey-tempimag
+ELSEIF tempimag < -@sizey
+     tempimag = -2*@sizey-tempimag
+ENDIF
+
+tempreal = tempreal*@fold
+tempimag = tempimag*@fold
+
+; spherefold
+float magnitude = sqrt(tempreal*tempreal + tempimag*tempimag)
+float newmagnitude = magnitude
+IF     magnitude < @irad
+      newmagnitude = magnitude/@irad^2
+ELSEIF magnitude < @orad
+      newmagnitude = @orad/magnitude
+ENDIF
+
+tempreal = (tempreal/magnitude)*newmagnitude
+tempimag = (tempimag/magnitude)*newmagnitude
+complex result = tempreal+flip(tempimag)
+       return result*@scale + fc
+endfunc
+;
+private:
+ complex fc
+;
+default:
+  title = "Divergent Box"
+  rating = recommended
+;
+param mode
+  caption = "Mode"
+  enum = "MandelBox" "JulieBox"
+  default = 0
+endparam
+param mflav
+  caption = "MandelBox Type"
+  enum = "Classic" "Pixel"
+  visible = (@mode == "MandelBox")
+  default = 1
+endparam
+param start
+    caption = "Start Value"
+    default = (1e-6, 0.0)
+    visible = (@mode == "MandelBox" && @mflav == "Classic")
+endparam
+param seed
+    caption = "Julia Seed"
+    default = (0.0,0.0)
+    visible = (@mode == "JulieBox")
+endparam
+func initf
+  caption = "Pixel function"
+  default = ident()
+endfunc
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+float param sizex
+        caption="Horiz Length"
+        default=1.0
+endparam
+float param sizey
+        caption="Vert Length"
+        default=1.0
+endparam
+;
+  float param fold
+        caption="Fold"
+        default=1.0
+  endparam
+  float param irad
+        caption = "Inner Radius"
+        default = 0.5
+  endparam
+  float param orad
+        caption = "Outer Radius"
+        default = 1.0
+  endparam
+
+  float param scale
+        caption="Scale"
+        default= 2.0
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 64.0
+    min = 1.0
+    exponential = true
+  endparam
+  param p_power ; Overrides p_power from Formula
+    visible = false ;hides inherited parameter from interface since not used
+  endparam
+}
+
+; my Plug-in development file
+class EEW_MT_BarnsleyIJulia(common.ulb:DivergentFormula) {
+;
+; Based on Barnsley 1 (Julia) in Fractint.ufm
+; <p>
+; Mark Townsend, May 2008
+;
+; Generalizations by Erik Wahl, August 2014
+public:
+complex func Init(complex pz)
+IF @mode == "Mandelbrot"
+   fc = @initf(pz)
+   IF @mflav == "Classic"
+     return @start
+   ELSE
+     return @initf(pz)
+   ENDIF
+ELSE
+   fc = @seed
+   return @initf(pz)
+ENDIF
+endfunc
+
+  complex func Iterate(complex pz)
+    if real(pz) >= @crit
+      return @bfn(pz - @off) * fc
+    else
+      return @bfn(pz + @off) * fc
+    endif
+  endfunc
+;
+private: ; use this for variables you don't want tampered with
+  complex fc
+;
+default:
+  title = "Simple Barnsley Dual"
+;
+param mode
+  caption = "Mode"
+  enum = "Mandelbrot" "Julia"
+  default = 1
+endparam
+param mflav
+  caption = "Mandelbrot Type"
+  enum = "Classic" "Pixel"
+  visible = (@mode == "Mandelbrot")
+  default = 0
+endparam
+param start
+    caption = "Start Value"
+    default = (0.0, 0.0)
+    visible = (@mode == "Mandelbrot" && @mflav == "Classic")
+endparam
+param seed
+    caption = "Julia Seed"
+    default = (0.6, 1.1)
+    visible = (@mode == "Julia")
+endparam
+func initf
+  caption = "Pixel function"
+  default = ident()
+endfunc
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func bfn
+  caption = "Barnsley function"
+  default = ident()
+endfunc
+float param crit
+    caption = "Critical value"
+    default = 0.0
+endparam
+float param off
+    caption = "Offset"
+    default = 0.5
+    min = 0.0
+endparam
+;
+param p_power
+    visible = false
+endparam
+float param p_bailout
+    caption = "Bailout value"
+    default = 12
+    min = 1.0
+    exponential = true
+endparam
+}
+
+
+class General_Divergent(common.ulb:DivergentFormula) {
+;  My first plug-in! (Gives himself fist-bump)
+public:
+;
+complex func Init(complex pz)
+; all code from init: goes in here
+;i = (0,1)
+;r = i^(@rot/90.0)
+;
+IF @mode == "Mandelbrot"
+   fc = @initf(pz)
+   IF @mflav == "Classic"
+     return @start
+   ELSE
+     return @initf(pz)
+   ENDIF
+ELSE
+   fc = @seed
+   return @initf(pz)
+ENDIF
+endfunc
+
+complex func Iterate(complex pz)
+; all code from loop: goes in here
+IF     @op == 0
+    return (@m1*@f(pz) + @m2*@g(pz))^@p_power + @cfn(fc)
+ELSEIF @op == 1
+    return (@m1*@f(pz) - @m2*@g(pz))^@p_power + @cfn(fc)
+ELSEIF @op == 2
+    return (@m1*@f(pz) * @m2*@g(pz))^@p_power + @cfn(fc)
+ELSEIF @op == 3
+    return (@m1*@f(pz) / @m2*@g(pz))^@p_power + @cfn(fc)
+ELSEIF @op == 4
+    return (@m1*@f(pz)^(@m2*@g(pz)))^@p_power + @cfn(fc)
+ELSE
+    return (@m1*@f(@m2*@g(pz)))^@p_power + @cfn(fc)
+ENDIF
+endfunc
+
+private: ; use this for variables you don't want tampered with
+  complex fc
+  ;complex fc0
+  ;complex pz0
+
+default: ;Set up the same as default: in ufm
+  title = "General Divergent Dual"
+;
+param mode
+  caption = "Mode"
+  enum = "Mandelbrot" "Julia"
+  default = 1
+endparam
+param mflav
+  caption = "Mandelbrot Type"
+  enum = "Classic" "Pixel"
+  visible = (@mode == "Mandelbrot")
+  default = 0
+endparam
+param start
+    caption = "Start Value"
+    default = (0.0, 0.0)
+    visible = (@mode == "Mandelbrot" && @mflav == "Classic")
+endparam
+param seed
+    caption = "Julia Seed"
+    default = (0.6, 1.1)
+    visible = (@mode == "Julia")
+endparam
+func initf
+  caption = "Pixel function"
+  default = ident()
+endfunc
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param m1
+    caption = "1st Multiplier"
+    default = (0.5,0.0)
+endparam
+func f
+  caption = "1st Function"
+  default = ident()
+endfunc
+;
+param op
+   caption = "Operator"
+   enum = "Add" "Subtract" "Multiply" "Divide" "Power" "Compose"
+   default = 0
+endparam
+param m2
+    caption = "2nd Multiplier"
+    default = (0.5,0.0)
+endparam
+func g
+  caption = "2nd Function"
+  default = ident()
+endfunc
+;
+param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+endparam
+;
+func cfn
+   caption = "C Function"
+   default = ident()
+endfunc
+;
+float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+endparam
+}
+

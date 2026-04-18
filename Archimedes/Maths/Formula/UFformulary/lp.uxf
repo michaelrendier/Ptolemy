@@ -1,0 +1,269 @@
+reversescissors { ; red williams after Luke Plant
+
+; This 'transformation' simply allows sections of a layer
+; to be defined using various shapes, and the surrounding
+; area to be assigned the solid colour.  This allows you
+; to 'applique' a portion of a layer onto the lower layer
+; by making the solid color transparent.  Because of the
+; way UF handles transforms, if multiple Reverse Scissor
+; transforms are used on a single layer, only their common
+; area will be preserved; in other words, if they have no
+; common area, the entire layer will be rendered transparent.
+; This makes it very simple to define polygons with a number
+; sides equal to a multiple of 4
+;
+; For the 'general' shape the region is defined by:
+; (x/a)^p + (y/b)^p < 1
+;
+; x is horizontal distance from the center of shape
+; y is vertical distance from center of shape
+; (x,y include any rotation that has been done to the shape)
+; a,b are width/height
+; p is some power:
+;    0 < p < 1  - concave sides
+;        p = 1  - straight sides
+;        p > 1  - convex sides
+;
+; The astroid, rhombus & ellipse are all special cases of the above.
+; A rectangle can be obtained with a slight modification
+;
+
+complex pix2 = (#pixel - @center)*exp(flip(-@tilt*pi/180))
+complex pix3 = real(pix2)/@width + flip(imag(pix2)/@height)
+IF (@shape==0)
+  IF ( |pix3| > 1 )
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==1)
+  pix3 = pix3 * exp(flip(pi/4))
+  IF ((abs(real(pix3)) + abs(imag(pix3))) > 1)
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==2)
+  IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) > 1)
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==3)
+  IF ((abs(real(pix3))^@power + abs(imag(pix3))^@power) > 1)
+    #solid = false
+  ENDIF
+
+ENDIF
+
+
+default:
+  title = "Reverse Scissors"
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+  endparam
+  param width
+    caption = "Width"
+    default = 1.0
+  endparam
+  param height
+    caption = "Height"
+    default = 1.0
+  endparam
+  param tilt
+    caption = "Tilt angle (degrees)"
+    default = 0.0
+  endparam
+  param power
+    caption = "Power"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+}
+
+comment {
+Luke Plant's public 
+transformation methods
+Date: 17-10-98
+
+
+}
+
+Inverse2 {
+transform:
+  #pixel = (@radius / (#pixel))+@center
+
+default:
+  title = "Inversion about point"
+  param center
+    caption = "Center of inversion"
+    default = (0.0,0.0)
+  endparam
+  param radius
+    caption = "Radius of circle"
+    default = 1.0
+  endparam
+}
+
+Twist { ; Transformation formula by Luke Plant 1998
+transform:
+  d = (#pixel-@center)
+  #pixel = d*exp(flip(@twist*exp(-|d|*@dec)))  + @center
+default:
+  title = "Twist"
+  param center
+    caption = "Center of twist"
+    default = (0.5,0.1)
+  endparam
+  param twist
+    caption = "Twist"
+    default = 8.0
+  endparam
+  param dec
+    caption = "Decay factor"
+    default = 10.0
+  endparam
+  }
+  
+  
+Spiral { ; Transformation formula by Luke Plant 1998
+transform:
+  d = (#pixel-@center)
+  #pixel = d*exp(flip(@twist/cabs(d)))  + @center
+default:
+  title = "Spiral"
+  param center
+    caption = "Center of twist"
+    default = (0.5,0.1)
+  endparam
+  param twist
+    caption = "Twist"
+    default = 0.1
+  endparam
+  }
+
+
+
+lp-HemiSphere1 { ; glass hemisphere effect
+  complex z2 = #pixel-@ctr
+  float x1 = 0
+  float y1 = 0
+  float beta = 0
+  float theta1 = 0
+  float x2 = 0
+
+  float x1 = cabs(z2)/@width
+  if x1 > 1
+    #pixel= #pixel
+  else
+  
+    ; refraction calcs
+    theta1 = acos(x1)
+    y1=sin(theta1)
+    beta = asin(x1/@n)
+    x2 = -y1/real(tan(theta1+beta))+ x1
+
+    ; move pixel
+    #pixel = z2/x1 * x2 + @ctr  
+  endif
+default:
+  title = "Glass hemisphere"
+  param n
+    caption = "Refractive index"
+    default = 2.0
+    hint = "Refactive index of 'glass'"
+  endparam
+  param width
+    caption = "Width"
+    default = 1.0
+    hint = "width of hemisphere"
+  endparam
+  param ctr
+    caption = "Center"
+    default = (0,0)
+    hint = "Center of hemisphere"
+  endparam
+}
+
+scissors { ; Luke Plant
+
+; This 'transformation' simply allows sections of a layer
+; to be cut out using various shapes, and assigned to
+; the solid colour.  This is particularly useful for making
+; certain regions of an image transparent.
+;
+; For the 'general' shape the region is defined by:
+; (x/a)^p + (y/b)^p < 1
+;
+; x is horizontal distance from the center of shape
+; y is vertical distance from center of shape
+; (x,y include any rotation that has been done to the shape)
+; a,b are width/height
+; p is some power:
+;    0 < p < 1  - concave sides
+;        p = 1  - straight sides
+;        p > 1  - convex sides
+;
+; The astroid, rhombus & ellipse are all special cases of the above.
+; A rectangle can be obtained with a slight modification
+;
+
+complex pix2 = (#pixel - @center)*exp(flip(-@tilt*pi/180))
+complex pix3 = real(pix2)/@width + flip(imag(pix2)/@height)
+IF (@shape==0)
+  If ( |pix3| < 1 )
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==1)
+  pix3 = pix3 * exp(flip(pi/4))
+  IF ((abs(real(pix3)) + abs(imag(pix3))) < 1)
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==2)
+  IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+    #solid = true
+  ENDIF
+
+ELSEIF (@shape==3)
+  IF ((abs(real(pix3))^@power + abs(imag(pix3))^@power) < 1)
+    #solid = true
+  ENDIF
+
+ENDIF
+
+
+default:
+  title = "Scissors"
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+  endparam
+  param width
+    caption = "Width"
+    default = 1.0
+  endparam
+  param height
+    caption = "Height"
+    default = 1.0
+  endparam
+  param tilt
+    caption = "Tilt angle (degrees)"
+    default = 0.0
+  endparam
+  param power
+    caption = "Power"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+}
+

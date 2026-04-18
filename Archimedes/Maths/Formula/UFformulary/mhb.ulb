@@ -1,0 +1,191 @@
+comment {
+	None of this would have happened without the previous work
+	of many people, including (but not limited to):
+	Damien M. Jones
+	Kerry Mitchell
+	Mark Townsend
+	Ron Barnett
+	and Andreas Lober
+	Thank you for all your contributions.
+
+	Thanks also to W. O. Love,
+	who knows much more about coding than I do.
+
+	M. Bell August 2009
+}
+
+class TrapShapeParametric(common.ulb:TrapShape) {
+	; Parametric curves trap shape.
+
+public:
+	func TrapShapeParametric(Generic pparent)
+		TrapShape.TrapShape(pparent)
+		i = 0
+		while ( i < (@ndots + 1))
+			t[i] = (i / @ndots) * 2.0 * #pi * @cycle
+
+			if (@curve == 0)
+			; lissajous
+				x[i] = (sin(@x_per * t[i]))
+				y[i] = (cos(@y_per * t[i]))
+
+			elseif (@curve == 1)
+			; epicycloid
+				x[i] = (1/@x_per) * ((@x_per + @y_per) * cos(t[i]) - @troch * cos((@x_per/@y_per + 1) * t[i]))
+				y[i] = (1/@x_per) * ((@x_per + @y_per) * sin(t[i]) - @troch * sin((@x_per/@y_per + 1) * t[i]))
+
+			elseif (@curve == 2)
+			; hypocycloid
+				x[i] = (1/@x_per) * ((@x_per - @y_per) * cos(t[i]) + @troch * cos((@x_per/@y_per - 1) * t[i]))
+				y[i] = (1/@x_per) * ((@x_per - @y_per) * sin(t[i]) - @troch * sin((@x_per/@y_per - 1) * t[i]))
+
+			elseif (@curve == 3)
+			; cycloid
+				x[i] = (@x_per * t[i] - @troch * sin(t[i]))/(2*#pi)
+				y[i] = (@x_per - @troch * cos(t[i]))/(2*#pi)
+			endif
+
+			i = i + 1
+		endwhile
+	endfunc
+	
+	float func Iterate(complex pz)
+		TrapShape.Iterate(pz)
+		r = 0.0
+		rmin = 1.0e+20
+		i = 0
+		if ( @method == 1 )
+			while ( i < @ndots)
+				c1 = x[i] + flip(y[i])
+				c2 = x[i + 1] + flip(y[i + 1])
+				s = (pz - c1) / (c2 - c1)
+				u = real(s)
+				v = imag(s)
+				if ( u < 0.0 )
+					r = sqr(u) + sqr(v)
+				elseif( u > 1.0 )
+					r = sqr(u - 1.0) + sqr(v)
+				else
+					r = sqr(v)
+				endif
+				r = sqrt(r) * cabs(c2 - c1)
+				if ( r < rmin )
+					rmin = r
+				endif
+				i = i + 1
+			endwhile
+			rmin = sqr(rmin)
+		else
+			while ( i < (@ndots + 1))
+				r = (x[i] - real(pz)) * (x[i] - real(pz)) + (y[i] - imag(pz)) * (y[i] - imag(pz))
+				if ( r < rmin )
+					rmin = r
+				endif
+				i = i + 1
+			endwhile
+		endif
+		rmin = rmin ^ @thick
+		return rmin
+	endfunc
+
+private:
+	int i
+	float r
+	float rmin
+	float u
+	float v
+	float t[10001]
+	float x[10001]
+	float y[10001]
+	complex c1
+	complex c2
+
+default:
+	title = "Parametric Curves"
+
+	helpfile="http://polychroma.com/fractals/parametric.php"
+
+	param curve
+		caption = "Curve"
+		enum = "Lissajous" "Epicycloid" "Hypocycloid" "Cycloid"
+		default = 0
+	endparam
+
+ 	param x_per
+ 		caption = "X Period"
+		default = 4.0
+ 		min = 1.0e-10
+ 	endparam
+
+	param y_per
+		caption = "Y Period"
+		default = 3.0
+		min = 1.0e-10
+		visible = @curve == "Lissajous" || @curve == "Epicycloid" || @curve == "Hypocycloid"
+	endparam
+
+	param troch
+		caption = "Trochoid Parameter"
+		default = 1.0
+		hint = "Changes the 'loopiness'"
+		visible = @curve == "Epicycloid" || @curve == "Hypocycloid" || @curve == "Cycloid"
+	endparam
+
+	param cycle
+		caption = "Cycles"
+		default = 1.0
+		hint = "For Epicycloid and Hypocycloid, this should generally equal the Y period."
+	endparam
+
+	param ndots
+		caption = "Number of Points"
+		default = 240
+		hint = "Increase for smoother line, decrease for \
+		  dots or angled lines. Should be between 1 and 10000."
+		min = 1
+		max = 10000
+	  endparam
+
+	param method
+		caption = "Method"
+		enum = "dots" "lines"
+		default = 0
+	endparam
+
+	param thick
+		caption = "Thickness"
+		default = 0.3
+		min = 0.0
+		hint = "Affects the dot size or line thickness, \
+		  similar to the Threshold parameter."
+	endparam
+}
+
+class Standard_TrapShapeSimplePolygon(common.ulb:TrapShape) {
+public:
+
+    float func Iterate(complex pz)
+		TrapShape.Iterate(pz)
+    float d = 1e20
+    complex z = pz
+    z = -z*1i
+    complex arg = atan2(z)
+    arg = -round(arg/(2*pi)*@order)/@order*(2*pi)
+    z = z*exp(1i*arg)
+
+    float dist = abs(real(z))
+    if dist < d
+      d = dist
+    endif
+
+    return d
+  endfunc
+default:
+  title = " Simple Polygon"
+  int param order
+    caption = "Polygon Order"
+    default = 3
+    min = 3
+    hint = "This is the number of sides in the polygon."
+  endparam
+}

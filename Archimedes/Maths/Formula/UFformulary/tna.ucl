@@ -1,0 +1,681 @@
+Basic-tna {
+; extension of basic coloring alrogithm in standard.ucl
+; by Ted Nason astrolathe@comcast.net
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+init:
+  complex f[50000]  ; array to hold the points of the orbit
+  complex sum = (0,0)
+  int iter = 0
+  int finaliter = 0
+  float rescape = 1000000000; if the stat being calced gets too big
+
+loop:
+  iter=iter+1
+  f[iter]=#z
+
+final:
+
+  finaliter=iter
+  sum = (0,0)
+
+  if(@type == 0); mod(lastz)
+    #index=|f[finaliter]|
+
+  elseif(@type == 1); phase(lastz)
+    if imag(f[finaliter]) !=0
+      #index=atan(real(f[finaliter])/imag(f[finaliter]))
+    endif
+
+  elseif(@type == 2); zlast - zfirst
+    #index = 10*(real(#z) * imag(#z))
+
+  elseif(@type == 3); mod(mean(last 3 pts))
+    #index = |f[finaliter-2] + f[finaliter-1] + f[finaliter]|
+
+  elseif(@type == 4); phase(mean(last 3 pts))
+    sum = f[finaliter-2] + f[finaliter-1] + f[finaliter]
+    if imag(sum) !=0; is this really necessary???
+      #index = real(sum)/imag(sum)
+    endif
+
+  elseif(@type == 5); angle(1st vertex)
+   ; #index = xxx
+
+  elseif(@type == 6); angle(last vertex)
+   ; #index = xxx
+
+  elseif(@type == 7); eValue(lastz)
+
+iter=0
+sum=(1,1)
+
+$define DEBUG
+while iter<finaliter
+;print ("finaliter = ", finaliter, "; iter = ", iter, "; evalue = ", |f[iter]|)
+iter=iter+1
+sum = 2*sum * f[iter] 
+endwhile
+
+#index = |sum|
+;print ("x = ", real(f[iter]), "; y = ", imag(f[iter]), "; index = ", |sum|)
+
+  elseif(@type == 8); ePhase(lastz)
+   ; #index = xxx
+
+  endif  
+
+default:
+  title = "Basic-tna" 
+  helptopic = "xxx.htm"
+
+  param type
+    caption = "Coloring Type"
+    default=0
+    enum = "mod(lastz)" "phase(lastz)" "zlast - zfirst" "mod(mean(last 3 pts))" "phase(mean(last 3 pts))" "angle(1st vertex)" "angle(last vertex)" "eValue(lastz)" "ePhase(lastz)"
+  endparam
+}
+
+
+
+
+tnaDirectOrbitTraps {
+;
+; Simplified (point only) Direct Orbit Traps coloring algorithm with multiple traps
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+; eliminate if then else loops for anything that’s not “direct” 
+; or trap shapes other than point 
+; or trap types other than traponly
+; eliminate unused variables
+; then add multiple traps
+;
+init:
+$DEFINE DIRECT
+  float d = 0.0
+  float d2 = 0.0
+  complex z2 = (0,0)
+  int iter = 0
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex trapcenter2 = @trapcenter
+
+  color accumulator = @startcolor; initialize color accumulator
+  color current = rgb(0,0,0); holds current iteration's color
+  bool usesolid = true   ; assume a solid color
+
+loop:
+  iter = iter + 1        ; iteration counter
+  z2 = #z
+  z2 = (z2 - trapcenter2) * r; rotate  
+  
+  if @aspect != 1.0
+    z2 = real(z2) + flip(imag(z2) * @aspect) ; apply aspect
+  endif
+  
+    d = cabs(z2)
+
+  ; Compute direct color. This code is very similar to the normal processing in the final section.
+  IF (d < @threshold); orbit is close enough to shape
+    IF (@trapcolor == "distance"); distance
+      current = gradient(d/@threshold)
+    ELSEIF (@trapcolor == "magnitude"); magnitude
+      current = gradient(cabs(z2))
+    ELSEIF (@trapcolor == "real"); real
+      current = gradient(abs(real(z2)))
+    ELSEIF (@trapcolor == "imaginary"); imaginary
+      current = gradient(abs(imag(z2)))
+    ELSEIF (@trapcolor == "angle to trap"); angle to trap
+      d2 = atan2(z2)
+      IF (d2 < 0)
+        d2 = d2 + #pi * 2
+      ENDIF
+      current = gradient(d2 / (#pi * 2))
+    ELSEIF (@trapcolor == "angle to origin"); angle to origin
+      d2 = atan2(#z)
+      IF (d2 < 0)
+        d2 = d2 + #pi * 2
+      ENDIF
+      current = gradient(d2 / (#pi * 2))
+    ELSEIF (@trapcolor == "angle to origin 2") ; angle to origin 2 (old ReallyCool)
+      current = gradient(0.02 * abs(atan(imag(#z) / real(#z)) * 180/#pi))
+    ELSEIF (@trapcolor == "iteration"); iteration
+      current = gradient(iter / #maxiter)
+    ENDIF
+
+    IF (@trapmergemodifier == "distance")
+      current = rgba(red(current), green(current), blue(current), alpha(current) * (1 - d / @threshold))
+    ENDIF
+    IF (@trapmergeorder == "bottom-up")
+      accumulator = compose(accumulator, blend(current, @trapmergemode(accumulator, current), alpha(accumulator)), @trapmergeopacity)
+    ELSEIF (@trapmergeorder == "top-down")
+      accumulator = compose(current, blend(accumulator, @trapmergemode(current, accumulator), alpha(current)), @trapmergeopacity)
+    ENDIF
+  ENDIF
+
+final:
+  if @solidcolor  ; apply solid color, if it is allowed.
+    #solid = usesolid
+  else
+    #solid = false
+  endif
+  
+  #color = accumulator   ; Return direct color.
+  
+default:
+  title = "tna Direct Orbit Traps"
+  helptopic = "xxx.html"
+
+  param trapcolor
+    caption = "Trap Coloring"
+    default = 0
+    enum = "distance" "magnitude" "real" "imaginary" "angle to trap" \
+           "angle to trap 2" "angle to origin" "angle to origin 2" "iteration"
+    hint = "This is the information used to produce a color."
+  endparam
+
+  param threshold
+    caption = "Threshold"
+    default = 0.25
+    min = 0
+  endparam
+
+  heading
+    caption = "Merging"
+  endheading
+
+  color param startcolor
+    caption = "Base Color"
+    default = rgb(0,0,0)
+    hint = "Specifies the 'base', or starting color with which all iterations' \
+            colors will be merged."
+  Endparam
+
+  color func trapmergemode
+    caption = "Trap Color Merge"
+    default = mergenormal()
+    hint = "This chooses the merge mode used to blend colors at each iteration."
+  Endfunc
+
+  param trapmergemodifier
+    caption = "Additional Alpha"
+    default = 0
+    enum = "none" "distance"
+    hint = "Specifies an additional alpha value to incorporate during merging."
+  Endparam
+
+  param trapmergeopacity
+    caption = "Trap Merge Opacity"
+    default = 0.2
+    hint = "Sets the opacity of each trap shape. Even if you set this value to 1 \
+        (forcing all traps to be fully opaque) you can still control opacity \
+        using the alpha channel in the gradient."
+  Endparam
+
+  param trapmergeorder
+    caption = "Trap Merge Order"
+    default = 0
+    enum = "bottom-up" "top-down"
+    hint = "Sets the order in which traps will be merged. Bottom-up merges new \
+    traps on top of previous ones. Top-down merges new traps underneath \
+    previous ones."
+  endparam
+
+  heading
+    caption = "Options"
+  endheading
+
+  param trapcenter
+    caption = "Trap Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+  Endparam
+
+  param aspect
+    caption = "Aspect Ratio"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the trap is.  You can distort the \
+            trap by using a value other than 1.0."
+  endparam
+
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap should \
+            be rotated."
+  Endparam
+
+  param solidcolor
+    caption = "Use Solid Color"
+    default = false
+    hint = "If enabled, areas 'outside' the trap area will be colored \
+            with the 'solid color' on the coloring tab."
+  endparam
+}
+
+
+FourierFreq {
+; discrete Fourier transform coloring algorithm - frequency peak version
+; by Ted Nason astrolathe@comcast.net
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+init:
+  int iterr = 0
+  float f[5000]  ; array to hold the function of the iterate to analyze
+
+loop:
+  f[iterr] = |#z| 
+  iterr = iterr + 1
+  ; put case select here - for now, analyze the FT spectrum of |#z|
+
+final:
+$define DEBUG
+; print ("x = ", real(#z), " ; y = ", imag(#z))
+
+  float ft[5000]  ; array to hold the Fourier components 
+  float sum = 0
+  int n = 0 ; this is period in index space ("time" domain)
+  int k = 0 ; index to count through
+  float nmaxx = @nmax
+  if @nmax > #maxiter
+    nmaxx = #maxiter   ; you can't calculate a fourier period which exceeds the max iterations :)
+  endif
+  
+  while n <= nmaxx; no sense in computing ft elements for periods greater than plot range
+    sum = 0 ; reset on every component
+    k = 0
+    while k <= iterr
+      sum = sum + f[k]*cos(2*#pi*n*k/iterr)
+  ; print ("k = ", k, " ; sum = ", sum, " ; f[k] = ", f[k]) 
+      k = k + 1
+    endwhile
+    ft[n] = (sum/(iterr+1))^2
+  ; print ("n = ", n, "; ft[n] = ", ft[n])
+    n = n + 1; this is the Fourier component of period n in index space ("time" domain)
+  endwhile
+
+  ; now calculate the peak in frequency domain (1/index, or 1/"time" domain)
+  int mmin = floor(iterr/nmaxx)  ; these are the time domain limits corresponding to nmin, nmax
+  int mmax = floor(iterr/@nmin)  ; within which to look for a peak in the spectrum
+
+  int m = 0 ; frequency index
+  int nn = 0 ; period corresponding to freq index m
+  float fmax = 0 ; this is the largest element of ft[] in the range nmin < n < nmax
+  int maxindex = 0 ; value of n at peak
+
+if mmin != mmax ; must be some range to plot
+  m = mmin  ; find the highest fourier component in range of mmin to mmax
+  while m <= mmax
+    nn = floor(iterr/m) ; calculate period from freq
+    if ft[m] > fmax 
+      fmax = ft[m] ; continually find the greatest value of ft
+      maxindex = nn ; and assign the period nn to the maxindex
+    endif
+; print ("m = ", m, "; ft[m] = ", ft[m])
+  m = m + 1
+  endwhile
+endif
+
+  float indexx = 0
+
+  if(@stattype==0); only code by index at peak
+    #index = maxindex
+
+  elseif(@stattype==1) ; sum sqr(peaks) - sqr helps bring low values (<< 1) up
+
+    m = mmin  ; normalize the components in range of mmin to mmax
+    while m <= mmax
+      nn = floor(iterr/m) ; calculate period from freq
+      ft[m] = ft[m]/fmax ; normalize
+; print ("ft[n] = ", ft[m])
+      m = m + 1
+    endwhile
+
+    sum = 0
+    m = mmin
+    while m <= mmax
+      sum = sum + sqrt(ft[m])
+; print ("sum = ", sum, "; ft[n] = ", ft[m])
+      m = m + 1
+    endwhile
+
+
+    sum = sum - 1; remove influence of major peak (= 1)
+    ; indexx = maxindex + floor(10*(indexx))  ; combine influence of major peak and minor peaks
+    indexx = floor(maxindex*(10*(indexx)))
+; print ("maxindex = ", maxindex, "; sum = ", sum, "; ft[n] = ", ft[m])
+
+     #index = indexx
+
+    ; #index = maxindex/40
+
+ elseif(@stattype==2); sum sqr(sqr(peaks))
+ 
+
+
+  else; sum exp(peaks) 
+
+
+
+  endif
+
+
+default:
+  title = "FourierFreq"
+  helpfile = "xxx.html"
+
+  int param nmin
+    caption = "min Fourier cpt"
+    default = 3
+    hint = "min Fourier cpt to plot - best if >2, else 2 dominates"
+  endparam
+
+  int param nmax
+    caption = "max Fourier cpt"
+    default = 50
+    hint = "max Fourier cpt to plot - MUST be less than max iterations or meaningless"
+  endparam
+
+  param vartype
+    caption="variable"
+    default=2
+    enum= "real" "imag" "magnitude" "imag/real" "angle to origin" "angle(k k-1)" "eigenvalue" "eigenphase"
+    hint="variable for which statistics will be calculated"
+  endparam
+
+  param stattype
+    caption="subordinate sum"
+    default=1
+    enum="none" "sqr" "^1/4" "exp"
+    hint="method of incorporating minor peaks"
+  endparam
+
+}
+
+
+
+Autocorrelation {
+; autocorrelation coloring algorithm
+; by Ted Nason astrolathe@comcast.net
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+init:
+  int iterr = 0
+  float sum = 0
+  float f[500]  ; array to hold the function of the iterate to analyze
+
+loop:
+  iterr = iterr + 1
+  f[iterr] = |#z| ; put case select here - for now, analyze the FT spectrum of |#z|
+  sum = sum + f[iterr] ; this is used to get the avg
+
+final:
+  float avg = sum/iterr
+  float auto[500]   ; array to hold the autocorrelation components 
+   $define DEBUG
+  print ("x = ", real(#z), " ; y = ", imag(#z), "avg = ", avg)
+  int k = 1 
+  int n = 0 
+  float sum1 = 0
+  float sum2 = 0
+
+  while n <= iterr-1
+    sum1 = 0
+    sum2 = 0
+    k = 1
+    while k <= iterr - n
+      sum1 = sum1 + (f[k]-avg)*(f[k+n]-avg)
+      sum2 = sum2 + (f[k]-avg)*(f[k]-avg)
+      k = k + 1
+    endwhile
+    auto[n] = sum1/sum2
+    n = n + 1
+  endwhile
+
+  int nmaxx = @nmax; now calculate the peak in specified range
+  if @nmax > iterr
+    nmaxx = iterr
+  endif
+
+  int nn = @nmin 
+  float fmax = 0 ; largest element of auto[] in the range nmin < n < nmax
+  int maxindex = 0 ; index at peak
+
+  while nn < nmaxx
+    if auto[nn] > fmax  ; find the highest component in range of nmin to nmax
+      fmax = auto[nn]; print ("nn = ", nn, "; auto[nn] = ", auto[nn])
+      maxindex = nn
+    endif
+    nn = nn + 1
+  endwhile
+print ("maxindex = ", maxindex)
+  #index = maxindex
+
+default:
+  title = "Autocorrelation"
+  helpfile = "xxx.html"
+
+  int param nmin
+    caption = "min Autocor cpt"
+    default = 3
+    hint = "min cpt to plot - best if >2, else 2 dominates"
+  endparam
+
+  int param nmax
+    caption = "max Autocor cpt"
+    default = 50
+    hint = "max cpt to plot - MUST be less than max iterations or meaningless"
+  endparam
+}
+
+
+
+
+PowerSpectrum {
+; power spectrum coloring algorithm
+; by Ted Nason astrolathe@comcast.net
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+init:
+  int iterr = 0
+  float sum = 0
+  float f[500]  ; array to hold the function of the iterate to analyze
+
+loop:
+  iterr = iterr + 1
+  f[iterr] = |#z| ; put case select here - for now, analyze the FT spectrum of |#z|
+  sum = sum + f[iterr] ; this is used to get the avg
+
+final:
+  float avg = sum/iterr
+  float auto[500]   ; array to hold the autocorrelation components 
+   $define DEBUG
+  print ("x = ", real(#z), " ; y = ", imag(#z), "avg = ", avg)
+  int k = 1 
+  int n = 0 
+  float sum1 = 0
+  float sum2 = 0
+
+  while n <= iterr-1
+    sum1 = 0
+    sum2 = 0
+    k = 1
+    while k <= iterr - n
+      sum1 = sum1 + (f[k]-avg)*(f[k+n]-avg)
+      sum2 = sum2 + (f[k]-avg)*(f[k]-avg)
+      k = k + 1
+    endwhile
+    auto[n] = sum1/sum2
+    n = n + 1
+  endwhile
+  ; now we have the autocorrelation elements, auto[n]
+; range is 0<n<iterr-1
+; now find its fourier transform and put into f[] array
+  int nmaxx = @nmax
+  if @nmax > #maxiter
+    nmaxx = #maxiter  ; you can't calculate a fourier period which exceeds the max iterations :)
+  endif
+
+  sum = 0
+  n = 0 ; this is period in index space ("time" domain)
+  k = 0 ; index to count through
+
+  while n <= iterr -1; should only go up to nmaxx?
+    sum = 0 ; reset on every component
+    k = 0
+    while k <= iterr -1
+      sum = sum + auto[k]*cos(2*#pi*n*k/iterr)
+   ;print ("k = ", k, " ; sum = ", sum, " ; auto[k] = ", auto[k]) 
+      k = k + 1
+    endwhile
+    f[n] = (sum/(iterr+1))^2; this is the Fourier component of period n in index space ("time" domain)
+   print ("n = ", n, "; ft[n] = ", f[n])
+    n = n + 1
+  endwhile
+; now calculate the peak in frequency domain (1/index, or 1/"time" domain)
+  int mmin = floor(iterr/nmaxx); these are the time domain limits corresponding to nmin, nmax
+  int mmax = floor(iterr/@nmin); within which to look for a peak in the spectrum
+
+  int m = 0 ; frequency index
+  int nn = 0 ; period corresponding to freq index m
+  float fmax = 0 ; this is the largest element of ft[] in the range nmin < n < nmax
+  int maxindex = 0 ; value of n at peak
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;if mmin <> mmax ; must be some range to plot
+
+  m = mmin  ; find the highest fourier component in range of mmin to mmax
+  while m <= mmax
+    nn = floor(iterr/m) ; calculate period from freq
+    if f[m] > fmax 
+      fmax = f[m] ; continually find the greatest value of ft
+      maxindex = nn ; and assign the period nn to the maxindex
+    endif
+  ; print ("m = ", m, "; ft[m] = ", f[m])
+  m = m + 1
+  endwhile
+   print ("maxindex = ", maxindex)
+  #index = maxindex
+
+default:
+  title = "PowerSpectrum"
+  helpfile = "xxx.html"
+
+  int param nmin
+    caption = "min Autocor cpt"
+    default = 3
+    hint = "min cpt to plot - best if >2, else 2 dominates"
+  endparam
+
+  int param nmax
+    caption = "max Autocor cpt"
+    default = 50
+    hint = "max cpt to plot - MUST be less than max iterations or meaningless"
+  endparam
+}
+
+
+
+
+
+
+
+Fourier {
+; discrete Fourier transform coloring algorithm
+; by Ted Nason astrolathe@comcast.net
+;
+; UNDER DEVELOPMENT SEPTEMBER 2004! USE AT YOUR OWN RISK!
+;
+init:
+  int iterr = 0
+  float f[500]  ; array to hold the function of the iterate to analyze
+
+loop:
+  f[iterr] = |#z| 
+  iterr = iterr + 1
+  ; put case select here - for now, analyze the FT spectrum of |#z|
+
+final:
+   $define DEBUG
+  print ("x = ", real(#z), " ; y = ", imag(#z))
+
+  ; at this point #numiter (=iterr) is either = #maxiter (inside)
+  ; or some smaller value where orbit escaped
+  ; would like to dim ft dynamically & smaller if possible...
+
+  float ft[500]   ; array to hold the Fourier components 
+
+  float sum = 0
+  int n = 0 ; this is period in index space ("time" domain)
+  int k = 0 ; index to count through
+
+  float nmaxx = @nmax
+  if @nmax > #maxiter
+  nmaxx = #maxiter  
+  ; you can't calculate a fourier period which exceeds the max iterations :)
+  endif
+
+  while n <= iterr
+  ; should only go up to nmaxx...
+  ; (if you only want to find peaks below @nmax,
+  ; no sense in computing ft's for periods greater than that...)
+    sum = 0 ; reset on every component
+    k = 0
+    while k <= iterr
+      sum = sum + f[k]*cos(2*#pi*n*k/iterr)
+  ; print ("k = ", k, " ; sum = ", sum, " ; f[k] = ", f[k]) 
+      k = k + 1
+    endwhile
+    ft[n] = (sum/(iterr+1))^2
+  ; print ("n = ", n, "; ft[n] = ", ft[n])
+    n = n + 1
+  ; this is the Fourier component of period n in index space ("time" domain)
+  endwhile
+
+  ; now calculate the peak in period domain (index or "time" domain)
+  int nn = @nmin ; find the peaks
+  float fmax = 0 ; this is the largest element of ft[] in the range nmin < n < nmax
+  int maxindex = 0 ; value of n at peak
+
+  while nn < nmaxx
+    if ft[nn] > fmax  ; find the highest fourier component in range of nmin to nmax
+      fmax = ft[nn]
+      maxindex = nn
+    endif
+
+  ; print ("nn = ", nn, "; ft[nn] = ", ft[nn])
+
+    nn = nn + 1
+  endwhile
+
+  #index = maxindex
+  ; print ("maxindex = ", maxindex)
+
+default:
+  title = "Fourier"
+  helpfile = "xxx.html"
+
+  int param nmin
+    caption = "min Fourier cpt"
+    default = 3
+    hint = "min Fourier cpt to plot - best if >2, else 2 dominates"
+  endparam
+
+  int param nmax
+    caption = "max Fourier cpt"
+    default = 50
+    hint = "max Fourier cpt to plot - MUST be less than max iterations or meaningless"
+  endparam
+}
+
+
+
+
+
+
+
+

@@ -1,0 +1,1098 @@
+class TMA_SwitchTalis(mmf.ulb:MMF_SwitchDivergentFormula) {
+;
+; Object version of 'Talis & Friends' in
+; tma2.ufm.  Switchable Mandelbrot/Julia.
+; Many thanks to Dave Makin for the switch!
+;
+; Here are the "Talis" formulae adapted from Fractal Explorer, plus some
+; extra variations. Lots of extra bells and whistles not possible in FE have
+; been added. Thanks to Andrea Spinozzi for some more extras, including the
+; "Extra Loop" goodies.
+;
+; v 1.0, 2008.06.03
+; v1.01, 2008.11.05 (fixed small bug)
+; v1.1,  2009.05.15 dded more Talis variations (Talis+1-7). You must vary the
+;  "Talis+' functions from their defaults in some cases (Talis+5 & 6)to get
+;  decent M sets, but I have left the defaults all at "Conj" for good results
+;  with the other variations. Look for these and new params in a new
+;  "Talis+ Functions & Params" section.
+
+public:
+
+; These sections are not necessary, since they will automatically be called
+; as part of the parent class
+
+;	func TMA_SwitchTalis(Generic pparent)
+;		MMF_SwitchDivergentFormula.MMF_SwitchDivergentFormula(pparent)
+;	endfunc
+
+;  complex func Init(complex pz) Done in the parent class
+;    return MMF_SwitchDivergentFormula.Init(pz)
+;  endfunc
+
+  complex func Iterate(complex pz)
+  complex imagz = @imagz*(0,1)
+  complex z0 = 0
+
+
+  if @type == false
+   if @zprime == 0
+    z0 = real(@fnreal(pz-@realz))+flip(imag(@fnimag(pz-imagz)))
+   elseif @zprime == 1
+    z0 = real(@fnreal(pz-@realz))-flip(imag(@fnimag(pz-imagz)))
+   elseif @zprime == 2
+    z0 = flip(imag(@fnimag(pz-imagz)))-real(@fnreal(pz-@realz))
+   endif
+  else
+   if @zprime == 0
+    z0 = @fnreal(real(pz-@realz))+@fnimag(flip(imag(pz-imagz)))
+   elseif @zprime == 1
+    z0 = @fnreal(real(pz-@realz))-@fnimag(flip(imag(pz-imagz)))
+   elseif @zprime == 2
+    z0 = @fnimag(flip(imag(pz-imagz)))-@fnreal(real(pz-@realz))
+   endif
+  endif
+
+; Select the global definition of Z
+   if @select == "z"; select variable type
+    if @version < 1.01
+     pz = @fnz(z0-@zg)*@ezg
+    else
+     z0 = @fnz(z0-@zg)*@ezg
+    endif
+   elseif @select == "z+c"
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z-c"
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "c-z"
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z*c"
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z/c"
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z+c|z+c"
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z+c|c-z"
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z+c|z*c"
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z+c|z/c"
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z-c|z-c"
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z-c|c-z"
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z-c|z*c"
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z-c|z/c"
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "c-z|z*c"
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "c-z|z/c"
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z*c|c-z"
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z*c|z*c"
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z/c|z+c"
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z/c|z-c"
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z/c|c-z"
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z/c|z/c"
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z*c+(Rz+Iz)"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+   elseif @select == "z/c+(Rz+Iz)"
+    z0 = (@fnz(z0-@zg)*@ezg/@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+   elseif @select == "z/c-(Rz+Iz)"
+    z0 = (@fnz(z0-@zg)*@ezg/@fnc((fConstant-@cg)*@cmg)^@ecg)-((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+   elseif @select == "z*c-+(Rz+Iz)"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)-((real(z0+@addz)\
+    *@muz)\
+          ^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+   elseif @select == "z/c-+(Rz+Iz)"
+    z0 = (@fnz(z0-@zg)*@ezg/@fnc((fConstant-@cg)*@cmg)^@ecg)-((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = (@fnz(z0-@zg)*@ezg/@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+   elseif @select == "z*c+(Rz+Iz)|z+c"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = @fnz(z0-@zg)*@ezg + @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z*c+(Rz+Iz)|z-c"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = @fnz(z0-@zg)*@ezg - @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z*c+(Rz+Iz)|c-z"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = @fnc((fConstant-@cg)*@cmg)^@ecg - @fnz(z0-@zg)*@ezg
+   elseif @select == "z*c+(Rz+Iz)|z*c"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = @fnz(z0-@zg)*@ezg * @fnc((fConstant-@cg)*@cmg)^@ecg
+   elseif @select == "z*c+(Rz+Iz)|z/c"
+    z0 = (@fnz(z0-@zg)*@ezg*@fnc((fConstant-@cg)*@cmg)^@ecg)+((real(z0+@addz)\
+          *@muz)^@exz+(imag(z0+@addz)*@muz1)^@exz1)
+    z0 = @fnz(z0-@zg)*@ezg / @fnc((fConstant-@cg)*@cmg)^@ecg
+   endif
+   c1 = @cfunc(((fConstant-@pc1)*@pc2)^@pc3)
+
+   if (@zsplit == false)
+   if (@selform==0)     ; Normal
+    z0 = z0
+   elseif (@selform==1) ; Mandelbrot
+    z0 = z0^2+c1
+   elseif (@selform==2) ; Barnsley
+    if real(z0) > 0
+     z0 = (z0-1)*c1
+    else
+     z0 = (z0+1)*c1
+    endif
+   elseif (@selform==3) ; Ikenaga Modified
+    z0 = z0^3+z0*(c1-1)*fConstant
+   elseif (@selform==4) ; Ikenaga Original
+    z0 = z0*z0*z0+z0*c1-z0-c1
+   elseif @selform == 5; Mandel Lambda
+    z0 = z0*c1
+   endif
+    z0 = ((z0+@paddz)*@pmuz)^@pexz
+   endif
+
+
+  if @var == "Talis"
+     pz =@fn1((z0-@p1)*@p1a)*@fn2(z0)/@fn3(@p2+(@fn4(z0)*@p2a))+@fn5\
+       (fConstant-@p3)*@p3a
+  elseif @var == "Talis+1"
+     pz =@fn1(((z0*@cfn1((((fConstant-@prc1)*@prc1a)^@prc1b)))-@p1)*@p1a)*@fn2\
+       (z0)/@fn3(@p2+(@fn4(z0)*@p2a))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis+2"
+     pz =@fn1((z0-@p1)*@p1a)*@fn2(z0*@cfn2(((fConstant-@prc2)*@prc2a)^@prc2b))\
+       /@fn3(@p2+(@fn4(z0)*@p2a))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis+3"
+     pz =@fn1((z0-@p1)*@p1a)*@fn2(z0)/@fn3(@p2+(@fn4(z0*@cfn3\
+       (((fConstant-@prc3)*@prc3a)^@prc3b))*@p2a))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis+4"
+     pz =@fn1(((z0*@cfn1((((fConstant-@prc1)*@prc1a)^@prc1b)))-@p1)*@p1a)*@fn2\
+       (z0*@cfn2(((fConstant-@prc2)*@prc2a)^@prc2b))/@fn3(@p2+(@fn4(z0)*@p2a))\
+        +@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis+5"
+     pz =@fn1(((z0*@cfn1((((fConstant-@prc1)*@prc1a)^@prc1b)))-@p1)*@p1a)*@fn2\
+     (z0)/@fn3 (@p2+(@fn4(z0*@cfn3(((fConstant-@prc3)*@prc3a)^@prc3b))*@p2a))\
+     +@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis+6"
+     pz =@fn1((z0-@p1)*@p1a)*@fn2(z0*@cfn2(((fConstant-@prc2)*@prc2a)^@prc2b))\
+     /@fn3(@p2+(@fn4(z0*@cfn3(((fConstant-@prc3)*@prc3a)^@prc3b))*@p2a))+@fn5\
+     (fConstant-@p3)*@p3a
+  elseif @var == "Talis+7"
+     pz =@fn1(((z0*@cfn1((((fConstant-@prc1)*@prc1a)^@prc1b)))-@p1)*@p1a)*@fn2\
+       (z0*@cfn2(((fConstant-@prc2)*@prc2a)^@prc2b))/@fn3(@p2+(@fn4(z0*@cfn3\
+       (((fConstant-@prc3)*@prc3a)^@prc3b))*@p2a))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 1"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)-@fn6(z0)) /@fn3(@p2+(@fn4(z0)*@p2a))\
+       +@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 2"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)*@fn6(z0)) /@fn3(@p2+(@fn4(z0)*@p2a))\
+       +@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 3"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)*@fn6(z0)*pz) /@fn3(@p2+(@fn4(z0)*@p2a)\
+       *@fn7(pz)-@fn8(z0))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 4"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)*@fn6(z0)) /@fn3(@p2+(@fn4(z0)*@p2a)\
+       *@fn7(pz)-@fn8(z0))+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 5"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)*@fn6(z0)) /@fn3(@p2+(@fn4(z0)*@p2a)\
+       *@fn7(pz)-@fn8(z0)-pz)+@fn5(fConstant-@p3)*@p3a
+  elseif @var == "Talis Var 6"
+    pz =@fn1(((z0-@p1)*@p1a)*@fn2(z0)*@fn6(z0)) /@fn3(@p2+(@fn4(z0)*@p2a)\
+       *@fn7(pz)-@fn8(z0)+pz)+@fn5(fConstant-@p3)*@p3a
+  endif
+
+   if (@zsplit == true)
+   if (@selform==0)     ; Normal
+    pz = pz
+   elseif (@selform==1) ; Mandelbrot
+    pz = pz^2+c1
+   elseif (@selform==2) ; Barnsley
+    if real(pz) > 0
+     pz = (pz-1)*c1
+    else
+     pz = (pz+1)*c1
+    endif
+   elseif (@selform==3) ; Ikenaga Modified
+    pz = pz^3+pz*(c1-1)*c1
+   elseif (@selform==4) ; Ikenaga Original
+    pz = pz*pz*pz+pz*c1-pz-c1
+   elseif @selform == 5; Mandel Lambda
+    pz = pz*c1
+   endif
+    pz = ((pz+@paddz)*@pmuz)^@pexz
+   endif
+  return pz
+  endfunc
+
+	bool func IsBailedOut(complex pz)
+	  bool bail = false
+	  if @test == 0
+	    bail = (|pz| > @p_bailout)
+	  elseif @test == 1
+	    bail = (sqr(real(pz)) > @p_bailout)
+	  elseif @test == 2
+      bail = (sqr(imag(pz)) > @p_bailout)
+	  elseif @test == 3
+      bail = (sqr(real(pz)) > @p_bailout || sqr(imag(pz)) > @p_bailout)	
+    elseif @test == 4
+      bail = (sqr(real(pz)) > @p_bailout && sqr(imag(pz)) > @p_bailout)	
+	  elseif @test == 5
+      bail = (sqr(abs(real(pz)) + abs(imag(pz))) > @p_bailout)
+	  elseif @test == 6
+      bail = (sqr(real(pz) + imag(pz)) > @p_bailout)
+    elseif @test == 7
+      bail = (sqr(real(@bailfunc(pz))) > @p_bailout)
+	  endif
+		return bail
+	endfunc
+
+default:
+  title = "Switch Talis and Friends"
+  rating = recommended
+
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+    visible = false
+    enabled = false
+  endparam
+  param version
+    caption = "Version"
+    default = 1.1
+    visible = false
+  endparam
+
+Heading
+  caption = "Initial Section"
+Endheading
+
+  param select
+    caption = "Z Mode"
+    enum = "z""z+c""z-c""c-z""z*c""z/c""z+c|z+c""z+c|c-z""z+c|z*c"\
+     "z+c|z/c""z-c|z-c""z-c|c-z""z-c|z*c""z-c|z/c""c-z|z*c""c-z|z/c"\
+     "z*c|c-z""z*c|z*c""z/c|z+c""z/c|z-c""z/c|c-z""z/c|z/c"\
+     "z*c+(Rz+Iz)""z/c+(Rz+Iz)""z/c-(Rz+Iz)""z*c-+(Rz+Iz)"\
+     "z/c-+(Rz+Iz)""z*c+(Rz+Iz)|z+c""z*c+(Rz+Iz)|z-c""z*c+(Rz+Iz)|c-z"\
+     "z*c+(Rz+Iz)|z*c""z*c+(Rz+Iz)|z/c"
+    default = 0
+    hint = "Determines the initial definition of Z"
+  endparam
+
+  complex param zg
+    caption = "Z Param 1"
+    default = (0,0)
+  endparam
+
+  complex param ezg
+    caption = "Z Param 2"
+    default = (1,0)
+  endparam
+
+  complex param addz
+    caption = "Z Param 3"
+    default = (1.0,0.0)
+    visible = (@select == 22)||(@select == 23)||(@select == 24)||\
+              (@select == 25)||(@select == 26)|| (@select == 27)||\
+              (@select == 28)||(@select == 29)||(@select == 30)|| \
+              (@select == 31)
+  endparam
+
+  complex param muz
+    caption = "Z Strength re"
+    default = (1.0,0.0)
+    visible = (@select == 22)||(@select == 23)||(@select == 24)||\
+              (@select == 25)||(@select == 26)|| (@select == 27)||\
+              (@select == 28)||(@select == 29)||(@select == 30)|| \
+              (@select == 31)
+  endparam
+
+  complex param muz1
+    caption = "Z Strength im"
+    default = (1.0,0.0)
+    visible = (@select == 22)||(@select == 23)||(@select == 24)||\
+              (@select == 25)||(@select == 26)|| (@select == 27)||\
+              (@select == 28)||(@select == 29)||(@select == 30)|| \
+              (@select == 31)
+  endparam
+
+  complex param exz
+    caption = "Z Power re"
+    default = (1.0,0.0)
+    visible = (@select == 22)||(@select == 23)||(@select == 24)||\
+              (@select == 25)||(@select == 26)|| (@select == 27)||\
+              (@select == 28)||(@select == 29)||(@select == 30)|| \
+              (@select == 31)
+  endparam
+
+  complex param exz1
+    caption = "Z Power im"
+    default = (1.0,0.0)
+    visible = (@select == 22)||(@select == 23)||(@select == 24)||\
+              (@select == 25)||(@select == 26)|| (@select == 27)||\
+              (@select == 28)||(@select == 29)||(@select == 30)|| \
+              (@select == 31)
+  endparam
+
+  complex param cg
+    caption = "C Param 1"
+    default = (0,0)
+    visible = @select != 0
+  endparam
+
+  complex param cmg
+    caption = "C Param 2"
+    default = (1,0)
+    visible = @select != 0
+  endparam
+
+  complex param ecg
+    caption = "C Param 3"
+    default = (1,0)
+    visible = @select != 0
+  endparam
+
+  func fnz
+    caption = "Global Z Func"
+    default = ident()
+    hint = "Applies a function to the initial Z"
+  endfunc
+
+  func fnc
+    caption = "Global C Func"
+    default = ident()
+    visible = @select != 0
+    hint = "Applies a function to the initial C"
+  endfunc
+
+  int param zprime
+    caption = "Change Operator"
+    enum = "Normal""Var 1""Var 2"
+    default = 0
+  endparam
+
+  func fnreal
+    caption = "Real Function"
+    default = ident()
+  endfunc
+
+  func fnimag
+    caption = "Imag Function"
+    default = ident()
+  endfunc
+
+  bool param type
+    caption = "Change R/I Fn Flavor"
+    default = false
+    hint = "Effective only with certain Real and Imag Function choices"
+  endparam
+
+  float param realz
+    caption = "Real Offset"
+    default = 0
+  endparam
+
+  float param imagz
+    caption = "Imag Offset"
+    default = 0
+  endparam
+
+Heading
+ caption = "Formula Parameters"
+Endheading
+
+  int param var
+    caption = "Formula Type"
+    enum = "Talis""Talis+1""Talis+2""Talis+3""Talis+4""Talis+5""Talis+6"\
+           "Talis+7""Talis Var 1""Talis Var 2""Talis Var 3""Talis Var 4"\
+           "Talis Var 5""Talis Var 6"
+    default = 0
+  endparam
+
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 100
+    min = 1.0
+    exponential = true
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "function"
+  endparam
+
+
+  func bailfunc
+   caption = "Bailout Function"
+   default = ident ()
+   visible = @test == 7
+  endfunc
+
+  param selform
+   caption = "Extra Loop"
+   enum = "None""Mandelbrot""Barnsley""Ikenaga 1""Ikenaga 2""Mandel Lambda Fn"
+   default = 0
+  endparam
+
+  param zsplit
+   caption = "Change Loop Flavor"
+   default = false
+   visible = @selform != 0
+  endparam
+
+  complex param p1
+    caption = "1st Z Offset"
+    default = (0,0)
+  endparam
+
+  complex param p1a
+    caption = "1st Z Strength"
+    default = (1,0)
+  endparam
+
+  complex param p2
+    caption = "2nd Z Offset"
+    default = (1,0)
+  endparam
+
+  complex param p2a
+    caption = "2nd Z Strength"
+    default = (1,0)
+  endparam
+
+  complex param p3
+    caption = "C Offset"
+    default = (0,0)
+  endparam
+
+  complex param p3a
+    caption = "C Strength"
+    default = (1,0)
+  endparam
+
+  complex param paddz
+   caption = "Global Offset"
+   default = (0.0,0.0)
+  endparam
+
+  complex param pmuz
+   caption = "Global Strength"
+   default = (1.0,0.0)
+  endparam
+
+  complex param pexz
+   caption = "Global Power"
+   default = (1.0,0.0)
+  endparam
+
+  complex param pc1
+    caption = "Loop C Offset"
+    default = (0,0)
+    visible = @selform  != 0
+  endparam
+
+  complex param pc2
+    caption = "Loop C Strength"
+    default = (1,0)
+    visible = @selform  != 0
+  endparam
+
+  complex param pc3
+    caption = "Loop C Power"
+    default = (1,0)
+    visible = @selform  != 0
+  endparam
+
+  func cfunc
+    caption = "Loop C Function"
+    default = ident()
+    visible = @selform  != 0
+  endfunc
+
+  func fn1
+    caption = "1st Z Function"
+    default = ident ()
+  endfunc
+
+  func fn2
+    caption = "2nd Z Function"
+    default = ident ()
+  endfunc
+
+  func fn3
+    caption = "3rd Z Function"
+    default = ident ()
+  endfunc
+
+  func fn6
+    caption = "Extra Z Function"
+    default = ident ()
+    visible = @var > 7
+  endfunc
+
+  func fn7
+    caption = "Extra Z2 Function"
+    default = ident ()
+    visible = @var > 9
+  endfunc
+
+  func fn8
+    caption = "Extra Z3 Function"
+    default = ident ()
+    visible = @var > 9
+  endfunc
+
+  func fn4
+    caption = "Another Function"
+    default = ident ()
+  endfunc
+
+  func fn5
+    caption = "C Function"
+    default = ident ()
+  endfunc
+
+heading
+  caption = "Talis+ Params & Functions"
+  visible = (@var=="Talis+1"||@var=="Talis+2"||@var=="Talis+3"||\
+               @var=="Talis+4"||@var=="Talis+5"||@var=="Talis+6"||\
+               @var=="Talis+7")
+endheading
+
+  func cfn1
+    caption = "Talis+ Function 1"
+    default = conj()
+    visible = (@var=="Talis+1"||@var=="Talis+4"||@var=="Talis+5"||\
+               @var=="Talis+7")
+  endfunc
+
+  func cfn2
+    caption = "Talis+ Function 2"
+    default = conj()
+    visible = (@var=="Talis+2"||@var=="Talis+4"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endfunc
+
+  func cfn3
+    caption = "Talis+ Function 3"
+    default = conj()
+    visible = (@var=="Talis+3"||@var=="Talis+5"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endfunc
+
+  complex param prc1
+    caption = "Talis+ P1 Offset"
+    default = 0
+    visible = (@var=="Talis+1"||@var=="Talis+4"||@var=="Talis+5"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc1a
+    caption = "Talis+ P1 Strength"
+    default = (1,0)
+    visible = (@var=="Talis+1"||@var=="Talis+4"||@var=="Talis+5"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc1b
+    caption = "Talis+ P1 Power"
+    default = (1,0)
+    visible = (@var=="Talis+1"||@var=="Talis+4"||@var=="Talis+5"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc2
+    caption = "Talis+ P2 Offset"
+    default = 0
+    visible = (@var=="Talis+2"||@var=="Talis+4"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc2a
+    caption = "Talis+ P2 Strength"
+    default = (1,0)
+    visible = (@var=="Talis+2"||@var=="Talis+4"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc2b
+    caption = "Talis+ P2 Power"
+    default = (1,0)
+    visible = (@var=="Talis+2"||@var=="Talis+4"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc3
+    caption = "Talis+ P3 Offset"
+    default = 0
+    visible = (@var=="Talis+3"||@var=="Talis+5"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc3a
+    caption = "Talis+ P3 Strength"
+    default = (1,0)
+    visible = (@var=="Talis+3"||@var=="Talis+5"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+
+  complex param prc3b
+    caption = "Talis+ P3 Power"
+    default = (1,0)
+    visible = (@var=="Talis+3"||@var=="Talis+5"||@var=="Talis+6"||\
+               @var=="Talis+7")
+  endparam
+}
+
+class TMA_TrapColoringModulatedIter(common.ulb:TrapColoring) {
+public:
+   float func Result(TrapMode pTrapMode)
+     return ((real(@colorFn((pTrapMode.getIteration(0)-@tz1)*@tz2)^@tz3) % @iter_mod) / @iter_mod ) + ptrapmode.GetTexture(0)
+   endfunc
+
+default:
+   title = "Modulated Iter +"
+  float param iter_mod
+     caption = "No. of Colors"
+     default = 4
+     hint = "The number of color ranges. Decimal values allowed"
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+class TMA_TrapColoringAngleToTrap(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    float angle = real(@colorFn(atan2(pTrapMode.getTransformedPoint(0)\
+                   -@tz1)*@tz2)^@tz3)
+    if angle < 0
+      angle = angle + #pi * 2
+    endif
+    return angle / (#pi * 2)
+  endfunc
+default:
+  title = "Angle to Trap +"
+  rating = recommended
+
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+
+}
+class TMA_TrapColoringModulatedIter(common.ulb:TrapColoring) {
+public:
+   float func Result(TrapMode pTrapMode)
+     return ((real(@colorFn((pTrapMode.getIteration(0)-@tz1)*@tz2)^@tz3) % @iter_mod) / @iter_mod ) + ptrapmode.GetTexture(0)
+   endfunc
+
+default:
+   title = "Modulated Iter +"
+  float param iter_mod
+     caption = "No. of Colors"
+     default = 4
+     hint = "The number of color ranges. Decimal values allowed"
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+class TMA_TrapColoringAngleToTrap(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    float angle = real(@colorFn(atan2(pTrapMode.getTransformedPoint(0)\
+                   -@tz1)*@tz2)^@tz3)
+    if angle < 0
+      angle = angle + #pi * 2
+    endif
+    return angle / (#pi * 2)
+  endfunc
+default:
+  title = "Angle to Trap +"
+  rating = recommended
+
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+
+}
+
+class TMA_TrapColoringAngleToOrigin(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    float angle = real(@colorFn(atan2(pTrapMode.getUntransformedPoint(0)\
+                   -@tz1)*@tz2)^@tz3)
+    if angle < 0
+      angle = angle + #pi * 2
+    endif
+    return angle / (#pi * 2)
+  endfunc
+default:
+  title = "Angle to Origin +"
+  rating = recommended
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+
+}
+
+class TMA_TrapColoringAngleToOrigin2(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    complex z = @colorFn(((pTrapMode.getUntransformedPoint(0)-@tz1)*@tz2)^@tz3)
+    return 0.02 * abs(real(@colorFn2(imag(@colorFn3(z-@pImag*(0,1)) / real(@colorFn4(z-@pReal))))) * 180/#pi)
+  endfunc
+default:
+  title = "Angle to Origin 2 +"
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  func colorFn2
+    caption = "Angle Fn"
+    default = atan()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  func colorFn3
+    caption = "Imag Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  float param pImag
+    caption = "Imag Offset"
+    default = 0
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  func colorFn4
+    caption = "Real Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  float param pReal
+    caption = "Real Offset"
+    default = 0
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+
+class TMA_TrapColoringImaginary(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    return abs(imag(@colorFn(((pTrapMode.getTransformedPoint(0))-@tz1)*@tz2)^@tz3))
+  endfunc
+default:
+  title = "Imaginary +"
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+class TMA_TrapColoringIteration(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    return 0.01 * real(@colorFn((pTrapMode.getIteration(0)-@tz1)*@tz2)^@tz3)
+  endfunc
+default:
+  title = "Iteration +"
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+class TMA_TrapColoringMagnitude(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    return cabs(@colorFn(((pTrapMode.getTransformedPoint(0))-@tz1)*@tz2)^@tz3)
+  endfunc
+default:
+  title = "Magnitude +"
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+
+class TMA_TrapColoringReal(common.ulb:TrapColoring) {
+public:
+  float func Result(TrapMode pTrapMode)
+    return abs(real(@colorFn(((pTrapMode.getTransformedPoint(0))-@tz1)*@tz2)^@tz3))
+  endfunc
+default:
+  title = "Real +"
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  func colorFn
+    caption = "Coloring Mode Fn"
+    default = ident()
+    hint = "Changes the gradient mapping onto the elements"
+  endfunc
+  complex param tz1
+    caption = "Color Offset"
+    default = (0,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz2
+    caption = "Color Strength"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+  complex param tz3
+    caption = "Color Power"
+    default = (1,0)
+    hint = "Changes the gradient mapping onto the elements"
+  endparam
+}
+
+class TMA_TrapModeClosest(Standard.ulb:Standard_TrapModeClosest) {
+public:
+  import "Standard.ulb"
+
+  func Init(complex pz)
+    Standard_TrapModeBase.Init(pz)
+    m_Distances[0] = 1e38
+  endfunc
+
+  func Iterate(complex pz, complex pzt, float pdistance, float ptexture)
+    Standard_TrapModeBase.Iterate(pz, pzt, pdistance, ptexture)
+    if pdistance < m_Threshold
+      m_Solid = false
+    endif
+    if pdistance < m_Distances[0]+ @edge/10
+      SetTrapInfo(0, pz, pzt, pdistance)
+    endif
+  endfunc
+
+default:
+  title = "Closest (+ edge)"
+  rating = recommended
+  param version
+    caption = "Version"
+    default = 1.00
+    visible = false
+  endparam
+  float param edge
+  caption = "Trap Edge"
+  default = 0
+  endparam
+}
+
+
+

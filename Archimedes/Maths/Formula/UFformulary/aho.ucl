@@ -1,0 +1,1370 @@
+comment {
+  Coloring formulas by Andreas Hoppler.
+  $LastChangedDate: 2007-07-10 12:19:12 +0200 (Di, 10 Jul 2007) $
+  
+  2004-02-08 added 'Frothy attractor' formula
+  2004-02-15 updated 'Frothy attractor', added direct color version of same.
+  2004-03-06 added 'Basic-Z' 
+  2007-07-01 added 'PotentialDifferential' and 'Circle', updated 'Stripes_any'
+  2007-07-10 bugfix and tweak to 'PotentialDifferential', suggested by Jim Blue
+  2021-12-25 added 'OrbitTracks' 
+  2021-12-29 added Plug-in 
+}
+
+Stripes_any {
+; This is my workhorse coloring formula.
+; I've migrated three or four different coloring formulas into this one,
+; because it makes it easier to switch and not forget parameters.
+;
+; Types:
+; - Smooth
+;   A variant of the "Smooth (Mandel)" formula.
+;   To be used with a superattractive fixed point, z goes towards the fixed
+;   point quadratically (or as some higher power). Infinity is a valid
+;   attractor, indeed, if you don't check "use z_step", the formula will only
+;   work for attractors zero and infinity.
+; - Smooth 1
+;   To be used with attractive fixed points.
+; - Iteration
+;   Plain vanilla "number of iteration steps" coloring formula.
+; - Real, Imaginary, Sum, Angle, Arg
+;   based on the last value of z.
+; z_step:
+;   If you check "use z_step", the formulas will substitute  "z-z[previous]"
+;   for z, which is useful if the attractor is something other than zero or
+;   or infinity.
+
+global:
+  float shift=@mag/@n_stripes
+  int max_save = 2*@n_stripes+1
+  float adjust_lambda
+  if (@lambda>0)
+    adjust_lambda = 0.5/log(@lambda)
+  else
+    adjust_lambda = -1
+  endif
+
+init:
+  ; initialize "saved z" array
+  complex save_z[2*@n_stripes+1] ; save_z[max_save]
+  int spos=0
+  while spos<max_save
+    save_z[spos] = #z
+    spos = spos+1
+  endwhile
+  spos = 0
+
+loop:
+  spos = spos+1
+  if spos >= max_save
+    spos = 0
+  endif
+  save_z[spos] = #z
+
+final:
+  float v       ; color value
+  complex zz
+  complex ratio = (0,0)
+  int spos1 = (spos+max_save-@n_stripes)%max_save
+
+  if (@use_step)
+    zz = save_z[spos] - save_z[spos1]
+  else
+    zz = #z
+  endif
+  if @type == "Smooth" || @type == "Smooth 1"
+    float absz = |zz|
+    v = #numiter/@n_stripes
+    float logz = 0
+    bool valid = false
+    if (@abs_fix)
+       if (zz!=0.0)
+;          logz = real( log(zz) ) * log(2.0) ; grrr wrong!
+          logz = real( log(zz) ) * 2.0
+          valid = true
+       endif
+    else
+;   float absz = |zz|
+		if (absz > 0)
+           logz = log( absz )
+           valid = true
+        endif
+    endif
+    if (valid)
+      if @type == "Smooth"
+        v = v + ( log(log(@delta)) - log(logz) ) / log(@power)
+      else  ; type == "Smooth 1"
+        if (@lambda > 0)
+          v =  v + ( log(@delta) - logz ) * adjust_lambda
+        else
+          if (@use_step)
+            int spos2 = (spos+max_save-2*@n_stripes)%max_save
+            ratio = zz / (save_z[spos1]-save_z[spos2])
+          else
+            ratio = save_z[spos] / save_z[spos1]
+          endif ; @use_step
+          v =  v + ( log(@delta) - logz ) / log(|ratio|)
+        endif ; @lambda
+      endif ; "Smooth"
+    endif ; valid
+    v = 0.01 * v
+  elseif @type == "Iteration"
+    v = 0.01 * #numiter/@n_stripes
+  elseif @type == "Real"
+    v = 0.05 * (4 + real(zz))
+  elseif @type == "Imaginary"
+    v = 0.05 * (4 + imag(zz))
+  elseif @type == "Angle"
+    v = 0.5 + atan2(zz)/(2*#pi)
+  elseif @type == "Arg"
+    v = 0.05 * cabs(zz)
+  else
+    v = 0.05 * (4 + real(zz) + imag(zz))
+  endif
+
+  if (@n_stripes<=1)
+    #index = v
+  else
+    int stripe = #numiter % @n_stripes
+    #index = v + shift * stripe
+    bool want_solid = false
+    if @use_solid == 1
+      want_solid = stripe >= @first_stripe  &&  stripe <= @last_stripe
+      #solid = want_solid
+    elseif @use_solid == 2
+      want_solid = stripe <  @first_stripe  ||  stripe >  @last_stripe
+      #solid = want_solid
+    endif
+$ifdef DEBUG
+    if (!want_solid) && ratio != (0,0)
+      print ( "ratio = ", ratio, ", abs=", cabs(ratio) )
+    endif
+$endif
+  endif
+
+default:
+
+  title = "Stripes (smooth and otherwise)"
+
+  heading
+    caption = "Coloring parameters"
+  endheading
+  bool param abs_fix
+    caption = "fix abs"
+    default = true
+    hint = "Fix for |z| overflow. \
+         Uncheck for compatibility with previous versions or \
+         for a minuscule increase in speed."
+  endparam
+  bool param use_step
+    caption = "use z_step"
+    hint = "This replaces the final z with (z-z[previous]) in all formulas. \
+            Useful if z converges to an attractor other than zero or infinity.";
+    default = false
+  endparam
+  param type
+    caption = "Coloring Type"
+    enum = "Smooth" "Smooth 1" "Iteration" "Real" "Imaginary" "Sum" "Angle" "Arg"
+    default = 0
+    hint = "Specifies how the fractal is colored."
+  endparam
+  float param delta
+    caption = "Bailout"
+    hint = "The bailout value for the function you're iterating \
+      (This parameter mostly shifts the colors in a small way.)"
+    default = 1e-20
+    enabled = @type == "Smooth" || @type == "Smooth 1"
+  endparam
+  float param power
+    caption = "Exponent"
+    default = 2
+    enabled = @type == "Smooth"
+    hint = "This should be set to match the exponent of the \
+            formula you are using (The default of two works for Newton-style, \
+            Mandelbrot, and a bunch of other formulas.)"
+  endparam
+  float param lambda
+    default = -1
+    enabled = @type == "Smooth 1"
+    hint = "The absolute value of the derivative of f(z) at the fixed point z0. \
+            If less than zero, the algorithm will take it's own estimate of this parameter."
+  endparam
+  heading
+    caption = "Stripes"
+  endheading
+  int param n_stripes
+    Caption = "Number of stripes"
+    hint = "Number of stripes. '1' means no striping done."
+    min = 1
+    default = 1
+  endparam
+  float param mag
+    Caption = "magnitude"
+    enabled = @n_stripes > 1
+    hint = "Striping magnitude. You may want to divide this by the color density."
+    default = 1.0
+  endparam
+  param use_solid
+    caption = "solid color for"
+    enabled = @n_stripes > 1
+    enum = "none" "stripes in group" "stripes excluded"
+    hint = "Lets you set some of the stripes to the 'Solid Color'."
+  endparam
+  int param first_stripe
+    Caption = "first of group"
+    enabled = @n_stripes > 1 && @use_solid > 0
+    hint = "Stripes are numbered from 0 to (number of stripes - 1)"
+    min = 0
+    default = 0
+  endparam
+  int param last_stripe
+    Caption = "last of group"
+    enabled = @n_stripes > 1 && @use_solid > 0
+    hint = "Stripes are numbered from 0 to (number of stripes - 1)"
+    min = 0
+    default = 0
+  endparam
+}
+
+PotentialDifferential {
+; Halfway between field lines and distance estimator. 
+; Has the potential for a smooth coloring.
+;
+; Bugfix and 'final roundoff' tweak by Jim Blue
+global:
+    float r_twopi = recip(2*#pi)
+    float r_relax = 1.0
+    if (@relax>1)
+        r_relax = recip(@relax)
+    endif
+
+init:
+    complex trace[#maxiter+1]       ; record of iteration
+    trace[0] = #z
+    int count = 1
+
+loop:
+    trace[count] = #z
+    count = count+1
+
+final:
+    trace[count] = #z
+    
+    int start_count=@inskipp
+    int end_count = count
+    
+    int ix
+    if (@delta_z)
+        ix = start_count
+        while ix<end_count
+            trace[ix] = trace[ix+1]-trace[ix]
+            ix = ix+1
+        endwhile
+        end_count = end_count-1
+    endif
+  
+    if @adj_inskipp
+        if |trace[start_count]| < 1e-80      ; way too close to zero, skip it
+            start_count = start_count+1
+        endif
+        
+        if |trace[end_count]| < 1e-80      ; way too close to zero, skip it
+            end_count = end_count-1
+        endif
+    endif
+    
+;   if (@method=="additive")
+        float rotation = 0.0
+;   else
+        complex dgdz = 1.0
+;   endif
+    bool initial_iter = true
+    ix = start_count
+    while (ix < end_count)
+        if (@method=="additive")
+            float delta_rot
+            delta_rot = atan2(trace[ix])
+    
+            if (initial_iter)
+                rotation = delta_rot*@initpower
+                initial_iter = false
+            else
+                rotation = rotation + delta_rot
+            endif
+        else
+            if (initial_iter)
+                dgdz = trace[ix]^@initpower
+                initial_iter = false
+            else
+                dgdz = dgdz * trace[ix]
+            endif
+
+            if (@relax>1)            
+                while ( (real(dgdz)>@relax || real(dgdz)<-@relax) && (imag(dgdz)>@relax || imag(dgdz)<-@relax) )
+                    dgdz = r_relax*dgdz
+                endwhile
+                while ( real(dgdz)>-r_relax && real(dgdz)<r_relax && imag(dgdz)>-r_relax && imag(dgdz)<r_relax )
+                    dgdz = @relax*dgdz
+                endwhile
+            endif ; @relax
+        
+        endif ; @method
+        
+        ix = ix+1
+  endwhile
+  
+  float v
+  if (@method=="additive")
+    v = r_twopi * ( atan2( trace[end_count]) - (@power-1)*rotation )
+  else
+    if (@power==2)
+        v = r_twopi * atan2( trace[end_count] / dgdz )
+    else 
+        v = r_twopi * atan2( trace[end_count] / dgdz^(@power-1) )
+    endif
+  endif
+
+  float usedshift
+  if (@auto_shift)  ; calculate shift based on last iteration step
+    if (end_count>start_count)  ; do we have a last iteration step?
+        if (@method=="additive")
+            usedshift = -r_twopi * ( atan2(trace[end_count]) - @power * atan2(trace[end_count-1]) )
+        else
+            usedshift = -r_twopi * atan2(trace[end_count] / (trace[end_count-1]^@power))
+        endif
+$ifdef DEBUG
+        print( "shift=", usedshift )
+$endif
+    else
+        usedshift = 0
+    endif
+  else
+    usedshift = @shift
+  endif
+  v = v + usedshift*(end_count - start_count)
+  if @final == "floor"
+    #index = v - floor(v)
+  elseif @final == "trunc"
+    #index = v - trunc(v)    
+  elseif @final == "round"
+    #index = v - round(v)    
+  else  ; @final == "ceil"
+    #index = ceil(v) - v
+  endif      
+
+default:
+  title = "Potential Differential"
+  heading
+    caption="Formula parameters"
+  endheading
+  float param power
+    caption="Exponent"
+    hint="Should be the exponent of the formula you're iterating \
+        (say, 2 for standard Mandelbrot)"
+    default = 2.0
+  endparam
+  float param initpower
+    caption="Initial exponent"
+    hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+    default = 2.0
+  endparam
+  bool param delta_z
+    caption="use z-step"
+    default=false
+  endparam
+  
+  param final
+    caption="final roundoff"
+    enum = "floor" "ceil" "trunc" "round"
+    default = 0
+  endparam  
+  
+  heading
+    caption="Under the hood"
+$ifdef VER40
+    expanded=false
+$endif
+  endheading
+  
+  int param inskipp
+    caption="Orbit start"
+    hint="Number of initial iterations to skip"
+    min=0
+    default=0
+  endparam
+  bool param adj_inskipp
+    caption="Auto-adjust orbit"
+    hint="Skip the first orbit entry if the orbit starts at (0,0)"
+    default=true
+  endparam
+
+  float param shift
+    caption="Manual shift"
+    hint="Can create (and sometimes, obliterate) stripes"
+    default=0
+    min=-1
+    max=1
+    enabled = (! @auto_shift)
+  endparam
+  bool param auto_shift
+    caption="Automatic shift"
+    hint="Guesstimate the shift value"
+    default=true
+  endparam
+  
+  param method
+    caption="Calculation"
+    hint="Method of calculation (multiplicative is faster, \
+        additive is less prone to round-off errors under certain conditions)"
+    enum="additive" "multiplicative"
+    default=1
+  endparam  
+  float param relax
+    enabled=(@method=="multiplicative")
+    min=0
+    default=128
+  endparam
+  
+}
+
+noodling_3 {
+init:
+  complex z_prev = #pixel
+  complex diff_prev = 1
+  complex diff = 1
+  int cnt = 0
+  int step = 1
+  int dracula = 0
+  complex sum_h = 0
+  complex sum_ll = 0
+loop:
+  step = step - 1
+  if (step <= 0)
+    diff_prev = diff
+    diff = #z - z_prev
+    z_prev = #z
+    cnt = cnt+1
+    step = @cycle
+    if (cnt>=3)
+      if (|diff|<@epsilon)
+        step = #maxiter
+      else
+        complex ll = log(diff_prev / diff)
+        complex h = 2*log(diff_prev) - log(diff-diff_prev)
+        if @oink
+          h = h - cnt*ll
+        endif
+        sum_h = sum_h + h
+        sum_ll = sum_ll + ll
+        dracula = dracula + 1
+      endif ; diff
+    endif ; cnt
+  endif ; step
+
+final:
+    complex f
+    if @lambda
+      f = sum_ll / dracula
+    else
+      f = sum_h / dracula
+    endif
+    float flat
+    if @argument
+      flat = imag( f )/(2*#pi)
+    else
+      flat = 0.01 * real( f )
+    endif
+    if (flat < 0)
+      flat = flat - floor(flat)
+    endif
+    #index = flat
+
+default:
+  int param cycle
+    default = 1
+    min = 1
+  endparam
+  float param epsilon
+    default = 1e-20
+  endparam
+  bool param argument
+    default = true
+  endparam
+  bool param oink
+  endparam
+  bool param lambda
+  endparam
+}
+
+angle_step {
+global:
+init:
+  complex zz1 = 0
+  complex zz2 = 0
+  complex zz3 = 0
+loop:
+  zz3 = zz2
+  zz2 = zz1
+  zz1 = #z
+final:
+  complex v1 = (zz3-zz2);
+  complex v2 = (zz2-zz1);
+  #index = 0.5 + atan2( sqr(v1) / (v2-v1) )/(2*#pi)
+}
+
+frothy_attractor {
+; Displays the attractor for the 'frothy basin' formula:  z^@power - @c*conj(z)
+; Use with 'pixel' formula and 'multipass' or 'one-pass' method.
+; 'Guessing' will guess wrong.
+;
+; The "frothy basin" formula was discovered by  James C. Alexander
+; Adapted for UltraFractal 3.0 by Andreas Hoppler
+;
+; This is the indexed coloring version.
+$undef DIRECT
+
+global:
+  ; if anti-aliasing is used, #x ranges from 0..#width inclusive. See UF manual. Ditto for #y.
+  int pixels[#width+1, #height+1]
+
+  ; set to zero
+  int iw = 0
+  while (iw <= #width)
+    int ih = 0
+    while (ih <= #height)
+      pixels[iw,ih] = 0
+      ih = ih+1
+    endwhile
+    iw = iw+1
+  endwhile
+
+  ; establish transformation from 'z' to screen coords
+  float scale
+  if 3 * #width < 4 * #height
+    scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+  float ax
+  float bx
+  float ay
+  float by
+  if #angle == 0
+    ax  = scale
+    bx  = 0
+    ay  = 0
+    by  = -scale
+  else
+    ax  = scale * cos( #angle )
+    bx  = scale * sin( #angle )
+    ay  = bx
+    by  = - ax
+    ax  = ax * #stretch
+    bx  = bx * #stretch
+  endif
+  if #skew != 0
+    ax = ax - tan(#skew) * ay
+    bx = bx - tan(#skew) * by
+  endif
+
+  int dx0 = round( #width/2  - real(#center)*ax - imag(#center)*bx )
+  int dy0 = round( #height/2 - real(#center)*ay - imag(#center)*by )
+
+  ; okay, we now got the transformation. it is
+  ;    x = dx0 + round( real(z)*ax + imag(z)*bx )
+  ;    y = dy0 + round( real(z)*ay + imag(z)*by )
+
+  int seed = @randseed  ; in case we need the random genie
+
+  ; now fill the pixels
+  int max_x = round(#width * @density)
+  int max_y = round(#width * @density)
+  float mult_x
+  float mult_y
+  if (@explore == "grid")
+    mult_x = (real(@max_z) - real(@min_z)) / max_x
+    mult_y = (imag(@max_z) - imag(@min_z)) / max_y
+  else
+    mult_x = (real(@max_z) - real(@min_z)) / #randomrange
+    mult_y = (imag(@max_z) - imag(@min_z)) / #randomrange
+  endif
+
+$ifdef DIRECT
+  float kernel[3,3]
+  kernel[2,0] = kernel[0,0] = 0.25*@blur_weight
+  kernel[2,1] = kernel[0,1] = @blur_weight
+  kernel[2,2] = kernel[0,2] = 0.25*@blur_weight
+  kernel[1,0] = @blur_weight
+  kernel[1,1] = 0
+  kernel[1,2] = @blur_weight
+$endif
+
+  float z_r = 0
+  complex zc
+
+  int ix = max_x
+  while ix >= 0
+    if @explore == "grid"
+      z_r = real(@min_z) + mult_x * ix
+      print( ix, ":", z_r )
+    endif
+    ix = ix - 1
+
+    int iy = max_y
+    while iy >= 0
+      if (@explore == "grid")
+        zc = z_r + flip( imag(@min_z) + mult_y * iy )
+      else
+        seed = random(seed)
+        z_r = mult_x * seed
+        seed = random(seed)
+        zc = @min_z + z_r + flip( mult_y * seed )
+      endif
+      iy = iy - 1
+
+      ; now do orbit starting at zc
+      int iter = - @skip_iter
+      while (iter < @max_iter)  &&  (|zc| < @bailout)
+
+        zc = zc^@power - @c*conj(zc)
+
+        int xp = dx0 + round( real(zc)*ax + imag(zc)*bx )
+        int yp = dy0 + round( real(zc)*ay + imag(zc)*by )
+        if iter >= 0 && xp>=0 && xp <= #width && yp >= 0 && yp <= #height
+          pixels[xp, yp] = pixels[xp, yp] + 1
+        endif
+
+        iter = iter+1
+      endwhile  ; iter
+    endwhile  ; iy
+  endwhile ; ix
+
+; loop:
+
+final:
+$ifdef DIRECT
+    color c_accu = rgba( 0,0,0,0 ) ; transparent
+    if (pixels[#x, #y] != 0)
+      c_accu = gradient( 0.2 * pixels[#x, #y] )
+    endif
+    if (@blur)
+      int x_c = 0
+      if #x == 0 
+        x_c = 1
+      endif
+      while (x_c < 3)
+        if (x_c < 2 || #x < #width)
+          int y_c = 0
+          if (#y == 0)
+            y_c = 1
+          endif
+          while (y_c < 3)
+            if (y_c < 2 || #y < #height)
+              int col_ix = pixels[ #x + x_c - 1, #y + y_c - 1 ]
+              if col_ix > 0
+                c_accu = compose( c_accu, gradient(0.2*col_ix), kernel[x_c, y_c] )
+              endif
+            endif
+            y_c = y_c + 1
+          endwhile
+        endif
+        x_c = x_c + 1
+      endwhile
+    endif ; @blur
+    #color = c_accu      
+$else    
+    int cnt = pixels[#x, #y]
+    if (@blur)
+      complex accu = @pre_func(0.2*cnt)
+      int c1
+      if #x > 0
+        c1 = pixels[#x-1, #y]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #x < #width
+        c1 = pixels[#x+1, #y]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #y > 0
+        c1 = pixels[#x, #y-1]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #y < #height
+        c1 = pixels[#x, #y+1]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if (cnt == 0)
+        #solid = true
+      endif
+      #index = real(accu)
+    else
+      if (cnt == 0)
+        #solid = true
+      endif
+      #index = 0.2*cnt
+    endif
+$endif 
+
+default:
+  title = "frothy attractor"
+	; specialized for 'frothy basin' formula
+	rating = notRecommended
+	; do not parallelize when rendering to disk
+  render = false
+
+  heading
+    caption = "Fractal shape"
+  endheading
+  complex param c
+    caption="c"
+    default=(1, 0.7)
+    hint="The c in the formula  z^k - c*conj(z). For 'standard' images, use real(c) == 1.0"
+  endparam
+  int param power
+    caption = "power k"
+    default = 2
+    hint="The Power k in the formula  z^k - c*conj(z)"
+  endparam
+
+  heading
+    caption = "Orbit"
+  endheading
+
+  param explore
+    enum = "random" "grid"
+    default = 1
+  endparam
+
+  float param density
+    default = 0.1
+    min = 0.0
+    hint = "Number of orbits to explore, as a percentage of the image size."
+  endparam
+
+  int param skip_iter
+    caption = "iterations to skip"
+    default = 10
+    min = 0
+    hint = "Lets you skip the first few iterations of each orbit, to better bring out the attractor."
+  endparam
+
+  int param max_iter
+    caption = "maximum iterations"
+    default = 100
+    min = 1
+    hint = "Lets you skip the first few iterations of each orbit, to better bring out the attractor."
+  endparam
+
+  int param randseed
+    caption = "Random seed"
+    hint = "The seed for the random number generator."
+    default = 314159
+    visible = @explore == "random"
+  endparam
+
+  float param bailout
+    caption = "large bailout"
+    hint="Radius for escape to infinity."
+    default= 1e2
+  endparam
+
+  complex param min_z
+    caption = "grid bottom left"
+    default = (-2.5, -2.5)
+  endparam
+
+  complex param max_z
+    caption = "grid top right"
+    default = (2.5, 2.5)
+  endparam
+
+  heading
+    caption = "Blur"
+  endheading
+
+  bool param blur
+    caption = "blur"
+    default = false
+  endparam
+
+  float param blur_weight
+    caption = "weight"
+    default = 0.125
+    enabled = @blur
+  endparam
+
+$ifdef DIRECT
+  ; nothing
+$else
+  complex func pre_func
+    default = ident()
+    enabled = @blur 
+  endfunc
+$endif
+}
+
+frothy_attractor_direct {
+; Displays the attractor for the 'frothy basin' formula:  z^@power - @c*conj(z)
+; Use with 'pixel' formula and 'multipass' or 'one-pass' method.
+; 'Guessing' will guess wrong.
+;
+; The "frothy basin" formula was discovered by  James C. Alexander
+; Adapted for UltraFractal 3.0 by Andreas Hoppler
+;
+; This is the direct coloring version (gives nicer blur)
+$define DIRECT
+global:
+  ; if anti-aliasing is used, #x ranges from 0..#width inclusive. See UF manual. Ditto for #y.
+  int pixels[#width+1, #height+1]
+
+  ; set to zero
+  int iw = 0
+  while (iw <= #width)
+    int ih = 0
+    while (ih <= #height)
+      pixels[iw,ih] = 0
+      ih = ih+1
+    endwhile
+    iw = iw+1
+  endwhile
+
+  ; establish transformation from 'z' to screen coords
+  float scale
+  if 3 * #width < 4 * #height
+    scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+  float ax
+  float bx
+  float ay
+  float by
+  if #angle == 0
+    ax  = scale
+    bx  = 0
+    ay  = 0
+    by  = -scale
+  else
+    ax  = scale * cos( #angle )
+    bx  = scale * sin( #angle )
+    ay  = bx
+    by  = - ax
+    ax  = ax * #stretch
+    bx  = bx * #stretch
+  endif
+  if #skew != 0
+    ax = ax - tan(#skew) * ay
+    bx = bx - tan(#skew) * by
+  endif
+
+  int dx0 = round( #width/2  - real(#center)*ax - imag(#center)*bx )
+  int dy0 = round( #height/2 - real(#center)*ay - imag(#center)*by )
+
+  ; okay, we now got the transformation. it is
+  ;    x = dx0 + round( real(z)*ax + imag(z)*bx )
+  ;    y = dy0 + round( real(z)*ay + imag(z)*by )
+
+  int seed = @randseed  ; in case we need the random genie
+
+  ; now fill the pixels
+  int max_x = round(#width * @density)
+  int max_y = round(#width * @density)
+  float mult_x
+  float mult_y
+  if (@explore == "grid")
+    mult_x = (real(@max_z) - real(@min_z)) / max_x
+    mult_y = (imag(@max_z) - imag(@min_z)) / max_y
+  else
+    mult_x = (real(@max_z) - real(@min_z)) / #randomrange
+    mult_y = (imag(@max_z) - imag(@min_z)) / #randomrange
+  endif
+
+$ifdef DIRECT
+  float kernel[3,3]
+  kernel[2,0] = kernel[0,0] = 0.25*@blur_weight
+  kernel[2,1] = kernel[0,1] = @blur_weight
+  kernel[2,2] = kernel[0,2] = 0.25*@blur_weight
+  kernel[1,0] = @blur_weight
+  kernel[1,1] = 0
+  kernel[1,2] = @blur_weight
+$endif
+
+  float z_r = 0
+  complex zc
+
+  int ix = max_x
+  while ix >= 0
+    if @explore == "grid"
+      z_r = real(@min_z) + mult_x * ix
+      ; print( ix, ":", z_r )
+    endif
+    ix = ix - 1
+
+    int iy = max_y
+    while iy >= 0
+      if (@explore == "grid")
+        zc = z_r + flip( imag(@min_z) + mult_y * iy )
+      else
+        seed = random(seed)
+        z_r = mult_x * seed
+        seed = random(seed)
+        zc = @min_z + z_r + flip( mult_y * seed )
+      endif
+      iy = iy - 1
+
+      ; now do orbit starting at zc
+      int iter = - @skip_iter
+      while (iter < @max_iter)  &&  (|zc| < @bailout)
+
+        zc = zc^@power - @c*conj(zc)
+
+        int xp = dx0 + round( real(zc)*ax + imag(zc)*bx )
+        int yp = dy0 + round( real(zc)*ay + imag(zc)*by )
+        if iter >= 0 && xp>=0 && xp <= #width && yp >= 0 && yp <= #height
+          pixels[xp, yp] = pixels[xp, yp] + 1
+        endif
+
+        iter = iter+1
+      endwhile  ; iter
+    endwhile  ; iy
+  endwhile ; ix
+
+; loop:
+
+final:
+$ifdef DIRECT
+    color c_accu = rgba( 0,0,0,0 ) ; transparent
+    if (pixels[#x, #y] != 0)
+      c_accu = gradient( 0.2 * pixels[#x, #y] )
+    endif
+    if (@blur)
+      int x_c = 0
+      if #x == 0 
+        x_c = 1
+      endif
+      while (x_c < 3)
+        if (x_c < 2 || #x < #width)
+          int y_c = 0
+          if (#y == 0)
+            y_c = 1
+          endif
+          while (y_c < 3)
+            if (y_c < 2 || #y < #height)
+              int col_ix = pixels[ #x + x_c - 1, #y + y_c - 1 ]
+              if col_ix > 0
+                c_accu = compose( c_accu, gradient(0.2*col_ix), kernel[x_c, y_c] )
+              endif
+            endif
+            y_c = y_c + 1
+          endwhile
+        endif
+        x_c = x_c + 1
+      endwhile
+    endif ; @blur
+    #color = c_accu      
+$else    
+    int cnt = pixels[#x, #y]
+    if (@blur)
+      complex accu = @pre_func(0.2*cnt)
+      int c1
+      if #x > 0
+        c1 = pixels[#x-1, #y]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #x < #width
+        c1 = pixels[#x+1, #y]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #y > 0
+        c1 = pixels[#x, #y-1]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if #y < #height
+        c1 = pixels[#x, #y+1]
+        accu = accu + @blur_weight * @pre_func(0.2*c1)
+        cnt = cnt + c1
+      endif
+      if (cnt == 0)
+        #solid = true
+      endif
+      #index = real(accu)
+    else
+      if (cnt == 0)
+        #solid = true
+      endif
+      #index = 0.2*cnt
+    endif
+$endif 
+
+default:
+  title = "frothy attractor (direct color)"
+	; specialized for 'frothy basin' formula
+	rating = notRecommended
+	; do not parallelize when rendering to disk
+  render = false
+
+  heading
+    caption = "Fractal shape"
+  endheading
+  complex param c
+    caption="c"
+    default=(1, 0.7)
+    hint="The c in the formula  z^k - c*conj(z). For 'standard' images, use real(c) == 1.0"
+  endparam
+  int param power
+    caption = "power k"
+    default = 2
+    hint="The Power k in the formula  z^k - c*conj(z)"
+  endparam
+
+  heading
+    caption = "Orbit"
+  endheading
+
+  param explore
+    enum = "random" "grid"
+    default = 1
+  endparam
+
+  float param density
+    default = 0.1
+    min = 0.0
+    hint = "Number of orbits to explore, as a percentage of the image size."
+  endparam
+
+  int param skip_iter
+    caption = "iterations to skip"
+    default = 10
+    min = 0
+    hint = "Lets you skip the first few iterations of each orbit, to better bring out the attractor."
+  endparam
+
+  int param max_iter
+    caption = "maximum iterations"
+    default = 100
+    min = 1
+    hint = "Lets you skip the first few iterations of each orbit, to better bring out the attractor."
+  endparam
+
+  int param randseed
+    caption = "Random seed"
+    hint = "The seed for the random number generator."
+    default = 314159
+    visible = @explore == "random"
+  endparam
+
+  float param bailout
+    caption = "large bailout"
+    hint="Radius for escape to infinity."
+    default= 1e2
+  endparam
+
+  complex param min_z
+    caption = "grid bottom left"
+    default = (-2.5, -2.5)
+  endparam
+
+  complex param max_z
+    caption = "grid top right"
+    default = (2.5, 2.5)
+  endparam
+
+  heading
+    caption = "Blur"
+  endheading
+
+  bool param blur
+    caption = "blur"
+    default = false
+  endparam
+
+  float param blur_weight
+    caption = "weight"
+    default = 0.125
+    enabled = @blur
+  endparam
+
+$ifdef DIRECT
+  ; nothing
+$else
+  complex func pre_func
+    default = ident()
+    enabled = @blur 
+  endfunc
+$endif
+}
+
+Basic-Z {
+; colors based on final value of z.
+; scales colors differently than "Basic" in standard.ucl
+final:
+  float v
+  if @type == "Angle"
+    v = atan2(#z)/(2*#pi)
+  elseif @type == "Abs"
+    v = cabs(#z)
+  elseif @type == "Real"
+    v = real(#z)
+  elseif @type == "Imaginary"
+    v = imag(#z)
+  else
+    v = imag(#z) + real(#z)
+  endif
+  if (v<0)
+    v = v - floor(v)
+  endif
+  #index = v
+  
+default:
+  title = "Basic-Z" 
+  param type
+    caption = "Coloring Type"
+    enum = "Real" "Imaginary" "Sum" "Abs" "Angle"
+    default = 3
+  endparam
+}
+
+
+Circle {
+; Auxilliary coloring function to draw a circle
+; Intended for use with pixel formula
+global:
+    float slope = recip(@width)
+init:
+
+loop:
+
+final:
+    float r = cabs( #z - @center ) - @radius
+    float v = 399/400
+    bool is_solid=false
+    if (r<0)
+        if @inside=="cutoff"
+            is_solid=true
+        elseif @inside=="ramp"
+            v = -v*r*slope
+        elseif @inside=="exp"
+            v = 1-exp(v*r*slope)
+        elseif @inside=="filled"
+            v = 0
+        elseif @inside=="step"
+            if (r>=-@width)
+                v = 0
+            else
+                is_solid=true
+            endif
+        else ; @inside=="smoothstep"
+            if (r>=-@width)
+                float tmp = -r*slope
+                v = v*sqr(tmp)*(3-2*tmp)
+            else
+                is_solid=true
+            endif
+        endif
+                
+    else
+        if @outside=="cutoff"
+            is_solid=true
+        elseif @outside=="ramp"
+            v = v*r*slope
+        elseif @outside=="exp"
+            v = 1-exp(-v*r*slope)
+        elseif @outside=="filled"
+            v = 0
+        elseif @outside=="step"
+            if (r<=@width)
+                v = 0
+            else
+                is_solid=true
+            endif
+        else ; @outside=="smoothstep"
+            if (r<=@width)
+                float tmp = r*slope
+                v = v*sqr(tmp)*(3-2*tmp)
+            else
+                is_solid=true
+            endif
+        endif
+    endif
+    if @usesolid
+       if is_solid || v >= 399/400
+          #solid = true
+       endif
+    endif
+    #index = v
+
+default:
+  title = "Coordinate Circle"
+  heading
+    caption="Origin and size"
+  endheading
+  complex param center
+    caption="Center"
+    default=(0,0)
+  endparam
+  float param radius
+    caption="Radius"
+    default=1
+  endparam
+
+  heading
+    caption="Display"
+  endheading
+  float param width
+    caption="Ring width"
+    default=0.05
+  endparam
+  bool param usesolid
+    caption="Use solid color"
+    default=true
+  endparam
+  param inside
+    caption="Inside edge"
+    enum="cutoff" "filled" "step" "ramp" "smoothstep" "exp"
+    default=3
+  endparam
+  param outside
+    caption="Outside edge"
+    enum="cutoff" "filled" "step" "ramp" "smoothstep" "exp"
+    default=3
+  endparam
+}
+
+; === UF 5.0 and later ==============================================
+
+OrbitTracks {
+$ifdef VER50
+; Highlights the points of an orbit
+; Intended for use with pixel formula
+global:
+	import "common.ulb"
+	import "aho.ulb"
+	
+	Coloring c = new @coloringClass(0)
+init:
+	c.Init(#z, #pixel)
+loop:
+	c.Iterate(#z)
+final:
+	#color = c.Result(#z)
+	#solid = c.IsSolid()
+	
+
+default:
+	title = "Orbit Tracks"
+	rating = average
+	
+	Coloring param coloringClass
+		default = OrbitTracksColoring
+		selectable = false
+	endparam
+	
+	param pFormula = coloringClass.pFormula
+	param pParam = coloringClass.pParam
+	param pMaxIter = coloringClass.pMaxIter
+	param pStartType = coloringClass.pStartType
+	param pStartPoint = coloringClass.pStartPoint
+	param pStartIndex = coloringClass.pStartIndex
+	param pOrbitShape = coloringClass.pOrbitMarker
+$endif
+}
+
+HSLDirectColoring {
+$ifdef VER50
+
+global:
+	import "common.ulb"
+	import "aho.ulb"
+	Coloring c = new @coloringClass(0)
+init:
+	c.Init(#z, #pixel)
+	
+loop:
+	c.Iterate(#z)
+	
+final:
+	#color = c.Result(#z)
+	#solid = c.IsSolid()
+	
+default:
+	title = "HSL Angle Coloring (Direct)"
+	; too specialized
+	rating = notRecommended
+	
+	Coloring param coloringClass
+		default = DirectRing
+		selectable = false
+	endparam
+$endif
+}
+
+aho_PluginDirectColoring {
+;
+
+global:
+	import "common.ulb"
+	import "aho.ulb"
+
+	aho_ColoringOrbiter o = new @p_orbiterClass(0)
+	o.setPower(@p_power)
+	aho_PotentialOrbiter poto = aho_PotentialOrbiter(o)
+	if poto!=0
+		poto.setBailout(@p_bailout)
+	endif
+	GradientWrapper colorWrapper = new @p_colorWrapper(0)
+	
+init:
+	o.Init(#z, #pixel)
+	
+loop:
+	o.Iterate(#z)
+	
+final:
+	o.Finish(#z, 0)
+	complex v = o.ComplexResult()
+	#color = colorWrapper.getColor( real(v) )
+	#solid = o.IsSolid()
+
+default:
+	title = "Plug-In Orbiters"
+	rating = recommended
+	
+	float param p_power
+		caption = "Exponent"
+		default = 2
+		hint = "This should be set to match the exponent of the \
+			formula you are using (The default of two works for Newton-style, \
+			Mandelbrot, and a bunch of other formulas.)"
+	endparam
+	
+	aho_ColoringOrbiter param p_orbiterClass
+		caption = "Orbit Algorithm"
+		expanded = false
+		default = aho_PotentialOrbiter
+		hint = "Selects the coloring algorithm to be used."
+	endparam
+	
+	GradientWrapper param p_colorWrapper
+		caption = "Color map"
+		default = DefaultGradient
+	endparam
+
+	heading
+		caption="Bailout"
+	endheading
+	
+	float param p_bailout
+		caption = "Bailout"
+		hint = "The bailout value for the function you're iterating \
+		  (This parameter mostly shifts the colors in a small way.)"
+		default = 1e10
+	endparam
+	
+}

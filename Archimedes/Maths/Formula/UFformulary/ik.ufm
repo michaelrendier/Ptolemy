@@ -1,0 +1,9121 @@
+
+  January 20, 2001
+  
+  This module deals with 1)variations of the cubic standard formula 
+  and 2) other methods of producing 2D-images of the four dimensional 
+  hyper space of cubic polynomials expressed by the standard-formula. 
+  Please read the rtf-dokument "GetStarted" attached to the zip-file 
+  together with a set parameter-files. Many thanks to Stig Pettersson 
+  for helping me with this module, and to Stephen C Ferguson and 
+  Professor Holger Jaenisch for sharing some interesting formulas.
+    
+  Regards,
+  Ingvar Kullberg
+  
+  www.come.to/kullberg
+  
+
+MilnorAB {
+
+
+init:
+  float c=0
+  float d=0
+  float t=0
+  float aa=0
+  a=0+0i
+  b=0+0i
+  c=real(#pixel)
+  d=imag(#pixel)
+  float IX=@InterX
+  float IY=@InterY
+  float yrot=0
+  float xrot=0
+  float xrotu=0
+  float yrotu=0
+  float zrot=0
+  float uzrot=0
+  float projxz=0
+  float projyz=0
+  float projxu=0
+  float projyu=0
+
+    IF @yrot!=0
+      yrot=(@yrot%360)*pi/180
+      t=cabs(c+IX*1i)      
+      aa=atan2(c+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        c=-t
+        IX=0
+      ELSEIF aa==pi/2
+        c=0
+        IX=t
+      ELSEIF aa==-pi/2
+        c=0
+        IX=-t
+      ELSE
+        c=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+d*1i)     
+      aa=atan2(IX+d*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        d=0
+      ELSEIF aa==pi/2
+        IX=0
+        d=t
+      ELSEIF aa==-pi/2
+        IX=0
+        d=-t
+      ELSE
+        IX=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    IF @yrotu!=0
+      yrotu=(@yrotu%360)*pi/180
+      t=cabs(c+IY*1i)      
+      aa=atan2(c+IY*1i) 
+      aa=yrotu+aa
+      IF abs(aa)==pi
+        c=-t
+        IY=0
+      ELSEIF aa==pi/2
+        c=0
+        IY=t
+      ELSEIF aa==-pi/2
+        c=0
+        IY=-t
+      ELSE
+        c=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrotu!=0
+      xrotu=(@xrotu%360)*pi/180
+      t=cabs(IY+d*1i)      
+      aa=atan2(IY+d*1i) 
+      aa=xrotu+aa
+      IF abs(aa)==pi
+        IY=-t
+        d=0
+      ELSEIF aa==pi/2
+        IY=0
+        d=t
+      ELSEIF aa==-pi/2
+        IY=0
+        d=-t
+      ELSE
+        IY=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0
+      zrot=(@zrot%360)*pi/180
+      t=cabs(c+d*1i)
+      aa=atan2(c+d*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        c=-t
+        d=0
+      ELSEIF aa==pi/2
+        c=0
+        d=t
+      ELSEIF aa==-pi/2
+        c=0
+        d=-t
+      ELSE
+        c=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+     
+    IF @uzrot!=0
+      uzrot=(@uzrot%360)*pi/180
+      t=cabs(IX+IY*1i)    
+      aa=atan2(IX+IY*1i)
+      aa=uzrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        IY=0
+      ELSEIF aa==pi/2
+        IX=0
+        IY=t
+      ELSEIF aa==-pi/2
+        IX=0
+        IY=-t
+      ELSE
+        IX=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+
+
+    IF @projxz!=0
+      projxz=(@projxz%360)*pi/180
+      IF @projxz==90      
+        IX=c+IX
+        c=0
+      ELSE
+        IX=c*sin(projxz)+IX
+        c=c*cos(projxz)
+      ENDIF
+    ENDIF
+  
+    IF @projyz!=0
+      projyz=(@projyz%360)*pi/180
+      IF @projyz==90      
+        IX=d+IX
+        d=0
+      ELSE
+        IX=d*sin(projyz)+IX
+        d=d*cos(projyz)
+      ENDIF
+    ENDIF
+    
+    IF @projxu!=0
+      projxu=(@projxu%360)*pi/180
+      IF @projxu==90      
+        IY=c+IY
+        c=0
+      ELSE
+        IY=c*sin(projxu)+IY
+        c=c*cos(projxu)
+      ENDIF
+    ENDIF
+    
+    IF @projyu!=0
+      projyu=(@projyu%360)*pi/180
+      IF @projyu==90      
+        IY=d+IY
+        d=0
+      ELSE
+        IY=d*sin(projyu)+IY
+        d=d*cos(projyu)
+      ENDIF
+    ENDIF
+    
+  IF @FLIP==1
+    IX=d
+    d=@FlipValue
+  ELSEIF @FLIP==2
+    IY=d
+    d=@FlipValue
+  ELSEIF @FLIP==3
+    IX=c
+    c=@FlipValue
+  ELSEIF @FLIP==4
+    IY=c
+    c=@FlipValue
+  ENDIF
+  
+  If @MovePlane == true
+    IX = real(#center)
+    IY = imag(#center)
+  ENDIF
+    
+  IF @IterPlane==0
+    a=c+d*1i
+    b=IX+IY*1i 
+  ELSEIF @IterPlane==1
+    a=c+IX*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==2
+    a=c+IX*1i
+    b=IY+d*1i
+  ELSEIF @IterPlane==3
+    a=IX+c*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==4
+    a=IX+c*1i
+    b=Iy+d*1i
+  ELSE 
+    a=IX+IY*1i
+    b=c+d*1i
+  ENDIF
+  
+  IF @M==false
+    z=sqrt(A)
+  ELSE 
+    z=-sqrt(A)
+  ENDIF
+    
+  loop:
+    z=z*z*z-3*A*z+sqrt(B)
+    
+bailout:
+  |z|<@bailout
+  
+  
+switch:
+  type="ToMilnorJulia"
+  seed=#pixel
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+  
+default:
+  title = "MilnorAB"
+  
+  param IterPlane
+    enum = "(A-real,A-imag)" "(A-real,B-real)" "(A-real,B-imag)" "(A-imag,B-real)" \
+    "(A-imag,B-imag)" "(B-real,B-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-sqrt(A)"
+    hint="Sets the sign of the initial parameter a. If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+     
+  }
+
+ToMilnorJulia {
+init:
+  
+  complex c=@seed
+  complex z=#pixel
+  g=@IterPlane
+  d=@InterX+flip(@interY)
+  IF g==0
+     a=c
+     b=d
+  ELSEIF g==1
+    a=real(c)+real(d)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==2
+    a=real(c)+real(d)*1i
+    b=imag(d)+imag(c)*1i
+  ELSEIF g==3
+    a=real(d)+real(c)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==4
+    a=real(d)+real(c)*1i
+    b=imag(d)+imag(c)*1i
+  ELSE
+    a=d
+    b=c
+  ENDIF
+   
+   
+loop:
+  z=z*z*z-3*A*z+sqrt(B)
+  
+bailout:
+  |z|<@bailout
+  
+switch:
+  type="MilnorAB"
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+
+default:
+  title = "ToMilnorJulia"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-sqrt(A)"
+    hint="Sets the sign of the initial parameter sqrt(A). If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+
+}
+
+MilnorJulia {
+init:
+  a=@areal+@aimag*1i
+  b=@breal+@bimag*1i
+  z=#pixel
+loop:
+  z=z*z*z-3*A*z+sqrt(B)  
+bailout:
+  |z|<@bailout
+default:
+  title = "MilnorJulia"
+  
+  param areal
+    caption="a-real"
+    hint="Real part of a-parameter"
+    default=0.0
+  endparam
+  
+   param aimag
+    caption="a-imag"
+    hint="Imaginary part of a-parameter"
+    default=0.0
+  endparam
+  
+   param breal
+    caption="b-real"
+    hint="Real part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bimag
+    caption="b-imag"
+    hint="Imaginary part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bailout
+    caption="bailout"
+    hint="Value of bailout"
+    default=100.0  
+  endparam
+  
+
+  param bailout
+    caption="bailout"
+    default=0.00001
+    hint="Bailout value."
+   endparam
+
+}
+
+SorensenCubic {
+
+
+init:
+  float c=0
+  float d=0
+  float t=0
+  float aa=0
+  a=0+0i
+  b=0+0i
+  c=real(#pixel)
+  d=imag(#pixel)
+  float IX=@InterX
+  float IY=@InterY
+  float yrot=0
+  float xrot=0
+  float xrotu=0
+  float yrotu=0
+  float zrot=0
+  float uzrot=0
+  float projxz=0
+  float projyz=0
+  float projxu=0
+  float projyu=0
+
+    IF @yrot!=0
+      yrot=(@yrot%360)*pi/180
+      t=cabs(c+IX*1i)      
+      aa=atan2(c+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        c=-t
+        IX=0
+      ELSEIF aa==pi/2
+        c=0
+        IX=t
+      ELSEIF aa==-pi/2
+        c=0
+        IX=-t
+      ELSE
+        c=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+d*1i)     
+      aa=atan2(IX+d*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        d=0
+      ELSEIF aa==pi/2
+        IX=0
+        d=t
+      ELSEIF aa==-pi/2
+        IX=0
+        d=-t
+      ELSE
+        IX=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    IF @yrotu!=0
+      yrotu=(@yrotu%360)*pi/180
+      t=cabs(c+IY*1i)      
+      aa=atan2(c+IY*1i) 
+      aa=yrotu+aa
+      IF abs(aa)==pi
+        c=-t
+        IY=0
+      ELSEIF aa==pi/2
+        c=0
+        IY=t
+      ELSEIF aa==-pi/2
+        c=0
+        IY=-t
+      ELSE
+        c=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrotu!=0
+      xrotu=(@xrotu%360)*pi/180
+      t=cabs(IY+d*1i)      
+      aa=atan2(IY+d*1i) 
+      aa=xrotu+aa
+      IF abs(aa)==pi
+        IY=-t
+        d=0
+      ELSEIF aa==pi/2
+        IY=0
+        d=t
+      ELSEIF aa==-pi/2
+        IY=0
+        d=-t
+      ELSE
+        IY=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0
+      zrot=(@zrot%360)*pi/180
+      t=cabs(c+d*1i)
+      aa=atan2(c+d*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        c=-t
+        d=0
+      ELSEIF aa==pi/2
+        c=0
+        d=t
+      ELSEIF aa==-pi/2
+        c=0
+        d=-t
+      ELSE
+        c=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+     
+    IF @uzrot!=0
+      uzrot=(@uzrot%360)*pi/180
+      t=cabs(IX+IY*1i)    
+      aa=atan2(IX+IY*1i)
+      aa=uzrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        IY=0
+      ELSEIF aa==pi/2
+        IX=0
+        IY=t
+      ELSEIF aa==-pi/2
+        IX=0
+        IY=-t
+      ELSE
+        IX=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+
+
+    IF @projxz!=0
+      projxz=(@projxz%360)*pi/180
+      IF @projxz==90      
+        IX=c+IX
+        c=0
+      ELSE
+        IX=c*sin(projxz)+IX
+        c=c*cos(projxz)
+      ENDIF
+    ENDIF
+  
+    IF @projyz!=0
+      projyz=(@projyz%360)*pi/180
+      IF @projyz==90      
+        IX=d+IX
+        d=0
+      ELSE
+        IX=d*sin(projyz)+IX
+        d=d*cos(projyz)
+      ENDIF
+    ENDIF
+    
+    IF @projxu!=0
+      projxu=(@projxu%360)*pi/180
+      IF @projxu==90      
+        IY=c+IY
+        c=0
+      ELSE
+        IY=c*sin(projxu)+IY
+        c=c*cos(projxu)
+      ENDIF
+    ENDIF
+    
+    IF @projyu!=0
+      projyu=(@projyu%360)*pi/180
+      IF @projyu==90      
+        IY=d+IY
+        d=0
+      ELSE
+        IY=d*sin(projyu)+IY
+        d=d*cos(projyu)
+      ENDIF
+    ENDIF
+    
+  IF @FLIP==1
+    IX=d
+    d=@FlipValue
+  ELSEIF @FLIP==2
+    IY=d
+    d=@FlipValue
+  ELSEIF @FLIP==3
+    IX=c
+    c=@FlipValue
+  ELSEIF @FLIP==4
+    IY=c
+    c=@FlipValue
+  ENDIF
+  
+  If @MovePlane == true
+    IX = real(#center)
+    IY = imag(#center)
+  ENDIF
+    
+  IF @IterPlane==0
+    a=c+d*1i
+    b=IX+IY*1i 
+  ELSEIF @IterPlane==1
+    a=c+IX*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==2
+    a=c+IX*1i
+    b=IY+d*1i
+  ELSEIF @IterPlane==3
+    a=IX+c*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==4
+    a=IX+c*1i
+    b=Iy+d*1i
+  ELSE 
+    a=IX+IY*1i
+    b=c+d*1i
+  ENDIF
+  
+  IF @M==false
+    z=-a/3+sqrt(a*a/9-b/3)
+  ELSE 
+    z=-a/3-sqrt(a*a/9-b/3)
+  ENDIF
+    
+  loop:
+    z=z*z*z+a*z*z+b*z
+    
+bailout:
+  |z|<@bailout
+  
+  
+switch:
+  type="ToSorensenCubicJulia"
+  seed=#pixel
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+  
+default:
+  title = "SorensenCubic"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,b-real)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-a/3-sqrt(a*a/9-b/3)"
+    hint="Change to the other critical point. If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+     
+  }
+
+ToSorensenCubicJulia {
+init:
+  
+  complex c=@seed
+  complex z=#pixel
+  g=@IterPlane
+  d=@InterX+flip(@interY)
+  IF g==0
+     a=c
+     b=d
+  ELSEIF g==1
+    a=real(c)+real(d)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==2
+    a=real(c)+real(d)*1i
+    b=imag(d)+imag(c)*1i
+  ELSEIF g==3
+    a=real(d)+real(c)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==4
+    a=real(d)+real(c)*1i
+    b=imag(d)+imag(c)*1i
+  ELSE
+    a=d
+    b=c
+  ENDIF
+   
+   
+loop:
+  z=z*z*z+a*z*z+b*z
+  
+bailout:
+  |z|<@bailout
+  
+switch:
+  type="SorensenCubic"
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+
+default:
+  title = "ToSorensenCubicJulia"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-a/3-sqrt(a*a/9-b/3)"
+    hint="Sets the sign of the initial parameter sqrt(A). If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+
+}
+
+SorensenCubicJulia {
+init:
+  a=@areal+@aimag*1i
+  b=@breal+@bimag*1i
+  z=#pixel
+loop:
+  z=z*z*z+a*z*z+b*z  
+bailout:
+  |z|<@bailout
+default:
+  title = "SorensenCubicJulia"
+  
+  param areal
+    caption="a-real"
+    hint="Real part of a-parameter"
+    default=0.0
+  endparam
+  
+   param aimag
+    caption="a-imag"
+    hint="Imaginary part of a-parameter"
+    default=0.0
+  endparam
+  
+   param breal
+    caption="b-real"
+    hint="Real part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bimag
+    caption="b-imag"
+    hint="Imaginary part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bailout
+    caption="bailout"
+    hint="Value of bailout"
+    default=100.0  
+  endparam
+  
+
+  param bailout
+    caption="bailout"
+    default=0.00001
+    hint="Bailout value."
+   endparam
+
+}
+
+KullbergCubic {
+
+
+init:
+  float c=0
+  float d=0
+  float t=0
+  float aa=0
+  a=0+0i
+  b=0+0i
+  c=real(#pixel)
+  d=imag(#pixel)
+  float IX=@InterX
+  float IY=@InterY
+  float yrot=0
+  float xrot=0
+  float xrotu=0
+  float yrotu=0
+  float zrot=0
+  float uzrot=0
+  float projxz=0
+  float projyz=0
+  float projxu=0
+  float projyu=0
+
+    IF @yrot!=0
+      yrot=(@yrot%360)*pi/180
+      t=cabs(c+IX*1i)      
+      aa=atan2(c+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        c=-t
+        IX=0
+      ELSEIF aa==pi/2
+        c=0
+        IX=t
+      ELSEIF aa==-pi/2
+        c=0
+        IX=-t
+      ELSE
+        c=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+d*1i)     
+      aa=atan2(IX+d*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        d=0
+      ELSEIF aa==pi/2
+        IX=0
+        d=t
+      ELSEIF aa==-pi/2
+        IX=0
+        d=-t
+      ELSE
+        IX=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    IF @yrotu!=0
+      yrotu=(@yrotu%360)*pi/180
+      t=cabs(c+IY*1i)      
+      aa=atan2(c+IY*1i) 
+      aa=yrotu+aa
+      IF abs(aa)==pi
+        c=-t
+        IY=0
+      ELSEIF aa==pi/2
+        c=0
+        IY=t
+      ELSEIF aa==-pi/2
+        c=0
+        IY=-t
+      ELSE
+        c=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrotu!=0
+      xrotu=(@xrotu%360)*pi/180
+      t=cabs(IY+d*1i)      
+      aa=atan2(IY+d*1i) 
+      aa=xrotu+aa
+      IF abs(aa)==pi
+        IY=-t
+        d=0
+      ELSEIF aa==pi/2
+        IY=0
+        d=t
+      ELSEIF aa==-pi/2
+        IY=0
+        d=-t
+      ELSE
+        IY=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0
+      zrot=(@zrot%360)*pi/180
+      t=cabs(c+d*1i)
+      aa=atan2(c+d*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        c=-t
+        d=0
+      ELSEIF aa==pi/2
+        c=0
+        d=t
+      ELSEIF aa==-pi/2
+        c=0
+        d=-t
+      ELSE
+        c=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+     
+    IF @uzrot!=0
+      uzrot=(@uzrot%360)*pi/180
+      t=cabs(IX+IY*1i)    
+      aa=atan2(IX+IY*1i)
+      aa=uzrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        IY=0
+      ELSEIF aa==pi/2
+        IX=0
+        IY=t
+      ELSEIF aa==-pi/2
+        IX=0
+        IY=-t
+      ELSE
+        IX=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+
+
+    IF @projxz!=0
+      projxz=(@projxz%360)*pi/180
+      IF @projxz==90      
+        IX=c+IX
+        c=0
+      ELSE
+        IX=c*sin(projxz)+IX
+        c=c*cos(projxz)
+      ENDIF
+    ENDIF
+  
+    IF @projyz!=0
+      projyz=(@projyz%360)*pi/180
+      IF @projyz==90      
+        IX=d+IX
+        d=0
+      ELSE
+        IX=d*sin(projyz)+IX
+        d=d*cos(projyz)
+      ENDIF
+    ENDIF
+    
+    IF @projxu!=0
+      projxu=(@projxu%360)*pi/180
+      IF @projxu==90      
+        IY=c+IY
+        c=0
+      ELSE
+        IY=c*sin(projxu)+IY
+        c=c*cos(projxu)
+      ENDIF
+    ENDIF
+    
+    IF @projyu!=0
+      projyu=(@projyu%360)*pi/180
+      IF @projyu==90      
+        IY=d+IY
+        d=0
+      ELSE
+        IY=d*sin(projyu)+IY
+        d=d*cos(projyu)
+      ENDIF
+    ENDIF
+    
+  IF @FLIP==1
+    IX=d
+    d=@FlipValue
+  ELSEIF @FLIP==2
+    IY=d
+    d=@FlipValue
+  ELSEIF @FLIP==3
+    IX=c
+    c=@FlipValue
+  ELSEIF @FLIP==4
+    IY=c
+    c=@FlipValue
+  ENDIF
+  
+  If @MovePlane == true
+    IX = real(#center)
+    IY = imag(#center)
+  ENDIF
+    
+  IF @IterPlane==0
+    a=c+d*1i
+    b=IX+IY*1i 
+  ELSEIF @IterPlane==1
+    a=c+IX*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==2
+    a=c+IX*1i
+    b=IY+d*1i
+  ELSEIF @IterPlane==3
+    a=IX+c*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==4
+    a=IX+c*1i
+    b=Iy+d*1i
+  ELSE 
+    a=IX+IY*1i
+    b=c+d*1i
+  ENDIF
+  
+  IF @M==false
+    z=0
+  ELSE 
+    z=-2*a/3
+  ENDIF
+    
+  loop:
+    z=z*z*z+a*z*z+b
+    
+bailout:
+  |z|<@bailout
+  
+  
+switch:
+  type="ToKullbergCubicJulia"
+  seed=#pixel
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+  
+default:
+  title = "KullbergCubic"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,b-real)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=5
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-2a/3"
+    hint="Change to the other critical point-2a/3. If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+     
+  }
+
+ToKullbergCubicJulia {
+init:
+  
+  complex c=@seed
+  complex z=#pixel
+  g=@IterPlane
+  d=@InterX+flip(@interY)
+  IF g==0
+     a=c
+     b=d
+  ELSEIF g==1
+    a=real(c)+real(d)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==2
+    a=real(c)+real(d)*1i
+    b=imag(d)+imag(c)*1i
+  ELSEIF g==3
+    a=real(d)+real(c)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==4
+    a=real(d)+real(c)*1i
+    b=imag(d)+imag(c)*1i
+  ELSE
+    a=d
+    b=c
+  ENDIF
+   
+   
+loop:
+  z=z*z*z+a*z*z+b
+  
+bailout:
+  |z|<@bailout
+  
+switch:
+  type="SorensenCubic"
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+
+default:
+  title = "ToKullbergCubicJulia"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-a/3-sqrt(a*a/9-b/3)"
+    hint="Sets the sign of the initial parameter sqrt(A). If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+
+}
+
+KullbergCubicJulia {
+init:
+  a=@areal+@aimag*1i
+  b=@breal+@bimag*1i
+  z=#pixel
+loop:
+  z=z*z*z+a*z*z+b  
+bailout:
+  |z|<@bailout
+default:
+  title = "KullbergCubicJulia"
+  
+  param areal
+    caption="a-real"
+    hint="Real part of a-parameter"
+    default=0.0
+  endparam
+  
+   param aimag
+    caption="a-imag"
+    hint="Imaginary part of a-parameter"
+    default=0.0
+  endparam
+  
+   param breal
+    caption="b-real"
+    hint="Real part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bimag
+    caption="b-imag"
+    hint="Imaginary part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bailout
+    caption="bailout"
+    hint="Value of bailout"
+    default=100.0  
+  endparam
+  
+
+  param bailout
+    caption="bailout"
+    default=0.00001
+    hint="Bailout value."
+   endparam
+
+}
+
+DevaneyCubic {
+
+
+init:
+  float c=0
+  float d=0
+  float t=0
+  float aa=0
+  a=0+0i
+  b=0+0i
+  c=real(#pixel)
+  d=imag(#pixel)
+  float IX=@InterX
+  float IY=@InterY
+  float yrot=0
+  float xrot=0
+  float xrotu=0
+  float yrotu=0
+  float zrot=0
+  float uzrot=0
+  float projxz=0
+  float projyz=0
+  float projxu=0
+  float projyu=0
+
+    IF @yrot!=0
+      yrot=(@yrot%360)*pi/180
+      t=cabs(c+IX*1i)      
+      aa=atan2(c+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        c=-t
+        IX=0
+      ELSEIF aa==pi/2
+        c=0
+        IX=t
+      ELSEIF aa==-pi/2
+        c=0
+        IX=-t
+      ELSE
+        c=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+d*1i)     
+      aa=atan2(IX+d*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        d=0
+      ELSEIF aa==pi/2
+        IX=0
+        d=t
+      ELSEIF aa==-pi/2
+        IX=0
+        d=-t
+      ELSE
+        IX=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    IF @yrotu!=0
+      yrotu=(@yrotu%360)*pi/180
+      t=cabs(c+IY*1i)      
+      aa=atan2(c+IY*1i) 
+      aa=yrotu+aa
+      IF abs(aa)==pi
+        c=-t
+        IY=0
+      ELSEIF aa==pi/2
+        c=0
+        IY=t
+      ELSEIF aa==-pi/2
+        c=0
+        IY=-t
+      ELSE
+        c=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrotu!=0
+      xrotu=(@xrotu%360)*pi/180
+      t=cabs(IY+d*1i)      
+      aa=atan2(IY+d*1i) 
+      aa=xrotu+aa
+      IF abs(aa)==pi
+        IY=-t
+        d=0
+      ELSEIF aa==pi/2
+        IY=0
+        d=t
+      ELSEIF aa==-pi/2
+        IY=0
+        d=-t
+      ELSE
+        IY=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0
+      zrot=(@zrot%360)*pi/180
+      t=cabs(c+d*1i)
+      aa=atan2(c+d*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        c=-t
+        d=0
+      ELSEIF aa==pi/2
+        c=0
+        d=t
+      ELSEIF aa==-pi/2
+        c=0
+        d=-t
+      ELSE
+        c=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+     
+    IF @uzrot!=0
+      uzrot=(@uzrot%360)*pi/180
+      t=cabs(IX+IY*1i)    
+      aa=atan2(IX+IY*1i)
+      aa=uzrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        IY=0
+      ELSEIF aa==pi/2
+        IX=0
+        IY=t
+      ELSEIF aa==-pi/2
+        IX=0
+        IY=-t
+      ELSE
+        IX=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+
+
+    IF @projxz!=0
+      projxz=(@projxz%360)*pi/180
+      IF @projxz==90      
+        IX=c+IX
+        c=0
+      ELSE
+        IX=c*sin(projxz)+IX
+        c=c*cos(projxz)
+      ENDIF
+    ENDIF
+  
+    IF @projyz!=0
+      projyz=(@projyz%360)*pi/180
+      IF @projyz==90      
+        IX=d+IX
+        d=0
+      ELSE
+        IX=d*sin(projyz)+IX
+        d=d*cos(projyz)
+      ENDIF
+    ENDIF
+    
+    IF @projxu!=0
+      projxu=(@projxu%360)*pi/180
+      IF @projxu==90      
+        IY=c+IY
+        c=0
+      ELSE
+        IY=c*sin(projxu)+IY
+        c=c*cos(projxu)
+      ENDIF
+    ENDIF
+    
+    IF @projyu!=0
+      projyu=(@projyu%360)*pi/180
+      IF @projyu==90      
+        IY=d+IY
+        d=0
+      ELSE
+        IY=d*sin(projyu)+IY
+        d=d*cos(projyu)
+      ENDIF
+    ENDIF
+    
+  IF @FLIP==1
+    IX=d
+    d=@FlipValue
+  ELSEIF @FLIP==2
+    IY=d
+    d=@FlipValue
+  ELSEIF @FLIP==3
+    IX=c
+    c=@FlipValue
+  ELSEIF @FLIP==4
+    IY=c
+    c=@FlipValue
+  ENDIF
+  
+  If @MovePlane == true
+    IX = real(#center)
+    IY = imag(#center)
+  ENDIF
+    
+  IF @IterPlane==0
+    a=c+d*1i
+    b=IX+IY*1i 
+  ELSEIF @IterPlane==1
+    a=c+IX*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==2
+    a=c+IX*1i
+    b=IY+d*1i
+  ELSEIF @IterPlane==3
+    a=IX+c*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==4
+    a=IX+c*1i
+    b=Iy+d*1i
+  ELSE 
+    a=IX+IY*1i
+    b=c+d*1i
+  ENDIF
+  
+  IF @M==false
+    z=1i*sqrt(a/3)
+  ELSE 
+    z=-1i*sqrt(a/3)
+  ENDIF
+    
+  loop:
+    z=z*z*z+a*z+b
+    
+bailout:
+  |z|<@bailout
+  
+  
+switch:
+  type="ToDevaneyCubicJulia"
+  seed=#pixel
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+  
+default:
+  title = "DevaneyCubic"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,b-real)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-1i*sqrt(a/3)"
+    hint="Change to the other critical point. If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+     
+  }
+
+ToDevaneyCubicJulia {
+init:
+  
+  complex c=@seed
+  complex z=#pixel
+  g=@IterPlane
+  d=@InterX+flip(@interY)
+  IF g==0
+     a=c
+     b=d
+  ELSEIF g==1
+    a=real(c)+real(d)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==2
+    a=real(c)+real(d)*1i
+    b=imag(d)+imag(c)*1i
+  ELSEIF g==3
+    a=real(d)+real(c)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==4
+    a=real(d)+real(c)*1i
+    b=imag(d)+imag(c)*1i
+  ELSE
+    a=d
+    b=c
+  ENDIF
+   
+   
+loop:
+  z=z*z*z+a*z+b
+  
+bailout:
+  |z|<@bailout
+  
+switch:
+  type="DevaneyCubic"
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+
+default:
+  title = "ToDevaneyCubicJulia"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-1i*sqrt(a/3)"
+    hint="Sets the sign of the initial parameter 1i*sqrt(a/3). If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+
+}
+
+DevaneyCubicJulia {
+init:
+  a=@areal+@aimag*1i
+  b=@breal+@bimag*1i
+  z=#pixel
+loop:
+  z=z*z*z+a*z+b  
+bailout:
+  |z|<@bailout
+default:
+  title = "DevaneyCubicJulia"
+  
+  param areal
+    caption="a-real"
+    hint="Real part of a-parameter"
+    default=0.0
+  endparam
+  
+   param aimag
+    caption="a-imag"
+    hint="Imaginary part of a-parameter"
+    default=0.0
+  endparam
+  
+   param breal
+    caption="b-real"
+    hint="Real part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bimag
+    caption="b-imag"
+    hint="Imaginary part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bailout
+    caption="bailout"
+    hint="Value of bailout"
+    default=100.0  
+  endparam
+  
+
+  param bailout
+    caption="bailout"
+    default=0.00001
+    hint="Bailout value."
+   endparam
+
+}
+
+BrannerSpecialCubic {
+
+
+init:
+  float c=0
+  float d=0
+  float t=0
+  float aa=0
+  a=0+0i
+  b=0+0i
+  c=real(#pixel)
+  d=imag(#pixel)
+  float IX=@InterX
+  float IY=@InterY
+  float yrot=0
+  float xrot=0
+  float xrotu=0
+  float yrotu=0
+  float zrot=0
+  float uzrot=0
+  float projxz=0
+  float projyz=0
+  float projxu=0
+  float projyu=0
+
+    IF @yrot!=0
+      yrot=(@yrot%360)*pi/180
+      t=cabs(c+IX*1i)      
+      aa=atan2(c+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        c=-t
+        IX=0
+      ELSEIF aa==pi/2
+        c=0
+        IX=t
+      ELSEIF aa==-pi/2
+        c=0
+        IX=-t
+      ELSE
+        c=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+d*1i)     
+      aa=atan2(IX+d*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        d=0
+      ELSEIF aa==pi/2
+        IX=0
+        d=t
+      ELSEIF aa==-pi/2
+        IX=0
+        d=-t
+      ELSE
+        IX=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    IF @yrotu!=0
+      yrotu=(@yrotu%360)*pi/180
+      t=cabs(c+IY*1i)      
+      aa=atan2(c+IY*1i) 
+      aa=yrotu+aa
+      IF abs(aa)==pi
+        c=-t
+        IY=0
+      ELSEIF aa==pi/2
+        c=0
+        IY=t
+      ELSEIF aa==-pi/2
+        c=0
+        IY=-t
+      ELSE
+        c=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrotu!=0
+      xrotu=(@xrotu%360)*pi/180
+      t=cabs(IY+d*1i)      
+      aa=atan2(IY+d*1i) 
+      aa=xrotu+aa
+      IF abs(aa)==pi
+        IY=-t
+        d=0
+      ELSEIF aa==pi/2
+        IY=0
+        d=t
+      ELSEIF aa==-pi/2
+        IY=0
+        d=-t
+      ELSE
+        IY=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0
+      zrot=(@zrot%360)*pi/180
+      t=cabs(c+d*1i)
+      aa=atan2(c+d*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        c=-t
+        d=0
+      ELSEIF aa==pi/2
+        c=0
+        d=t
+      ELSEIF aa==-pi/2
+        c=0
+        d=-t
+      ELSE
+        c=t*cos(aa)
+        d=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+     
+    IF @uzrot!=0
+      uzrot=(@uzrot%360)*pi/180
+      t=cabs(IX+IY*1i)    
+      aa=atan2(IX+IY*1i)
+      aa=uzrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        IY=0
+      ELSEIF aa==pi/2
+        IX=0
+        IY=t
+      ELSEIF aa==-pi/2
+        IX=0
+        IY=-t
+      ELSE
+        IX=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+
+
+    IF @projxz!=0
+      projxz=(@projxz%360)*pi/180
+      IF @projxz==90      
+        IX=c+IX
+        c=0
+      ELSE
+        IX=c*sin(projxz)+IX
+        c=c*cos(projxz)
+      ENDIF
+    ENDIF
+  
+    IF @projyz!=0
+      projyz=(@projyz%360)*pi/180
+      IF @projyz==90      
+        IX=d+IX
+        d=0
+      ELSE
+        IX=d*sin(projyz)+IX
+        d=d*cos(projyz)
+      ENDIF
+    ENDIF
+    
+    IF @projxu!=0
+      projxu=(@projxu%360)*pi/180
+      IF @projxu==90      
+        IY=c+IY
+        c=0
+      ELSE
+        IY=c*sin(projxu)+IY
+        c=c*cos(projxu)
+      ENDIF
+    ENDIF
+    
+    IF @projyu!=0
+      projyu=(@projyu%360)*pi/180
+      IF @projyu==90      
+        IY=d+IY
+        d=0
+      ELSE
+        IY=d*sin(projyu)+IY
+        d=d*cos(projyu)
+      ENDIF
+    ENDIF
+    
+  IF @FLIP==1
+    IX=d
+    d=@FlipValue
+  ELSEIF @FLIP==2
+    IY=d
+    d=@FlipValue
+  ELSEIF @FLIP==3
+    IX=c
+    c=@FlipValue
+  ELSEIF @FLIP==4
+    IY=c
+    c=@FlipValue
+  ENDIF
+  
+  If @MovePlane == true
+    IX = real(#center)
+    IY = imag(#center)
+  ENDIF
+    
+  IF @IterPlane==0
+    a=c+d*1i
+    b=IX+IY*1i 
+  ELSEIF @IterPlane==1
+    a=c+IX*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==2
+    a=c+IX*1i
+    b=IY+d*1i
+  ELSEIF @IterPlane==3
+    a=IX+c*1i
+    b=d+IY*1i
+  ELSEIF @IterPlane==4
+    a=IX+c*1i
+    b=Iy+d*1i
+  ELSE 
+    a=IX+IY*1i
+    b=c+d*1i
+  ENDIF
+  
+  IF @M==false
+    z=+1
+  ELSE 
+    z=-1
+  ENDIF
+    
+  loop:
+    z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2
+    
+bailout:
+  |z|<@bailout
+  
+  
+switch:
+  type="ToBrannerSpecialCubicJulia"
+  seed=#pixel
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+  
+default:
+  title = "BrannerSpecialCubic"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,b-real)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-1"
+    hint="Change to the other critical point. If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+     
+  }
+
+ToBrannerSpecialCubicJulia {
+init:
+  
+  complex c=@seed
+  complex z=#pixel
+  g=@IterPlane
+  d=@InterX+flip(@interY)
+  IF g==0
+     a=c
+     b=d
+  ELSEIF g==1
+    a=real(c)+real(d)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==2
+    a=real(c)+real(d)*1i
+    b=imag(d)+imag(c)*1i
+  ELSEIF g==3
+    a=real(d)+real(c)*1i
+    b=imag(c)+imag(d)*1i
+  ELSEIF g==4
+    a=real(d)+real(c)*1i
+    b=imag(d)+imag(c)*1i
+  ELSE
+    a=d
+    b=c
+  ENDIF
+   
+   
+loop:
+  z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2
+  
+bailout:
+  |z|<@bailout
+  
+switch:
+  type="BrannerSpecialCubic"
+  IterPlane=IterPlane
+  InterX=InterX
+  InterY=InterY
+  yrot=yrot
+  xrot=xrot
+  yrotu=yrotu
+  xrotu=xrotu
+  zrot=zrot
+  uzrot=uzrot
+  projxz=projxz
+  projxu=projxu
+  projyz=projyz
+  projyu=projyu
+  FlipValue=FlipValue
+  FLIP=FLIP
+  M=M
+  MovePlane=MovePlane
+  bailout=bailout
+
+default:
+  title = "ToBrannerSpecialCubicJulia"
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param InterX
+    caption=" z-axis"
+    hint="Complement to Iterative Plane.For ex. iter: a-imag,b-real this should be a-real"
+    default=0.0
+  endparam
+  
+ param InterY
+    caption=" u-axis"
+    hint="Complement to Iterative Plane.For iter: a-real,b-imag this should be b-real"
+    default=0.0
+  endparam
+  
+ param yrot
+    caption="Rotates xz-plane."
+    hint= "Rotates xyz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrot
+    caption="Rotates yz-plane."
+    hint= "Rotates xyz-plane in degrees around the x-axes."
+    default=0.0
+  endparam
+  
+ param yrotu
+    caption="Rotates xu-plane."
+    hint= "Rotates the xyu-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+  
+  param xrotu
+    caption="Rotates yu-plane."
+    hint= "Rotating xyu-plane in degrees around the x-axis."
+    default=0.0
+  endparam
+  
+  param zrot
+    caption="Rotates xy-plane."
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+  param uzrot
+    caption="Rotates uz-plane"
+    hint="Rotates the uz-plane in degrees."
+    default=0.0
+  endparam
+  
+  param projxz
+    caption="Project x on z."
+    hint="Projecting x on z in degrees."
+    default=0.0
+  endparam
+  
+ param projxu
+    caption="Project x on u."
+    hint="Projecting x on u in degrees."
+    default=0.0
+  endparam
+  
+  param projyz
+    caption="Project y on z."
+    hint="Projecting y on z in degrees."
+    default=0.0
+  endparam
+  
+  param projyu
+    caption="Project y on u."
+    hint="Projecting y on u in degrees."
+    default=0.0
+  endparam
+  
+   
+  param FlipValue
+    caption="flip value"
+    hint="Value for flip. Should be be taken from properties/location/center. \
+    y for y-flip x for x-flip. \
+    Don´t forget to zero the coordinate at location after flip or simply cut the coordinate."
+    default=0.0
+  endparam
+  
+  param FLIP
+    enum = "No Flip" "Flip y -> z" "Flip y -> u" "Flip x -> z" "Flip x -> u"
+    hint="Turns coordinateplane 90 deg. Paste the coordinate you want to flip from location. \
+    Don´t forget to zero the coordinate at location after the flip or simly cut the coordinate."
+    default=0
+  endparam
+  
+  param M
+    caption="-1"
+    hint="Sets the sign of the initial parameter sqrt(A). If set it will be negative."
+    default=false
+  endparam 
+  
+  param MovePlane
+    caption = "Move On"
+    default=false
+    hint = "Is to play with. Be sure interceptcoords. are zero (default location).\
+            Put MovePlane on. Push control as you move the area in the window \
+            (hold left mousebutton down). If you move the mouse in x-direction \
+            the set will move along the z-axis. In y-direction along u-axis. Enjoy." 
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+    min=1
+  endparam
+
+}
+
+BrannerSpecialCubicJulia {
+init:
+  a=@areal+@aimag*1i
+  b=@breal+@bimag*1i
+  z=#pixel
+loop:
+  z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2  
+bailout:
+  |z|<@bailout
+default:
+  title = "BrannerSpecialCubicJulia"
+  
+  param areal
+    caption="a-real"
+    hint="Real part of a-parameter"
+    default=0.0
+  endparam
+  
+   param aimag
+    caption="a-imag"
+    hint="Imaginary part of a-parameter"
+    default=0.0
+  endparam
+  
+   param breal
+    caption="b-real"
+    hint="Real part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+   param bimag
+    caption="b-imag"
+    hint="Imaginary part of b-parameter"
+    default=0.0
+  endparam
+  
+    
+  param bailout
+    caption="bailout"
+    default=100
+    hint="Bailout value."
+   endparam
+
+}
+
+MilnorAB2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;A-real, A-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;A-real, B-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;A-real, B-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;A-imag, B-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;A-imag, B-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;B-real, B-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;A-real, A-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;A-real, B-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;A-real, B-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;A-imag, B-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;A-imag, B-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;B-real, B-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=sqrt(A)
+  elseif (@M==1)&&(@mode==0)
+    z=-sqrt(A)
+  else
+    z=sqrt(A)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z-3*A*z+sqrt(B)
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-sqrt(A)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z-3*A*z+sqrt(B)
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=sqrt(A)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        else
+          z=sqrt(A)
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-sqrt(A)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        else 
+          z=-sqrt(A)
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif m1save==#maxiter
+          z=-sqrt(A)
+        elseif m2save==#maxiter
+          z=sqrt(A)
+        else
+          if m1save>m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif (m1save==#maxiter)
+          z=sqrt(A)
+        else
+          z=-sqrt(A)
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif m1save==#maxiter
+          z=-sqrt(A)
+        elseif m2save==#maxiter
+          z=sqrt(A)
+        else
+          if m1save<m2save
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=sqrt(A)
+          else
+            z=-sqrt(A)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=sqrt(A)
+          else
+
+            z=-sqrt(A)
+          endif
+        elseif (m1save==#maxiter)
+          z=sqrt(A)
+        else
+          z=-sqrt(A)
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=z*z*z-3*A*z+sqrt(B)
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="MilnorJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "MilnorAB2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(A-real,A-imag)" "2.(A-real,B-real)" "3.(A-real,B-imag)" "4.(A-imag,B-real)"   \
+           "5.(A-imag,B-imag)" "6.(B-real,B-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" A-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" A-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" B-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" B-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+MilnorJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;A-real, A-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;A-real, B-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;A-real, B-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;A-imag, B-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;A-imag, B-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;B-real, B-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;A-real, A-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;A-real, B-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;A-real, B-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;A-imag, B-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;Aa-imag, B-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;B-real, B-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=z*z*z-3*A*z+sqrt(B)
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="MilnorAB2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+
+  bailout=bailout
+  
+
+  
+default:
+  title = "MilnorJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+
+  
+  param PlottedPlane
+    enum = "1.(A-real,A-imag)" "2.(A-real,B-real)" "3.(A-real,B-imag)" "4.(A-imag,B-real)"   \
+           "5.(A-imag,B-imag)" "6.(B-real,B-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+
+SorensenCubic2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=-a/3+sqrt(a*a/9-b/3)
+  elseif (@M==1)&&(@mode==0)
+    z=-a/3-sqrt(a*a/9-b/3)
+  else
+    z=-a/3+sqrt(a*a/9-b/3)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z*z+b*z
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-a/3-sqrt(a*a/9-b/3)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z*z+b*z
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=-a/3+sqrt(a*a/9-b/3)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        else
+          z=-a/3+sqrt(a*a/9-b/3)
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-a/3-sqrt(a*a/9-b/3)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        else 
+          z=-a/3-sqrt(a*a/9-b/3)
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif m1save==#maxiter
+          z=-a/3-sqrt(a*a/9-b/3)
+        elseif m2save==#maxiter
+          z=-a/3+sqrt(a*a/9-b/3)
+        else
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save==#maxiter)
+          z=-a/3+sqrt(a*a/9-b/3)
+        else
+          z=-a/3-sqrt(a*a/9-b/3)
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif m1save==#maxiter
+          z=-a/3-sqrt(a*a/9-b/3)
+        elseif m2save==#maxiter
+          z=-a/3+sqrt(a*a/9-b/3)
+        else
+          if m1save<m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=-a/3+sqrt(a*a/9-b/3)
+          else
+
+            z=-a/3-sqrt(a*a/9-b/3)
+          endif
+        elseif (m1save==#maxiter)
+          z=-a/3+sqrt(a*a/9-b/3)
+        else
+          z=-a/3-sqrt(a*a/9-b/3)
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=z*z*z+a*z*z+b*z
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="SorensenCubicJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "SorensenCubic2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+SorensenCubicJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+loop:
+  oldz=z
+  z=z*z*z+a*z*z+b*z
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="SorensenCubic2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "SorensenCubicJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+
+KullbergCubic2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=0
+  elseif (@M==1)&&(@mode==0)
+    z=-2*a/3
+  else
+    z=0
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z*z+b
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-2*a/3
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z*z+b
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=0
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        else
+          z=0
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-2*a/3
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        else 
+          z=-2*a/3
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif m1save==#maxiter
+          z=-2*a/3
+        elseif m2save==#maxiter
+          z=0
+        else
+          if m1save>m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif (m1save==#maxiter)
+          z=0
+        else
+          z=-2*a/3
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif m1save==#maxiter
+          z=-2*a/3
+        elseif m2save==#maxiter
+          z=0
+        else
+          if m1save<m2save
+            z=0
+          else
+            z=-2*a/3
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=0
+          else
+            z=-2*a/3
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=0
+          else
+
+            z=-2*a/3
+          endif
+        elseif (m1save==#maxiter)
+          z=0
+        else
+          z=-2*a/3
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=z*z*z+a*z*z+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="KullbergCubicJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "KullbergCubic2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=5
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+KullbergCubicJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=z*z*z+a*z*z+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="KullbergCubic2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+
+  bailout=bailout
+  
+
+  
+default:
+  title = "KullbergCubicJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+DevaneyCubic2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=1i*sqrt(a/3)
+  elseif (@M==1)&&(@mode==0)
+    z=-1i*sqrt(a/3)
+  else
+    z=1i*sqrt(a/3)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z+b
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-1i*sqrt(a/3)
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=z*z*z+a*z+b
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=1i*sqrt(a/3)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        else
+          z=1i*sqrt(a/3)
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-1i*sqrt(a/3)
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        else 
+          z=-1i*sqrt(a/3)
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif m1save==#maxiter
+          z=-1i*sqrt(a/3)
+        elseif m2save==#maxiter
+          z=1i*sqrt(a/3)
+        else
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save==#maxiter)
+          z=1i*sqrt(a/3)
+        else
+          z=-1i*sqrt(a/3)
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif m1save==#maxiter
+          z=-1i*sqrt(a/3)
+        elseif m2save==#maxiter
+          z=1i*sqrt(a/3)
+        else
+          if m1save<m2save
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1i*sqrt(a/3)
+          else
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1i*sqrt(a/3)
+          else
+
+            z=-1i*sqrt(a/3)
+          endif
+        elseif (m1save==#maxiter)
+          z=1i*sqrt(a/3)
+        else
+          z=-1i*sqrt(a/3)
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=z*z*z+a*z+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="DevaneyCubicJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "DevaneyCubic2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+DevaneyCubicJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=z*z*z+a*z+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="DevaneyCubic2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "DevaneyCubicJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+
+BrannerSpecialCubic2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=1
+  elseif (@M==1)&&(@mode==0)
+    z=-1
+  else
+    z=1
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=a*(z*z*z-3*z)+b
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-1
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=1
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        else
+          z=1
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-1
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        else 
+          z=-1
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif m1save==#maxiter
+          z=-1
+        elseif m2save==#maxiter
+          z=1
+        else
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save==#maxiter)
+          z=1
+        else
+          z=-1
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif m1save==#maxiter
+          z=-1
+        elseif m2save==#maxiter
+          z=1
+        else
+          if m1save<m2save
+            z=1
+          else
+            z=-1
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+
+            z=-1
+          endif
+        elseif (m1save==#maxiter)
+          z=1
+        else
+          z=-1
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="BrannerSpecialCubicJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "BrannerSpecialCubic2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+BrannerSpecialCubicJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=(b/4-a/4)*(z*z*z-3*z)+a/2+b/2
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="BrannerSpecialCubic2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+
+  bailout=bailout
+  
+
+  
+default:
+  title = "BrannerSpecialCubicJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(2,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+
+EpsteinCubic2 {
+
+init:
+  int n=0
+  int m1save=0
+  int m2save=0
+  float abs1=0
+  float abs2=0
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  if (@M==0)&&(@mode==0)
+    z=1
+  elseif (@M==1)&&(@mode==0)
+    z=-1
+  else
+    z=1
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=a*(z*z*z-3*z)+b
+    endwhile
+    m1save=n
+    abs1=|z|
+    n=0
+    z=-1
+    while (|z|<@bailout)&&(n<#maxiter)
+      n=n+1
+      z=a*(z*z*z-3*z)+b
+    endwhile
+    m2save=n
+    abs2=|z|
+
+    if @mode==1
+      if @M==0  ;M1
+        if m1save==#maxiter
+          z=1
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        else
+          z=1
+        endif
+        
+      elseif @M==1  ;M2
+        if m2save==#maxiter
+          z=-1
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        else 
+          z=-1
+        endif
+        
+      elseif (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif m1save==#maxiter
+          z=-1
+        elseif m2save==#maxiter
+          z=1
+        else
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        endif       
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save==#maxiter)
+          z=1
+        else
+          z=-1
+        endif
+      endif     
+    else
+      if (@M==2)
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1<abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save<m2save
+            z=1
+          else
+            z=-1
+          endif
+        elseif m1save==#maxiter
+          z=-1
+        elseif m2save==#maxiter
+          z=1
+        else
+          if m1save<m2save
+            z=1
+          else
+            z=-1
+          endif
+        endif
+      elseif @M==3
+        if (m1save==#maxiter)&&(m2save==#maxiter)
+          if abs1>abs2
+            z=1
+          else
+            z=-1
+          endif
+        elseif (m1save<#maxiter)&&(m2save<#maxiter)
+          if m1save>m2save
+            z=1
+          else
+
+            z=-1
+          endif
+        elseif (m1save==#maxiter)
+          z=1
+        else
+          z=-1
+        endif
+      endif
+    endif                 
+  endif
+   
+loop:
+  oldz=z
+  z=a*(z*z*z-3*z)+b
+
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="EpsteinCubicJulia2"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "EpsteinCubic2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+EpsteinCubicJulia2 {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=a*(z*z*z-3*z)+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+
+  type="EpsteinCubic2"
+  PlottedPlane=PlottedPlane
+  M=M
+  mode=mode
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+default:
+  title = "EpsteinCubicJulia2"
+  periodicity=0
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param M
+    enum="M+" "M-" "CCL" "M+ and/or M-"
+    hint="The choosen critical point to initialize z"
+    default=0
+  endparam 
+  
+  param mode
+
+    enum="Normal" "High"
+    default=0
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0.4)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+
+
+
+CBAP {
+init:
+  t=#pixel
+  t3=3*t
+  t2=t*t
+  a=(t2+1)/t3
+  b=2*a*a*a+(t2-2)/t3
+  aa3=a*a*3
+  z=-a
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="CBAPjulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "CBAP"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+CCAP {
+init:
+  a=#pixel
+  b=2*a*a*a+a
+  aa3=a*a*3
+  z=-a
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="CCAPjulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "CCAP"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+CFAP {
+init:
+  a=#pixel
+  b=2*a*a*a-2*a
+  aa3=a*a*3
+  z=-a
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="CFAPjulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "CFAP"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+CGAP {
+init:
+  a=#pixel
+  b=2*a*a*a+1
+  aa3=a*a*3
+  z=-a
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="CGAPjulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "CGAP"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+SteveCubic {
+init:
+  t=#pixel
+  a=(t*t*t-1)/(3*t*t)
+  b=2*a*a*a-2*a
+  aa3=a*a*3
+  z=-a
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="SteveCubicJulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "SteveCubic"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+
+CBAPjulia {
+init:
+  t=@seed
+  complex z=#pixel
+  t3=3*t
+  t2=t*t
+  a=(t2+1)/t3
+  b=2*a*a*a+(t2-2)/t3
+  aa3=a*a*3
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+switch:
+  type="CBAP"
+  bailout=bailout
+  
+default:
+  title = "CBAPjulia"
+  periodicity=0
+  method=multipass
+  
+  param seed
+    caption="Seed"
+    default=(0,1)
+  endparam
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+
+CCAPjulia {
+init:
+  a=@seed
+  b=2*a*a*a+a
+  aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="CCAP"
+  bailout=bailout
+  
+default:
+  title = "CCAPjulia"
+  periodicity=0
+  method=multipass
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+  endparam
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+
+CFAPjulia {
+
+init:
+  a=@seed
+  b=2*a*a*a-2*a
+  aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="CFAP"
+  bailout=bailout
+  
+default:
+  title = "CFAPjulia"
+  periodicity=0
+  method=multipass
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+  endparam
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+
+CGAPjulia {
+init:
+  a=@seed
+  b=2*a*a*a+1
+  aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="CGAP"
+  bailout=bailout
+  
+default:
+  title = "CGAPjulia"
+  periodicity=0
+  method=multipass
+  
+  param seed
+    caption="Seed"
+    default=(-0.5,0)
+  endparam
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+
+SteveCubicJulia {
+init:
+  t=@seed
+  a=(t*t*t-1)/(3*t*t)
+  b=2*a*a*a-2*a
+  aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="SteveCubic"
+  bailout=bailout
+  
+default:
+  title = "SteveCubicJulia"
+  periodicity=0
+  method=multipass
+  
+  param seed
+    caption="Seed"
+    default=(0.75,0)
+  endparam
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+
+}
+
+HomerCubic {
+init:
+  a=#pixel
+  b=a
+  aa3=a*a*3
+  IF @M==false
+    z=a
+  ELSE 
+    z=-a
+  ENDIF
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="HomerCubicJulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "HomerCubic"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+param bailout
+  caption="bailout"
+  default=100.0
+endparam
+  
+param M
+  caption="-a"
+  hint="Sets the sign of the initial parameter a. If set it will be negative."
+  default=false
+endparam
+
+}
+
+HomerCubicJulia {
+init:
+  a=@seed
+  b=a
+  aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="HomerCubic"
+  bailout=bailout
+  
+default:
+  title = "HomerCubicJulia"
+  periodicity=0
+  method=multipass
+  
+param seed
+  caption="Seed"
+  default=(0,0)
+endparam
+
+ param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+param bailout
+  caption="bailout"
+  default=100.0
+endparam
+
+}
+
+MysticCubic {
+init:
+  a=#pixel
+  b=a-2*a*a*a
+  aa3=a*a*3
+  z=a
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="MysticCubicJulia"
+  seed=#pixel
+  diff=diff
+  bailout=bailout
+  
+default:
+  title = "MysticCubic"
+  periodicity=0
+  method=multipass
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    default=100.0
+  endparam
+  
+}
+
+MysticCubicJulia {
+init:
+  a=@seed
+    b=a-2*a*a*a
+    aa3=a*a*3
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z*z*z-aa3*z+b
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="MysticCubic"
+  bailout=bailout
+  
+default:
+  title = "MysticCubicJulia"
+  periodicity=0
+  method=multipass
+  
+param seed
+  caption="Seed"
+  default=(0,0)
+endparam
+
+param diff
+    caption="Diff-Bailout"
+    default=false
+endparam
+  
+param bailout
+  caption="bailout"
+  default=100.0
+endparam
+
+}
+
+
+Article15 {
+;NOTE: This sub-module is written only for 
+;pedagogical reasons and does not contribute 
+;any new forms that can not be brought out 
+;from the standard Mandelbrot formula in 
+;Ultra Fractal."Article15" refers to an 
+;article in the Chaotic series.
+
+init:
+  z=@start
+  p=@parameter
+  c=#pixel
+
+loop:
+  z=z^2+p*z+c
+
+bailout:
+  |z|<@bailout
+
+default:
+  title = "Article15"
+  center = (-0.75,0)
+  
+param start
+  caption = "Starting point"
+  default = (0,0)
+endparam
+
+param parameter
+  caption = "z-coefficient"
+  default = (1,0)
+endparam
+
+param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100
+  endparam
+
+}
+
+
+Multicorns {
+
+init:
+  z=@start
+  d=@exponent
+  c=#pixel
+
+loop:
+  oldz=z
+  z=conj(z)^d+c
+
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+   switch:
+  type="MulticornsJulia"
+  seed=#pixel
+  exponent=exponent
+  diff=diff
+  bailout=bailout
+
+default:
+  title = "Multicorns"
+  center = (0,0)
+  
+param exponent
+  caption = "exponent"
+  default = (2,0)
+endparam
+
+param start
+  caption = "Starting point"
+  default = (0,0)
+endparam
+
+param diff
+    caption="Diff-Bailout"
+    default=false
+endparam
+
+
+param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100
+  endparam
+  
+
+}
+
+MulticornsJulia {
+init:
+
+  d=@exponent
+  c=@seed
+  z=#pixel
+
+loop:
+  oldz=z
+  z=conj(z)^d+c
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="Multicorns"
+  bailout=bailout
+  
+default:
+  title = "MulticornsJulia"
+  periodicity=0
+  method=multipass
+  
+param seed
+  caption="Seed"
+  default=(0,0)
+endparam
+
+param exponent
+    caption="exponent"
+    default = (2,0)
+ endparam
+ 
+param diff
+    caption="Diff-Bailout"
+    default=false
+endparam
+  
+param bailout
+  caption="bailout"
+  default=100.0
+endparam
+
+}
+
+Compasses {
+
+init:
+  a=#pixel
+  z=a
+  d=@exponent
+  
+loop:
+  oldz=z
+  z=z^d-d*a^(d-1)*z
+
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+  
+switch:
+  type="CompassJulia"
+  seed=#pixel
+  exponent=exponent
+  diff=diff
+  bailout=bailout
+
+default:
+  title = "Compasses"
+  center = (0,0)
+  
+param exponent
+  caption = "exponent"
+  default = (3,0)
+endparam
+
+param diff
+    caption="Diff-Bailout"
+    default=false
+endparam
+
+param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100
+  endparam
+
+}
+
+CompassJulia {
+init:
+
+  d=@exponent
+  a=@seed
+  z=#pixel
+
+loop:
+  oldz=z
+  z=z^d-d*a^(d-1)*z
+bailout:
+    (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+
+switch:
+  type="Compasses"
+  bailout=bailout
+  
+default:
+  title = "CompassJulia"
+  periodicity=0
+  method=multipass
+  
+param seed
+  caption="Seed"
+  default=(0,0)
+endparam
+
+param exponent
+    caption="exponent"
+    default = (3,0)
+endparam
+  
+param diff
+    caption="Diff-Bailout"
+    default=false
+endparam
+
+param bailout
+  caption="bailout"
+  default=100.0
+endparam
+
+}
+
+DeformedMandelbrot {
+
+init:
+  complex z=0
+  complex oldz=0
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(#pixel)
+  float dd=imag(#pixel)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+    
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+
+  z=a
+      
+  loop:
+    oldz=z
+    z=z*z-2*a*z+b
+    
+bailout:
+(!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="DeformedJulia"
+  seed=#pixel
+  PlottedPlane=PlottedPlane
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+  bailout=bailout
+  
+
+  
+default:
+  title = "DeformedMandelbrot"
+  periodicity=2
+  method=multipass
+  
+  
+  param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+
+  
+  param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+     
+  }
+  
+  
+DeformedJulia {
+
+init:
+  complex z=#pixel
+  complex oldz=0+0i
+  float t=0
+  float aa=0
+  complex a=0+0i
+  complex b=0+0i
+  float cc=real(@seed)
+  float dd=imag(@seed)
+  float IX=0
+  float IY=0
+  float resIX=0
+  float resIY=0
+  float yrot=0
+  float xrot=0
+  float zrot=0
+  
+  IF @PlottedPlane==0     ;a-real, a-imag
+    IX=@breal
+    IY=@bimag
+  ELSEIF @PlottedPlane==1 ;a-real, b-real
+    IX=@aimag
+    IY=@bimag
+  ELSEIF @PlottedPlane==2 ;a-real, b-imag
+    IX=@aimag
+    IY=@breal
+  ELSEIF @PlottedPlane==3 ;a-imag, b-real
+    IX=@areal
+    IY=@bimag
+  ELSEIF @PlottedPlane==4 ;a-imag, b-imag
+    IX=@areal
+    IY=@breal
+  ELSE                    ;b-real, b-imag
+    IX=@areal
+    IY=@aimag
+  ENDIF
+  
+  IF @LocalRot==true
+    cc=cc-real(#center)
+    dd=dd-imag(#center)
+    resIX=IX
+    resIY=IY
+    IX=0
+    IY=0
+  ENDIF
+
+    IF @yrot!=0  ;yrot-z
+      yrot=(@yrot%360)*pi/180
+      t=cabs(cc+IX*1i)      
+      aa=atan2(cc+IX*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IX=0
+      ELSEIF aa==pi/2
+        cc=0
+        IX=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IX=-t
+      ELSE
+        cc=t*cos(aa)
+        IX=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrot!=0   ;xrot-z
+      xrot=(@xrot%360)*pi/180
+      t=cabs(IX+dd*1i)     
+      aa=atan2(IX+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IX=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IX=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IX=0
+        dd=-t
+      ELSE
+        IX=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @zrot!=0   ;zrot-xy
+      zrot=(@zrot%360)*pi/180
+      t=cabs(cc+dd*1i)
+      aa=atan2(cc+dd*1i)     
+      aa=zrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        dd=0
+      ELSEIF aa==pi/2
+        cc=0
+        dd=t
+      ELSEIF aa==-pi/2
+        cc=0
+        dd=-t
+      ELSE
+        cc=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+
+    IF @yrott!=0   ;yrot-t
+      yrot=(@yrott%360)*pi/180
+      t=cabs(cc+IY*1i)      
+      aa=atan2(cc+IY*1i)
+      aa=yrot+aa
+      IF abs(aa)==pi
+        cc=-t
+        IY=0
+      ELSEIF aa==pi/2
+        cc=0
+        IY=t
+      ELSEIF aa==-pi/2
+        cc=0
+        IY=-t
+      ELSE
+        cc=t*cos(aa)
+        IY=t*sin(aa)
+      ENDIF
+    ENDIF
+      
+    IF @xrott!=0   ;xrot-t
+      xrot=(@xrott%360)*pi/180
+      t=cabs(IY+dd*1i)     
+      aa=atan2(IY+dd*1i)
+      aa=xrot+aa
+      IF abs(aa)==pi
+        IY=-t
+        dd=0
+      ELSEIF aa==pi/2
+        IY=0
+        dd=t
+      ELSEIF aa==-pi/2
+        IY=0
+        dd=-t
+      ELSE
+        IY=t*cos(aa)
+        dd=t*sin(aa)
+      ENDIF
+    ENDIF
+    
+  IF @LocalRot==true
+    cc=cc+real(#center)
+    dd=dd+imag(#center)
+    IX=IX+resIX
+    IY=IY+resIY
+  ENDIF
+    
+  
+  IF @PlottedPlane==0      ;a-real, a-imag
+    a=cc+dd*1i
+    b=IX+IY*1i
+  ELSEIF @PlottedPlane==1  ;a-real, b-real
+    a=cc+IX*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==2  ;a-real, b-imag
+    a=cc+IX*1i
+    b=IY+dd*1i
+  ELSEIF @PlottedPlane==3  ;a-imag, b-real
+    a=IX+cc*1i
+    b=dd+IY*1i
+  ELSEIF @PlottedPlane==4  ;a-imag, b-imag
+    a=IX+cc*1i
+    b=IY+dd*1i
+  ELSE
+    a=IX+IY*1i             ;b-real, b-imag
+    b=cc+dd*1i
+  ENDIF
+
+    
+  
+loop:
+  oldz=z
+  z=z*z-2*a*z+b
+
+    
+bailout:
+  (!@diff && (|z|<@bailout))||(@diff && (|z-oldz|>1/@bailout)&&(|z|<@bailout))
+  
+switch:
+  type="DeformedMandelbrot"
+  PlottedPlane=PlottedPlane
+  areal=areal
+  aimag=aimag
+  breal=breal
+  bimag=bimag
+  xrot=xrot
+  yrot=yrot
+  xrott=xrott
+  yrott=yrott
+  zrot=zrot
+  LocalRot=LocalRot
+  diff=diff
+
+  bailout=bailout
+  
+
+default:
+  title = "DeformedJulia"
+  periodicity=2
+  method=multipass
+  
+   param PlottedPlane
+    enum = "1.(a-real,a-imag)" "2.(a-real,b-real)" "3.(a-real,b-imag)" "4.(a-imag,b-real)"   \
+           "5.(a-imag,b-imag)" "6.(b-real,b-imag)"
+    default=0
+    hint="The axis that will be plotted."
+  endparam
+  
+  param areal
+    caption=" a-real "
+    hint="Value for a-real when a-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+  param aimag
+    caption=" a-imag "
+    hint="Value for a-imag when a-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param breal
+    caption=" b-real "
+    hint="Value for b-real when b-real is constant (not plotted)."
+    default=0.0
+  endparam
+  
+   param bimag
+    caption=" b-imag "
+    hint="Value for b-imag when b-imag is constant (not plotted)."
+    default=0.0
+  endparam
+  
+ 
+ param xrot
+    caption="x-rotz"
+    hint= "Rotates yz-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrot
+    caption="y-rotz"
+    hint= "Rotates xz-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+ param xrott
+    caption="x-rott"
+    hint= "Rotates yt-plane in degrees around the x-axes."
+    default=0.0
+ endparam
+  
+ param yrott
+    caption="y-rott"
+
+    hint= "Rotates xt-plane in degrees around the y-axis."
+    default=0.0
+ endparam
+ 
+  
+  param zrot
+    caption="z-rot"
+    hint= "Rotating xy-plane in degrees around the z-axis."
+    default=0.0
+  endparam
+  
+ 
+
+   param LocalRot
+    caption="Local Rotation"
+    hint="Enables Local Rotation."
+    default=false
+  endparam
+  
+  
+  param diff
+    caption="Diff-Bailout"
+    default=false
+  endparam
+  
+  param bailout
+    caption="bailout"
+    hint="Value for bailout"
+    default=100.0
+  endparam
+  
+  
+  param seed
+    caption="Seed"
+    default=(0,0)
+    hint="Seed for Julia"
+  endparam
+     
+  }
+  

@@ -1,0 +1,294 @@
+FixMandelbrot {
+; Mandelbrot a iteracion fija,Todos los puntos son interiores
+init:
+  z = 0
+  int i=0
+loop:
+  z = z*z + #pixel
+  i = i + 1
+bailout:
+  i <= #maxiter
+;  |z|<10
+default:
+  title = "FixMandel"
+  center = (-0.5, 0)
+}
+
+FixJulia {
+; Julia a iteracion fija,Todos los puntos son interiores
+init:
+  z = #pixel
+  int iter=0
+loop:
+  z = z*z + @c 
+  iter=iter+1
+bailout:
+iter<=#maxiter
+default:
+  title = "FixJulia"
+  center = (-0.5, 0)
+  param c
+    caption = "C"
+    default = (-0.5,0)
+  endparam
+}
+
+GenMandel {
+init:
+  int iter=0;
+  z=pixel;
+  float x=0
+  float y=0
+  float tmpx=0;
+  float tmpy=0;
+  float a0=@pa0;
+  float b0=@pb0;
+  float c0=@pc0;
+  float d0=@pd0;
+  float e0=@pe0;
+  float f0=real(pixel)
+  float a1=@pa1;
+  float b1=@pb1;
+  float c1=@pc1;
+  float d1=@pd1;
+  float e1=@pe1;
+  float f1=imag(pixel)
+loop:
+  x=tmpx
+  y=tmpy
+  tmpx=a0*x^2+b0*y^2+c0*x*y+d0*x+e0*y+f0
+  tmpy=a1*x^2+b1*y^2+c1*x*y+d1*x+e1*y+f1
+  z=tmpx+(0,1)*tmpy
+  iter=iter+1
+bailout:
+  |z|<@bailout
+  ;iter<=#maxiter
+default:
+  title = "GenMandel"
+  param pa0
+    caption = "Real x^2"
+    default = 1.0
+  endparam
+  param pb0
+    caption = "Real y^2"
+    default = -1.0
+  endparam
+  param pc0
+    caption = "Real xy"
+    default = 0.0
+  endparam
+  param pd0
+    caption = "Real x"
+    default = 0.0
+  endparam
+  param pe0
+    caption = "Real y"
+    default = 0.0
+  endparam
+  param pa1
+    caption = "Imag x^2"
+    default = 0.0
+  endparam
+  param pb1
+    caption = "Imag y^2"
+    default = 0.0
+  endparam
+  param pc1
+    caption = "Imag xy"
+    default = 2.0
+  endparam
+  param pd1
+  caption = "Imag x"
+    default = 0.0
+  endparam
+  param pe1
+    caption = "Imag y"
+    default = 0.0
+  endparam
+  param bailout
+    caption = "BailOut"
+    default = 4.0
+  endparam
+
+switch:
+  type = "GenJulia"
+  seed=#pixel
+  pa0=pa0
+  pb0=pb0
+  pc0=pc0
+  pd0=pd0
+  pe0=pe0
+  pa1=pa1
+  pb1=pb1
+  pc1=pc1
+  pd1=pd1
+  pe1=pe1
+  bailout=bailout
+}
+
+
+GenJulia {
+init:
+  int iter=0;
+  z=pixel;
+  float x=0
+  float y=0
+  float tmpx=real(pixel);
+  float tmpy=real(pixel);
+  float a0=@pa0;
+  float b0=@pb0;
+  float c0=@pc0;
+  float d0=@pd0;
+  float e0=@pe0;
+  float f0=real(@seed);
+  float a1=@pa1;
+  float b1=@pb1;
+  float c1=@pc1;
+  float d1=@pd1;
+  float e1=@pe1;
+  float f1=imag(@seed);
+loop:
+  x=real(z)
+  y=imag(z)
+  tmpx=a0*x^2+b0*y^2+c0*x*y+d0*x+e0*y+f0
+  tmpy=a1*x^2+b1*y^2+c1*x*y+d1*x+e1*y+f1
+  z=tmpx+(0,1)*tmpy
+  iter=iter+1
+bailout:
+  |z|<@bailout
+  ;iter<=#maxiter
+default:
+  title = "GenJulia"
+  param seed
+    caption = "seed"
+    default = (-1.25,0.0)
+  endparam
+  param pa0
+    caption = "Real x^2"
+    default = 1.0
+  endparam
+  param pb0
+    caption = "Real y^2"
+    default = -1.0
+  endparam
+  param pc0
+    caption = "Real xy"
+    default = 0.0
+  endparam
+  param pd0
+    caption = "Real x"
+    default = 0.0
+  endparam
+  param pe0
+    caption = "Real y"
+    default = 0.0
+  endparam
+  param pa1
+    caption = "Imag x^2"
+    default = 0.0
+  endparam
+  param pb1
+    caption = "Imag y^2"
+    default = 0.0
+  endparam
+  param pc1
+    caption = "Imag xy"
+    default = 2.0
+  endparam
+  param pd1
+    caption = "Imag x"
+    default = 0.0
+  endparam
+  param pe1
+    caption = "Imag y"
+    default = 0.0
+  endparam
+  param bailout
+    caption = "BailOut"
+    default = 4.0
+  endparam
+
+switch:
+  type = "GenMandel"
+  pa0=pa0
+  pb0=pb0
+  pc0=pc0
+  pd0=pd0
+  pe0=pe0
+  pf0=pf0
+  pa1=pa1
+  pb1=pb1
+  pc1=pc1
+  pd1=pd1
+  pe1=pe1
+  bailout=bailout
+}
+
+NewtonFnA{
+; Se resuelve la ecuacion f(z)^n = c por el metodo de Newton
+; Se itera z = z - (f(z)^n - c) / (f(z)^n)'
+; En cada iteracion, se toma pixel por valor inicial.
+; Se utiliza la expresion de derivada f'(z)=(f(z+dz)-f(z))/dz dz->0.
+; Se ha utilizado un dz pequeño en la direccion del origen al pixel. 
+; La ecuacion esta resuelta si f(z)^n-c=0
+init:
+   z = pixel
+  dz = 0.00001*pixel/cabs(pixel)        
+loop:
+  diff1 = (@f(z+dz)^@n-@f(z)^@n)/dz   ;  (f(z)^n)'
+      z = z-(@f(z)^@n-@c)/diff1       ;   
+bailout:
+  |@f(z)^@n - @c| >= 0.00001 && |z|<1.0e20
+default:
+func f
+  caption="Funcion"
+  hint="funcion a resolver para f(n)^n-c=0 \
+        Tomar ident para newton clásico"
+  default = ident()
+endfunc
+param n
+ caption="Exponente"
+ default = (3,0)
+endparam
+param c
+ caption="Raiz"
+ default = (1,0)
+endparam
+switch:
+  type = "NewtonFnB"
+  c=#pixel
+  f=@f
+  n=@n
+
+} 
+
+NewtonFnB{
+init:
+;$define DEBUG
+  z = @c
+  dz = 0.00001*pixel/cabs(pixel)
+loop:
+  diff = (@f(z+dz)^@n-@f(z)^@n)/dz   ;  (f(z)^n)'
+     z = z-(@f(z)^@n-pixel)/diff
+  print("->",z)
+bailout:
+  |@f(z)^@n - pixel| >= 0.00001 && |z|<1.0e20
+default:
+func f
+  caption="Funcion"
+  default = ident()
+endfunc
+param n
+ caption="Exponente"
+ default = (3,0)
+endparam
+param c
+ caption="Valor inicial"
+ default = (1,0)
+endparam
+switch:
+  type = "NewtonFnA"
+  c=#pixel
+  f=@f
+  n=@n
+} 

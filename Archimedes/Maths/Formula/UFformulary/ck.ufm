@@ -1,0 +1,355 @@
+Mandelbrot_construct_3 {
+;
+; Constructing the Mandel Set ...
+;
+; alternating some mandelbrot formulas ...
+; parameter description :
+;
+; here we have 3 mandelbrot formulas together
+;
+; when in MANDELBROT Mode:
+; shift1,shift2,shift3 - are the shift values for each formula
+; power1,power2,power3 - the powers of the formulas ...
+; pertubate            - global pertubation value
+;
+; when in JULIA mode:
+; shift1,shift2,shift3 - are the Julia Seed values for each formula
+; power1,power2,power3 - the powers of the formulas ...
+; pertubate            - global pertubation value
+;
+; www.fractalmovies.com - delightful fractalmovies ...
+; c.Kleinhuis feb 2002
+init:
+    
+    if !@julia
+    z=@pertubate
+    c=#pixel+@Shift_1
+    c2=#pixel+@Shift_2
+    c3=#pixel+@Shift_3
+    else
+    z=#pixel
+    c=@Shift_1
+    c2=@Shift_2
+    c3=@Shift_3
+   
+    endif
+    
+ int count=0   
+ loop:
+ 
+ count=count+1
+ 
+ if count %2 ==0 
+  z = z^@power_1+c
+  ELSEif count %3 ==1 
+  z = z^@power_2+c2
+ ELSEif count %3 ==2 
+  z = z^@power_3+c3 
+ Endif  
+  bailout:
+  |z| <= @bailout
+default:
+  title = "ck Mandelbrot Construct 3"
+  center = (-0.5, 0)
+  param shift_1
+    caption = "1 Shift"
+    default = (0,0)
+    hint = "Perturbation or julia set parameter for first fractal, use at your own RISK."
+  endparam
+  param shift_2
+    caption = "2 Shift"
+    default = (0,0)
+    hint = "Perturbation or julia set parameter for second fractal, use at your own RISK."
+  endparam
+  param shift_3
+    caption = "3 Shift"
+    default = (0,0)
+    hint = "Perturbation or julia set parameter for third fractal, use at your own RISK."
+  endparam
+    
+    param power_1
+    caption = "Power 1"
+    default = (2,0)
+    hint = "This defines the power of the first Mandelbrot set. Use (2,0) \
+            for the standard Mandelbrot set."
+  endparam
+  param power_2
+    caption = "Power 2"
+    default = (2,0)
+    hint = "This defines the power of the second Mandelbrot set. Use (2,0) \
+            for the standard Mandelbrot set."
+  endparam
+  param power_3
+    caption = "Power 3"
+    default = (2,0)
+    hint = "This defines the power of the third Mandelbrot set. Use (2,0) \
+            for the standard Mandelbrot set."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+ param julia
+    caption = "Julia Mandelbrot"
+default=false
+    
+   
+  endparam
+switch:
+  type = "Mandelbrot_construct_3"
+  p1 = #pixel
+  power = power
+  bailout = bailout
+}
+
+
+Ludwig_K {
+; Ludwig k 
+; A designed fractal, 
+; 2002 by c.Kleinhuis
+;
+; notes:
+; i like most the lifelikeliness of this fractal,
+; try changing phoenix distortion and magnet shift
+; for exciting results ...
+; Consider: The deeper you zoom, the more interesting !
+;
+init:
+;-
+; halley init
+  float zmod  = |z|
+  float oldzmod = 0
+;-
+; Phoenix init 
+  complex y = 0
+;-
+;Magnet init
+  pixel2=@start+#pixel+@shift_magnet  
+  m_pixel=@start+#pixel
+  complex mz=(0,0) 
+  z = @start + #pixel
+  complex oldz=0
+  int counter=0
+  p1=@p1
+  p2=@p2
+
+  bool check_halley=false
+bool check_magnet=false
+loop:
+  counter=counter+1
+  check_halley=false
+  check_magnet=false
+  IF (counter % 3) ==0 
+    ;
+    ;
+    ; Mandelbrot 
+    z = z^@man_power+#pixel
+  ELSEIF(counter %3) == 1
+    ; Phoenix
+    z = z^p1 + pixel * z^(p1- 1) + p2 * y
+    y = z
+ ELSEIF(counter%3==2)
+   ; Magnet 
+   z = sqr(  (z^2 + m_pixel - 1) / (2*z * + pixel2 - 2) )
+   check_magnet=true
+ENDIF
+   
+  oldz=z
+bailout:
+  (|z|>0.01 ) || (check_magnet &&((|z - 1| < 0.0001) ||(|z|>= 123))) || (check_halley&&( abs(zmod - oldzmod) <= 0.0001))
+
+  default:
+  title = "Ludwig K"
+  periodicity = 0
+  maxiter = 500
+  angle=270
+  magn = 1    
+  center = (-0.4,0)
+     param bailout
+    caption = "Bailout"
+    default = 123
+  endparam
+   param start
+    caption = "Mandelbrot Pertubation"
+    default = (0,0)
+  endparam
+param shift_magnet
+    caption = "Magnet shift "
+    default = (-0.2,0.2)
+  endparam
+ param man_power
+    caption = "Mandelbrot Power"
+    default = (2,0)
+  endparam
+param p2
+    caption = "Phoenix Distorsion"
+    default = (0,0)
+  endparam
+param p1
+    caption = "Phoenix Power 2"
+    default = (2,0)
+  endparam
+
+switch:
+  type = "Ludwig_K"
+ 
+   p2=#pixel
+   start=start
+
+   relaxation=relaxation
+    bailout = @bailout
+ shift_magnet=@shift_magnet
+}
+
+Kleinhuis_Mandel_Phoenix {
+; Albert k 
+; A designed fractal, 
+; 2002 by c.Kleinhuis
+; Antoher life-like fractal !
+init:
+
+; Phoenix init 
+ 
+  complex y = 0
+ 
+
+;--------
+
+  z = @start + #pixel
+  complex oldz=0
+  int counter=0
+  p1=@p1
+  p2=@p2
+loop:
+
+ 
+
+  ;z=z+(oldz) 
+  
+    if (counter % 2) == 0 
+   ; Mandelbrot 
+    z = z^3+#pixel
+  ELSEIF(counter % 2) == 1 
+   ; Phoenix
+     z = z^2 + pixel * z^(p1- 1) + p2 * y
+ 
+       ; (imag (pixel) * y)
+    y = oldz
+ 
+ ENDIF
+   
+  oldz=z
+counter=counter+1
+
+
+bailout:
+  ( |z| <= @bailout)    
+  default:
+  title = "ManPhoenix Man"
+  periodicity = 0
+  angle=90
+  maxiter = 500
+ magn=1.5
+  center = (0,0)
+     param bailout
+    caption = "Bailout"
+    default = 4
+  endparam
+   param start
+    caption = "Mandelbrot Pertubation"
+    default = (0,0)
+  endparam
+param p1
+    caption = "Phoenix Distorsion"
+    default = (0.5,0)
+  endparam
+param p2
+    caption = "Phoenix Distorsion 2"
+    default = (0.5,0)
+  endparam
+
+}
+
+
+
+AlternatingFormula2 {
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+
+
+  Formula f[2];
+  f[0]=new @formulaClass1(0)
+  f[1]=new @formulaClass2(0)
+
+init:
+  int count=0;
+  #z = f[0].Init(#pixel)
+  f[1].Init(#pixel);
+loop:
+  count=count+1
+  #z = f[count%2].Iterate(#z)
+bailout:
+  ; (!f[1].IsBailedOut(#z))&&(!f[0].IsBailedOut(#z))
+  !f[count%2].IsBailedOut(#z)
+default:
+  title = "2 Alternating Formula"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/formulas/standard/generic.html"
+  rating = recommended
+  Formula param formulaClass1
+    caption = "Formula #1"
+    default = Standard_Mandelbrot
+  endparam
+Formula param formulaClass2
+    caption = "Formula #2"
+    default = Standard_Mandelbrot
+  endparam
+}
+
+
+
+AlternatingFormula3 {
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+
+  int numformulas=3;
+  Formula f[3];
+  f[0]=new @formulaClass1(0)
+  f[1]=new @formulaClass2(0)
+  f[2]=new @formulaClass3(0)
+
+init:
+  int count=0;
+  #z = f[count%numformulas].Init(#pixel)
+  f[1].Init(#pixel);
+  f[2].Init(#pixel);
+loop:
+  #z = f[count%numformulas].Iterate(#z)
+  count=count+1
+bailout:
+  (!f[0].IsBailedOut(#z))&&( !f[1].IsBailedOut(#z))&&( !f[2].IsBailedOut(#z))
+default:
+  title = "3 Alternating Formulas"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/formulas/standard/generic.html"
+  rating = recommended
+  Formula param formulaClass1
+    caption = "Formula #1"
+    default = Standard_Mandelbrot
+  endparam
+Formula param formulaClass2
+    caption = "Formula #2"
+    default = Standard_Mandelbrot
+  endparam
+Formula param formulaClass3
+    caption = "Formula #3"
+    default = Standard_Mandelbrot
+  endparam
+}
+
+

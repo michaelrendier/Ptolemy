@@ -1,0 +1,259 @@
+eew-dmj-Symmetry {
+;
+; Symmetry Transformation
+; This is simpler (and faster) to use for basic
+; symmetry than Kaleidoscope.  However, because
+; the symmetry center is ALWAYS the image center,
+; various surprising things may happen if you try
+; to zoom on an image using this transform.
+;
+;Enhanced by Erik Wahl
+;July 9 2014
+; The purpose of adding more symmetry options is to guarantee that one never
+; has to use this in conjunction with the Mirror transform which often leads to
+; confusing results.
+transform:
+  complex r = (0,1) ^ (#angle * 2/#pi); complex rotation vector
+  complex z2 = (0,0)
+  complex c = #center; symmetry center is screen center
+  float asp = #height/#width
+  IF (@mode == 0); horizontal symmetry
+    IF (#x > #width/2); point is in right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 1); mirrored horizontal symmetry
+    IF (#x < #width/2); point is in left half
+      z2 = (#pixel-c) / r
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 2); vertical symmetry
+    IF (#y < #height/2); point is in bottom half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 3); mirrored vertical symmetry
+    IF (#y > #height/2); point is in top half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 4); horizontal + vertical symmetry
+    IF (#x > #width/2); point is in right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+    IF (#y > #height/2); point is in bottom half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 5); mirrored horizontal + vertical symmetry
+    IF (#x < #width/2); point is in left half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+    IF (#y > #height/2); point is in bottom half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 6); horizontal + mirrored vertical symmetry
+    IF (#x > #width/2); point is in right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+    IF (#y < #height/2); point is in top half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 7); mirrored horizontal + mirrored vertical symmetry
+    IF (#x < #width/2); point is in left half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+    IF (#y < #height/2); point is in top half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+     ELSEIF (@mode == 8); diagonal symmetry
+    IF (asp*#x+#y > (asp*#width+#height)/2); point is in lower right half
+      z2 = (#pixel-c) / r
+      #pixel = r * (-z2) + c ;spin it 180
+    ENDIF
+     ELSEIF (@mode == 9);  mirrored diagonal symmetry
+    IF (asp*#x+#y < (asp*#width+#height)/2); point is in upper right half
+      z2 = (#pixel-c) / r
+      #pixel = r * (-z2) + c ;spin it 180
+    ENDIF
+    ELSEIF (@mode == 10);  negative diagonal symmetry
+    IF (asp*#x-#y < (asp*#width-#height)/2); point is in upper right half
+      z2 = (#pixel-c) / r
+      #pixel = r * (-z2) + c ;spin it 180
+    ENDIF
+    ELSEIF (@mode == 11);  mirrored negative diagonal symmetry
+    IF (asp*#x-#y > (asp*#width-#height)/2); point is in upper left half
+      z2 = (#pixel-c) / r
+      #pixel = r * (-z2) + c ;spin it 180
+    ENDIF
+  ENDIF
+
+default:
+  title = "Symmetry"
+ ;
+  param mode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "Horizontal" "Horizontal mirrored" "Vertical" "Vertical mirrored"\
+      "Both" "Horiz Mirrored + Vert" "Horiz + Vert Mirrored"\
+     "Both Mirrored" "Diagonal" "Mirrored Diagonal" "Negative Diagonal" \
+     "Mirrored Negative Diagonal" "None"
+    hint = "Style of symmetry."
+  endparam
+}
+
+eew-jos-Photomaton {
+; Jos Leys  October 2009
+; Erik Wahl July 2014
+; fixed so that image rotation works properly
+
+transform:
+
+  int x1 = #x,int y1 = #y
+  int x = #x,int y = #y
+  float ratio = #height/#width
+if ratio < 0.75
+float sx = 1.5/#magn/ratio
+float sy = 1.5/#magn
+else
+float sx = 2/#magn
+float sy = 2*ratio/#magn
+endif
+;
+complex i = (0.0,1.0)
+complex r = i^(#angle*2/#PI)
+int j=0
+;
+while (j<@its)
+   x=x1,y=y1
+  if x<=#width/2 && y<=#height/2
+        x1=2*x
+        y1=2*y
+     endif
+
+   if x>#width/2 && y<=#height/2
+     x1=2*x-#width-1
+     y1=2*y
+      endif
+
+   if x<=#width/2 && y>#height/2
+     x1=2*x
+     y1=2*y-#height-1
+      endif
+   if x>#width/2 && y>#height/2
+    x1=2*x-#width-1
+    y1=2*y-#height-1
+    endif
+
+    ;z=x1+y1*i
+    j=j+1
+    endwhile
+  #pixel = (#center-(sx-2*sx*x1/#width)+i*(sy-2*sy*y1/#height))*r
+
+default:
+  title = "eew-Photomaton"
+
+    param its
+    caption = "iterations"
+    default = 0
+  endparam
+}
+
+
+
+Simple_Julia {
+; Erik Wahl
+; This is a more efficient version of Damien Jones  dmj-Julia
+; transformation (located in dmj.uxf). It keeps the fractal centered
+; in the window so that genuine Julia symmetry can be displayed ( for
+; those functions that support it; not all in the function dropdown list do).
+;
+transform:
+  int i = @iters
+     c = #center
+  complex z = #pixel-c
+  WHILE (i > 0 && |z| <= @bailout)
+    z = @f(z)^@power + @seed
+    i = i - 1
+  ENDWHILE
+  IF (|z| > @bailout)
+    #solid = true
+  ELSE
+    #pixel = z+c
+  ENDIF
+
+default:
+  title = "Simple Julia"
+;
+  param iters
+    caption = "Iterations"
+    default = 1
+    hint = "Number of iterations to do before calculating the fractal. \
+            Use a small number."
+  endparam
+  func f
+    caption = "Function"
+    default = ident()
+  endfunc
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+  endparam
+  param power
+    caption = "Exponent"
+    hint = "Set this to the fractal formula's Exponent."
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    hint = "Set this to the fractal formula's Bailout."
+    default = 128.0
+  endparam
+}
+
+HyperProjective{
+transform:
+pn = @a*conj(#pixel)^2+@b*#pixel*conj(#pixel)+@c*#pixel^2+@d*conj(#pixel)+@e*#pixel+@f
+pd = @g*conj(#pixel)^2+@h*#pixel*conj(#pixel)+@i*#pixel^2+@j*conj(#pixel)+@k*#pixel+@l
+#pixel = pn/pd
+
+default:
+title = "HyperProjective"
+;
+  param a, caption = "a", default = 0.0, endparam
+  param b, caption = "b", default = 0.0, endparam
+  param c, caption = "c", default = 0.0, endparam
+  param d, caption = "d", default = 1.0, endparam
+  param e, caption = "e", default = 1.0, endparam
+  param f, caption = "f", default = 0.0, endparam
+  param g, caption = "g", default = 0.0, endparam
+  param h, caption = "h", default = 0.0, endparam
+  param i, caption = "i", default = 0.0, endparam
+  param j, caption = "j", default = 1.0, endparam
+  param k, caption = "k", default = -1.0, endparam
+  param l, caption = "l", default = 0.0, endparam
+
+}
+
+Gen_Mandy {
+transform:
+  #pixel = @fn(#pixel)+ @c
+default:
+  title = "General Mandelbrot"
+;
+  func fn
+  caption = "General Function"
+  default = ident()
+  endfunc
+  param c
+  caption = "Seed"
+  default = (0,0)
+  endparam
+}

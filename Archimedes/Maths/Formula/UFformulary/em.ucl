@@ -1,0 +1,3347 @@
+comment {
+If you had made something good out of this I WANT TO SEE IT.
+So please share it here:
+http://edo555.deviantart.com/
+
+I have no idea about images being made by my formulas
+alsou that could be the only profit of this.
+...
+Colouring methods developed by Edgar Malinovsky.
+Found these methods and features pretty usefull;)
+Tried to make user friendly.
+
+INCREASE THE BAILOUT, most of these methods require bailout to be at least >50.
+
+Non gradient colours can be switched to gradient
+by changing Colour Mode to "Gradient Based" or "Gradient by Harmonic".
+
+Includes:
+- NumberSeeker (default Exponent Smoothing variation) smoother
+- TwinLamps (Exp smooth divided by fractal dimension) deatailed
+- TwinLamps Direct colouring. 3x slower and unwielding as palette version,
+but it creates cosmic / electric / soap bubble colours. 
+- Log Trichrome. Based on FE and direct exp smoothing. Creates nice colourfull stalks.
+http://www.youtube.com/user/Antifacio
+- E++ Exponent Smoothing, more advanced version of exponent smoothing.
+- Wave Trichrome.
+- Brahmabrot, a simplified and expanded Buddhabrot.
+}
+
+NumberSeeker {
+; Colour method is variation of Exponenthial Smoothing developed 
+; Invented by Ron Barnett code taken from Damien M. Jones, + orbital colouring for quaternions
+; Zeros (trap center) are marked with dots and adding some number
+; diverses positive and negative areas in z^3 brots.
+; Colour iterations value smaller than iterations for some fractals
+; can change their colours.
+; but ZOOM in REQUIRES to manualy increase colour iterations.
+
+; http://edo555.deviantart.com/
+
+global:
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+float cabsz=0.0
+int cnt=0
+
+loop:
+IF (cnt<= iter)
+
+  IF (@diverge)
+    sum = sum + exp(-cabs(#z+@posneg))
+  ENDIF
+  IF (@converge)
+    sum2 = sum2 + exp(-1/cabs(zold-#z+@posneg))
+  ENDIF
+  zold = #z
+		; if nothing works
+IF (@modulusz)
+cabsz= cabs(#z+@posneg)
+ENDIF
+
+cnt=cnt+1
+ENDIF
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = sum2
+    ELSE
+      #index = cabsz
+    ENDIF
+    
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = sum
+    ELSE
+      #index = cabsz
+    ENDIF
+  ENDIF
+  		
+default:
+  title = "NumberSeeker"
+
+  param diverge
+    caption = "Color Divergent"
+    default = TRUE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  
+  param modulusz
+    caption = "Color by modulus of Z"
+    default = TRUE
+    hint = "Use simple modulusZ method"
+  endparam
+
+param posneg
+caption = "Zero is -"
+default =  (2.0, 0.0)
+hint = "The same as trap center.\
+	Adding number diverses negative Z areas\
+	and marks -n with dots."
+endparam
+
+heading
+caption = "Info"
+text = "Specifies iterations used for colours. Small values like 20 can reveal some features, but zoom in requires to increase the number."
+endheading
+
+param iternum
+caption="Use first N iterations"
+default=30
+min=0
+endparam
+}
+
+TwinLamps {
+; Standart Exp smoothing (invented by Ron Barnet code taken from Damien M. Jones) 
+; divided by fractal dimension statistics (from Kerry Mitchell). 
+; + 2 leveling functions in both methods for smoother result. 
+; Tried to make universal algorithm and  showing features
+; of fractal and not of colour method. Goes with mandelbrots, 
+; patterns and julias, but not so with newton fractals.
+; Zoom will require manual increase of colour iterations.
+; by Edgars Malinovskis 17.01.2012
+; Removed bug creating no colour spots. 23.02.1012
+
+;You may redistribute this algorithm, modify, derivate or use comercialy
+; as you wish as long as you give proper credits.
+
+; http://edo555.deviantart.com/
+
+global:
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+
+init:
+float sum = 0.0
+float zmin=1e20
+float zmax=-1
+float cabsz=0.0
+float lnz=0.0
+int cnt=0
+
+loop:
+IF (cnt<= iter)
+
+cabsz= cabs(#z+@posneg)
+
+	IF (@dimtype=="Exp- leveled |z|")
+	lnz=exp(-cabsz)
+	ELSEIF (@dimtype=="Ln leveled |z|")
+	lnz=log(cabsz)
+	ELSEIF  (@dimtype=="|z|")
+	lnz=cabsz
+	ENDIF
+
+;finding min and max z. Here was an ugly bug.
+IF (lnz < zmin)
+zmin = lnz
+ENDIF
+IF (lnz > zmax)
+zmax = lnz
+ENDIF
+
+;exp smoothing
+sum= sum+ exp(-cabsz)
+
+cnt=cnt+1
+ENDIF
+
+final:
+;dividing exponent smooth value by fractal dimension value
+IF (@mathsmooth == "TanH leveled")		
+#index=tanh(sum)/(1+zmax-zmin)
+
+ELSEIF (@mathsmooth == "Sqrt leveled")
+#index=sqrt(sum)/(1+zmax-zmin)
+
+ELSEIF (@mathsmooth == "Non leveled")
+#index=sum/(1+zmax-zmin)
+ENDIF
+  		
+default:
+title = "TwinLamps"
+
+	param posneg
+	caption = "Add to pixel value"
+	default =  (0.0, 0.0)
+	hint = "The same as trap center.\
+	Adding number diverses negative Z areas\
+	and marks -n with dots."
+	endparam
+
+	param dimtype
+	caption = "Fractal Dimension of";
+	enum = "Exp- leveled |z|" "Ln leveled |z|" "|z|";
+	default = 0;
+	endparam
+		
+param mathsmooth
+caption = "Exp- smoothing is";
+enum = "Sqrt leveled" "TanH leveled" "Non leveled";
+default =  0;
+endparam
+
+heading
+caption = "Info"
+text = "Specifies iterations used for colours. Small values like 20 can reveal some features, but zoom in requires to increase the number."
+endheading
+
+param iternum
+caption="Use first N iterations"
+default=2500
+min=0
+hint="Specify the iteration cycle at which colouring is applied"
+endparam
+}
+
+
+TwinLampsDirect {
+; Direct colouring of Twin Lamps method.
+; Exponential smoothing colouring divided by fractal dimenison statistics. 
+; + an option for just Direct Colouring Exponent Smoothing.
+
+; Colours are calculated by different exponent bases. 
+; The smaller is a base the more of that colour is taken. 0 still is 0.
+; This looks cosmic as alike algorithm are used to colour
+; astro photos. (low values goes to red, high to blue) 
+; Just keep colours different (Re, Im, Re neagative bases.)
+
+; 3x as slow and unwielding as palette based version;)
+; ZOOM requires manual INCREASE of colour iterations.
+; But low colour iteration values (~25) increase features.
+
+; Used standart Exp smoothing (invented by Ron Barnet) code taken from Damien M. Jones. 
+; and fractal dimension statistics from Kerry Mitchell. 
+; http://www.fractalforums.com/index.php?topic=10153.0
+
+; by Edgars Malinovskis 18.01.2012
+; + Removed bug creating black spots. 23.02.1012
+; + Changed exponent bases to generate more natural colours. 31.03.2012.
+
+; 20.04.2012.
+; + normalisation for z values converging to small number, aka all white insides.
+; +  post functions for more colour capabilities. 
+; Saved fractals of older versions could require maxiter increase or will be darker.
+
+; 03.10.2012. + new colour mode by harmonic between gradient and direct.
+; So to have advantages of using gradients and direct colours.
+; 13.11.2012. + flag to remove unnatural blue tones in direct modes.
+; 14.08.2013. + triangle transfer function and more colour switches.
+
+; You may redistribute this algorithm, modify, derivate or use comercialy
+; as you wish as long as you give proper credits.
+
+
+; http://edo555.deviantart.com/
+
+$DEFINE DIRECT
+global:
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+
+init:
+complex sumR = (0, 0)
+complex sumG = (0, 0)
+complex sumB = (0, 0)
+float resultR=0.0
+float resultG=0.0
+float resultB=0.0
+float zmin=1e20
+float zmax=-1
+float cabsz=0.0
+float lnz=0.0
+int cnt=0
+color	gradcolor=rgba(0, 0, 0, 0)
+float resultAlpha =0.0
+
+loop:
+IF (cnt<= iter) ;calculates first iterations
+
+cabsz= cabs(#z+@posneg)
+
+IF (@justexp == FALSE)
+	IF (@dimtype=="Exp- leveled |z|")
+	lnz=exp(-cabsz)
+	ELSEIF (@dimtype=="Ln leveled |z|")
+	lnz=log(cabsz)
+	ELSEIF  (@dimtype=="|z|")
+	lnz=cabsz
+	ENDIF
+
+	;finding min and max z. Bug- conditionals must be seperate.
+	IF (lnz < zmin)
+	zmin = lnz
+	ENDIF
+	IF (lnz > zmax)
+	zmax = lnz
+	ENDIF
+
+ENDIF
+
+; normalisation for the insides
+; effect are noticable with iterations close to max and small z value.
+cabsz =cnt/iter *2 + cabsz
+
+cnt=cnt+1
+
+;exp smoothing. different exponent bases gives different summs for each chanell.
+sumR= @baseR^(-cabsz) + sumR
+sumG= @baseG^(-cabsz) + sumG
+sumB= @baseB^(-cabsz) + sumB
+
+
+ENDIF
+
+final:
+	;diversing negative bases by using just real part of the summ
+	resultR=abs(real(sumR))
+	resultG=abs(real(sumG))
+	resultB=abs(real(sumB))
+
+;dividing exponent smooth value by fractal dimension value
+IF (@mathsmooth == "TanH leveled" && @justexp == FALSE )		
+resultR=tanh(resultR)/(1+zmax-zmin)
+resultG=tanh(resultG)/(1+zmax-zmin)
+resultB=tanh(resultB)/(1+zmax-zmin)
+
+ELSEIF (@mathsmooth == "Sqrt leveled" && @justexp == FALSE)
+resultR=sqrt(resultR)/(1+zmax-zmin)
+resultG=sqrt(resultG)/(1+zmax-zmin)
+resultB=sqrt(resultB)/(1+zmax-zmin)
+
+ELSEIF (@mathsmooth == "Non leveled" && @justexp == FALSE)
+resultR=resultR/(1+zmax-zmin)
+resultG=resultG/(1+zmax-zmin)
+resultB=resultB/(1+zmax-zmin)
+
+ELSEIF (@justexp == TRUE) ;just direct colour exp smoothing
+resultR=resultR
+resultG=resultG
+resultB=resultB
+ENDIF
+
+IF (@postfn==0)	
+;nothing
+
+ELSEIF (@postfn==1)	
+	resultR=sqr(resultR)
+	resultG=sqr(resultG)
+	resultB=sqr(resultB)
+
+ELSEIF (@postfn==2)	
+	resultR=sqrt(resultR)
+	resultG=sqrt(resultG)
+	resultB=sqrt(resultB)
+
+ELSEIF (@postfn==3)	
+	resultR=(  1- resultR   )
+	resultG=(  1- resultG   )
+	resultB=(  1- resultB   )
+
+ELSEIF (@postfn==4)	
+resultR=abs(   cos(#pi*resultR)+resultR*0.5  )
+resultG=abs(   cos(#pi*resultG)+resultG*0.5  )
+resultB=abs(   cos(#pi*resultB)+resultB*0.5  )
+
+ELSEIF (@postfn==5)
+float alsresultR = resultR
+float alsresultG = resultG
+float alsresultB = resultB
+	
+	resultR=abs(resultR -sqrt(alsresultG*alsresultB)*0.5)
+	resultG=abs(resultG -sqrt(alsresultR*alsresultB)*0.5)
+	resultB=abs(resultB -sqrt(alsresultR*alsresultG)*0.5)
+
+ELSEIF (@postfn==6)	
+	resultR=sqr(sin(#pi*resultR))
+	resultG=sqr(sin(#pi*resultG))
+	resultB=sqr(sin(#pi*resultB))
+	
+ELSEIF (@postfn==7)	
+	resultR=(  sin(resultR)  )
+	resultG=(  sin(resultG)  )
+	resultB=(  sin(resultB)  )
+	
+ELSEIF (@postfn==8)	
+resultR= abs( resultR -round(resultR) )
+resultG= abs( resultG -round(resultG) )
+resultB= abs( resultB -round(resultB) )
+
+ELSEIF (@postfn==9)	
+	resultR=tanh(resultR)
+	resultG=tanh(resultG)
+	resultB=tanh(resultB)
+	
+ELSEIF (@postfn==10)	
+	resultR=sin((resultR) )*cos((resultG))
+	resultG=sin((resultG) )*cos((resultR))
+	resultB=sin((resultB) )*cos((resultR))
+
+ELSEIF (@postfn==11)	
+	resultR=((resultR)/(2+abs(resultR)))*3
+	resultG=((resultG)/(2+abs(resultG)))*3
+	resultB=((resultB)/(2+abs(resultB)))*3
+
+ELSEIF (@postfn==12)
+  resultR=abs(abs(resultR*0.5-trunc(resultR*0.5))-0.5)*2
+  resultG=abs(abs(resultG*0.5-trunc(resultG*0.5))-0.5)*2
+  resultB=abs(abs(resultB*0.5-trunc(resultB*0.5))-0.5)*2
+
+ELSEIF (@postfn==13)
+  ;mathematicaly correct version code from Erik Wahl
+  alsresultR = resultR
+  alsresultG = resultG
+  alsresultB = resultB
+	resultR = sin((alsresultG))*cos((alsresultB)) + alsresultR*0.5
+	resultG = sin((alsresultB))*cos((alsresultR)) + alsresultG*0.5
+	resultB = sin((alsresultR))*cos((alsresultG)) + alsresultB*0.5
+
+ELSEIF (@postfn==14)
+  resultR = abs(cos(resultR))
+  resultG = abs(cos(resultG))
+  resultB = abs(cos(resultB))
+  
+ELSEIF (@postfn==15)
+  resultR = abs(exp(sin(resultR))-1)
+  resultG = abs(exp(sin(resultG))-1)
+  resultB = abs(exp(sin(resultB))-1)
+  	 	
+ENDIF
+
+  ; switching red and blue.
+	IF (@switchRB==true)
+	cabsz=resultB
+	resultB=resultR
+	resultR=cabsz
+  ENDIF
+  ; switching red and green.
+	IF (@switchRG==true)
+	cabsz=resultG
+	resultG=resultR
+	resultR=cabsz
+  ENDIF
+
+;colour mode: direct, using palette, or mix.
+IF (@palette==0)
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+#color = rgb(resultR, resultG, resultB)
+
+ELSEIF (@palette==1)
+#color = gradient(resultG)
+
+ELSEIF (@palette==2)
+ ;gradient is by arithmetic mean of RGB
+  gradcolor=gradient( (resultR+resultG+resultB)*0.333333333333333 )
+ ;harmonic of gradient and RGB
+	resultR=2/(  recip (red(gradcolor))+ recip(resultR) )
+	resultG=2/(  recip (green(gradcolor))+ recip(resultG) )
+	resultB=2/(  recip (blue(gradcolor))+ recip(resultB) )
+				
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+				
+	resultAlpha=alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+	
+ELSEIF (@palette==3)
+; colour mode like of Fractal Explorer.
+; uses pallete, but each chanell is calculated seperately.
+resultR=red(gradient(resultR))
+resultG=green(gradient(resultG))
+resultB=blue(gradient(resultB))
+resultAlpha=alpha(gradient( resultG))
+
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+
+#color = rgba(resultR, resultG, resultB, resultAlpha)
+
+ELSEIF (@palette==4)	
+;smoother.
+#color=gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+ 		
+default:
+title = "TwinLamps Direct Colouring"
+
+heading
+caption = "Colour notice"
+text = "For Gradient change the colour mode."
+endheading
+
+param palette
+	caption = "Colour Mode"
+	enum= "Direct Colouring" "Gradient Based" "Mixed Harmonic" "Fractal Explorer like" "Gradient by Harmonic"
+	default=2
+	hint= "Gradient Based is gradient calculated from green channel, gradient harmonic is gradient calc from mean of all channels. Mixed is harmonic mean between gradient colour (by mean of RGB) and RGB channels. Fractal Explorer like is RGB values calculated seperately from gradient. All exept direct colouring uses gradient and alpha channel."
+endparam
+
+
+	param posneg
+	caption = "Add to pixel value"
+	default =  (2.0, 0)
+	hint = "The same as trap center. Adding number diverses negative Z areas and marks -n with dots. Say 2 marks all pixels where z=-2 with dots (technicaly zeroes)."
+	endparam
+
+param iternum
+caption="Use first N iterations"
+default=2500
+min=0
+hint="Specify the iteration cycle at which colouring is applied"
+endparam
+
+	param dimtype
+	caption = "Fractal Dimension of";
+	enum = "Exp- leveled |z|" "Ln leveled |z|" "|z|";
+	default = 0;
+	visible = (@justexp == FALSE)
+	endparam
+		
+param mathsmooth
+caption = "Exp- smoothing is";
+enum = "Sqrt leveled" "TanH leveled" "Non leveled";
+default =  0;
+visible = (@justexp == FALSE)
+endparam
+
+  param justexp
+  caption = "Just direct Exp Smoothing"
+  default = TRUE
+  hint = "Use sole direct colouring exponent smoothing non  affected by fractal dimension."
+  endparam
+
+param postfn
+	caption = "Transfer Function"
+	enum = "1- None" "2- Square Power (darker)" "3- Square Root (lighter)" "4- Inverted" "5- Half Periodic cos" "6- Accentuate RGB" "7- Haversine" "8- periodic Sine" "9- Solarisation" "10- Hyperbolic Tangent" "11- SineCosineMix" "12- Sigmoid" "13- Triangle" "14- eew SineCosineMix" "15- Cosine" "16- ExpOfSin"
+	default =  0
+endparam
+
+param switchRB
+	caption = "Switch Red and Blue"
+	default=false
+	hint= "Switch Red and Blue channels, so don't need to change log Bases."
+endparam
+
+param switchRG
+	caption = "Switch Red and Green"
+	default=false
+	hint= "Switch Red and Green channels, so don't need to change exponent bases to got different colours."
+endparam
+
+param naturalise
+	caption = "Naturalise Colours"
+	visible = (@palette == 0||@palette == 2||@palette == 3)
+	default=false
+	hint="Removes unnatural blue tint of non-gradient methods."
+endparam
+
+param pallete
+	caption = "UNUSED Use Gradient instead"
+	default=false
+	visible=false
+	hint= "FLAG IS NOT USED. Now method uses colour mode instead."
+endparam
+
+heading
+caption = "Info"
+text = "To get nice colours use switches and flags, post functions, switching channels and 'Add to pixel value'. Exponent bases are for good at math. Colours are calculated by different -exponent bases for each channel. 1/2+1/3+1/4. So colours can be changed by changing bases, larger number means less of that colour. 0 is nothing, but 10000 are less than 1.5. Normalisation depends on maxiter, so larger the maxiter, lighter the picture. Colour Mode allows to switch between direct, gradient based and mixed direct and gradient by harmonic mean, Fractal Explorer like and gradient by harmonic mean modes."
+endheading
+
+param baseR
+caption = "Red Base"
+default = (3,0)
+hint="Base for red channel exponent. The more different bases, the more different colours. Larger values results less of that colour."
+endparam
+
+param baseG
+caption = "Green Base"
+default = (-1.85,0)
+endparam
+
+param baseB
+caption = "Blue Base"
+default = (0,1.85)
+endparam
+
+heading
+caption = "Colours"
+text = "Colour Mode is incompatible with flag 'use gradient instead' of earlyer versions. Old parameters could require setting colour mode to direct or gradient. All modes exept direct colouring uses gradient and alpha channel."
+endheading
+}
+
+
+LogTrichrome {
+
+; Direct colour method based on Fractal Explorer and NASA
+; colour techniques. Summs of inveversed multiple log,
+; algorithm by Arthur Sirotinsky and Olga Federenko. 
+; Colour information is generated by each channel having
+; different logarithm bases.
+; http://www.fractalforums.com/index.php?topic=11520 
+
+; + post functions for greater variety.
+; + switch to use gradient, index is green channel.
+; 03.10.2012. + new colour mode by harmonic between gradient and direct.
+; So to have advantages of using gradients and direct colours.
+; 12.10.2012. + gradient mode with index calculated as harmonic mean between 3 chanells - smoother.
+; 17.10.2012. better normalisation for deeper renders.
+; 13.11.2012. + flag to remove unnatural blue tones in direct modes.
+; 14.08.2013. + triangle transfer function & more colour switches.
+; 28.08.2013 + Pre functions, works like orbit traps.
+; 30.09.2013  + 8 pre functions.
+;+ random noise taken from Mark Townsend's scripts.
+
+; by Edgar Malinovsky 16.04.2012.
+; You may redistribute this algorithm, modify, derivate or use comercialy as you wish as long as you give proper credits.
+
+
+; http://edo555.deviantart.com/
+
+$DEFINE DIRECT
+global:
+; Calculating differences to ln
+float factlogR = recip(log(@baseR));
+float factlogG = recip(log(@baseG));
+float factlogB = recip(log(@baseB));
+
+init:
+
+float sumR= 0.0
+float sumG= 0.0
+float sumB= 0.0
+float resultR= 0.0
+float resultG= 0.0
+float resultB= 0.0
+float cabsz= 0.0
+float dataR= 0.0
+float dataG= 0.0
+float dataB= 0.0
+int cnt= 0
+int normaliter = 0
+color	gradcolor=rgba(0, 0, 0, 0)
+float resultAlpha =0.0
+complex ztemp =(0,0)
+
+loop:
+;"trap center"
+ztemp=#z +@posneg
+;pre functions
+; + 1.0E-15 to avoid null value dots and not working with magnet.
+
+  IF (@prefn == 0)  ; original unmodified
+  cabsz= cabs( ztemp  +1.0E-15)
+  ELSEIF (@prefn == 1)
+  cabsz= cabs( real(ztemp)- imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 2)
+  cabsz= cabs( real(ztemp)* imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 3)
+  cabsz= cabs( real(ztemp)% (imag(ztemp) +1E-20) +1.0E-15)
+  ELSEIF (@prefn == 4)
+  cabsz= |ztemp +1.0E-15|
+  ; non linear
+  ELSEIF (@prefn == 5)
+  cabsz= cabs( abs(real(ztemp)*2+ imag(ztemp))+ recip(abs(ztemp)+1e-15) +1.0E-15)
+  ELSEIF (@prefn == 6)
+  cabsz= cabs( ( (real(ztemp))*2+ (imag(ztemp))/((real(ztemp))+ (imag(ztemp))+ (1.9,0.1) )  ) +1.0E-15)
+  ELSEIF (@prefn == 7)
+  cabsz= cabs( (round(ztemp) +ztemp)*0.5 +1.0E-15)
+  ELSEIF (@prefn == 8)
+  cabsz= cabs( sinh( ztemp)  +1.0E-15)
+  ELSEIF (@prefn == 9)
+  cabsz= cabs( cos( ztemp)  +1.0E-15)
+  ; symmetric
+  ELSEIF (@prefn == 10)
+  cabsz=cabs( sqr(imag(ztemp)) - sqrt(abs(real(ztemp))) + flip (sqr(real(ztemp)) - sqrt(abs(imag(ztemp) ))) + 1.0E-15)
+  ELSEIF (@prefn == 11)
+  cabsz= cabs(( sqr(sqr( imag(ztemp) )) + sqr(sqr( real(ztemp) )) + 1.0E-15  ) ^0.25 )
+ ;back to basic
+ELSEIF (@prefn == 12)  ; real
+cabsz= abs(real( ztemp  +1.0E-15))
+ELSEIF (@prefn == 13)  ; imag
+cabsz= abs(imag( ztemp)  +1.0E-15)
+;from orbit trap	
+ELSEIF (@prefn == 14)
+; "hyperbola"
+cabsz = abs(imag(ztemp) * real(ztemp) - 1+1.0E-15)
+; from thin orbit trap of Samuel Monnier
+ELSEIF (@prefn == 15 )
+;sincos waves
+cabsz= abs( sin(real(ztemp)) + cos(real(ztemp)) + imag(ztemp) +1.0E-15 )
+ELSEIF (@prefn == 16 )
+;parabola
+cabsz = abs( sqr(real(ztemp)) - imag(ztemp) +1.0E-15)
+ELSEIF (@prefn == 17 )
+;trifolium
+cabsz = abs(8/( sqr(real (ztemp) )  +4) - imag(ztemp) +1.0E-15)
+;arlecchino, modified Mark Townsend harlequin
+ELSEIF (@prefn == 18 )
+;arlecchino
+cabsz=cabs( ztemp- 1- sqr(1.25*real(atan( real(ztemp) / (imag(ztemp)+1.0E-15 ) )) )   +1.0E-15)
+;formulas
+ELSEIF (@prefn == 19)
+;Chebyshev4Axolotl
+cabsz =cabs(  (sqr(ztemp)*(35 * sqr(ztemp) - 30) + 3) / 8  +1.0E-15)
+ENDIF
+
+
+cnt=cnt+1
+
+;Log normalisation for insides => zero.
+IF (cnt<100)
+normaliter = sqr(cnt)
+ENDIF
+
+;Here goes logarithms
+IF (@lgtype ==0)
+dataR=  abs( factlogR*log (  factlogR*log (  factlogR*log (cabsz)  )  ) )
+dataG=  abs( factlogG*log ( factlogG*log (  factlogG*log (cabsz)  )  ) )
+dataB=  abs( factlogB*log (  factlogB*log (  factlogB*log (cabsz)  )  ) )
+
+ELSEIF (@lgtype ==1)
+dataR=  abs( factlogR*log (  log (  factlogR*log (cabsz)  )  ) )
+dataG=  abs( factlogG*log (  log ( factlogG*log (cabsz)  )  ) )
+dataB=  abs( factlogB*log (  log (  factlogB*log (cabsz)  )  ) )
+
+ELSEIF (@lgtype ==2)
+dataR=  abs( factlogR*log (  factlogR*log (  factlogR*log (  factlogR*log (cabsz)  )  )  ) )
+dataG=  abs( factlogG*log (  factlogG*log ( factlogG*log (  factlogG*log (cabsz)  )  )  ) )
+dataB=  abs( factlogB*log  (  factlogB*log (  factlogB*log (  factlogB*log (cabsz)  )  )  ) )
+
+ELSEIF (@lgtype ==3)
+dataR=  abs( factlogR*log (  ( factlogR*log (cabsz ) )  ) )
+dataG=  abs( factlogG*log (  ( factlogG*log (cabsz ) )  ) )
+dataB=  abs( factlogB*log (  ( factlogB*log (cabsz ) )  ) )
+ENDIF
+
+		;summ of inverted logs
+		sumR= recip(dataR*normaliter +  @darkness) + sumR
+		sumG= recip(dataG*normaliter +  @darkness) + sumG
+		sumB= recip(dataB*normaliter +  @darkness) + sumB
+
+final:
+
+IF (@userandom==true)
+sumR = abs( tanh(@hyperandom *real(#random)) +sumR)
+sumG = abs( tanh(@hyperandom *real(#random)) +sumG)
+sumB = abs( tanh(@hyperandom *real(#random)) +sumB)
+ENDIF
+
+;modifications of index grade values 0 to 1.
+IF (@postfn==0)	
+	resultR=sumR
+	resultG=sumG
+	resultB=sumB
+
+ELSEIF (@postfn==1)	
+	resultR=sqr(sumR)
+	resultG=sqr(sumG)
+	resultB=sqr(sumB)
+
+ELSEIF (@postfn==2)	
+	resultR=sqrt(sumR)
+	resultG=sqrt(sumG)
+	resultB=sqrt(sumB)
+
+ELSEIF (@postfn==3)	
+	resultR= (  1- sumR )
+	resultG= (  1- sumG )
+	resultB= (  1- sumB )
+
+ELSEIF (@postfn==4)	
+resultR= abs(  cos(#pi*sumR)+sumR*0.5  )
+resultG= abs(  cos(#pi*sumG)+sumG*0.5  )
+resultB= abs(  cos(#pi*sumB)+sumB*0.5  )
+
+ELSEIF (@postfn==5)	
+	resultR=abs(sumR -sqrt(sumG*sumB)*0.5)
+	resultG=abs(sumG -sqrt(sumR*sumB)*0.5)
+	resultB=abs(sumB -sqrt(sumR*sumG)*0.5)
+
+ELSEIF (@postfn==6)	
+	resultR=sqr(sin(#pi*sumR))
+	resultG=sqr(sin(#pi*sumG))
+	resultB=sqr(sin(#pi*sumB))
+
+ELSEIF (@postfn==7)	
+resultR= abs( sumR -round(sumR) )
+resultG= abs( sumG -round(sumG) )
+resultB= abs( sumB -round(sumB) )
+
+ELSEIF (@postfn==8)	
+resultR= tanh(sumR)
+resultG= tanh(sumG)
+resultB= tanh(sumB)
+
+ELSEIF (@postfn==9)	
+	resultR=(  sin((sumR) )*cos((sumG))  )
+	resultG=(  sin((sumG) )*cos((sumR))  )
+	resultB=(  sin((sumB) )*cos((sumR))  )
+
+ELSEIF (@postfn==10)	
+	resultR=((sumR)/(2+abs(sumR)))*3
+	resultG=((sumG)/(2+abs(sumG)))*3
+	resultB=((sumB)/(2+abs(sumB)))*3	
+	
+ELSEIF (@postfn==11)	
+  resultR=abs(abs(sumR*0.5-trunc(sumR*0.5))-0.5)*2
+  resultG=abs(abs(sumG*0.5-trunc(sumG*0.5))-0.5)*2
+  resultB=abs(abs(sumB*0.5-trunc(sumB*0.5))-0.5)*2
+
+ELSEIF (@postfn==12)
+  resultR = abs(cos(sumR))
+  resultG = abs(cos(sumG))
+  resultB = abs(cos(sumB))
+
+ELSEIF (@postfn==13)
+  resultR = asinh(sumR)
+  resultG = asinh(sumG)
+  resultB = asinh(sumB)
+
+ELSEIF (@postfn==14)
+  resultR = abs(exp(sin(sumR))-1)
+  resultG = abs(exp(sin(sumG))-1)
+  resultB = abs(exp(sin(sumB))-1)
+
+
+ENDIF
+  ; switching red and blue.
+	IF (@switchRB==true)
+	sumB=resultB
+	resultB=resultR
+	resultR=sumB
+  ENDIF
+  ; switching red and green.
+	IF (@switchRG==true)
+	sumB=resultG
+	resultG=resultR
+	resultR=sumB
+  ENDIF
+  
+;colour mode: direct, using palette, or mix.
+IF (@palette==0)
+
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+
+#color = rgb(resultR, resultG, resultB)
+ELSEIF (@palette==1)
+#color = gradient(resultG)
+ELSEIF (@palette==2)
+
+ ;gradient is by arithmetic mean of RGB
+  gradcolor=gradient( (resultR+resultG+resultB)*0.333333333333333 )
+ ;harmonic of gradient and RGB
+	resultR=2/(  recip (red(gradcolor))+ recip(resultR) )
+	resultG=2/(  recip (green(gradcolor))+ recip(resultG) )
+	resultB=2/(  recip (blue(gradcolor))+ recip(resultB) )
+				
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+				
+	resultAlpha=alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+
+ELSEIF (@palette==3)
+; colour mode like of Fractal Explorer.
+; uses pallete, but each chanell is calculated seperately.
+resultR=red(gradient(resultR))
+resultG=green(gradient(resultG))
+resultB=blue(gradient(resultB))
+resultAlpha=alpha(gradient( resultG))
+
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+
+#color = rgba(resultR, resultG, resultB, resultAlpha)
+
+ELSEIF (@palette==4)	
+;smoother.
+#color=gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+
+default:
+title = "Log Trichrome"
+rating = recommended
+
+heading
+caption = "Colour notice"
+text = "For Gradient change the colour mode."
+endheading
+
+param palette
+	caption = "Colour Mode"
+	enum= "Direct Colouring" "Gradient Based" "Mixed Harmonic" "Fractal Explorer like" "Gradient by Harmonic"
+	default=0
+	hint= "Gradient Based is gradient calculated from green channel, gradient harmonic is gradient calc from mean of all channels. Mixed is harmonic mean between gradient colour (by mean of RGB) and RGB channels. Fractal Explorer like is RGB values calculated seperately from gradient. All exept direct colouring uses gradient and alpha channel."
+endparam
+
+param posneg
+	caption = "Add to pixel value"
+	default =  (0, 0)
+	hint = "Adding number aka trap center curves stalks around points with the opposite value. (2 and -2) And diverses + and - areas."	
+endparam
+		
+param lgtype
+	caption = "Logarithms applied"
+	enum = "1- Triple logarithm" "2- Smoother Triple log" "3- Quadruple logarithm" "4- Double logarithm"
+	default = 0
+endparam
+		
+param darkness
+	caption="Darkness amount"
+	default=2.5
+	hint="Value added before inverting logarithm. Larger value creates darker pictures."
+endparam	
+	
+param switchRB
+	caption = "Switch Red and Blue"
+	default=false
+	hint= "Switch Red and Blue channels, so don't need to change log Bases."
+endparam
+	
+param switchRG
+	caption = "Switch Red and Green"
+	default=false
+	hint= "Switch Red and Green channels, so don't need to change exponent Bases."
+endparam
+	
+param prefn
+	caption = "Pre Function"
+	enum = "1 None" "2 X-Y" "3 X*Y" "4 remainder of X/Y" "5 X*X+Y*Y" "6 Stalks A" "7 Stalks B" "8 Areas" "9 Sinh" "10 Cos" "11 SZA Butterfly" "12 Supermodulus 4"   "13 Real" "14 Imag" "15 Hyperbola" "16 Sincos Waves" "17 Parabola" "18 Trifolium" "19 Arlecchino" "20 Chebyshev4Axolotl"
+	default =  0
+	hint= "Pre function applied before colour calculations. Changes colour pattern like orbit traps."
+endparam	
+	
+param postfn
+	caption = "Transfer Function"
+	enum = "1- None" "2- Square Power (darker)" "3- Square Root (lighter)" "4- Inverted" "5- Half Periodic cos" "6- Accentuate RGB" "7- Haversine" "8- Solarisation" "9- Hyperbolic Tangent" "10- SineCosineMix" "11- Sigmoid" "12- Triangle" "13- Cosine" "14- ArcSinH" "15- ExpOfSin"
+	default =  0
+	hint="Changes colours. The same as UF, but applied before colour mode and have extra functions."
+endparam
+
+param naturalise
+	caption = "Naturalise Colours"
+	visible = (@palette == 0||@palette == 2||@palette == 3)
+	default=false
+	hint="Removes unnatural blue tint of non-gradient methods."
+endparam
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param hyperandom
+caption = "Hypertangent noise"
+hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+default = 0.04
+visible = (@userandom==true)
+endparam
+
+heading
+caption = "Info"
+text = "Colour method based on Fractal Explorer and NASA techniques. Indexes are summs of normalised inveversed multiple logarithms of all iterated z values. 3 different log bases behaves differently, hence generate different colours. Use Switches and 'Add to pixel value', more logarithms creates more stalks, 'Add to pixel' curves stalks around oposite values (adding 1 to -1 is 0), and post function changing tone. log Bases are for good in math. Colour Mode allows to switch between direct, gradient based and mixed direct and gradient by harmonic mean, Fractal Explorer like and gradient by harmonic mean modes. www.fractalforums.com"
+endheading
+
+param baseR
+	caption = "Red log Base"
+	default = 1.35
+	hint="Logarithmic base for a red channel. Colours are generated by each channel having different logs."
+endparam
+param baseG
+	caption = "Green log Base"
+	default = 1.55
+endparam
+param baseB
+	caption = "Blue log Base"
+	default = 1.65
+endparam
+
+heading
+caption = "Colours"
+text = "Colour Mode is incompatible with flag 'use gradient' of earlyer versions. Old parameters could require setting colour mode to direct or gradient. All modes exept direct colouring uses gradient and alpha channel."
+endheading
+}
+
+E++ExpSmoothting {
+; by Edgar Malinovsky
+; based on bunch of different ideas from REB, LDM and LKM to Fractal Explorer and my own.
+; 17.07.2012
+;03.10.2012. removed direct options for more easy gradient change.
+; 15.08.2013. more transfer functions.
+; 24.08.2013. +5 pre functions.
+; 28.08.2013 +2 pre functions, now add to pixel should work correctly with pre functions.
+; 30.09.2013  + 8 pre functions and random noise texturing
+; taken from Mark Townsend's scripts.
+
+; http://edo555.deviantart.com/
+
+global:
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+
+complex imagine = #e*(0,1)
+float minuse = - #e
+
+init:
+complex sum = (0, 0)
+float result=0.0
+float zmax=-1
+float cabsz=0.0
+float lnz=0.0
+int cnt=0
+float oldcabsz = 0.0
+float data = 0
+complex ztemp =(0,0)
+
+loop:
+IF (cnt<= iter) ;calculates first iterations
+
+;"trap center"
+ztemp=#z +@posneg
+;pre functions
+; + 1.0E-15 to avoid null value dots and not working with magnet.
+
+  IF (@prefn == 0)  ; original unmodified
+  cabsz= cabs( ztemp  +1.0E-15)
+  ELSEIF (@prefn == 1)
+  cabsz= cabs( real(ztemp)- imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 2)
+  cabsz= cabs( real(ztemp)* imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 3)
+  cabsz= cabs( real(ztemp)% (imag(ztemp) +1E-20) +1.0E-15)
+  ELSEIF (@prefn == 4)
+  cabsz= |ztemp +1.0E-15|
+  ; non linear
+  ELSEIF (@prefn == 5)
+  cabsz= cabs( abs(real(ztemp)*2+ imag(ztemp))+ recip(abs(ztemp)+1e-15) +1.0E-15)
+  ELSEIF (@prefn == 6)
+  cabsz= cabs( ( (real(ztemp))*2+ (imag(ztemp))/((real(ztemp))+ (imag(ztemp))+ (1.9,0.1) )  ) +1.0E-15)
+  ELSEIF (@prefn == 7)
+  cabsz= cabs( (round(ztemp) +ztemp)*0.5 +1.0E-15)
+  ELSEIF (@prefn == 8)
+  cabsz= cabs( sinh( ztemp)  +1.0E-15)
+  ELSEIF (@prefn == 9)
+  cabsz= cabs( cos( ztemp)  +1.0E-15)
+  ; symmetric
+  ELSEIF (@prefn == 10)
+  cabsz=cabs( sqr(imag(ztemp)) - sqrt(abs(real(ztemp))) + flip (sqr(real(ztemp)) - sqrt(abs(imag(ztemp) ))) + 1.0E-15)
+  ELSEIF (@prefn == 11)
+  cabsz= cabs(( sqr(sqr( imag(ztemp) )) + sqr(sqr( real(ztemp) )) + 1.0E-15  ) ^0.25 )
+;back to basic
+ELSEIF (@prefn == 12)  ; real
+cabsz= abs(real( ztemp  +1.0E-15))
+ELSEIF (@prefn == 13)  ; imag
+cabsz= abs(imag( ztemp)  +1.0E-15)
+;from orbit trap	
+ELSEIF (@prefn == 14)
+; "hyperbola"
+cabsz = abs(imag(ztemp) * real(ztemp) - 1+1.0E-15)
+; from thin orbit trap of Samuel Monnier
+ELSEIF (@prefn == 15 )
+;sincos waves
+cabsz= abs( sin(real(ztemp)) + cos(real(ztemp)) + imag(ztemp) +1.0E-15 )
+ELSEIF (@prefn == 16 )
+;parabola
+cabsz = abs( sqr(real(ztemp)) - imag(ztemp) +1.0E-15)
+ELSEIF (@prefn == 17 )
+;trifolium
+cabsz = abs(8/( sqr(real (ztemp) )  +4) - imag(ztemp) +1.0E-15)
+;harlequin
+ELSEIF (@prefn == 18 )
+;arlecchino, modified Mark Townsend harlequin.
+cabsz=cabs( ztemp- 1- sqr(1.25*real(atan( real(ztemp) / (imag(ztemp)+1.0E-15 ) )) )   +1.0E-15)
+;formulas
+ELSEIF (@prefn == 19)
+;Chebyshev4Axolotl
+cabsz =cabs(  (sqr(ztemp)*(35 * sqr(ztemp) - 30) + 3) / 8  +1.0E-15)
+ENDIF
+  
+
+;finding max z.
+IF (@expdim == TRUE)
+	lnz=exp(-cabsz)
+	IF (lnz > zmax)
+	zmax = lnz
+	ENDIF
+ENDIF
+
+; some normalisation for insides => small value.
+IF (@calculation == 2)
+cabsz =cnt/iter*0.25  + cabsz
+ELSE
+cabsz =cnt/iter  + cabsz
+ENDIF
+
+cnt=cnt+1
+
+;now smoothing and convergent/divergent or both.
+IF (@calculation == 0)
+data = -cabsz - @darkness
+ELSEIF (@calculation == 1)
+data = oldcabsz - cabsz - @darkness
+ELSEIF (@calculation == 2)
+data= -abs( recip(oldcabsz -cabsz)- cabsz) - @darkness
+ENDIF
+
+;summ of exponents
+IF (@exponentype == "Eulers Number")
+sum = exp(data) + sum
+
+ELSEIF (@exponentype == "Negative E")
+sum = minuse^(data) + sum
+
+ELSEIF (@exponentype == "Imaginary E")
+sum = (imagine)^(data) + sum
+
+ELSEIF (@exponentype == "Free exponent")
+sum = @base^(data) + sum
+ENDIF
+
+oldcabsz = cabsz
+
+ENDIF
+
+final:
+;only real positive numbers are of use
+result=abs(real(sum))
+	IF (@expdim == TRUE)
+	result=result/(1+ zmax)
+	ENDIF
+
+IF (@userandom==true)
+result = abs( tanh(@hyperandom *real(#random)) +result)
+ENDIF
+
+IF (@postfn==0)	
+;nothing
+
+ELSEIF (@postfn==1)	
+result= abs( cos(#pi*result)+result*0.5  )
+
+ELSEIF (@postfn==2)
+	result= abs(  cos(result)  )
+
+ELSEIF (@postfn==3)	
+	result=sqr(sin(#pi*result))
+	
+ELSEIF (@postfn==4)	
+	result=  abs(  sin(result)  )
+	
+ELSEIF (@postfn==5)	
+	result=result*0.5 + 0.5/result
+	
+ELSEIF (@postfn==6)	
+	result=tanh(result)
+
+ELSEIF (@postfn==7)	
+result= abs( result -round(result) )
+
+ELSEIF (@postfn==8)
+result=((result)/(2+abs(result)))*3
+
+ELSEIF (@postfn==9)	
+result=abs(abs(result*0.5-trunc(result*0.5))-0.5)*2
+
+ELSEIF (@postfn==10)
+  result = asinh(result)
+
+ELSEIF (@postfn==11)
+  result = abs(exp(sin(result))-1)
+
+ENDIF
+
+#index=result
+ 		
+default:
+title = "E++ExpSmoothting"
+rating = recommended
+
+	param posneg
+	caption = "Add to pixel value"
+	default =  (0, 0)
+	hint = "The same as trap center. Adding number diverses negative Z areas and marks -n with dots. Say 2 marks all pixels where z=-2 with dots (technicaly zeroes)."
+	endparam
+
+param iternum
+caption="Use first N iterations"
+default=7770000
+min=1
+hint="Specify the iteration cycle at which colouring is applied. Using just few first iterations would make fractal much smoother."
+endparam
+
+  param expdim
+  caption = "Fractal dimension smoothing"
+  default = FALSE
+  hint = "Divides colour value by max inverse exponent. Sometimes generates smoother result, with a kalisets can generate sharper patterns."
+  endparam
+
+heading
+caption = "Info"
+text = "Trying to make more advanced version of exponent smoothing;) If artefacts appears try to change bailout value to somewhere 50 < bailout < 1000."
+endheading
+
+param darkness
+caption = "Darkness (smooths)"
+default = 0.0
+hint="Adds value to inverse exponent. Positive value decreases detail density, negative increases."
+endparam
+
+param calculation
+caption = "Formula type"
+enum = "Mandelbrot type" "Newton type" "Magnet type"
+default =  0
+hint = "Uses different formulas originaly intended for different fractal types based on bailout options: convergent, divergent and both (magnet). Should work with both."
+endparam
+
+param exponentype
+caption = "Exponent Base"
+enum = "Eulers Number" "Negative E" "Imaginary E" "Free exponent"
+default =  0
+hint = "Exponent base used to calculate colours. Normal exponent function is single curve thus generating smooth gradient. Negative and imaginary exponents are wave functions thus generating waved colour gradient. Non default exponents could cease to work in deep zooms."
+endparam
+
+param base
+caption = "Exponent Base"
+default = (-2,2)
+hint="Base for inverse exponent. Negative and imaginary values works differently than real. The larger number the least would be colour density."
+visible = (@exponentype == "free exponent")
+endparam
+
+param prefn
+	caption = "Pre Function"
+	enum = "1 None" "2 X-Y" "3 X*Y" "4 remainder of X/Y" "5 X*X+Y*Y" "6 Stalks A" "7 Stalks B" "8 Areas" "9 Sinh" "10 Cos" "11 SZA Butterfly" "12 Supermodulus 4"   "13 Real" "14 Imag" "15 Hyperbola" "16 Sincos Waves" "17 Parabola" "18 Trifolium" "19 Arlecchino" "20 Chebyshev4Axolotl"
+	default =  0
+	hint= "Pre function applied before colour calculations. Changes colour pattern, like orbit traps. Some pre functions with non-standart (Eulers) exponent bases could require additional (number) precision. If artefacts appears try to change bailout value in interval 50 < bailout < 1000."
+endparam
+
+param postfn
+	caption = "Transfer Function"
+	enum = "1- None" "2- Half Cosine" "3- Cosine" "4- Haversine" "5- Sine" "6- DoubleEdged" "7- Hyperbolic Tangent" "8- Solarisation" "9- Sigmoid" "10- Triangle" "11- ArcSinH" "12- ExpOfSin"
+	default =  0
+	hint= "The same as built in colour transfer, but with additional functions."
+endparam
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param hyperandom
+caption = "Hypertangent noise"
+hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+default = 0.04
+visible = (@userandom==true)
+endparam
+}
+
+WaveTrichrome {
+;Based on Fractal Explorer Orbit Counting
+;by Arthur Sirotinsky and Olga Federenko (and Ed Algra).
+;but are better in deep zooms.
+;& inspired by Paul Derbyshire's renders & Ron Barnett's exp smoothing.
+; www.fractalforums.com
+
+;Here colours behave much as waves.
+;Channels ara calculated as inversed summs
+;by Edgar Malinovsky 17.11.2012.
+; 14.08.2013. + triangle transfer function & more colur switches.
+; 28.08.2013 + Szegedy Butterfly trap.
+; 30.09.2013  + 2 orbits, type 9 now will work from start intended.
+;+ random noise taken from Mark Townsend's scripts.
+
+; You may redistribute this algorithm, modify, derivate or use comercialy as you wish as long as you give proper credits.
+
+
+; http://edo555.deviantart.com/
+
+$DEFINE DIRECT
+global:
+float antilightR=1/@lightR
+float antilightG=1/@lightG
+float antilightB=1/@lightB
+
+init:
+int cnt=0
+float sumR=0
+float sumG=0
+float sumB=0
+
+float dataR=@seed
+float dataG=@seed
+float dataB=@seed
+
+float resultR= 0.0
+float resultG= 0.0
+float resultB= 0.0
+
+float cabsz=0
+float xx = 0
+float yy = 0
+float zx = 0
+float zy = 0
+color gradcolor=rgba(0, 0, 0, 0)
+float resultAlpha =0.0
+
+loop:
+cnt=cnt+1
+
+IF (@orbits !=0)
+zx = real(#z)
+zy = imag(#z)
+xx = sqr(zx)
+yy = sqr(zy)
+ENDIF
+
+IF (@orbits ==0)
+cabsz=cabs(#z)
+
+ELSEIF (@orbits ==1)
+cabsz= abs(2*xx - yy - sin(yy)) + abs(2*yy - xx - sin(xx))
+
+ELSEIF (@orbits ==2)
+cabsz= abs(xx - abs(abs(yy) - cos(abs(xx)))) + abs(yy - abs(abs(xx) - cos(abs(yy))))
+
+ELSEIF (@orbits ==3)
+cabsz= abs(xx - yy + abs(sin(yy))) + abs(yy*yy - xx + abs(sin(xx)))
+
+ELSEIF (@orbits ==4)
+cabsz= abs(2*sin(xx) + abs(yy) - cos(yy*yy)) + abs(2*sin(yy) + abs(xx) - cos(xx*xx))
+
+ELSEIF (@orbits ==5)
+cabsz= abs(2*sin(abs(zx)) - abs(zy) - cos(2*abs(zx)))+abs(2*sin(abs(zy)) - abs(zx) - cos(2*abs(zy)))
+
+ELSEIF (@orbits ==6)
+cabsz= abs(xx - yy + sin(yy*yy)) + abs(yy - xx + sin(xx*xx))
+
+ELSEIF (@orbits ==7)
+cabsz= abs(abs(zy) - cos(abs(zx))) + abs(abs(zx) - cos(abs(zy)))
+
+ELSEIF (@orbits ==8)
+cabsz= abs(xx-sin(yy) + abs(cos(yy)*sin(0.5*yy))) + abs(xx-sin(xx) + abs(cos(xx)*sin(0.5*xx)))
+
+ELSEIF (@orbits ==9)
+;cabsz= abs(xx - abs(sin(zy)-cos(zx))) + abs(yy - abs(sin(zx)-cos(zy))) + abs(xx - abs(sin(zy)+cos(zx))) + abs(yy - abs(sin(zx)+cos(zy)))
+cabsz= cabs( (xx - abs(sin(zy)-cos(zx))) + flip(yy - abs(sin(zx)-cos(zy))) + (xx - abs(sin(zy)+cos(zx))) + flip(yy - abs(sin(zx)+cos(zy)))  )
+ELSEIF (@orbits ==10)
+cabsz=cabs( yy - sqrt(abs(zx) ) + flip ( xx - sqrt(abs(zy ))   ) + 1.0E-15)
+ELSEIF (@orbits == 11 )
+;arlecchino, modified Mark Townsend harlequin
+cabsz=cabs( zx+flip(zy)- 1- sqr(1.25*real(atan(zx / (zy+1.0E-15) )) )   +1.0E-15)
+;formulas
+ELSEIF (@orbits == 12)
+;Chebyshev4Axolotl
+cabsz =cabs(  ( (xx-yy+flip(2*zx*zy) )*(35 * sqr(xx-yy+flip(2*zx*zy) ) - 30) + 3) / 8  +1.0E-15)
+ENDIF
+
+;here are colour method
+IF (@colmethod ==0)
+dataR =  (dataR + recip(cnt) )/( @scalarR + cabsz*antilightR)
+dataG =  (dataG + recip(cnt) )/( @scalarG + cabsz*antilightG)
+dataB =  (dataB + recip(cnt) )/( @scalarB + cabsz*antilightB)
+
+ELSEIF (@colmethod ==1)
+dataR =  (dataR )/( @scalarR + cabsz*antilightR)
+dataG =  (dataG )/( @scalarG + cabsz*antilightG)
+dataB =  (dataB )/( @scalarB + cabsz*antilightB)
+ENDIF
+
+sumR=sumR + dataR
+sumG=sumG + dataG
+sumB=sumB + dataB
+
+
+final:
+resultR = abs(sumR)
+resultG = abs(sumG)
+resultB = abs(sumB)
+;here ends colour method.
+;post modifications of index grade values 0 to 1.
+
+IF (@userandom==true)
+resultR = abs( tanh(@hyperandom *real(#random)) +resultR)
+resultG = abs( tanh(@hyperandom *real(#random)) +resultG)
+resultB = abs( tanh(@hyperandom *real(#random)) +resultB)
+ENDIF
+
+IF (@postfn==0)	
+;nothing
+
+ELSEIF (@postfn==1)	
+	resultR=sqr(resultR)
+	resultG=sqr(resultG)
+	resultB=sqr(resultB)
+
+ELSEIF (@postfn==2)	
+	resultR=sqrt(resultR)
+	resultG=sqrt(resultG)
+	resultB=sqrt(resultB)
+
+ELSEIF (@postfn==3)	
+	resultR=(  1- resultR )
+	resultG=(  1- resultG )
+	resultB=(  1- resultB )
+
+ELSEIF (@postfn==4)	
+resultR=abs(  cos(#pi*resultR)+resultR*0.5  )
+resultG=abs(  cos(#pi*resultG)+resultG*0.5  )
+resultB=abs(  cos(#pi*resultB)+resultB*0.5  )
+
+ELSEIF (@postfn==5)
+float sumR = resultR
+float sumG = resultG
+float sumB = resultB
+	
+	resultR=abs(resultR -sqrt(sumG*sumB)*0.5)
+	resultG=abs(resultG -sqrt(sumR*sumB)*0.5)
+	resultB=abs(resultB -sqrt(sumR*sumG)*0.5)
+
+ELSEIF (@postfn==6)	
+	resultR=sqr(sin(#pi*resultR))
+	resultG=sqr(sin(#pi*resultG))
+	resultB=sqr(sin(#pi*resultB))
+	
+ELSEIF (@postfn==7)	
+	resultR=abs(  sin(resultR)  )
+	resultG=abs(  sin(resultG)  )
+	resultB=abs(  sin(resultB)  )
+	
+ELSEIF (@postfn==8)	
+resultR= abs( resultR -round(resultR) )
+resultG= abs( resultG -round(resultG) )
+resultB= abs( resultB -round(resultB) )
+
+ELSEIF (@postfn==9)	
+	resultR=tanh(resultR)
+	resultG=tanh(resultG)
+	resultB=tanh(resultB)
+	
+ELSEIF (@postfn==10)	
+	resultR=abs(  sin((resultR) )*cos((resultG)) )
+	resultG=abs(  sin((resultG) )*cos((resultR)) )
+	resultB=abs(  sin((resultB) )*cos((resultR)) )
+
+ELSEIF (@postfn==11)	
+	resultR=((resultR)/(2+abs(resultR)))*3
+	resultG=((resultG)/(2+abs(resultG)))*3
+	resultB=((resultB)/(2+abs(resultB)))*3
+	
+ELSEIF (@postfn==12)
+  resultR=abs(abs(resultR*0.5-trunc(resultR*0.5))-0.5)*2
+  resultG=abs(abs(resultG*0.5-trunc(resultG*0.5))-0.5)*2
+  resultB=abs(abs(resultB*0.5-trunc(resultB*0.5))-0.5)*2
+
+ELSEIF (@postfn==13)
+  resultR = abs(cos(resultR))
+  resultG = abs(cos(resultG))
+  resultB = abs(cos(resultB))
+
+ELSEIF (@postfn==14)
+  resultR = asinh(resultR)
+  resultG = asinh(resultG)
+  resultB = asinh(resultB)
+
+ELSEIF (@postfn==15)
+  resultR = abs(exp(sin(resultR))-1)
+  resultG = abs(exp(sin(resultG))-1)
+  resultB = abs(exp(sin(resultB))-1)  	 	
+  	 	
+ENDIF
+
+  ; switching red and blue.
+	IF (@switchRB==true)
+	sumB=resultB
+	resultB=resultR
+	resultR=sumB
+  ENDIF
+  ; switching red and green.
+	IF (@switchRG==true)
+	sumB=resultG
+	resultG=resultR
+	resultR=sumB
+  ENDIF
+
+;colour mode: direct, using palette, or mixed.
+IF (@palette==0)
+
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+
+#color = rgb(resultR, resultG, resultB)
+
+ELSEIF (@palette==1)
+#color = gradient(resultG)
+
+ELSEIF (@palette==2)
+ ;gradient is by arithmetic mean of RGB
+  gradcolor=gradient( (resultR+resultG+resultB)*0.333333333333333 )
+ ;harmonic of gradient and RGB
+	resultR=2/(  recip (red(gradcolor))+ recip(resultR) )
+	resultG=2/(  recip (green(gradcolor))+ recip(resultG) )
+	resultB=2/(  recip (blue(gradcolor))+ recip(resultB) )
+	
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF			
+				
+	resultAlpha=alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+
+ELSEIF (@palette==3)
+; colour mode like of Fractal Explorer.
+; uses pallete, but each chanell is calculated seperately.
+resultR=red(gradient(resultR))
+resultG=green(gradient(resultG))
+resultB=blue(gradient(resultB))
+resultAlpha=alpha(gradient( resultG))
+
+       IF (@naturalise==true)
+       resultB=resultB*0.8
+       ENDIF
+
+#color = rgba(resultR, resultG, resultB, resultAlpha)
+
+ELSEIF (@palette==4)	
+;all waves included.
+#color=gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+
+default:
+title = "Wave Trichrome"
+rating = recommended
+
+heading
+caption = "Colour notice"
+text = "For Gradient change the colour mode."
+endheading
+
+param palette
+	caption = "Colour Mode"
+	enum= "Direct Colouring" "Gradient Based" "Mixed Harmonic" "Fractal Explorer like" "Gradient by Harmonic"
+	default=3
+	hint= "Gradient Based is gradient calculated from green channel, gradient harmonic is gradient calc from mean of all channels. Mixed is harmonic mean between gradient colour (by mean of RGB) and RGB channels. Fractal Explorer like is RGB values calculated seperately from gradient. All exept direct colouring uses gradient and alpha channel."
+endparam
+
+float param seed
+caption = "Start Seed"
+default = 1
+hint="Starts colour calculation with this value + 1/ iteration. Density of colour wave depends on this, lowest is somewhere -2.5."
+endparam
+
+param orbits
+caption = "Symmetric Orbits"
+enum = "None" "Type 1" "Type 2" "Type 3" "Type 4" "Type 5" "Type 6" "Type 7" "Type 8" "Type 9" "SZA Butterfly" "Arlecchino" "Chebyshev4Axolotl"
+hint= "Used instead of modulus. So that it shows additional features."
+endparam
+
+param switchRB
+	caption = "Switch Red and Blue"
+	default=false
+	hint= "Switch Red and Blue channels."
+endparam
+
+param switchRG
+	caption = "Switch Red and Green"
+	default=false
+	hint= "Switch Red and Green channels, so don't need to change numbers."
+endparam
+
+param colmethod
+caption = "Method"
+enum = "With counter" "Counterless"
+hint= "Slightly different colour calculation. With counter are normal color method, but Counterless sometimes produces nice overall julia shapes but it is not zoomable."
+endparam
+
+param naturalise
+	caption = "Naturalise Colours"
+	default=false
+	visible = (@palette == 0||@palette == 2||@palette == 3)
+	hint="Removes unnatural blue tint of non-gradient methods."
+endparam
+
+param postfn
+	caption = "Transfer Function"
+	enum = "1- None" "2- Square Power (darker)" "3- Square Root (lighter)" "4- Inverted" "5- Half Periodic cos" "6- Accentuate RGB" "7- Haversine" "8- periodic Sine" "9- Solarisation" "10- Hyperbolic Tangent" "11- SineCosineMix" "12- Sigmoid" "13- Triangle" "14- Cosine" "15- ArcSinH" "16- ExpOfSin"
+	default =  0
+	hint="The same as UF, but applied before colour mode and have extra functions."
+endparam
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param hyperandom
+caption = "Hypertangent noise"
+hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+default = 0.04
+visible = (@userandom==true)
+endparam
+
+heading
+caption = "Info"
+text="Increase bailout. Colour method is based on Fractal Explorer orbit counting but behave better in deep zooms. Colours here behave as 3 waves. Each channel is calculated as summ of inversed progression throught all the iterations, with calculation starting with start seed. Colour amount and wave lenght depends on light - multiplicator and scalar - addition, working in opposite. Colour effects takes place when light and scalar are different. It generates large colour value, so Direct Colouring mode works with Sine transfer. www.fractalforums.com"
+endheading
+
+float param lightR
+caption = "Red light"
+default = 0.7
+endparam
+
+float param scalarR
+caption = "Red scalar"
+default = 0.7
+endparam
+
+float param lightG
+caption = "Green light"
+default = 1.2
+endparam
+
+float param scalarG
+caption = "Green scalar"
+default = 1.2
+endparam
+
+float param lightB
+caption = "Blue light"
+default = 0.25
+endparam
+
+float param scalarB
+caption = "Blue scalar"
+default = 0.25
+endparam
+
+}
+
+Brahmabrot {
+; This is different from standart Buddhabrot in that
+; colours are calculated from progressive curves
+; using Wave Trichrome method, who are inspired by RGB Buddhabrots but needs fewer iterations.
+; As it don't tests for insdes or outsides of fractal, but mixes buddhabrot and antibuddhabrot.
+; Alsou it used both mandelbrot and newton bailout.
+; source code for this mostly is taken from Susan D. Chambless buddhabrot.
+; and one more loop.
+; Some formulas like Swirl transform, Royal, SummonerEye, Gavarun are by Kram1032.
+; Buddhabrot technique is by Melinda Green.
+;By Edgar Malinovsky 02.12.2012.
+
+;http://www.fractalforums.com/fractal-programs/problems-with-implementing-budhabrot-in-uf/
+;08.12.2012
+; Added newton bailout revealing more features.
+; Tweeking of parameters, so that there are less dots.
+; Changed some formulas for another.
+
+;21.12.2012
+;+ faster bailout using modulus without sqrt.
+;+ quasiJulia set. Normal julia aren't enought dharmic.
+; moved at the end of colour formulas, so that it wount interfere with fractal colouring.
+
+;21.05.2013
+; + equalisation for large sample size.
+;+ few formula changes.
+;15.08.2013. + triangle transfer function and more control over equalisation.
+;03.09.2013. + one formula and one code simplification.
+;01.10.2013. + more equaly distributed float sequences (halton+RND)/2.
+;26.10.2013. + swirlbox formula. Would require zoom out and 8;8 pixel source.
+;30.10.2014. + fractalus techna formula.
+
+; You may redistribute this algorithm, modify, derivate or use comercialy as you wish as long as you give proper credits.
+
+
+; http://edo555.deviantart.com/
+
+$DEFINE DIRECT
+global:
+float maxcolour=0
+float increaser=0
+float antilightR=1/@lightR
+float antilightG=1/@lightG
+float antilightB=1/@lightB
+  int seed =  @seedinput
+    float dataR=1
+    float dataG=1
+    float dataB=1
+
+    int pwid = trunc(#width)
+    int phgt = trunc(#height)
+
+  ;3 arrays for RGB
+  float pixR[trunc(#width),trunc(#height)]  ; offscreen image
+  float pixG[trunc(#width),trunc(#height)]  ; offscreen image
+  float pixB[trunc(#width),trunc(#height)]  ; offscreen image
+
+  ;calculate buddha loop many times
+  int superloop=1
+  int slcounter =0
+
+  complex locations[@maxiter]       ; collect locations
+  int cnt = 0                         ; Loop counters
+  float colourcnt = 0                ;colourcounter
+  int x = 0, int y = 0              ; Loop counters & integer coords
+  float xc =  real(#center)         ; Scaling constants
+  float yc = -imag(#center)
+
+  float srcMinX = - (@srcWidth * 0.5)
+  float srcMinY = - (@srcHeight * 0.5)
+  float  bscale = (#height * #magn) / 3
+  float nsamples =0
+  int irandX1  =0
+  int irandY1   =0
+  float srcX1  =0
+  float srcY1  =0
+  complex z =0
+  complex c  =0
+  complex zold=1
+  int iter =0
+  int locindex =0
+  float dx  =0
+  float dy   =0
+
+  ;for halton
+float haltonX = 0
+float haltonY = 0
+float form = 0
+int cycle = 0
+
+; Initialize arrays of RGB pixels with neutral colour.
+  while x < #width
+    y = 0
+    while y < #height
+      pixR[x, y] = @ambient
+      pixG[x, y] = @ambient
+      pixB[x, y] = @ambient
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+  ; Main buddha iteration loop
+  nsamples = round(#width * #height* #magn)
+  cnt = 0
+
+;if sample number is too large, divide single
+;loop in many small. 12 divides better than 10, so multiples of 12 is used.
+IF @sampleDensity > 497664
+nsamples = trunc(nsamples/3456)
+superloop=3456
+ELSEIF @sampleDensity > 41472
+nsamples = trunc(nsamples/288)
+superloop=288
+ELSEIF @sampleDensity > 3456
+nsamples = trunc(nsamples/24)
+superloop=24
+ELSE
+nsamples = trunc(nsamples/4)
+superloop=4
+ENDIF
+
+nsamples =  nsamples * @sampleDensity
+
+while slcounter < superloop  ; superloop
+
+  while cnt < nsamples  ;main buddha loop
+    ; generate random integers (-#randomrange to #randomrange)
+    irandX1 = seed = random(seed)
+    irandY1 = seed = random(seed)
+
+
+
+IF (@addhalton==true)
+haltonX = 0
+form = 0.5
+cycle = cnt+34
+WHILE (cycle > 0)
+haltonX = haltonX + form * (cycle % 2)
+cycle = floor(cycle *0.5)
+form = form *0.5
+ENDWHILE
+
+haltonY = 0
+form = 0.2
+cycle = cnt+34
+WHILE (cycle > 0)
+haltonY = haltonY + form * (cycle % 5)
+cycle = floor(cycle *0.2)
+form = form *0.2
+ENDWHILE
+
+    ; mean of random float and halton numbers
+srcX1 = (abs(irandX1) / #randomrange +haltonX)*0.5*@srcWidth + srcMinX
+srcY1 = (abs(irandY1) / #randomrange +haltonY)*0.5*@srcHeight + srcMinY
+ELSE
+ ;convert to random floats.
+srcX1 = (abs(irandX1) / #randomrange)*@srcWidth + srcMinX
+srcY1 = (abs(irandY1) / #randomrange)*@srcHeight + srcMinY
+ENDIF
+    ; Mbrot set with random c value
+IF (@settype=="Mset")
+				; Mset with random c value
+				z= 0
+				c= srcX1 + flip(srcY1)
+ELSEIF  (@settype=="QuasiJulia")
+				;like julia set with random start z and c = julia + pixel
+				z= srcX1 + flip(srcY1)
+				c= z+ @julia
+ENDIF
+    
+    zold=1
+    ; iteration count and modulus, this don't need large bailout
+    iter = 0
+    while ( (|z| < 16) && (|zold-z| >0.000001 ) && (iter < @maxIter) ) ;fractal formula loop
+
+zold=z
+IF (@formula ==0)
+;Mandelbrot
+z= z^@power +c
+ELSEIF (@formula ==1)
+;Talis
+z= z^@power/(z^(@power-1) + @talisadd) +c
+ELSEIF (@formula ==2)
+;Starbrot
+z= z*@stargeom - z^@starpower + c
+ELSEIF (@formula ==3)
+;Tricorn
+z= conj(z^@power)+c
+ELSEIF (@formula ==4)
+;BurningSihp
+z=abs(z^@power)+c
+ELSEIF (@formula ==5)
+;8th modulus Mbrot
+z=sqr(z)
+z=(z^8+z^8)^0.125+c
+ELSEIF (@formula ==6)
+;Unit Vector - Mbrot
+z=z^@power+c
+z= z/cabs(z)*@unitvector +z
+ELSEIF (@formula ==7)
+;Quadratic General
+z= sqr(real(z)) + sqr(imag(z))+ flip(real(z)*imag(z)*@quadfactor) + c
+ELSEIF (@formula ==8)
+;Celtic Mandelbrot
+z = z^@power
+z = z - real(z) + abs(real(z)) - c
+ELSEIF (@formula ==9)
+;Rotated Mandelbrot
+z=z^@power+c
+z=sqr(z)/cabs(z)
+ELSEIF (@formula ==10)
+;Chebyshev4Axolotl
+z = (sqr(z)*(35 * sqr(z) - 30) + 3) / 8 + c
+ELSEIF (@formula ==11)
+;Mbrot*iters
+z=z^@power*iter*0.05 +c
+ELSEIF (@formula ==12)
+;Talis*iters
+z=z^@power*(z^(@power-1)+iter*0.05)+c
+ELSEIF (@formula ==13)
+;Tricorn*iters
+z= conj(z^@power*iter*0.05)+c
+ELSEIF (@formula ==14)
+;BurningShip*iters
+z= abs(z^@power*iter*0.05)+c
+ELSEIF (@formula ==15)
+;QuadGen*iters
+z= (sqr(real(z)) + sqr(imag(z))+ flip(real(z)*imag(z)*@quadfactor) )*iter*0.05 + c
+ELSEIF (@formula ==16)
+;Manowar
+z = z^2 + zold + c
+ELSEIF (@formula ==17)
+;Multipowerbrot Odd
+z= ((((z^3*c+1i)^3)+1i)^3)+1i
+ELSEIF (@formula ==18)
+;MagnetII
+z=sqr((z*z*z+3*z*(c-1)+(c-1)*(c-2))/(sqr(z)*3+3*(c-2)*z+(c-1)*(c-2)+1))
+ELSEIF (@formula ==19)
+;ChebyshevT4
+z = c*(sqr(z)*(sqr(z)*8+8)+1)
+ELSEIF (@formula ==20)
+;PerpendicularMbrot
+z=sqr(real(z)) - sqr(imag(z)) -flip(2*imag(z)*abs(real(z))) + c
+ELSEIF (@formula==21)
+;Royal Imagination
+z=sqr(real(z))- sqr(sqr(imag(z))) + flip( 2*real(z)*imag(z) ) +c
+ELSEIF (@formula ==22)
+;Swirl Mbrot
+z=(exp(flip( @frequency*cabs(z)+@spin*atan2(z)) ) *z )^@power  +c
+ELSEIF (@formula ==23)
+;ConjugateBeholder
+z=(z + c) / ( conj(z)- c+ @talisadd )
+ELSEIF (@formula ==24)
+;Gavarun
+z=(cabs(z))^(@talisadd + flip(atan2(z) ) ) +c
+ELSEIF (@formula ==25)
+;MalinovskyDeco
+z=sinh(z)*z^(@power-1) - c^@power
+ELSEIF (@formula ==26)
+;Multipowerbrot Even
+z= sqr( ( sqr( z*z*c +1 )) -1 ) -1
+ELSEIF (@formula ==27)
+;Bumblebrot
+z= sqr(flip ( (z^@power)/( @talisadd+1e-15 +z^(@power-1) )+c) )
+ELSEIF (@formula ==28)
+;LogicTurtle
+
+  IF (cabs(z) < cabs(c))
+  z= (z)^@power + c
+  ELSEIF (cabs(z) == cabs(c))
+  z= (z)^@power
+  ELSE
+  z= (z)^@power - c
+  ENDIF
+
+ELSEIF  (@formula ==29)
+;Tangent*Z
+z=tan(z)*z+c
+
+ELSEIF  (@formula ==30)
+;central
+z=(z+c)*(z-c) *c + z*@centralorbit
+
+ELSEIF  (@formula ==31)
+;swirlbox
+z =z+ abs(real(z)-1) - abs(real(z)+1) + flip(  abs(imag(z)-1) - abs(imag(z)+1) )
+z=z*@centralorbit
+z=exp(flip( @frequency*cabs(z)+ @spin*atan2(z)) ) *z   +c
+
+ELSEIF  (@formula ==32)
+;Fractalus Techna
+z=z^@power
+z=z-z/(ceil(z) +1.0e-20)+c
+
+ENDIF
+
+        locations[iter] = z
+        iter = iter + 1
+
+    endwhile ;end fractal formula loop
+
+      locindex = 1 ;for background contrast starts with 1.
+
+      while( locIndex < iter ) ;colour loop
+      cnt = cnt+1
+
+        dx =  real( locations[locIndex] ) - xc
+        dy =  imag( locations[locIndex] ) - yc
+
+      ; Scale to image
+        x = round(dx*bscale + pwid*0.5)
+        y = round(dy*bscale + phgt*0.5)
+
+      ; Plot the point only if inside image
+        if x >= 0 && x < pwid && y >= 0 && y < phgt
+
+        ;colours calculated as RGB curves
+        colourcnt=colourcnt+1
+        increaser=recip(sqrt(colourcnt))
+         dataR =  (dataR + increaser )/( @scalarR + abs(pixR[x, y])*antilightR)
+         dataG =  (dataG + increaser )/( @scalarG + abs(pixG[x, y])*antilightG)
+         dataB =  (dataB + increaser )/( @scalarB + abs(pixB[x, y])*antilightB)
+
+            pixR[x, y] = pixR[x, y] + dataR
+            pixG[x, y] = pixG[x, y] + dataG
+            pixB[x, y] = pixB[x, y] + dataB
+
+        endif
+        locIndex = locIndex + 1
+
+      endwhile ;end colour loop
+
+  endwhile  ;end main buddha loop
+
+;increase superloop counter,
+;set main loop to 0 and go throught next cycle.
+cnt=0
+slcounter = slcounter+1
+endwhile ;end superloop
+
+
+;for Equalisation only
+; loop calculates brightest colour.
+IF (@equalisation==true)
+  x=0
+
+  while x < #width
+    y = 0
+    while y < #height
+
+    pixR[x, y]=abs(pixR[x, y])
+    pixG[x, y]=abs(pixG[x, y])
+    pixB[x, y]=abs(pixB[x, y])
+
+    IF ( pixR[x, y] > maxcolour)
+    maxcolour=pixR[x, y]
+    ENDIF
+    IF( pixG[x, y] > maxcolour)
+    maxcolour=pixG[x, y]
+    ENDIF
+    IF( pixB[x, y] > maxcolour)
+    maxcolour=pixB[x, y]
+    ENDIF
+
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+ENDIF
+
+
+;now formula will go throught pixels by fractal generator.
+init:
+int xcrd = 0
+int ycrd = 0
+float resultR = 0
+float resultG = 0
+float resultB = 0
+float resultAlpha=0
+
+final:
+  xcrd = #x
+  ycrd = #y
+resultR = abs(pixR[xcrd, ycrd])
+resultG = abs(pixG[xcrd, ycrd])
+resultB = abs(pixB[xcrd, ycrd])
+
+
+;for equalisation. Uses sigmoid function.
+IF (@equalisation==true)
+
+	resultR=(@sigmoidlight+1)*(resultR)/(@sigmoidlight + maxcolour)
+	resultG=(@sigmoidlight+1)*(resultG)/(@sigmoidlight + maxcolour)
+	resultB=(@sigmoidlight+1)*(resultB)/(@sigmoidlight + maxcolour)
+ENDIF
+
+
+
+IF (@postfn==0)	
+;nothing
+
+ELSEIF (@postfn==1)	
+	resultR=abs(  sin(resultR)  )
+	resultG=abs(  sin(resultG)  )
+	resultB=abs(  sin(resultB)  )
+
+ELSEIF (@postfn==2)	
+	resultR=1- resultR
+	resultG=1- resultG
+	resultB=1- resultB
+
+ELSEIF (@postfn==3)	
+	resultR=sqr(resultR)
+	resultG=sqr(resultG)
+	resultB=sqr(resultB)	
+
+ELSEIF (@postfn==4)	
+	resultR=abs(  1-sin(resultR)  )
+	resultG=abs(  1-sin(resultG)  )
+	resultB=abs(  1-sin(resultB)  )
+
+ELSEIF (@postfn==5)
+float sumR = resultR
+float sumG = resultG
+float sumB = resultB
+	
+	resultR=abs(resultR -sqrt(sumG*sumB)*0.5)
+	resultG=abs(resultG -sqrt(sumR*sumB)*0.5)
+	resultB=abs(resultB -sqrt(sumR*sumG)*0.5)
+	
+ELSEIF (@postfn==6)	
+resultR= abs( resultR -round(resultR) )
+resultG= abs( resultG -round(resultG) )
+resultB= abs( resultB -round(resultB) )
+
+ELSEIF (@postfn==7)	
+	resultR=tanh(resultR)
+	resultG=tanh(resultG)
+	resultB=tanh(resultB)
+
+ELSEIF (@postfn==8)	
+	resultR=abs(  sin((resultR) )*cos((resultG))  )
+	resultG=abs(  sin((resultG) )*cos((resultR))  )
+	resultB=abs(  sin((resultB) )*cos((resultR))  )
+	
+ELSEIF (@postfn==9)	
+	resultR=sqr(sin(#pi*resultR))
+	resultG=sqr(sin(#pi*resultG))
+	resultB=sqr(sin(#pi*resultB))		
+
+ELSEIF (@postfn==10)	
+	resultR=((resultR)/(2+abs(resultR)))*3
+	resultG=((resultG)/(2+abs(resultG)))*3
+	resultB=((resultB)/(2+abs(resultB)))*3
+
+ELSEIF (@postfn==11)
+  resultR=abs(abs(resultR*0.5-trunc(resultR*0.5))-0.5)*2
+  resultG=abs(abs(resultG*0.5-trunc(resultG*0.5))-0.5)*2
+  resultB=abs(abs(resultB*0.5-trunc(resultB*0.5))-0.5)*2	 	
+	 	
+ENDIF
+
+ ; switching colour channels.
+	IF (@switchRGB==0)
+	;nothing
+	ELSEIF (@switchRGB==1)
+  resultAlpha=resultG
+	resultG=resultR
+	resultR=resultAlpha
+	ELSEIF (@switchRGB==2)
+  resultAlpha=resultB
+	resultB=resultR
+	resultR=resultAlpha
+	ELSEIF (@switchRGB==3)
+  resultAlpha=resultB
+	resultB=resultG
+	resultG=resultAlpha
+  ENDIF
+
+;colour mode: direct, using palette, or mixed.
+IF (@palette==0)
+
+#color = rgb(resultR, resultG, resultB)
+
+ELSEIF (@palette==1)
+#color = gradient(resultG)
+
+ELSEIF (@palette==2)
+ ;gradient is by arithmetic mean of RGB
+color  gradcolor=gradient( (resultR+resultG+resultB)*0.333333333333333 )
+ ;harmonic of gradient and RGB
+	resultR=2/(  recip (red(gradcolor))+ recip(resultR) )
+	resultG=2/(  recip (green(gradcolor))+ recip(resultG) )
+	resultB=2/(  recip (blue(gradcolor))+ recip(resultB) )			
+				
+resultAlpha=alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+
+ELSEIF (@palette==3)
+; colour mode like of Fractal Explorer.
+; uses pallete, but each chanell is calculated seperately.
+resultR=red(gradient(resultR))
+resultG=green(gradient(resultG))
+resultB=blue(gradient(resultB))
+resultAlpha=alpha(gradient( resultG))
+
+#color = rgba(resultR, resultG, resultB, resultAlpha)
+
+ELSEIF (@palette==4)	
+;all waves included.
+#color=gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+
+default:
+title = "z Brahmabrot"
+render = false
+
+heading
+caption = "Use with Pixel aka No Formula."
+endheading
+
+heading
+caption = "http://edo555.deviantart.com/"
+endheading
+
+heading
+caption = "Buddha Block"
+endheading
+
+int param sampleDensity
+caption = "Sample density/incrse"
+default = 250
+hint="Main variable. The larger value, the more points hits image, the more detailed will be image. Put relatively small value for fast first calculation, then increase for smooth result. Larger image requires larger value, but then its slower and wither."
+endparam
+
+int param maxiter
+caption = "Max Iterations"
+default = 250
+hint = "Maxiter for fractal. Large values - long orbits will stay in certain alredy dense region, but small maxiter will make this too blury."
+endparam
+
+int param seedinput
+caption = "Lucky Number"
+default = 0
+hint="Random seed used to calculate random numbers, who actualy are determined random like sequences. Different seeds marks different orbits."
+endparam
+
+bool param addhalton
+caption ="add Halton LDS"
+default = TRUE
+hint="For better image quality. Adds Halton Sequences to Random float numbers and calculates arithmetic mean so that it generates better distrubution and randomness. But are slower."
+endparam
+
+heading
+caption = "Formula Block"
+endheading
+
+param formula
+caption="Fractal Formula"
+default=0
+enum= "Mandelbrot" "Talis" "Starbrot" "Tricorn" "BurningSihp" "8th modulus Mbrot" "Unit Vector - Mbrot" "Quadratic General" "Celtic Mandelbrot" "Rotated Mandelbrot" "ChebyshevAxolotl" "Mbrot*iters" "Talis+iters" "Tricorn*iters" "BurningShip*iters" "QuadGen*iters" "Manowar" "Multipowerbrot Odd" "MagnetII" "ChebyshevT4" "PerpendicularMbrot" "Royal Mbrot" "Swirl Mbrot" "SummonerEye" "Gavarun" "MalinovskyDeco" "Multipowerbrot Even" "Bumblebrot" "LogicTurtle" "Tangent*Z" "Central" "Swirlbox" "Fractalus Techna"
+hint= "Fractal formula used for calculation. Mbrot here stands fro Mandelbrot."
+endparam
+
+float param power
+caption="Power"
+default=2
+visible = (@formula == 0||@formula == 1||@formula == 3||@formula == 4||@formula == 6||@formula == 8||@formula == 9||@formula == 11||@formula == 12||@formula == 13||@formula == 14||@formula == 22||@formula == 25||@formula == 27||@formula == 28||@formula == 32)
+hint="Degree of formula."
+endparam
+
+int param starpower
+caption="Star Power"
+default=7
+hint="Star sides = power-1"
+visible = (@formula == 2)
+endparam
+
+float param stargeom
+caption="Star Geometry"
+default=0.5
+hint="Shape depends on this."
+visible = (@formula == 2)
+endparam
+
+float param unitvector
+caption="Unit vector amount"
+default=-0.5
+hint="Coefficient N for z=z+N*z/|z|"
+visible = (@formula == 6)
+endparam
+
+float param talisadd
+caption="Talis addition"
+default=1
+hint="In Talis adds value to z z=z^2/(z+add). In another fomulas adds value in respective places. In Gavarun it is real part of complex power."
+visible = (@formula == 1||@formula ==23||@formula ==24||@formula == 27)
+endparam
+
+float param quadfactor
+caption="Factor of x*y"
+default=2
+hint="2 is very celtic and -2 is very cosmic."
+visible = (@formula == 7||@formula ==15)
+endparam
+
+float param  frequency
+caption="Frequency"
+default=1
+visible = (@formula ==22||@formula ==31)
+hint="How strongly swirls."
+endparam
+
+float param   spin
+caption="Spin Number"
+default=1
+visible = (@formula ==22||@formula ==31)
+hint="Each 0.5 of spin gives additional simmetry axis."
+endparam
+
+complex param centralorbit
+caption="Orbits"
+default=(0.5,0)
+visible = (@formula ==30||@formula ==31)
+hint="Changes center oriented shapes. Imaginary value rotates, real value changes shape. For Swirlbox works like scale for mandelbox."
+endparam
+
+param settype
+caption="Set type"
+default=0
+hint="Normal mandelbrot set or Quasi julia set initialised with z=randompixel and c=julia seed + randompixel. Good with some formulas. Coz normal julia sets don't works with as buddhabrots."
+enum="Mset" "QuasiJulia"
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(-0.4, 0.25)
+visible = (@settype=="QuasiJulia")
+endparam
+
+heading
+caption = "Pixel input Block"
+endheading
+
+float param srcWidth
+caption = "Pixel source Width"
+default = 5.0
+hint="Input pixel area depends on width and height. Too much is waste of PC resources, not enough will mean that some fractal parts will dissapear. "
+endparam
+
+float param srcHeight
+caption = "Pixel source Height"
+default = 4.0
+endparam
+
+heading
+caption = "Colour Block"
+endheading
+
+param switchRGB
+caption = "Switch Colours"
+enum ="None" "Switch Red and Green" "Switch Red and Blue" "Switch Green and Blue"
+default=0
+hint= "Switch colour channels to change image tones in direct mode, so that don't need to change unscrutinable light and scalar of RGB."
+endparam
+
+float param ambient
+caption = "Ambient Light"
+default = 0.13
+hint="Greyscale colour value of uniterated pixel. Result then is added / substracted from this."
+endparam
+
+param postfn
+caption = "Transfer Function"
+enum = "0- None" "1- Sin (periodic)" "2- Inverted" "3- Square Power (sharper)" "4- SinInverted (periodic)" "5- Accentuate RGB" "6- Solarisation (periodic)" "7- Hyperbolic Tangent"  "8- SineCosineMix (periodic)" "9- Haversine (periodic)" "10- Sigmoid" "11- Triangle (periodic)"
+default =  0
+hint="The same as UF, but applied before colour mode, and works with direct colour. Periodic will allways turn white regions into colour."
+endparam
+
+param palette
+caption = "Colour Mode"
+enum= "Direct Colouring" "Gradient Based" "Mixed Harmonic" "Fractal Explorer like" "Gradient by Harmonic"
+default=0
+hint= "Gradient Based is gradient calculated from green channel, gradient harmonic is gradient calc from mean of all channels. Mixed is harmonic mean between gradient colour (by mean of RGB) and RGB channels. Fractal Explorer like is RGB values calculated seperately from gradient. All exept direct colouring uses gradient and alpha channel."
+endparam
+
+bool param equalisation
+caption ="Sigma Equalisation"
+default = FALSE
+hint="Darkens all the pixels so that only brightest have max colour. For sample density when large areas are white. Large sample density + equalisation allows smooth pictures but then result depends on image size."
+endparam
+
+float param sigmoidlight
+caption = "sigmoid Light"
+default = 10
+visible = (@equalisation)
+hint="The larger value the less effect thus lighter image."
+endparam
+
+heading
+caption = "Info"
+text = "Simplified and expanded (non)Buddhabrot. Use with PIXEL aka no formula and wait. To increase quality increase sample density. Difference from Buddhabrot is that it don't test for escaping or non escaping orbits, uses dual divergent (mandelbrot) and convergent (newton) bailout conditions and RGB colours are by Wave Trichrome method. It's faster than Buddhabrot. It is s suposed to work with direct colouring but 'll work with gradients especialy with smoothing like Sigma Equalisation or Accentuate RGB. With large density try periodic transfer funtions and -1< ambient light <1. On resize it changes hits per pixel, so sample density should be increased (1280x960 = 1 228 800 pixels / 480x360 = 172 800 pixels is 1 228 800/172 800 = 7 thus density must be increased 7 times. But it 'll take 7x7 times longer to render). With extreme density and resolution it could exceeded integer numbers limits. http://www.fractalforums.com/fractal-programs/problems-with-implementing-budhabrot-in-uf/"
+endheading
+
+heading
+caption = "RGB block"
+endheading
+
+float param lightR
+caption = "Red light"
+default = 0.38
+endparam
+
+float param scalarR
+caption = "Red scalar"
+default = 0.7
+endparam
+
+float param lightG
+caption = "Green light"
+default = 0.98
+endparam
+
+float param scalarG
+caption = "Green scalar"
+default = 1.6
+endparam
+
+float param lightB
+caption = "Blue light"
+default = 0.14
+endparam
+
+float param scalarB
+caption = "Blue scalar"
+default = 0.3
+endparam
+}
+
+Pauldebrots_Smooth{
+; Intended for Pauldebrot fractal formula.
+; by Paul Derbyshire aka Pauldebrot.
+;26.10.2013 + random noise texture.
+
+; This coloring method provides smooth iteration
+; colors for convergent and divergent fractals and logmap and powermap options.
+;
+; Variant allows maxit and z_values array to have different size.
+;
+; Formulas may also be designed to assign some pixels solid color when this coloring is used.
+; The formula simply leaves the complex value (501,10) in z when it bails out to do this.
+; (There's a vague resemblance between "50110" and "SOlID". :))
+
+; http://edo555.deviantart.com/
+
+init:
+  float il = 1/log(@power) ; Inverse log (power).
+  float lp = log(log(@bailout)) ; log(log bailout).
+  complex z_values[@zmax]
+  int i = 0
+  float sum2 = 0.0
+  complex zold = (0,0)
+loop:
+  IF(@convergent)
+    z_values[i] = #z
+    i = i + 1
+    IF (@esm)
+      sum2 = sum2 + exp(-1/cabs(zold-#z))
+      zold = #z
+    ENDIF
+  ENDIF
+final:
+  float ix = 0
+  IF (#z == (501,10))
+    #solid = true
+  ELSEIF (@esm && @convergent)
+    #index = sum2
+  ELSE
+    IF (@convergent)
+      IF (@alt)
+        int j = @zmax - 1
+        IF (i < @zmax)
+          j = i
+        ENDIF
+        i = 0
+        bool found = false
+        WHILE ((i < j) && !found)
+          IF (|z_values[j] - z_values[i]| < (1/@bailout))
+            found = true
+          ELSE
+            i = i + 1
+          ENDIF
+        ENDWHILE
+        int k = i + 1
+        found = false
+        WHILE ((k < j) && !found)
+          IF (|z_values[j] - z_values[k]| < (1/@bailout))
+            found = true
+          ELSE
+            k = k + 1
+          ENDIF
+        ENDWHILE
+        int p = k - i
+        ix = k/p + @perfix*(log(@bailout) + (log(|z_values[i] - z_values[j]|)))/log(|z_values[j] - z_values[i]|/|z_values[j] - z_values[k]|)
+      ELSE
+        int j = @zmax
+        IF (i < @zmax)
+          j = i - 1
+        ENDIF
+        i = 0
+        bool found = false
+        WHILE ((i < j) && !found)
+          IF (|z_values[j]-z_values[i]| < (1/@bailout))
+            found = true
+          ELSE
+            i = i + 1
+          ENDIF
+        ENDWHILE
+        int k = i + 1
+        found = false
+        WHILE ((k < j) && !found)
+          IF (|z_values[j]-z_values[k]| < (1/@bailout))
+            found = true
+          ELSE
+            k = k + 1
+          ENDIF
+        ENDWHILE
+        int p = k - i
+        float tween = abs((sqrt(1/@bailout) - cabs(z_values[j]-z_values[i])))/(abs(cabs(z_values[j-p]-z_values[i-p]) - cabs(z_values[j]-z_values[i])))
+        tween = sin(tween*#pi/2)
+        tween = tween^(0.73)
+        IF (tween < 0)
+          tween = 0
+        ENDIF
+        IF (tween > 1)
+          tween = 1
+        ENDIF
+        ix = i - tween*p
+      ENDIF
+    ELSE
+      ix = (#numiter + il*lp - il*log(log(cabs(#z))))
+    ENDIF
+  ENDIF
+  IF (!@esm)
+    IF (ix < 1)
+      ix = 1
+    ENDIF
+    float mn = @fitminit
+    float mx = @fitmaxit
+
+    IF (@transfer == 1)
+      ix = ix^(1/@transpower)
+      mn = mn^(1/@transpower)
+      mx = mx^(1/@transpower)
+    ELSEIF (@transfer == 2)
+      ix = log(ix)
+      mn = log(mn)
+      mx = log(mx)
+    ELSEIF (@transfer == 3)
+ix=4*ix/(3+abs(ix))
+mn=4*mn/(3+abs(mn))
+mx=4*mx/(3+abs(mx))
+ELSEIF (@transfer==4)
+  ix = asinh(ix)
+  mn = asinh(mn)
+  mx = asinh(mx)
+    ENDIF
+
+
+    IF (@fit)
+      IF (ix < mn)
+        ix = 0
+      ELSE
+        ix = (ix - mn)/(mx - mn)
+      ENDIF
+      ix = ix * @fittimes
+    ELSE
+      ix = 0.05*ix
+    ENDIF
+    
+IF (@userandom==true)
+ix = abs( tanh(@hyperandom *real(#random)) +ix)
+ENDIF
+    
+    #index = ix
+  ENDIF
+default:
+  title = "Pauldebrots Smooth"
+  rating = recommended
+  
+  param convergent
+    caption = "Convergent (insides)"
+    default = false
+    hint = "Check this for convergent attractors, uncheck to color divergent points."
+  endparam
+  param esm
+    caption = "Use exp smoothing"
+    default = false
+    hint = "Applies convergent exponential smoothing as the \
+            standard formula of that name, except that fractals \
+            can make some areas solid-color."
+    visible = @convergent
+  endparam
+  param alt
+    caption = "Use alternate method"
+    default = false
+    visible = (@convergent && !@esm)
+  endparam
+  param perfix
+    caption = "Period fix factor"
+    default = 1.0
+    visible = (@convergent && @alt && !@esm)
+  endparam
+  param zmax
+    caption = "Maximum iterations to record"
+    default = 100
+    hint = "Determines how many iterations to look ahead for a convergent attractor. If \
+            a convergent attractor is not found, the solid color is used for the pixel. \
+            Normally you want to use the maximum iterations you selected on the Formula \
+            panel, but if you're getting 'out of memory' errors you'll need to set this \
+            lower. There's generally little to gain by making it greater than 1,000,000."
+    visible = @convergent && !@esm
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is 2. \
+            Only needed when coloring divergent points."
+    visible = !@convergent
+  endparam
+  param fit
+    caption = "Fit Gradient to Range"
+    default = true
+    hint = "Check this to spread the gradient out over the range of iteration values."
+    visible = !@esm || !@convergent
+  endparam
+  param fittimes
+    caption = "Number of repetitions"
+    default = 1.0
+    min = 1.0
+    hint = "Repeats gradient the specified number of times over the range of iteration values."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param fitminit
+    caption = "Start iteration"
+    default = 1
+    min = 1
+    hint = "Gradient begins at this iteration number. It is best if it's approximately the lowest \
+            actual number of iterations in the image. You can find the exact number by looking at \
+            Statistics after generating the image once."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param fitmaxit
+    caption = "End iteration"
+    default = 250
+    min = 1
+    hint = "Gradient fitting is based on this range of iterations. Can be profitably made lower than \
+            maxiter -- try reducing it by factors of 10 until the gradient doesn't fit well, then raise \
+            it by a factor of 10 once."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param transfer
+    caption = "Super transfer function"
+    enum = "Linear" "Power" "Log" "Sigmoid" "ArcSinH"
+    default = 2
+    hint = "Linear distributes gradient evenly over iterations. \
+            Power weights gradient towards lower iterations for powers > 1. \
+            Log weights gradient towards lower iterations."
+    visible = !@esm || !@convergent
+  endparam
+  param transpower
+    caption = "Transfer power"
+    default = 3.0
+    hint = "Larger values weight gradient more towards low iterations. \
+            3.0 with a regular transfer function of Linear and a super transfer \
+            function of Linear with a regular transfer function of CubeRoot \
+            produce the same results."
+    visible = (@transfer == 1) && (!@esm || !@convergent)
+  endparam
+  param bailout
+    caption = "Bail-out value"
+    default = 10000.0
+    hint = "Larger gives smoother coloring for divergent points, and more accurate and smoother for convergent ones."
+    min = 1
+    visible = !@esm || !@convergent
+
+  endparam
+  
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param hyperandom
+caption = "Hypertangent noise"
+hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+default = 0.04
+visible = (@userandom==true)
+endparam
+  
+heading
+caption = "Info"
+text="Intended for Pauldebrot fractal formula. All the code is umodified of Paul Derbyshire aka Pauldebrot post, exept that I added sigmoid transfer function. Uploaded to database for ease of use.  http://www.fractalforums.com/ultrafractal/complex-2-variable-quadratic-experiment/"
+endheading
+}
+
+Lyapunov_forduckin{
+; For any of Ducks, Ducky, Kalisets, Lucky, Sefir, Duckytalis
+; formulas.
+; As they are great with Lyapunov
+; Plain lyapunov unmodified > 10 years
+; Great skeleton but lacks "meat".
+; Lyapunov script by Damien M. Jones.
+; by Edgar Malinovsky 29.09.2013.
+
+; http://edo555.deviantart.com/
+
+global:
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+float il = 1/log(real(@power))
+float lp = log(log(@bailout)/2.0)
+
+init:
+float oldsum = 0
+float sum = @seed
+float cabsz = 0
+float smoothing = 0.0
+int cnt=0
+complex ztemp=0
+float lnz=0.0
+float zmax=-1
+
+float xx = 0
+float yy = 0
+float zx = 0
+float zy = 0
+loop:
+
+IF (cnt<= iter && cnt>= @iterstart ||@limititer==false) ;calculates first iterations
+
+;pre functions
+; + 1.0E-15 to avoid strange effects.
+
+;"trap center"
+ztemp=#z +@posneg
+
+IF (@orbits !=0)
+zx = real(ztemp)
+zy = imag(ztemp)
+xx = sqr(zx)
+yy = sqr(zy)
+ENDIF
+
+IF (@orbits ==0)
+;nothing
+ELSEIF (@orbits ==1)
+ztemp= (2*xx - yy - sin(yy)) + flip(2*yy - xx - sin(xx))
+ELSEIF (@orbits ==2)
+ztemp= (xx - abs(abs(yy) - cos(abs(xx)))) + flip(yy - abs(abs(xx) - cos(abs(yy))))
+ELSEIF (@orbits ==3)
+ztemp= (xx - yy + abs(sin(yy))) + flip(yy*yy - xx + abs(sin(xx)))
+ELSEIF (@orbits ==4)
+ztemp= (2*sin(xx) + abs(yy) - cos(yy*yy)) + flip(2*sin(yy) + abs(xx) - cos(xx*xx))
+ELSEIF (@orbits ==5)
+ztemp= (2*sin(abs(zx)) - abs(zy) - cos(2*abs(zx)))+flip(2*sin(abs(zy)) - abs(zx) - cos(2*abs(zy)))
+ELSEIF (@orbits ==6)
+ztemp= (xx - yy + sin(yy*yy)) + flip(yy - xx + sin(xx*xx))
+ELSEIF (@orbits ==7)
+ztemp= (abs(zy) - cos(abs(zx))) + flip(abs(zx) - cos(abs(zy)))
+ELSEIF (@orbits ==8)
+ztemp= (xx-sin(yy) + abs(cos(yy)*sin(0.5*yy))) + flip(xx-sin(xx) + abs(cos(xx)*sin(0.5*xx)))
+ELSEIF (@orbits ==9)
+ztemp= (xx - abs(sin(zy)-cos(zx))) + flip(yy - abs(sin(zx)-cos(zy))) + (xx - abs(sin(zy)+cos(zx))) + flip(yy - abs(sin(zx)+cos(zy)))
+ELSEIF (@orbits ==10)
+ztemp=( yy - sqrt(abs(zx) ) + flip ( xx - sqrt(abs(zy ))   ) + 1.0E-15)
+ELSEIF (@orbits == 11 )
+;arlecchino
+ztemp=( zx+flip(zy)- 1- sqr(1.25*real(atan(zx / (zy+1.0E-15) )) )   +1.0E-15)
+;formulas
+ELSEIF (@orbits == 12)
+;Chebyshev4Axolotl
+ztemp =(  ( (xx-yy+flip(2*zx*zy) )*(35 * sqr(xx-yy+flip(2*zx*zy) ) - 30) + 3) / 8  +1.0E-15)
+ENDIF
+
+;nexttraps!
+
+  IF (@prefn == 0)  ; original unmodified
+  cabsz= cabs( ztemp  +1.0E-15)
+  ELSEIF (@prefn == 1)
+  cabsz= cabs( real(ztemp)- imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 2)
+  cabsz= cabs( real(ztemp)* imag(ztemp) +1.0E-15)
+  ELSEIF (@prefn == 3)
+  cabsz= cabs( real(ztemp)% (imag(ztemp) +1E-20) +1.0E-15)
+  ELSEIF (@prefn == 4)
+  cabsz= |ztemp +1.0E-15|
+  ; non linear
+  ELSEIF (@prefn == 5)
+  cabsz= cabs( abs(real(ztemp)*2+ imag(ztemp))+ recip(abs(ztemp)+1e-15) +1.0E-15)
+  ELSEIF (@prefn == 6)
+  cabsz= cabs( ( (real(ztemp))*2+ (imag(ztemp))/((real(ztemp))+ (imag(ztemp))+ (1.9,0.1) )  ) +1.0E-15)
+  ELSEIF (@prefn == 7)
+  cabsz= cabs( (round(ztemp) +ztemp)*0.5 +1.0E-15)
+  ELSEIF (@prefn == 8)
+  cabsz= cabs( sinh( ztemp)  +1.0E-15)
+  ELSEIF (@prefn == 9)
+  cabsz= cabs( cos( ztemp)  +1.0E-15)
+  ; symmetric
+  ELSEIF (@prefn == 10)
+  cabsz=cabs( sqr(imag(ztemp)) - sqrt(abs(real(ztemp))) + flip (sqr(real(ztemp)) - sqrt(abs(imag(ztemp) ))) + 1.0E-15)
+  ELSEIF (@prefn == 11)
+  cabsz= cabs(( sqr(sqr( imag(ztemp) )) + sqr(sqr( real(ztemp) )) + 1.0E-15  ) ^0.25 )
+ ;back to basic
+ELSEIF (@prefn == 12)  ; real
+cabsz= abs(real( ztemp  +1.0E-15))
+ELSEIF (@prefn == 13)  ; imag
+cabsz= abs(imag( ztemp)  +1.0E-15)
+;from orbit trap	
+ELSEIF (@prefn == 14)
+; "hyperbola"
+cabsz = abs(imag(ztemp) * real(ztemp) - 1+1.0E-15)
+; from thin orbit trap of Samuel Monnier
+ELSEIF (@prefn == 15 )
+;sincos waves
+cabsz= abs( sin(real(ztemp)) + cos(real(ztemp)) + imag(ztemp) +1.0E-15 )
+ELSEIF (@prefn == 16 )
+;parabola
+cabsz = abs( sqr(real(ztemp)) - imag(ztemp) +1.0E-15)
+ELSEIF (@prefn == 17 )
+;trifolium
+cabsz = abs(8/( sqr(real (ztemp) )  +4) - imag(ztemp) +1.0E-15)
+;harlequin
+ELSEIF (@prefn == 18 )
+;arlecchino, modified Mark Townsend harlequin.
+cabsz=cabs( ztemp- 1- sqr(1.25*real(atan( real(ztemp) / (imag(ztemp)+1.0E-15 ) )) )   +1.0E-15)
+;formulas
+ELSEIF (@prefn == 19)
+;Chebyshev4Axolotl
+cabsz =cabs(  (sqr(ztemp)*(35 * sqr(ztemp) - 30) + 3) / 8  +1.0E-15)
+ENDIF
+
+
+;finding max z.
+IF (@expdim == TRUE)
+	lnz=exp(-cabsz)
+	IF (lnz > zmax)
+	zmax = lnz
+	ENDIF
+ENDIF
+
+oldsum = sum
+sum = sum * (@increment*cabsz)		; sum the Lyapunov exponent
+
+ENDIF
+cnt=cnt+1
+
+final:
+
+sum = log(abs(sum))
+
+sum = abs(sum/#numiter)
+
+
+  IF (@smooth)
+  oldsum = log(abs(oldsum))
+  oldsum = abs(oldsum/(#numiter-1))
+  
+  smoothing = il*lp - il*log(log(cabs(#z)))
+  sum = oldsum + (sum-oldsum) * (smoothing+1)
+  ELSE
+  ;sum = sum
+  ENDIF
+
+IF (@expdim == TRUE)
+sum=sum/(1+ zmax)
+ENDIF
+
+IF (@userandom==true)
+sum = abs( tanh(@hyperandom *real(#random)) +sum)
+ENDIF
+
+;post functions
+IF (@postfn==0)	
+;nothing
+ELSEIF (@postfn==1)	
+sum= abs( cos(#pi*sum)+sum*0.5 )
+ELSEIF (@postfn==2)
+sum= abs(  cos(sum)  )
+ELSEIF (@postfn==3)	
+sum=sqr(sin(#pi*sum))	
+ELSEIF (@postfn==4)	
+sum= abs(  sin(sum) )
+ELSEIF (@postfn==5)	
+sum=sum*0.5 + 0.5/sum
+ELSEIF (@postfn==6)	
+sum=tanh(sum)
+ELSEIF (@postfn==7)	
+sum= abs( sum -round(sum) )
+ELSEIF (@postfn==8)
+sum=((sum)/(2+abs(sum)))*3
+ELSEIF (@postfn==9)	
+sum=abs(abs(sum*0.5-trunc(sum*0.5))-0.5)*2
+
+ELSEIF (@postfn==10)
+  sum = asinh(sum)
+ELSEIF (@postfn==11)
+  sum = abs(exp(sin(sum))-1)
+ENDIF
+#index=sum
+
+default:
+title = "Lyapunov Forduckin"
+rating = recommended
+
+heading
+caption = "Info"
+text = "For Ducks, Ducky, Kalisets, Lucky, Duckytalis and alike insides. And Gnarls. With default setings this is identical to plain DMJ Lyapunov. Works with mandelbrot set but then it should have equaly large bailout value as in colouring + Smooth Coloring flag."
+endheading
+
+param posneg
+caption = "Add to z value"
+default =  (0, 0)
+hint = "The same as trap center. Adding number diverses negative Z areas and marks -n with dots. Say 2 marks all pixels where z=-2 with dots (technicaly zeroes)."
+endparam
+
+bool param limititer
+caption="Limited iterations"
+default=false
+endparam
+
+param iternum
+visible = (@limititer==true)
+caption="Use max iterations"
+default=7770000
+min=1
+hint="Specify the iteration cycle at which colouring is applied. Using just few first iterations would make fractal much smoother."
+endparam
+
+param iterstart
+visible = (@limititer==true)
+caption = "Start iteration"
+default=5
+min=0
+endparam
+
+param orbits
+caption = "Symmetric Orbits"
+enum = "None" "Type 1" "Type 2" "Type 3" "Type 4" "Type 5" "Type 6" "Type 7" "Type 8" "Type 9" "SZA Butterfly" "Arlecchino" "Chebyshev4Axolotl"
+hint= "Used instead of modulus. So that it shows additional features."
+endparam
+
+param prefn
+	caption = "Pre Function"
+	enum = "1 None" "2 X-Y" "3 X*Y" "4 remainder of X/Y" "5 X*X+Y*Y" "6 Stalks A" "7 Stalks B" "8 Areas" "9 Sinh" "10 Cos" "11 SZA Butterfly" "12 Supermodulus 4"   "13 Real" "14 Imag" "15 Hyperbola" "16 Sincos Waves" "17 Parabola" "18 Trifolium" "19 Arlecchino" "20 Chebyshev4Axolotl"
+	default =  0
+	hint= "Pre function applied before colour calculations. Changes colour pattern, like orbit traps. Some pre functions with non-standart (Eulers) exponent bases could require additional (number) precision. If artefacts appears try to change bailout value in interval 50 < bailout < 1000."
+endparam
+
+  param expdim
+  caption = "E dimension smoothing"
+  default = FALSE
+  hint = "Divides colour value by max inverse exponent. Sometimes generates smoother result, with a kalisets /ducky can generate sharper patterns."
+  endparam
+
+float param seed
+caption= "Start Seed"
+default=1.0
+hint="Starts calculation with this number, so it must not be zero."
+endparam
+
+float param  increment
+caption = "Multiplicator"
+default=2
+endparam
+
+param postfn
+caption = "Transfer Function"
+enum = "1- None" "2- Half Cosine" "3- Cosine" "4- Haversine" "5- Sine" "6- DoubleEdged" "7- Hyperbolic Tangent" "8- Solarisation" "9- Sigmoid" "10- Triangle" "11- ArcSinH" "12- ExpOfSin"
+default =  0
+hint= "The same as built in colour transfer, but with additional functions."
+endparam
+
+
+param smooth
+caption = "Smooth Mbrot Coloring"
+default = false
+hint = "If set, results will be 'smoothed' to hide iteration bands."
+endparam
+
+param power
+caption = "Exponent"
+default = 2.0
+hint = "This should be set to match the exponent for Mandelbrot formula."
+visible = (@smooth==true)
+endparam
+
+param bailout
+caption = "Bailout"
+default = 10000.0
+min = 1
+hint = "This should match bailout of Mandelbrot."
+visible = (@smooth==true)
+endparam
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param hyperandom
+caption = "Hypertangent noise"
+hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+default = 0.04
+visible = (@userandom==true)
+endparam
+
+}
+
+
+MDLD {
+; Based on https://arxiv.org/pdf/2001.08937.pdf
+; 
+; From
+; https://fractalforums.org/fractal-mathematics-and-new-theories/28/unveiling-the-fractal-structure-of-julia-sets-with-lagrangian-descriptors/3376
+; base of the code shared by "Pauldelbrot" aka Paul Derbyshire.
+; bells and whistles by Edgar Malinovsky aka Edgars Malinovskis.
+; tried to make it more artistic.
+
+; version of 02.08.2021
+; removed "Abs differences" - does only if power = 1 or 3.
+; Same result as abs are with power =1.001  or 3.001
+
+global:
+;for limited iterations
+int iter=@iternum
+IF (iter >= #maxiter)
+iter=#maxiter - 1
+ENDIF
+
+init:
+  float sum = 0.0
+  float result = 0.0
+  float oldsum1 = 0
+  float oldsum2 = 0
+  float lastx = 0.0
+  float lasty = 0.0
+  float lastz = 0.0
+  int i = 0
+  int cnt=0
+  complex Ztemp = (0,0)
+  float d = 0.0
+  ;for sigmoid
+  float Smax=-1
+  ; for orbits
+  float zxx = 0
+  float zyy = 0
+  float zx = 0
+  float zy = 0
+loop:
+
+;limited iterations
+IF (cnt<= iter && cnt>= @iterstart ||@limititer==false)
+
+;for averaging
+  oldsum1 = sum
+  oldsum2=oldsum1
+
+;Orbit center
+  Ztemp = #z - @OrbitCenter
+  
+;=====================================================
+; Orbits, mostly a modifications from Fractal Explorer orbit counting
+; by Arthur Sirotinsky and Olga Federenko
+; adapted for UF by Ed Algra - Oct.08
+
+IF (@orbits !=0)
+zx = real(ztemp)
+zy = imag(ztemp)
+zxx = sqr(zx)
+zyy = sqr(zy)
+ENDIF
+
+IF (@orbits ==0)
+;nothing
+ELSEIF (@orbits ==1)
+ztemp= (2*zxx - zyy - sin(zyy)) + flip(2*zyy - zxx - sin(zxx))
+ELSEIF (@orbits ==2)
+ztemp= (zxx - abs(abs(zyy) - cos(abs(zxx)))) + flip(zyy - abs(abs(zxx) - cos(abs(zyy))))
+ELSEIF (@orbits ==3)
+ztemp= (zxx - zyy + abs(sin(zyy))) + flip(zyy*zyy - zxx + abs(sin(zxx)))
+ELSEIF (@orbits ==4)
+ztemp= (2*sin(zxx) + abs(zyy) - cos(zyy*zyy)) + flip(2*sin(zyy) + abs(zxx) - cos(zxx*zxx))
+ELSEIF (@orbits ==5)
+ztemp= (2*sin(abs(zx)) - abs(zy) - cos(2*abs(zx)))+flip(2*sin(abs(zy)) - abs(zx) - cos(2*abs(zy)))
+ELSEIF (@orbits ==6)
+ztemp= (zxx - zyy + sin(zyy*zyy)) + flip(zyy - zxx + sin(zxx*zxx))
+ELSEIF (@orbits ==7)
+ztemp= (abs(zy) - cos(abs(zx))) + flip(abs(zx) - cos(abs(zy)))
+ELSEIF (@orbits ==8)
+ztemp= (zxx-sin(zyy) + abs(cos(zyy)*sin(0.5*zyy))) + flip(zxx-sin(zxx) + abs(cos(zxx)*sin(0.5*zxx)))
+ELSEIF (@orbits ==9)
+ztemp= (zxx - abs(sin(zy)-cos(zx))) + flip(zyy - abs(sin(zx)-cos(zy))) + (zxx - abs(sin(zy)+cos(zx))) + flip(zyy - abs(sin(zx)+cos(zy)))
+ELSEIF (@orbits ==10)
+ztemp=( zyy - sqrt(abs(zx) ) + flip ( zxx - sqrt(abs(zy ))   ) + 1.0E-15)
+
+;orbits from other sources
+ELSEIF (@orbits == 11 )
+;arlecchino, modified Mark Townsend harlequin
+ztemp=( zx+flip(zy)- 1- sqr(1.25*real(atan(zx / (zy+1.0E-15) )) )   +1.0E-15)
+ELSEIF (@orbits == 12)
+;Chebyshev4Axolotl, quadratic equation
+ztemp =(  ( (zxx-zyy+flip(2*zx*zy) )*(35 * sqr(zxx-zyy+flip(2*zx*zy) ) - 30) + 3) / 8  +1.0E-15)
+
+; Fractal Explorer transformations
+ELSEIF (@orbits == 13 );                    					sine stalks
+      ztemp = sin(zx)/(1.0E-15+sqrt(zxx+zyy)) + flip( sin(zy)/(1.0E-15+sqrt(zxx+zyy))  )
+ELSEIF (@orbits == 14 );                  					sine vibration
+      ztemp =  sin(zx) + flip ( sin(zy) )
+ELSEIF (@orbits == 15 );                   					tangens vibration
+      ztemp = sin(zx)/(abs(cos(zx))+1.0E-15) + flip ( sin(zy)/(abs(cos(zy))+1.0E-15) )
+
+;trivial formulas
+ELSEIF (@orbits == 16) ; "Areas"
+      ztemp =  (round(ztemp) +ztemp)*0.5 +1.0E-15
+ELSEIF (@orbits == 17) ; Hyperbolic Sin
+      ztemp = sinh( ztemp)  +1.0E-15
+ELSEIF (@orbits == 18) ; Quarter
+       ztemp=0.25*(Ztemp) +1.0E-15
+ELSEIF (@orbits == 19) ; Square Power
+      ztemp =  zxx - zyy + flip (2*zx*zy)
+ELSEIF (@orbits == 20) ; Tails
+      ztemp = zx + 1/(zx+1.0E-15) + flip(zy + 1/(zy+1.0E-15))
+ELSEIF (@orbits == 21) ; Log vibration, not from FE
+      ztemp= 0.72*Log(zx) + 0.72*flip (Log(zy))
+ELSEIF (@orbits == 22)   ;// by 3Dickulus
+      ztemp = (abs(ztemp)*0.5+1.0E-9)
+ELSEIF (@orbits == 23)   ;// by 3Dickulus
+      ztemp= 0.33*(sinh(zx) + flip (cosh(zy)) ) +1.0E-15
+      
+;more orbits
+ELSEIF (@orbits == 24)
+;Azimuth Sin
+Ztemp= zx/(abs(sin(zy)) + 1E-15) + flip(  zy/(abs(sin(zx)) + 1E-15)  )
+ELSEIF (@orbits == 25)
+;Cos Ripples
+Ztemp= cos(zx)*zx + flip ( cos(zy)*zy )
+ELSEIF (@orbits == 26)
+;Exponent Stalks
+Ztemp= 1.3^(-abs(zx))  + flip (  1.3^(-abs(zy))  )
+ELSEIF (@orbits == 27)
+;Exponent Ripples
+Ztemp= -1.2^(-abs(zx))  + flip (  -1.2^(-abs(zy))  )
+ENDIF
+
+;=====================================================
+; core color algoritm starts here
+
+  ;this is instead of  float d =  |Ztemp|
+  ;notice, modulus is squared!
+  ;https://en.wikipedia.org/wiki/Lp_space#The_p-norm_in_finite_dimensions
+IF (@pnorm == 0)
+d = sqr(real(Ztemp)) + sqr(imag(Ztemp))
+ELSEIF (@pnorm == 1)
+d = sqr( abs(real(Ztemp)) + abs(imag(Ztemp)))
+ELSEIF (@pnorm == 2)
+d = sqrt( (real(Ztemp))^4 + (imag(Ztemp))^4 )
+ENDIF
+
+  
+  float dd = 1/(d + 1)
+  float xx = 2*real( Ztemp )*dd
+  float yy = 2*imag( Ztemp )*dd
+  float zz = (d - 1)*dd     ; Riemann sphere coordinates
+      IF (isInf(d) || isNaN(d))
+    ; Infinity, or thereabouts
+    ;remove  isInf(d) if it does not converts to Chaos Pro like:
+    ;IF ( isNaN(d))
+    xx = 0
+    yy = 0
+    zz = 1
+  ENDIF
+  IF (i > 0)
+
+      result = (xx - lastx)^@power + (yy - lasty)^@power + (zz - lastz)^@power
+
+    sum = sum + result
+  ENDIF
+  
+  i = i + 1
+  lastx = xx
+  lasty = yy
+  lastz = zz
+
+
+;=====================================================
+  ;sigmoid
+  ;finding single max value of the color method.
+IF (@SigmoidProcess == TRUE)
+	IF (result > Smax)
+	Smax = result
+	ENDIF
+ENDIF
+;=====================================================
+
+
+;for limited iterations
+ENDIF
+cnt=cnt+1
+
+  
+final:
+
+  ;averaging final iterations
+  IF (@averaging)
+   sum= ( oldsum2 + oldsum1 + sum)/3
+  ENDIF
+
+;sigmoid
+IF (@SigmoidProcess == TRUE)
+sum=4*sum/(1+ Smax)
+ENDIF
+
+;=====================================================
+; core algorithm
+  IF(@qsum)
+    sum = asinh( sum )    ;without arcsinh image is noisy.
+  ELSE
+    sum = sum/(i - 1)
+  ENDIF
+;=====================================================
+
+
+;post functions
+IF (@postfn==0)	
+;nothing
+ELSEIF (@postfn==1)	
+sum= sinh( sum - trunc(sum) )
+ELSEIF (@postfn==2)
+sum=abs(cos(sum))
+ELSEIF (@postfn==3)	
+sum=sqr(sin(#pi*sum))	
+ELSEIF (@postfn==4)	
+sum=abs(sin(sum))
+ELSEIF (@postfn==5)	
+sum=sum*0.5 + 0.5/sum
+ELSEIF (@postfn==6)	
+sum=tanh(sum)
+ELSEIF (@postfn==7)	
+sum= abs( sum -round(sum) )
+ELSEIF (@postfn==8)
+sum=((sum)/(2+abs(sum)))*3
+ELSEIF (@postfn==9)	
+sum=abs(abs(sum*0.5-trunc(sum*0.5))-0.5)*2
+ELSEIF (@postfn==10)
+sum = asinh(sum)
+ELSEIF (@postfn==11)
+sum=abs(exp(sin(sum))-1)
+ENDIF
+
+;adds random noise
+IF (@userandom==true)
+sum = abs( tanh(@NoiseAmount*real(#random)) +sum)
+ENDIF
+
+;The result
+#index = sum
+  
+default:
+  title = "Mega Discrete Langrangian Descriptors"
+heading
+caption = "Core"
+text = "Color algorithm developed for scientic research. To get rid of 'equipotential lines' increase bailout and flag Sum."
+endheading
+  param power
+    caption = "Power"
+    default = 0.25
+    hint = "Affects the steepness of the gradient near singularities (fractal features like a Julia set)"
+    min = 0.0
+  endparam
+  param qsum
+    caption = "Sum"
+    default = true
+    hint = "Averages if false, sums if true."
+  endparam
+  
+; removed this option as it does nothing exept in 2 special cases power =1 or 3
+; less code means faster rendering.
+  param qabs
+    caption = "Abs differences"
+    default = false
+    visible = false
+  endparam
+  
+heading
+caption = "Additions"
+endheading
+  
+param averaging
+caption = "Average final iterations"
+default = true
+hint = "Averages 3 final iterations, to smooth out lines - equipotential curves."
+endparam
+
+bool param limititer
+caption="Limited iterations"
+default=false
+endparam
+
+param iternum
+visible = (@limititer==true)
+caption="Use max iterations"
+default=7770000
+min=1
+hint="Specify the iteration cycle at which colouring is applied. Using first tens of iterations could smooth out fractal but skiping out first non-escaping iterations could show more features."
+endparam
+
+param iterstart
+visible = (@limititer==true)
+caption = "Start iteration"
+default=2
+min=0
+endparam
+
+  param SigmoidProcess
+  caption = "Sigmoid Process"
+  default = FALSE
+  hint = "Can enchance orbits or features. Finds single max value generated by method and then process it throught sigmoid equation."
+  endparam
+
+param pnorm
+caption = "Flavor p-norm"
+enum = "Normal p=2" "Diamond p=1" "Supercircle p=4"
+default =  0
+hint= "Uses p norms in modulus calcualtions. The effect is minimal. But each have it's own style."
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+  complex param  OrbitCenter
+  caption = "Orbit Center"
+  default = (0,0)
+  endparam
+ 
+param orbits
+caption = "Complex Orbits"
+enum = "None" "Type 1" "Type 2" "Type 3" "Type 4" "Type 5" "Type 6" "Type 7" "Type 8" "Type 9" "SZA Butterfly" "Arlecchino" "Chebyshev4Axolotl" "Sine Stalks" "Sine Vibration" "Tangens Vibration" "Areas" "Hyperbolic Sin" "Quarter" "Square Power" "Tails" "Log stalks"  "AbsHalf Canopy" "SinHCosH Bubbles" "Azimuth Sin" "Cos Ripples" "Exponent Stalks" "Exponent Ripples"
+hint= "Symmetrical orbit traps of very complex equations. More noticable with Sigmoid On."
+endparam
+ 
+heading
+caption = "Color Functions"
+endheading
+ 
+param postfn
+caption = "Transfer Function"
+enum = "1- None" "2- SinHofFraction" "3- Cosine" "4- Haversine" "5- Sine" "6- AverageWInverse" "7- Hyperbolic Tangent" "8- Solarisation" "9- Sigmoid" "10- Triangle" "11- ArcsinH" "11- ExpOfSin"
+default =  0
+hint= "The same as built in colour transfer, but with additional functions."
+endparam
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+ float param NoiseAmount
+ caption = "Noise amount"
+ hint = "Adds a random noise to the colours. Use very small or very large values 0.1 or 50."
+ default = 0.02
+ visible = (@userandom==true)
+ endparam
+}

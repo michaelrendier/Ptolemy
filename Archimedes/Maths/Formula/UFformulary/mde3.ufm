@@ -1,0 +1,1742 @@
+Comment {
+Je voudrais remercier tous ceux qui ont testé/utilisé ces formules en attendant leur
+publication. Il y en a trop et j'aurais peur d'oublier quelqu'un. Aussi, je ne les 
+nommerai pas. Mais soyez sûrs qu'ils sont tous du monde super.
+
+I would like to thank all those people who tested/used these formulas until their
+publishing. They are all too numerous and I don't want to forget anybody. So, I won't 
+name them, but they are all great people.
+
+ Helpfiles / Fichiers d'aide:
+ http://www.pruniermei.ca/mde-help.zip
+ Pour me contacter / To contact me:
+ http://www.pruniermei.ca
+
+}
+
+md-2fn-ja {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; fn||fn, fn+fn, fn*z+z, fn(z)+fn(pix), julia(fn||fn)
+; julia fn(z)+e^z, julia fn(z)+z^2, sqr(1/fn(z))
+; fn(z*z), sqr(fn(z))
+;
+init:
+  float x = 0
+  float y = 0  
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    z = (@p1*@fn1(z)*@p2*@fn2(z)) +@c          ;fn*fn
+  elseif @var == 1
+    z = (@p1 * @fn1(z) + @p2 * @fn2(z)) +@c    ;fn+fn
+; si @fn2 = exp() -> julia fn(z)+e^z
+; si @fn2 = sqr() -> julia fn(z)+z^2
+  elseif @var == 2
+    z = (@p1 * @fn1(z) - @p2 * @fn2(z)) +@c    ;
+  elseif @var == 3
+    z = (@p1 * @fn1(z) / @p2 * @fn2(z)) +@c    ;
+  elseif @var == 4
+    z = ((@p1 * @fn1(z)) ^( @p2 * @fn2(z))) +@c ;
+  elseif @var == 5 
+; si @fn2 = sqr()  -> fn(z*z) 
+; si @fn1 = sqr() -> sqr(fn(z))
+    z = @p1*@fn1(@fn2(z))+@c
+  elseif @var == 6
+    z = (@p1 * @fn1(z) + @p2) * z + @c           ;fn*z+z
+  elseif @var == 7
+    z = (@fn1(z) + @p1 * @fn2(#pixel))+ @c      ;fn(z)+fn(pix)
+  elseif @var == 8
+    z = @p1*@fn1(1/@fn2(z)) + @c
+; si @fn1 = sqr() -> sqr(1/fn(z))
+  elseif @var == 9                              ; julia(fn||fn)
+    if |z| < @shift
+      z = @p1*@fn1(z) + @c
+    else
+      z = @p2*@fn2(z) + @c
+    endif
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Deux fonctions (Julia)"
+  helpfile="mde-help\mde3-deux-fonctions.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 150
+  magn = 0.5
+  heading
+    caption = "Parameters"
+  endheading
+  int param var
+    caption = "Variation"
+    enum = "First" "Second" "Third" "Fourth" "Fifth" "Sixth" "Seventh" "Eighth" "Ninth" "Tenth"
+  endparam
+  complex param p1
+    caption = "First Coefficient"
+    default = (1,0)
+  endparam
+  complex param p2
+    caption = "Second Coefficient"
+    default = (1,0)
+    visible = (@var <= 4) || (@var == 6) || (@var == 9)
+  endparam
+  float param shift
+    caption = "Function Shift"
+    default = 8.0
+    visible = (@var == 9)
+  endparam
+  complex param c
+    caption ="Seed"
+    default = (0.0, 0.0)
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  complex param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  int param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  float param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+    visible = (@barn > 0)
+  endparam  
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading
+  int param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  int param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible = (@pairimp > 0)
+  endparam
+  bool param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible = (@pairimp > 0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  float param bailout
+    caption = "Bailout Value"
+    default = 64.0
+    min = 1.0
+  endparam
+  int param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  heading
+    caption = "Functions"
+  endheading
+  func fn1
+    caption = "First Function"
+    default = sin()    
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = acosh()
+    visible = (@var != 6)
+  endfunc
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible = (@barn > 0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible = (@pairimp > 0)
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-2fn-ma"
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  fnbl = fnbl
+  fnpi = fnpi
+  var = var
+  p1 = p1
+  p2 = p2
+  sgn = sgn
+  intf = intf
+  bornes = bornes
+  fnb = fnb
+  fn1 = fn1
+  fn2 = fn2
+  barn = barn
+  barn_offset = barn_offset
+  shift = shift
+}
+
+md-2fn-ma {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; fn||fn, fn+fn, fn*z+z, fn(z)+fn(pix), mandel(fn||fn)
+; mandel fn(z)+e^z, mandel fn(z)+z^2, sqr(1/fn(z))
+; fn(z*z), sqr(fn(z))
+;
+init:
+  float x = 0
+  float y = 0  
+  z=#pixel+@c
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    z = (@p1*@fn1(z)*@p2*@fn2(z)) +#pixel
+  elseif @var == 1
+    z = (@p1 * @fn1(z) + @p2 * @fn2(z)) +#pixel
+; si @fn2 = exp() -> Mandelbrot fn(z) + e^z
+; si @fn2 = sqr() -> Mandelbrot fn(z) + z^2
+  elseif @var == 2
+    z = (@p1 * @fn1(z) - @p2 * @fn2(z)) +#pixel
+  elseif @var == 3
+    z = (@p1 * @fn1(z) / @p2 * @fn2(z)) +#pixel
+  elseif @var == 4
+    z = ((@p1 * @fn1(z)) ^( @p2 * @fn2(z))) +#pixel
+  elseif @var == 5
+    z = @p1*@fn1(@fn2(z)) +#pixel
+  elseif @var == 6
+    z = (@p1 * fn1(z) + @p2) * z + #pixel
+  elseif @var == 7
+    z = (@fn1(z) + @p1 * @fn2(#pixel)) +#pixel
+  elseif @var == 8
+    z = @p1*@fn1(1/@fn2(z)) + #pixel
+  elseif @var == 9                         ;Mandelbrot (fn||fn)
+    if |z| < @shift
+      z = @p1*@fn1(z) + #pixel
+    else
+      z = @p2*@fn2(z) + #pixel
+    endif
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Deux fonctions (Mandelbrot)"
+  helpfile="mde-help\mde3-deux-fonctions.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 150
+  magn = 0.5
+  heading
+    caption = "Parameters"
+  endheading
+  int param var
+    caption = "Variation"
+    enum = "First" "Second" "Third" "Fourth" "Fifth" "Sixth" "Seventh" "Eighth" "Ninth" "Tenth"
+  endparam
+  complex param p1
+    caption = "First Coefficient"
+    default = (1,0)
+  endparam
+  complex param p2
+    caption = "Second Coefficient"
+    default = (1,0)
+    visible = (@var <= 4) || (@var == 6) || (@var == 9)
+  endparam
+  float param shift
+    caption = "Function Shift"
+    default = 8.0
+    visible = (@var == 9)
+  endparam
+  complex param c
+    caption ="Starting point"
+    default =(0.0,0.0)
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  complex param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  int param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  float param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+    visible = (@barn > 0)
+  endparam
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading  
+  int param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  int param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible = (@pairimp > 0)
+  endparam
+  bool param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible = (@pairimp > 0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  float param bailout
+    caption = "Bailout Value"
+    default = 64.0
+    min = 1.0
+  endparam
+  int param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  heading
+    caption = "Functions"
+  endheading
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = acosh()
+    visible = (@var != 6)
+  endfunc
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible = (@barn > 0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible = (@pairimp > 0)
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc
+switch:
+  type = "md-2fn-ja"
+  c = pixel
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  fnbl = fnbl
+  fnpi = fnpi
+  var = var
+  p1 = p1
+  p2 = p2
+  sgn = sgn
+  intf = intf
+  fn1 = fn1
+  fn2 = fn2
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  shift = shift
+  barn_offset = barn_offset
+}
+
+md-lambda-ja {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; lambda, lambda c*fn(z), lambda fn||fn
+;
+init:
+  float x = 0
+  float y = 0  
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    z = @lambda * z * (1 - z)    ;lambda
+  elseif @var == 1
+    z = @lambda * @fn1(z)        ;lambda c*fn(z)
+  elseif @var == 2
+    if cabs(z) < @shift          ;lambda fn||fn
+      z = @lambda *@fn1(z)
+    else
+      z = @lambda * @fn2(z)
+    endif
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Lambada (Julia)"
+  helpfile="mde-help\mde3-lambada.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 150
+  heading
+    caption = "Parameters"
+  endheading
+  param var
+    caption = "Variation"
+    enum = "First" "Second" "Third"
+  endparam
+  param lambda
+    caption = "Parameter"
+    default = (0.85, 0.6)
+  endparam
+  param shift
+    caption = "Function Shift"
+    default = 1.0
+    min = 0.0
+    visible = (@var == 2)
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+    visible = (@barn >0)
+  endparam 
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible = (@pairimp >0)
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible = (@pairimp >0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  heading
+    caption = "Functions"
+  endheading
+  func fn1
+    caption = "First Function"
+    default = sin()
+    visible = (@var !=0)
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sqr()
+    visible = (@var ==2)
+  endfunc
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible = (@barn >0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible = (@pairimp >0)
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-lambda-ma"
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  var = var
+  fn1 = fn1
+  fn2 = fn2
+  shift = shift
+  fnbl = fnbl
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+}
+
+md-lambda-ma {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; lambda, lambda c*fn(z), lambda fn||fn
+;
+init:
+  float x = 0
+  float y = 0  
+  z=@c+#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    z = #pixel * z * (1 - z)     ;Mandelbrot Lambda
+  elseif @var == 1
+    z = #pixel * fn1(z)          ;Mandelbrot c*fn(z)
+  elseif @var == 2
+    if cabs(z) < @shift          ;Lambda Mandelbrot fn||fn
+      z = @fn1(z)*#pixel
+    else
+      z = @fn2(z)*#pixel
+    endif
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Lambada (Mandelbrot)"
+  helpfile="mde-help\mde3-lambada.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 150
+  heading
+    caption = "Parameters"
+  endheading
+  param var
+    caption = "Variation"
+    enum = "First" "Second" "Third"
+  endparam
+  param c
+    caption ="Starting point"
+    default =(0.0,0.0)
+  endparam
+  param shift
+    caption = "Function Shift"
+
+    default = 1.0
+    min = 0.0
+    visible = (@var == 2)
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"     
+    default = 0.0
+    visible =(@barn >0)
+  endparam
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading   
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible =(@pairimp >0)
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible =(@pairimp >0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  heading
+    caption = "Functions"
+  endheading
+  func fn1
+    caption = "First Function"
+    default = sin()
+    visible = (@var !=0)
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sqr()
+    visible = (@var == 2)
+  endfunc
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible =(@barn >0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible =(@pairimp >0)
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc
+switch:
+  type = "md-lambda-ja"
+  lambda = pixel
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  var = var
+  fn1 = fn1
+  fn2 = fn2
+  shift = shift
+  fnbl = fnbl
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+}
+
+md-magnetica-ja {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; Magnet
+;
+init:
+  z = #pixel
+  float x = 0
+  float y = 0  
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+
+loop:
+  zold = z
+  if @var == 0                                              ; Magnet1
+    z = sqr( (z^2 + @p1 - 1) / (2*z + @p1 - 2) )
+  elseif @var == 1
+    z = sqr( (z^3 + 3 * (@p1-1) * z + (@p1-1) * (@p1-2))  /            \
+           (3 * z^2 + 3 * (@p1-2) * z + (@p1-1) * (@p1-2) + 1) )  ; Magnet2
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if real(temp3) < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+bailout:
+  |z| < @bailout && |z - zold| > @magnet
+default:
+  title = "Magnetica (Julia)"
+  magn = 0.25
+  maxiter = 150
+  helpfile="mde-help\mde3-magnetica.htm"
+  method = multipass
+  periodicity = 0
+  heading
+    caption = "Parameters"
+  endheading
+  param var
+    caption = "Variation"
+    enum = "First" "Second"
+  endparam
+  param p1
+    caption = "Parameter"
+    default = (0, 0)
+  endparam
+  param magnet
+    caption = "Magnetism"
+    default = 0.0001
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+    visible = (@barn >0)
+  endparam  
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible = (@pairimp >0)
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible = (@pairimp >0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  heading
+    caption = "Functions"
+    visible = (@pairimp >0 || @barn >0)
+  endheading
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible = (@barn >0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible = (@pairimp >0)
+  endfunc
+switch:
+  type = "md-magnetica-ma"
+  bailout = bailout
+  magnet = magnet
+  var = var
+  pairimp = pairimp
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+}
+
+md-magnetica-ma {
+; Michèle Dessureault, Novembre 2001
+;
+; Version personnelle de formules de Fractint
+; tel que porté par F. Slijkerman vers UF :
+; Personal version of some Fractint formulas
+; as ported to UF by F. Slijkerman:
+; Magnet
+;
+init:
+  z = @p1
+  float x = 0
+  float y = 0  
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    z = sqr( (z^2 + #pixel - 1) / (2*z + #pixel - 2) )      ;Magnet1
+  elseif @var == 1
+    z = sqr( (z^3 + 3 * (#pixel-1) * z + (#pixel-1) * (#pixel-2))  /        \
+           (3 * z^2 + 3 * (#pixel-2) * z + (#pixel-1) * (#pixel-2) + 1) )   ; Magnet2
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+bailout:
+  |z| < @bailout && |z - 1| > @magnet
+default:
+  title = "Magnetica (Mandelbrot)"
+  helpfile="mde-help\mde3-magnetica.htm"
+  method = multipass
+  periodicity = 0
+  magn = 0.5
+  maxiter = 150
+  heading
+    caption = "Parameters"
+  endheading
+  param var
+    caption = "Variation"
+    enum = "First" "Second"
+  endparam
+  param p1
+    caption = "Perturbation"
+    default = (0, 0)
+  endparam
+  param magnet
+    caption = "Magnetism"
+    default = 0.00005
+  endparam
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+    visible = (@barn >0)
+  endparam  
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+    visible = (@pairimp >0)
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+    visible = (@pairimp >0)
+  endparam
+  heading
+    caption = "Bailout Toolbox"
+  endheading
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  heading
+    caption = "Functions"
+    visible = (@pairimp >0 || @barn >0)
+  endheading
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+    visible = (@barn >0)
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+    visible = (@pairimp >0)
+  endfunc
+switch:
+  type = "md-magnetica-ja"
+  p1 = pixel
+  bailout = bailout
+  magnet = magnet
+  var = var
+  pairimp = pairimp
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+
+}
+
+md-glyphia-v14112004-1 {
+; Michèle Dessureault, 06/11/2004 
+; Modified Glyph formula from Samuel Monnier, 19.3.00
+; Modified Vine formula (from Mark Townsend)
+
+init:
+  z = #pixel    
+  x = 0 
+  y = 0 
+  newx = 0
+  newy = 0
+  int iter = 0
+  int i = 0
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float xx = 0
+  float yy = 0
+  float bi = real(@bornes)
+  float bs = imag(@bornes) 
+loop:
+  iter = iter + 1
+  x = real(z) + flip(real(@start/100))
+  y = imag(z) + flip(imag(@start/100))
+  newx = y
+  newy = x
+  i = 0
+  while i < @flavor
+    i = i + 1
+    newx = y + real(@h2)*@fn1(@a * newx) + imag(@h2)*@fn2(@a * newx)
+    newy = x + real(@h2)*@fn1(@a * newy) + imag(@h2)*@fn2(@a * newy)
+  endwhile
+  x = x - real(@h1)*@fn1(newx) - imag(@h1)*@fn2(newx)
+  y = y + real(@h1)*@fn1(newy) + imag(@h1)*@fn2(newy)
+  z = @fnx(x)+ flip(@fny(y))
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  xx = real(z)
+  yy = imag(z)
+  if ((((xx-yy)>bi) && ((xx-yy)<bs)) || (((xx+yy)>bi) && ((xx+yy)<bs)))
+      z=1E6           
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+bailout:
+  iter < #maxiter
+default:
+  title = "Glyphia"
+  helpfile = "mde-help/mde3-glyphia-ufm.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 20 
+  magn = 0.15
+  float param version
+    default = 14112004.1
+    visible = false
+  endparam
+  int param flavor
+    caption = "Flavor"
+    default = 2
+    min = 0
+  endparam  
+  float param a
+    caption = "Alpha"
+    default = 2.7
+  endparam 
+  param start
+    caption = "Starting Point"
+  endparam 
+  param h1
+    caption = "Step size I"
+    default = (.05,.05)
+  endparam  
+  param h2
+    caption = "Step size II"
+    default = (.8,.8)
+  endparam
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc  
+  func fn2
+    caption = "Second Function"
+    default = cos()
+  endfunc
+  heading
+    caption = "Epsilon Range Toolbox"
+  endheading
+  param bornes
+    caption ="Epsilon Range"
+    default = (0.0,0.0)
+  endparam
+  heading
+    caption = "Barnsley Toolbox"
+  endheading
+  int param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  float param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  heading
+    caption = "Odd-Even Toolbox"
+  endheading 
+  int param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  int param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  bool param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  heading
+    caption = "Function Application"
+  endheading
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+}

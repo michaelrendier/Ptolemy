@@ -1,0 +1,1319 @@
+jh-NovaJuliaRelaxation {
+;
+; A modified Nova fractal based on the Nova formulas by Damien M. Jones.
+; Parts of the original code is used with his kind premission.
+; This formula replaces the relaxation parameter with the pixel location.
+;
+; Jussi Härkönen 10-09-15
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  z = @start
+loop:
+  IF (@power == (2,0)); special optimized routine for power 2
+    zold = z
+    z = z - #pixel * (sqr(z)-1) / (2*z) + @seed
+  ELSEIF (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - #pixel * (zcubed-1) / (3*zsquared) + @seed
+  ELSE
+    zold = z
+    z = z - #pixel * (z^@power-1) / (@power * z^(@power-1)) + @seed
+  ENDIF
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova Relaxation"
+  maxiter = 30
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Overall exponent for the equation. The value (3,0) gives \
+            the classic Nova Mandelbrot-type fractal."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e-20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "Bailout value; smaller values will cause more \
+            iterations to be done for each point."
+  endparam
+  param seed
+    caption = "Seed"
+    default = (-0.5,0)
+    hint = "Julia seed value."
+  endparam
+
+switch:
+  type = "jh-NovaJulia"
+  power = @power
+  bailout = @bailout
+  relax = #pixel
+  seed = @seed
+}
+
+jh-NovaJulia {
+;
+; This is a copy of Damien Jones' Nova Julia formula, duplicated here
+; to allow the use of Switch feature with the NovaJuliaRelaxation formula
+; (switch requires the target formula to be in the same file).
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  z = #pixel
+
+loop:
+  IF (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @relax * (zcubed-1) / (3*zsquared) + @seed
+  ELSE
+    zold = z
+    z = z - @relax * (z^@power-1) / (@power * z^(@power-1)) + @seed
+  ENDIF
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova (Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-nova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (0,0)
+  magn = 1.5
+
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Overall exponent for the equation.  (3,0) gives \
+            the classic Nova type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 0.00001
+    hint = "Bailout value; smaller values will cause more \
+            iterations to be done for each point."
+  endparam
+  param relax
+    caption = "Relaxation"
+    default = (1,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+}
+
+PerforatedMandelbrot {
+; (c) Jussi Härkönen, 07-01-02
+;
+; A modified mandelbrot set that has a denominator factor to modify the shape
+; of the fractal set. Poles emerge for nonzero distortion values.
+;
+; 07-02-11 Fixed an outdated parameter in the switch section
+; 07-02-15 Added the denominator parameter and two new modes
+; 07-06-?? Added Specify as polar checkbox for the distortion parameter
+;
+init:
+  z = 0
+  complex denominator = 0
+
+  complex factor = @factor
+  if (@usePolar)
+    factor = @denominatorRadius * exp(@denominatorAngle * flip(1))
+  endif
+  
+loop:
+  if (@mode == 0)
+    denominator = 1 + factor*z
+  elseif (@mode == 1)
+    denominator = 1 + factor*z^(@power-1)
+  else
+    denominator = 1 + factor*(@polFactor - z)^(@power - 1)
+  endif
+
+  z = z^@power / denominator + #pixel
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "Perforated Mandelbrot"
+  center = (-0.5, 0)
+
+param mode
+  caption = "Denominator"
+  default = 0
+  enum = "1+dz" "1+dz^(p-1)" "d(1-z)^(p-1)"
+  hint = "Specifies the structure of the denominator in the iterating function."
+endparam
+
+param power
+  caption = "Power"
+  default = (2,0)
+endparam
+
+float param denominatorRadius
+  caption = "Distortion radius"
+  visible = @usePolar
+  default = 0.35355339059327
+endparam
+
+float param denominatorAngle
+  caption = "Distortion angle"
+  visible = @usePolar
+  default = 2.356194490125
+endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  visible = !@usePolar
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+bool param usePolar
+  caption = "Specify as polar"
+  default = false
+  hint = "Specify the denominator factor in polar coordinates."
+endparam
+
+complex param polFactor
+  caption = "Polynomial factor"
+  default = (1,0)
+  visible = @mode == 2
+  hint = "Distorts the shape of the fractal"
+endparam
+
+float param bailout
+  caption = "Bailout value"
+  default = 1e20
+  min = 1.0
+  $IFDEF VER40
+    exponential = true
+  $ENDIF
+  hint = "Defines how soon an orbit bails out while iterating."
+endparam
+  
+switch:
+  type = "PerforatedJulia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+  factor = factor
+  polFactor = polFactor
+  mode = mode
+  usePolar = usePolar
+  denominatorRadius = denominatorRadius
+  denominatorAngle = denominatorAngle
+}
+
+
+PerforatedJulia {
+; 07-01-02 Jussi Härkönen
+;
+; A Julia set for the Perforated Mandelbrot formula.
+;
+; 07-02-15 Added the denominator parameter and two new modes
+init:
+  z = #pixel
+  complex denominator = 0
+  complex factor = @factor
+  if (@usePolar)
+    factor = @denominatorRadius * exp(@denominatorAngle * flip(1))
+  endif
+
+loop:
+  if (@mode == 0)
+    denominator = 1 + factor*z
+  elseif (@mode == 1)
+    denominator = 1 + factor*z^(@power-1)
+  else
+    denominator = 1 + factor*(@polFactor - z)^(@power - 1)
+  endif
+
+  z = z^@power / denominator + @seed
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "Perforated Julia"
+  center = (0, 0)
+
+param mode
+  caption = "Denominator"
+  default = 0
+  enum = "1+dz" "1+dz^(p-1)" "1 + d(f-z)^(p-1)"
+  hint = "Specifies the structure of the denominator in the iterating function."
+endparam
+
+param seed
+  caption = "Julia seed"
+  default = (-1, 0.3)
+endparam
+
+param power
+  caption = "Power"
+  default = (2,0)
+endparam
+
+float param denominatorRadius
+  caption = "Distortion radius"
+  visible = @usePolar
+  default = 0.35355339059327
+endparam
+
+float param denominatorAngle
+  caption = "Distortion angle"
+  visible = @usePolar
+  default = 2.356194490125
+endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  visible = !@usePolar
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+bool param usePolar
+  caption = "Specify as polar"
+  default = false
+  hint = "Specify the denominator factor in polar coordinates."
+endparam
+
+complex param polFactor
+  caption = "Polynomial factor"
+  default = (1,0)
+  visible = @mode == 2
+  hint = "Distorts the shape of the fractal"
+endparam
+
+float param bailout
+  caption = "Bailout value"
+  default = 1e20
+  min = 1.0
+  $IFDEF VER40
+    exponential = true
+  $ENDIF
+  hint = "Defines how soon an orbit bails out while iterating."
+endparam
+
+switch:
+  type = "PerforatedMandelbrot"
+  seed = #pixel
+  power = power
+  bailout = bailout
+  factor = factor
+  polFactor = polFactor
+  mode = mode
+}
+
+jh-pfJulia3-Start {
+;
+; This is the starting point for Perforated Julia3, the periodic-c
+; Perforated Julia variant.
+;
+; Code copied and modified by Jussi Härkönen from Julia3 formulas in
+; dmj.ufm with the kind permission of Damien Jones.
+;
+; 08-01-26 First implementation
+;
+init:
+  z = 0
+
+loop:
+  z = z^@power / (1 + @factor * z) + #pixel
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Perforated Julia3 Start"
+  maxiter = 500
+  center = (-0.5,0)
+
+  param seedorder
+    caption = "Seed Order"
+    default = 6
+    enum = "1, 2, 3" "2, 3, 1" "3, 1, 2" "3, 2, 1" "2, 1, 3" "1, 3, 2" "custom"
+    hint = "Selects the order in which the Julia seeds are used. \
+            This parameter is retained for compatibility purposes; \
+    new fractals should use 'Custom' and set the order explicitly."
+  endparam
+  param pattern
+    caption = "Seed Pattern"
+    default = 123
+    min = 12
+    hint = "Defines the pattern in which the two seeds will be used. \
+            Each digit indicates the seed to use, 1, 2, or 3; when all \
+    digits have been used, the pattern repeats.  The default \
+    of 123 gives the original Julia3 behavior."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia3 set anymore."
+  endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+switch:
+  type = "jh-pfJulia3-Step1"
+  seed1 = #pixel
+  seedorder = @seedorder
+  pattern = @pattern
+  power = @power
+  bailout = @bailout
+  factor = @factor
+}
+
+jh-pfJulia3-Step1 {
+;
+; This is the first step in selecting a Julia3 fractal.  From
+; here, use the Switch feature again to select the second Julia
+; point.
+;
+init:
+  z = 0
+  int p = @pattern; Starting pattern
+  IF (@seedorder == 0); Preset pattern
+    p = 123
+  ELSEIF (@seedorder == 1)
+    p = 231
+  ELSEIF (@seedorder == 2)
+    p = 312
+  ELSEIF (@seedorder == 3)
+    p = 321
+  ELSEIF (@seedorder == 4)
+    p = 213
+  ELSEIF (@seedorder == 5)
+    p = 132
+  ENDIF
+  int plength = floor(log(p)/log(10)); number of digits in the pattern, - 1
+  int pmul = floor(10^plength); multiplier to get leftmost digit
+  int pdigit = 0; used for extracted digit
+
+loop:
+  pdigit = floor(p / pmul); rotate pattern one step
+  p = (p-pdigit*pmul)*10 + pdigit
+  IF (pdigit == 1); using first seed
+    z = z^@power / (1 + @factor * z) + @seed1
+  ELSEIF (pdigit == 2); using second seed
+    z = z^@power / (1 + @factor * z) + #pixel
+  ELSE; using third seed
+    z = z^@power / (1 + @factor * z) + #pixel
+  ENDIF
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Perforated Julia3 Step 1"
+  maxiter = 500
+  center = (-0.5,0)
+
+  param seed1
+    caption = "Julia Seed 1"
+    default = (0,0)
+    hint = "This is the first Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seedorder
+    caption = "Seed Order"
+    default = 6
+    enum = "1, 2, 3" "2, 3, 1" "3, 1, 2" "3, 2, 1" "2, 1, 3" "1, 3, 2" "custom"
+    hint = "Selects the order in which the Julia seeds are used. \
+            This parameter is retained for compatibility purposes; \
+    new fractals should use 'Custom' and set the order explicitly."
+  endparam
+  param pattern
+    caption = "Seed Pattern"
+    default = 123
+    min = 12
+    hint = "Defines the pattern in which the two seeds will be used. \
+            Each digit indicates the seed to use, 1, 2, or 3; when all \
+    digits have been used, the pattern repeats.  The default \
+    of 123 gives the original Julia3 behavior."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia3 set anymore."
+  endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+switch:
+  type = "jh-pfJulia3-Step2"
+  seed1 = @seed1
+  seed2 = #pixel
+  seedorder = @seedorder
+  pattern = @pattern
+  power = @power
+  bailout = @bailout
+  factor = @factor
+}
+
+jh-pfJulia3-Step2 {
+;
+; This is the second step in selecting a Julia3 fractal.  From
+; here, use the Switch feature again to select the third Julia
+; point.
+;
+init:
+  z = 0
+  int p = @pattern; Starting pattern
+  IF (@seedorder == 0); Preset pattern
+    p = 123
+  ELSEIF (@seedorder == 1)
+    p = 231
+  ELSEIF (@seedorder == 2)
+    p = 312
+  ELSEIF (@seedorder == 3)
+    p = 321
+  ELSEIF (@seedorder == 4)
+    p = 213
+  ELSEIF (@seedorder == 5)
+    p = 132
+  ENDIF
+  int plength = floor(log(p)/log(10)); number of digits in the pattern, - 1
+  int pmul = floor(10^plength); multiplier to get leftmost digit
+  int pdigit = 0; used for extracted digit
+
+loop:
+  pdigit = floor(p / pmul); rotate pattern one step
+  p = (p-pdigit*pmul)*10 + pdigit
+  IF (pdigit == 1); using first seed
+    z = z^@power / (1 + @factor * z) + @seed1
+  ELSEIF (pdigit == 2); using second seed
+    z = z^@power / (1 + @factor * z) + @seed2
+  ELSE; using third seed
+    z = z^@power / (1 + @factor * z) + #pixel
+  ENDIF
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Perforated Julia3 Step 2"
+  maxiter = 500
+  center = (-0.5,0)
+
+  param seed1
+    caption = "Julia Seed 1"
+    default = (0,0)
+    hint = "This is the first Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seed2
+    caption = "Julia Seed 2"
+    default = (0,0)
+    hint = "This is the second Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seedorder
+    caption = "Seed Order"
+    default = 6
+    enum = "1, 2, 3" "2, 3, 1" "3, 1, 2" "3, 2, 1" "2, 1, 3" "1, 3, 2" "custom"
+    hint = "Selects the order in which the Julia seeds are used. \
+            This parameter is retained for compatibility purposes; \
+    new fractals should use 'Custom' and set the order explicitly."
+  endparam
+  param pattern
+    caption = "Seed Pattern"
+    default = 123
+    min = 12
+    hint = "Defines the pattern in which the two seeds will be used. \
+            Each digit indicates the seed to use, 1, 2, or 3; when all \
+    digits have been used, the pattern repeats.  The default \
+    of 123 gives the original Julia3 behavior."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia3 set anymore."
+  endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+switch:
+  type = "jh-pfJulia3-Step3"
+  seed1 = @seed1
+  seed2 = @seed2
+  seed3 = #pixel
+  seedorder = @seedorder
+  pattern = @pattern
+  power = @power
+  bailout = @bailout
+  factor = @factor
+}
+
+jh-pfJulia3-Step3 {
+;
+; This is the final alternating-c Julia3 fractal.
+;
+init:
+  z = #pixel
+  int p = @pattern; Starting pattern
+  IF (@seedorder == 0); Preset pattern
+    p = 123
+  ELSEIF (@seedorder == 1)
+    p = 231
+  ELSEIF (@seedorder == 2)
+    p = 312
+  ELSEIF (@seedorder == 3)
+    p = 321
+  ELSEIF (@seedorder == 4)
+    p = 213
+  ELSEIF (@seedorder == 5)
+    p = 132
+  ENDIF
+  int plength = floor(log(p)/log(10)); number of digits in the pattern, - 1
+  int pmul = floor(10^plength); multiplier to get leftmost digit
+  int pdigit = 0; used for extracted digit
+
+loop:
+  pdigit = floor(p / pmul); rotate pattern one step
+  p = (p-pdigit*pmul)*10 + pdigit
+  IF (pdigit == 1); using first seed
+    z = z^@power / (1 + @factor * z) + @seed1
+  ELSEIF (pdigit == 2); using second seed
+    z = z^@power / (1 + @factor * z) + @seed2
+  ELSE; using third seed
+    z = z^@power / (1 + @factor * z) + @seed3
+  ENDIF
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Perforated Julia3 Step 3"
+  maxiter = 500
+  center = (0,0)
+
+  param seed1
+    caption = "Julia Seed 1"
+    default = (0,0)
+    hint = "This is the first Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seed2
+    caption = "Julia Seed 2"
+    default = (0,0)
+    hint = "This is the second Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seed3
+    caption = "Julia Seed 3"
+    default = (0,0)
+    hint = "This is the third Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param seedorder
+    caption = "Seed Order"
+    default = 6
+    enum = "1, 2, 3" "2, 3, 1" "3, 1, 2" "3, 2, 1" "2, 1, 3" "1, 3, 2" "custom"
+    hint = "Selects the order in which the Julia seeds are used. \
+            This parameter is retained for compatibility purposes; \
+    new fractals should use 'Custom' and set the order explicitly."
+  endparam
+  param pattern
+    caption = "Seed Pattern"
+    default = 123
+    min = 12
+    hint = "Defines the pattern in which the two seeds will be used. \
+            Each digit indicates the seed to use, 1, 2, or 3; when all \
+    digits have been used, the pattern repeats.  The default \
+    of 123 gives the original Julia3 behavior."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia3 set anymore."
+  endparam
+
+complex param factor
+  caption = "Distortion"
+  default = (-0.25,0.25)
+  hint = "This parameter affects the shape of the fractal set. Use (0,0) for \
+          the usual Mandelbrot set. When using power = 2, you may have to \
+          increase the maximum \
+          iterations for values close to 1 in absolute value due to slow \
+          convergence."
+endparam
+
+switch:
+  type = "jh-pfJulia3-Start"
+  seedorder = @seedorder
+  pattern = @pattern
+  power = @power
+  bailout = @bailout
+  factor = @factor
+}
+
+jh-NovaDuckyMandelbrot {
+;
+; This is a Ducky adaptation of the Nova fractal. The implementation is based on
+; the Nova Julia and Mandelbrot formulas by Damien M. Jones (see dmj.ufm).
+; The idea of Symmetry Modes is from Samuel Monnier's work on ducky formulas.
+;
+; Use the Switch funcitonality on the Mandelbrot and Relaxation versions to
+; explore Julia sets.
+;
+; Jussi Härkönen 11-06-19
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  z = @start
+loop:
+  if (@symmetryMode == 0)
+    ; Abs
+    z = @absOffset + abs(z - @absOffset)
+  elseif (@symmetryMode == 1)
+    ; LAbs (abs on imaginary part)
+    complex zOffset = z - @absOffset
+    z = @absOffset + real(zOffset) + flip(abs(imag(zOffset)))
+  endif
+
+  if (@power == (2,0)); special optimized routine for power 2
+    zold = z
+    z = z - @relaxation * (sqr(z)-1) / (2*z) + #pixel
+  elseif (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @relaxation * (zcubed-1) / (3*zsquared) + #pixel
+  else
+    zold = z
+    z = z - @relaxation * (z^@power-1) / (@power * z^(@power-1)) + #pixel
+  endif
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova Ducky (Mandelbrot)"
+  maxiter = 30
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param symmetryMode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "Abs" "LAbs"
+  endparam
+  complex param absOffset
+    caption = "Symmetry Offset"
+    default = (0,0)
+  endparam
+  param start
+    caption = "Start Value"
+    default = (1,0)
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e-20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  param relaxation
+    caption = "Relaxation"
+    default = (3.0,0)
+  endparam
+
+switch:
+  type = "jh-NovaDuckyJulia"
+  seed = #pixel
+  power = @power
+  bailout = @bailout
+  relaxation = @relaxation
+  symmetryMode = @symmetryMode
+  absOffset = @absOffset
+}
+
+jh-NovaDuckyJulia {
+;
+; This is a Ducky adaptation of the Nova fractal. The implementation is based on
+; the Nova Julia and Mandelbrot formulas by Damien M. Jones (see dmj.ufm).
+; The idea of Symmetry Modes is from Samuel Monnier's work on ducky formulas.
+;
+; Use the Switch funcitonality on the Mandelbrot and Relaxation versions to
+; explore Julia sets.
+;
+; Jussi Härkönen 11-06-19
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  z = #pixel
+loop:
+  if (@symmetryMode == 0)
+    ; Abs
+    z = @absOffset + abs(z - @absOffset)
+  elseif (@symmetryMode == 1)
+    ; LAbs (abs on imaginary part)
+    complex zOffset = z - @absOffset
+    z = @absOffset + real(zOffset) + flip(abs(imag(zOffset)))
+  endif
+
+  if (@power == (2,0)); special optimized routine for power 2
+    zold = z
+    z = z - @relaxation * (sqr(z)-1) / (2*z) + @seed
+  elseif (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @relaxation * (zcubed-1) / (3*zsquared) + @seed
+  else
+    zold = z
+    z = z - @relaxation * (z^@power-1) / (@power * z^(@power-1)) + @seed
+  endif
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova Ducky (Julia)"
+  maxiter = 30
+  periodicity = 0
+  center = (0,0)
+  magn = 1.5
+
+  param symmetryMode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "Abs" "LAbs"
+  endparam
+  complex param absOffset
+    caption = "Symmetry Offset"
+    default = (0,0)
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e-20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  param relaxation
+    caption = "Relaxation"
+    default = (3.0,0)
+  endparam
+
+switch:
+  type = "jh-NovaDuckyMandelbrot"
+  power = @power
+  bailout = @bailout
+  relaxation = @relaxation
+  center = @seed
+  symmetryMode = @symmetryMode
+  absOffset = @absOffset
+}
+
+jh-NovaDuckyRelax {
+;
+; This is a Ducky adaptation of the Nova fractal. The implementation is based on
+; the Nova Julia and Mandelbrot formulas by Damien M. Jones (see dmj.ufm).
+; The idea of Symmetry Modes is from Samuel Monnier's work on ducky formulas.
+;
+; Use the Switch funcitonality on the Mandelbrot and Relaxation versions to
+; explore Julia sets.
+;
+; Jussi Härkönen 11-06-19
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  z = @start
+loop:
+  if (@symmetryMode == 0)
+    ; Abs
+    z = @absOffset + abs(z - @absOffset)
+  elseif (@symmetryMode == 1)
+    ; LAbs (abs on imaginary part)
+    complex zOffset = z - @absOffset
+    z = @absOffset + real(zOffset) + flip(abs(imag(zOffset)))
+  endif
+
+  if (@power == (2,0)); special optimized routine for power 2
+    zold = z
+    z = z - #pixel * (sqr(z)-1) / (2*z) + @seed
+  elseif (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - #pixel * (zcubed-1) / (3*zsquared) + @seed
+  else
+    zold = z
+    z = z - #pixel * (z^@power-1) / (@power * z^(@power-1)) + @seed
+  endif
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova Ducky (Relaxation)"
+  maxiter = 30
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param symmetryMode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "Abs" "LAbs"
+  endparam
+  complex param absOffset
+    caption = "Symmetry Offset"
+    default = (0,0)
+  endparam
+  param start
+    caption = "Start Value"
+    default = (1,0)
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e-20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  param seed
+    caption = "Seed"
+    default = (-0.5,0)
+    hint = "Julia seed value."
+  endparam
+
+switch:
+  type = "jh-NovaDuckyJulia"
+  seed = @seed
+  power = @power
+  bailout = @bailout
+  relaxation = #pixel
+  symmetryMode = @symmetryMode
+  absOffset = @absOffset
+}
+
+jh-NovaDuckyOffset {
+;
+; This is a Ducky adaptation of the Nova fractal. The implementation is based on
+; the Nova Julia and Mandelbrot formulas by Damien M. Jones (see dmj.ufm).
+; The idea of Symmetry Modes is from Samuel Monnier's work on ducky formulas.
+;
+; Use the Switch funcitonality on the Mandelbrot and Relaxation versions to
+; explore Julia sets.
+;
+; Jussi Härkönen 11-06-19
+;
+init:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+  
+  z = @start
+loop:
+  if (@symmetryMode == 0)
+    ; Abs
+    z = #pixel + abs(z - #pixel)
+  elseif (@symmetryMode == 1)
+    ; LAbs (abs on imaginary part)
+    complex zOffset = z - #pixel
+    z = #pixel + real(zOffset) + flip(abs(imag(zOffset)))
+  endif
+
+  if (@power == (2,0)); special optimized routine for power 2
+    zold = z
+    z = z - @relaxation * (sqr(z)-1) / (2*z) + @seed
+  elseif (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @relaxation * (zcubed-1) / (3*zsquared) + @seed
+  else
+    zold = z
+    z = z - @relaxation * (z^@power-1) / (@power * z^(@power-1)) + @seed
+  endif
+
+bailout:
+  |z - zold| > @bailout
+
+default:
+  title = "Nova Ducky (Offset)"
+  maxiter = 30
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param symmetryMode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "Abs" "LAbs"
+  endparam
+  param start
+    caption = "Start Value"
+    default = (1,0)
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e-20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  param seed
+    caption = "Seed"
+    default = (-0.5,0)
+    hint = "Julia seed value."
+  endparam
+  param relaxation
+    caption = "Relaxation"
+    default = (3.0,0)
+  endparam
+switch:
+  type = "jh-NovaDuckyJulia"
+  seed = @seed
+  power = @power
+  bailout = @bailout
+  relaxation = @relaxation
+  symmetryMode = @symmetryMode
+  absOffset = #pixel
+}
+
+jh-PointIndicator {
+;
+; Jussi Härkönen 14-01-21
+;
+init:
+  z = #pixel
+loop:
+
+bailout:
+  cabs(z - @position) < @size
+
+default:
+  title = "Point Indicator"
+  maxiter = 1
+  periodicity = 0
+  center = (0,0)
+  magn = 1
+
+  complex param position
+    caption = "Position"
+    default = (0,0)
+  endparam
+  float param size
+    caption = "Size"
+    default = 0.1
+  endparam
+}
+
+jh-gnarlies {
+; Jussi Härkönen 2014-05
+init:
+  z = #pixel
+  int iteration = 0
+
+loop:
+  complex func getOffset(const complex current, const complex frequency, complex offset, \
+          const complex flavorWeight, const complex flavorFrequency)
+
+    float x = real(current)
+    float y = imag(current)
+    float xOffset = sin(real(frequency) * y + real(offset) + real(flavorWeight) * real(@flavor(real(flavorFrequency) * y)))
+    float yOffset = sin(imag(frequency) * x + imag(offset) + imag(flavorWeight) * real(@flavor(imag(flavorFrequency) * x)))
+
+    return (xOffset) + flip(powered(yOffset))
+  endfunc
+
+  float func powered(float value)
+    return getSign(value) * abs(value)^@power
+  endfunc
+
+  float func getSign(float value)
+    if (value < 0)
+      return -1
+    else
+      return 1
+    endif
+  endfunc
+
+  complex func scaleToWeight(const complex weight, const complex value)
+    return real(weight) * real(value) + flip(imag(weight) * imag(value))
+  endfunc
+
+  iteration = iteration + 1
+
+  complex offset = (0,0)
+  if (@primaryComponent)
+    complex primaryOffset = getOffset(z, @primaryFrequency, @primaryOffset, @primaryFlavorWeight, @primaryFlavorFrequency)
+    offset = scaleToWeight(@primaryWeight, primaryOffset)
+  endif
+
+  if (@secondaryComponent)
+    complex secondaryOffset = getOffset(z, @secondaryFrequency, @secondaryOffset, @secondaryFlavorWeight, @secondaryFlavorFrequency)
+    offset = offset + scaleToWeight(@secondaryWeight, secondaryOffset)
+  endif
+
+  if (@thirdComponent)
+    complex thirdOffset = getOffset(z, @thirdFrequency, @thirdOffset, @thirdFlavorWeight, @thirdFlavorFrequency)
+    offset = offset + scaleToWeight(@thirdWeight, thirdOffset)
+  endif
+  
+  complex zoomOffset1 = (z - @zoomCenter1) * @zoomSpeed1
+  complex zoomOffset2 = (z - @zoomCenter2) * @zoomSpeed2
+
+  z = z + @step * (offset + @flowOffset + zoomOffset1 + zoomOffset2)
+bailout:
+  iteration < #maxiter
+default:
+  title = "Gnarlies"
+  maxiter = 20
+  magn = 0.5
+  float param step
+    caption = "Step"
+    default = 0.1
+  endparam
+  float param power
+    caption = "Power"
+    default = 1
+  endparam
+  func flavor
+    caption = "Flavor Function"
+    default = sin()
+    visible = @secondaryComponent
+  endfunc
+  complex param flowOffset
+    caption = "Offset"
+    default = (0,0)
+  endparam
+  heading
+    caption = "Zooming"
+  endheading
+  float param zoomSpeed1
+    caption = "Zoom Speed 1"
+    default = 0
+  endparam
+  complex param zoomCenter1
+    caption = "Zoom Center 1"
+    default = (0,0)
+  endparam
+  float param zoomSpeed2
+    caption = "Zoom Speed 2"
+    default = 0
+  endparam
+  complex param zoomCenter2
+    caption = "Zoom Center 2"
+    default = (0,0)
+  endparam
+  heading
+    caption = "Primary Component"
+  endheading
+  bool param primaryComponent
+    caption = "1. Component"
+    default = true
+  endparam
+  complex param primaryWeight
+    caption = "1. Weight"
+    default = (1,1)
+    visible = @primaryComponent
+  endparam
+  complex param primaryFrequency
+    caption = "1. Frequency"
+    default = (1, 1)
+    visible = @primaryComponent
+  endparam
+  complex param primaryOffset
+    caption = "1. Offset"
+    default = (0, 0)
+    visible = @primaryComponent
+  endparam
+  complex param primaryFlavorWeight
+    caption = "1. Flavor Weight"
+    default = (0, 0)
+    visible = @primaryComponent
+  endparam
+  complex param primaryFlavorFrequency
+    caption = "1. Flavor Frequency"
+    default = (2, 2)
+    visible = @primaryComponent
+  endparam
+  heading
+    caption = "Secondary Component"
+  endheading
+  bool param secondaryComponent
+    caption = "2. Component"
+    default = false
+  endparam
+  complex param secondaryWeight
+    caption = "2. Weight"
+    default = (1,1)
+    visible = @secondaryComponent
+  endparam
+  complex param secondaryFrequency
+    caption = "2. Frequency"
+    default = (2, 2)
+    visible = @secondaryComponent
+  endparam
+  complex param secondaryOffset
+    caption = "2. Offset"
+    default = (0, 0)
+    visible = @secondaryComponent
+  endparam
+  complex param secondaryFlavorWeight
+    caption = "2. Flavor Weight"
+    default = (0, 0)
+    visible = @secondaryComponent
+  endparam
+  complex param secondaryFlavorFrequency
+    caption = "2. Flavor Frequency"
+    default = (2, 2)
+    visible = @secondaryComponent
+  endparam
+
+  heading
+    caption = "Third Component"
+  endheading
+  bool param thirdComponent
+    caption = "3. Component"
+    default = false
+  endparam
+  complex param thirdWeight
+    caption = "3. Weight"
+    default = (1,1)
+    visible = @thirdComponent
+  endparam
+  complex param thirdFrequency
+    caption = "3. Frequency"
+    default = (2, 2)
+    visible = @thirdComponent
+  endparam
+  complex param thirdOffset
+    caption = "3. Offset"
+    default = (0, 0)
+    visible = @thirdComponent
+  endparam
+  complex param thirdFlavorWeight
+    caption = "3. Flavor Weight"
+    default = (0, 0)
+    visible = @thirdComponent
+  endparam
+  complex param thirdFlavorFrequency
+    caption = "3. Flavor Frequency"
+    default = (2, 2)
+    visible = @thirdComponent
+  endparam
+}

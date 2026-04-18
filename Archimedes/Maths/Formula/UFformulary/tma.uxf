@@ -1,0 +1,411 @@
+theCompleatLake/sg+tma {
+;
+; Transformation written by Sylvie Gallet
+; December 11, 1999
+; Wavelet extension by Dave Makin
+; February 10th 2003
+; A bunch of stuff added by Toby Marshall
+; Jun 2006 , v 1.5
+;
+; This is basically an extension of Sylvie Gallet's great,
+; classic transformation. I hope I haven't screwed up its
+; elegant simplicity too much. Differences are as follows:
+;
+; Added "Skew" param--this skews the reflection to the
+; left or to the right depending on the value (negative
+; or positive) input. However to use this without
+; breaking horizontal symmetry 'Use screen center' must
+; unchecked and water level set manually, with real component
+; set to 0.
+;
+; Added "Wave Variation"--an enumerated param which
+; changes somewhat the pattern of reflection and shape
+; of the waves.
+;
+; Added "Distribution" param--which at higher values
+; increases the frequency of the waves farther from
+; the figure.
+;
+; Added "Periodicity" param--this increases the frequency of
+; the waves, although differently than the "Frequency" param.
+; Negative values work with some choices in "Wavelet Fn 3".
+;
+; A number of new params and functions added to Wavelets--
+; please see the hints.
+;
+; A number of "Non-Symmetrical" parameters added--again
+; please check out the individual hints.
+;
+; NOTE: All parameters grouped under "Non-Symmetrical
+; Parameters" cause discontinuities at the horizon
+; when the water level is not 0. Some cause horizontal
+; discontinuity regardless. They can, however, be useful
+; when one is lucky enough to find a useful zero level,
+; or when working with the 'reflection' only--or when it
+; does not touch the main figure at the apparent horizon.
+;
+; All new Wavelet params and functions integrate seamlessly
+; at any water level, except for a few function choices in
+; one function, as noted in the hints.
+;
+; HINT: For "funhouse mirror" effects try the following:
+; Set "Amplitude" low and "Frequency" to 1. Set the water
+; level low so that the figure you want to distort doesn't
+; touch the horizon--so that you have a discrete reflection,
+; and then frame only the reflection. Check "Add wavelets"
+; and play with the wavelet values. You can get some
+; interesting '3D mapping' effects that way.
+
+
+transform:
+
+  if (@use_sc)
+    centr = #center
+  else
+    centr = @w1
+  endif
+
+  if (@use_la)
+    float ang = #angle
+  else
+    float ang = @rot * pi / 180
+  endif
+  
+  float amp = @a
+  if (ang != 0)
+    #pixel = (#pixel - centr) * e^flip(-ang) + centr
+  endif
+
+  float y = imag((#pixel)-imag(flip(centr)))*@h1
+  if (y < imag(centr))
+    float dy = imag(centr) - real((@fny1(y-@p1)*@p2)+@fny2(y))
+    y = 2 * imag(centr) - real(y)
+    dy = dy*@pdy
+    if @wavelets
+      if @wvltype == "Normal"
+        amp =(amp-@offset) * real(@waveletfn3(@waveletfn2(@inter*dy)+@size*real\
+        (@waveletfn1((#pixel-@wp1)*@wp2)^@wp3)*dy^-.5*@x))
+      elseif @wvltype == "Var 1"
+        amp = (amp-@offset)+ real(@waveletfn3(@waveletfn2(@inter*dy)+@size*real\
+        (@waveletfn1((#pixel-@wp1)*@wp2)^@wp3)*dy^-.5*@x))*@wvol
+      elseif @wvltype == "Var 2"
+        amp = (amp-@offset) - real(@waveletfn3(@waveletfn2(@inter*dy)+@size*real\
+        (@waveletfn1((#pixel-@wp1)*@wp2)^@wp3)*dy^-.5*@x))*@wvol
+    endif
+  endif
+  
+   if @skew == false
+    if @type == "Var 1"
+      y = y + amp * dy * sin(@f * (dy-@abb)^@ab)
+    elseif @type == "Var 2"
+      y = y + amp * dy * sin(sin(@f * (dy-@abb)^@ab))
+    elseif @type == "Var 3"
+      y = y + amp * dy * sin(cos(@f * (dy-@abb)^@ab))
+    elseif @type == "Var 4"
+      y = y + amp * dy * sin(tan(@f * (dy-@abb)^@ab))
+    elseif @type == "Var 5"
+      y = y + amp * dy * sin(cotan(@f * (dy-@abb)^@ab))
+    endif
+      #pixel = real(#pixel) + flip(y^@h2*@h3-@h4)
+
+   else
+    if @type == "Var 1"
+      y = y + amp * dy * sin(real(@f * (dy-@abb)^@ab))
+    elseif @type == "Var 2"
+      y = y + amp * dy * sin(real(sin(@f * (dy-@abb)^@ab)))
+    elseif @type == "Var 3"
+      y = y + amp * dy * sin(real(cos(@f * (dy-@abb)^@ab)))
+    elseif @type == "Var 4"
+      y = y + amp * dy * sin(real(tan(@f * (dy-@abb)^@ab)))
+    elseif @type == "Var 5"
+      y = y + amp * dy * sin(real(cotan(@f * (dy-@abb)^@ab)))
+     endif
+      #pixel = real((#pixel-centr)*(1+flip(@h5))) + flip(y^@h2*@h3-@h4)
+   endif
+  endif
+  if (ang != 0)
+    #pixel = (#pixel - centr) * e^flip(ang) + centr
+  endif
+
+default:
+  title = "The Compleat Lake"
+
+  param version
+   caption = "Version"
+   default = 150
+   visible = false
+  endparam
+  
+  complex param w1
+    caption = "Water level"
+    default = (0,0)
+  endparam
+
+  param use_sc
+    caption = "Use screen center"
+    default = false
+  endparam
+
+  float param rot
+    caption = "Angle"
+    default = 0.0
+    min = -360.0
+    max = 360.0
+  endparam
+
+  param use_la
+    caption = "Use Location tab angle"
+    default = true
+  endparam
+
+  float param a
+    caption = "Amplitude"
+    default = 0.2
+  endparam
+
+  float param ab
+    caption = "Distribution"
+    default = 0.2
+    min = 0
+    hint = "Higher values increase the frequency of the waves towards \
+            the front. Minimum value is 0"
+  endparam
+
+  float param f
+    caption = "Frequency"
+    default = 300.0
+    min = 0.0
+  endparam
+
+  float param abb
+    caption = "Precedence"
+    default = 0
+    hint = "Changes the distribution of the waves"
+  endparam
+
+  float param pdy
+    caption = "Periodicity"
+    default = 1
+    hint = "Varies frequency of waves. Negative values sometimes give \
+           interesting results with certain functions in 'Wavelet Fn 3'"
+  endparam
+  
+  int param type
+     caption = "Wave Type"
+     enum = "Var 1""Var 2""Var 3""Var 4""Var 5"
+     default = 0
+     hint = "Varies the shape and distribution of the waves to a small extent"
+  endparam
+
+  bool param skew
+    caption = "Use Skew? (Read Hint!!)"
+    default = false
+    hint = "To use this param without breaking horizontal symmetry you must \
+           uncheck 'Use screen center', and set the water level manually. \
+           'Water Level(Re)' must be set to '0' for angles other than \
+           0 degrees"
+  endparam
+
+  float param h5
+    caption = "Skew"
+    default = 0
+    hint = "Works at all water levels. Negative and positive values skew the \
+            reflection in opposite directions. To use this param without \
+            breaking horizontal symmetry you must uncheck 'Use screen center', \
+            and set the water level manually with 'Water Level(Re)' set to 0"
+    visible = @skew == true
+  endparam
+
+heading
+  caption = "Non-Symmetrical Parameters"
+  visible = @rflx
+endheading
+
+  param rflx
+    caption = "Non-Symmetrical Parameters"
+    default = false
+  endparam
+  
+  complex param h2
+    caption = "Stretch 1/Pattern 1"
+    default = (1,0)
+    hint = "This param keeps horizontal symmetry only at a water level \
+            value of 0. In that case changes in the real value stretch or \
+            foreshorten the 'reflection'. Imag value changes change the \
+            wave pattern and direction"
+    visible = @rflx
+  endparam
+
+   complex param h3
+    caption = "Stretch 2/Skew 2"
+    default = (1,0)
+    hint = "This param keeps horizontal symmetry only at a water level \
+            value of 0. Similar but not identical to 'Stretch 1' or 'Stretch 2'\
+            --they can be used together to offset each other by using \
+            complimentary values, thereby coming up with different effects \
+            from either used alone. 'Skew 2' can be used with 'Skew' to come \
+            up with different wave patterns and effects"
+    visible = @rflx           
+  endparam
+
+  float param h1
+    caption = "Stretch 3"
+    default = 1
+    hint = "This param keeps horizontal symmetry only at a water level \
+            value of 0. Similar but not identical to 'Stretch 1' or 'Stretch 2'\
+            --they can be used together to offset each other by using \
+            complimentary values, there by coming up with different effects \
+            from either used alone"
+    visible = @rflx
+  endparam
+
+  complex param h4
+    caption = "Displace"
+    default = (0,0)
+    hint = "Moves reflection vertically (real value) or horizontally \
+           (imag value). This param breaks the reflection symmetry at \
+           the horizon. Most effective when no image elements touch the \
+           apparent horizon."
+    visible = @rflx           
+  endparam
+  
+  float param p1
+    caption = "Shape"
+    default = 0
+    hint = "Changes the shape of the waves. Always breaks the horizontal \
+            symmetry but can be interesting where that is not an issue"
+    visible = @rflx
+  endparam
+
+  float param p2
+    caption = "Frequency 2"
+    default = 1
+    hint = "This param keeps horizontal symmetry only at a water level \
+            value of 0. Use in conjunction with 'Frequency' for \
+            achieving different wave patterns"
+    visible = @rflx
+  endparam
+
+  func fny1
+    caption = "Wave Fn 1"
+    default = ident()
+    hint = "Some functions will maintain horizontal symmetry, but only \
+            if the water level is 0"
+    visible = @rflx
+  endfunc
+
+  func fny2
+    caption = "Wave Fn 2"
+    default = zero()
+    hint = "Some functions will maintain horizontal symmetry, but only \
+            if the water level is 0"
+    visible = @rflx
+  endfunc
+
+heading
+  caption = "Wavelets"
+endheading
+
+  param wavelets
+    caption = "Add wavelets"
+    default = false
+    hint = "You will probably need to adjust the wavelet \
+            scale and interference values to suit the main \
+            frequency and amplitude"
+  endparam
+  
+  int param wvltype
+    caption = "Wavelet Type"
+    enum = "Normal""Var 1""Var 2"
+    default = 0
+    hint = "Changes the wavelet effect"
+    visible = @wavelets
+  endparam
+
+  float param wvol
+    caption = "Wavelet Amount"
+    default = 1
+    visible = @wavelets && (@wvltype == "Var 1" || @wvltype == "Var 2")
+  endparam
+    
+  float param size
+    caption = "Wavelet scale"
+    default = 8.0
+    hint = "Larger values produce smaller wavelets."
+    visible = @wavelets
+  endparam
+
+  float param inter
+    caption = "Wavelet interference"
+    default = 80.0
+    hint = "Helps stop the wavelets appearing too regular. \
+            Larger values produce more interference"
+    visible = @wavelets
+  endparam
+
+  float param x
+    caption = "Horizontal squeeze"
+    default = 1
+    hint = "Reduces the horizontal pitch of the wavelets."
+    visible = @wavelets
+  endparam
+  
+  float param wp1
+    caption = "Wavelet Shift"
+    default = 0
+    hint = "Moves the wavelets to the left or right depending on whether \
+            (and how much) the value is negative or positive"
+    visible = @wavelets
+  endparam
+  
+  float param wp2
+    caption = "Wavelet Frequency"
+    default = 1
+    hint = "Determines the frequency of the wavelets"
+    visible = @wavelets
+  endparam
+
+  complex param wp3
+    caption = "Wavelet Pattern"
+    default = (1,0)
+    hint = "An exponential parameter that determines the \
+            pattern and frequency of the wavelets. Usable \
+            'imag' range is about -2 to 2, 'real' range is greater"
+    visible = @wavelets
+  endparam
+  
+  float param offset
+    caption = "Turbulence"
+    default = 0
+    visible = @wavelets
+  endparam
+  
+  func waveletfn1
+    caption = "Wavelet Fn 1"
+    default = ident()
+    hint = "Varies the pattern of the wavelets. All choices maintain \
+            horizontal symmetry. This function is the least radical of the \
+            three, though some choices create a vertical discontinuity in \
+            the reflection "
+    visible = @wavelets
+  endfunc
+
+  func waveletfn2
+    caption = "Wavelet Fn 2"
+    default = sin()
+    hint = "Varies the pattern of the wavelets. All choices maintain \
+           horizontal symmetry although not all are pretty "
+    visible = @wavelets
+  endfunc
+  
+  func waveletfn3
+    caption = "Wavelet Fn 3"
+    default = sin()
+    hint = "Varies the pattern of the wavelets. Some choices break \
+            horizontal symmetry. Negative values of 'Periodicity give \
+            interesting results with some function choices here"
+    visible = @wavelets
+   endfunc
+
+}
+

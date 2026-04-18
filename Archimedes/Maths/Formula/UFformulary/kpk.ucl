@@ -1,0 +1,5989 @@
+AKLucille {
+;
+; Basics in daz.ucl
+; Refined by Klaus-Peter Kubik Feb, 24 2000
+; This version by Andreas Lober Feb, 25 2000
+; with kind permission of KPK -> Thank you.
+;
+; Little gift to K.-Peter Kubik.
+;
+; Thanks, Andreas :-)
+;
+init:
+  complex zp=0
+  complex zc=0
+  complex dist=@area
+
+  bool do_loop = TRUE
+
+loop:
+
+  if (@trapMode > 0)
+    if (@trapMode==1 && @lowerTrap<real(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==2 && @lowerTrap<imag(zc) && imag(zc)<@upperTrap) || \
+       (@trapMode==3 && @lowerTrap<cabs(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==4 && @lowerTrap<real(zc) && imag(zc)<@upperTrap) || \
+       (@trapMode==5 && @lowerTrap<imag(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==6 && @lowerTrap<real(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==7 && @lowerTrap<cabs(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==8 && @lowerTrap<imag(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==9 && @lowerTrap<cabs(zc) && imag(zc)<@upperTrap)
+      do_loop = FALSE
+    endif
+  else
+    do_loop = TRUE
+  endif
+
+  if (do_loop)
+    if (@initialisation == 1)
+      dist=@area
+    endif
+  
+    if     (@modeR == 0)
+      if (real(dist) <= @testR)
+        dist=dist+@vary1
+      endif
+    elseif (@modeR == 1)
+      if (real(dist) >= @testR)
+        dist=dist+@vary1
+      endif
+    endif
+  
+    if     (@modeI == 0)
+      if (imag(dist) <= @testI)
+        dist=dist+@vary2
+      endif
+    elseif (@modeI == 1)
+      if (imag(dist) >= @testR)
+        dist=dist+@vary1
+      endif
+    endif
+  
+    zp = fn1(#z/dist)
+    zc = fn2(#z-(zp*dist))
+      
+    if (@addMode == 0)
+      if (fn3(real(zp))>0.5)
+  
+        zc=(zc+imag(dist)/4)
+  
+        if(zc>dist)
+          zc=zc^dist
+        endif
+  
+      endif
+    endif 
+  
+  
+  endif  ; trapping...
+
+
+final:
+  #index=|zc|/|dist|
+
+
+default:
+  title="AKLucille"
+
+  param modeR
+    caption = "Var. Mode Real"
+    enum = "<" ">"
+    default = 0
+  endparam
+ 
+  param modeI
+    caption = "Var. Mode Imag"
+    enum = "<" ">"
+    default = 0
+  endparam
+ 
+  param initialisation
+    caption = "Initialisation"
+    enum    = "init:" "loop:"
+    default = 1
+  endparam
+   
+  param trapMode
+    caption = "Trap Mode"
+    enum    = "None" \
+              "real(zc)" "imag(zc)" "cabs(zc)" \
+              "ri" "ir" "rc" "cr" "ic" "ci"
+    default = 0
+  endparam
+  
+  param lowerTrap
+    caption = "Trap: Lower Border"
+    default = 0.0
+  endparam
+  
+  param upperTrap
+    caption = "Trap: Upper Border"
+    default = 20.0
+  endparam
+  
+  param addMode
+    caption = "Add. Variation Mode"
+    enum = "Float" "Explode"
+    default = 0
+  endparam
+ 
+  param area
+    caption = "Width"
+    default = (1.0,1.0)
+  endparam
+   
+  param vary1
+    caption = "Variation 1"
+    default = (1.0,0.0)
+  endparam
+  
+  param vary2
+    caption = "Variation 2"
+    default = (0.0,1.0)
+  endparam
+  
+  param testR
+    caption = "Test Value Real"
+    default = 5.0
+  endparam
+  
+  param testI
+    caption = "Test Value Imag"
+    default = 5.0
+  endparam
+
+  func fn1
+    caption = "f1"
+    default = asinh()
+  endfunc
+
+  func fn2
+    caption = "f2"
+    default = recip()
+  endfunc
+  
+  func fn3
+    caption = "f3"
+    default = trunc()
+  endfunc
+
+}
+
+AKLucillerd {
+;
+; Basics in daz.ucl
+;
+; Refined by Klaus-Peter Kubik February 24, 2000
+; Enhanced by Andreas Lober February 25, 2000
+; 
+; Param Randomness added April 27, 2000
+;
+init:
+  complex zp=0
+  complex zc=0
+  complex dist=@area
+
+  bool do_loop = TRUE
+
+loop:
+
+  if (@trapMode > 0)
+    if (@trapMode==1 && @lowerTrap<real(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==2 && @lowerTrap<imag(zc) && imag(zc)<@upperTrap) || \
+       (@trapMode==3 && @lowerTrap<cabs(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==4 && @lowerTrap<real(zc) && imag(zc)<@upperTrap) || \
+       (@trapMode==5 && @lowerTrap<imag(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==6 && @lowerTrap<real(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==7 && @lowerTrap<cabs(zc) && real(zc)<@upperTrap) || \
+       (@trapMode==8 && @lowerTrap<imag(zc) && cabs(zc)<@upperTrap) || \
+       (@trapMode==9 && @lowerTrap<cabs(zc) && imag(zc)<@upperTrap)
+      do_loop = FALSE
+    endif
+  else
+    do_loop = TRUE
+  endif
+
+  if (do_loop)
+    if (@initialisation == 1)
+      dist=@area
+    endif
+  
+    if     (@modeR == 0)
+      if (real(dist) <= @testR)
+        dist=dist+@vary1
+      endif
+    elseif (@modeR == 1)
+      if (real(dist) >= @testR)
+        dist=dist+@vary1
+      endif
+    endif
+  
+    if     (@modeI == 0)
+      if (imag(dist) <= @testI)
+        dist=dist+@vary2
+      endif
+    elseif (@modeI == 1)
+      if (imag(dist) >= @testR)
+        dist=dist+@vary1
+      endif
+    endif
+  
+    zp = fn1(#z/dist)
+    zc = fn2(#z-(zp*dist))
+      
+    if (@addMode == 0)
+      if (fn3(real(zp))>0.5)
+  
+        zc=(zc+imag(dist)/4)
+  
+        if(zc>dist)
+          zc=zc^dist
+        endif
+  
+      endif
+    endif 
+  
+  
+  endif  ; trapping...
+
+
+final:
+  #index=|zc|/|dist|+(@rando * real(#random))
+
+
+default:
+  title="AKLucille RD"
+
+  param modeR
+    caption = "Var. Mode Real"
+    enum = "<" ">"
+    default = 0
+  endparam
+ 
+  param modeI
+    caption = "Var. Mode Imag"
+    enum = "<" ">"
+    default = 0
+  endparam
+ 
+  param initialisation
+    caption = "Initialisation"
+    enum    = "init:" "loop:"
+    default = 1
+  endparam
+   
+  param trapMode
+    caption = "Trap Mode"
+    enum    = "None" \
+              "real(zc)" "imag(zc)" "cabs(zc)" \
+              "ri" "ir" "rc" "cr" "ic" "ci"
+    default = 0
+  endparam
+  
+  param lowerTrap
+    caption = "Trap: Lower Border"
+    default = 0.0
+  endparam
+  
+  param upperTrap
+    caption = "Trap: Upper Border"
+    default = 20.0
+  endparam
+  
+  param addMode
+    caption = "Add. Variation Mode"
+    enum = "Float" "Explode"
+    default = 0
+  endparam
+ 
+  param area
+    caption = "Width"
+    default = (1.0,1.0)
+  endparam
+   
+  param vary1
+    caption = "Variation 1"
+    default = (1.0,0.0)
+  endparam
+  
+  param vary2
+    caption = "Variation 2"
+    default = (0.0,1.0)
+  endparam
+  
+  param testR
+    caption = "Test Value Real"
+    default = 5.0
+  endparam
+  
+  param testI
+    caption = "Test Value Imag"
+    default = 5.0
+  endparam
+
+  param rando
+      caption = "Randomness"
+      default = 0.0
+      hint    = "0 to 1"
+  endparam
+  
+  func fn1
+    caption = "f1"
+    default = asinh()
+  endfunc
+
+  func fn2
+    caption = "f2"
+    default = recip()
+  endfunc
+  
+  func fn3
+    caption = "f3"
+    default = trunc()
+  endfunc
+
+}
+
+kpkbarnsleytree {
+; Written by KPK September 2000
+;
+; From Samuel Monnier's
+; Fractal Tree coloring
+;
+; Thanks Sam, for your kind permission
+; 
+init:
+
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+
+  IF @mode == 0
+    z = #pixel
+  ENDIF
+
+  float dr = pi/180*@rotincr/2
+
+loop:
+
+  IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+        z = fn1(z - 1) * @start
+      ELSE
+        z = fn2(z + 1) * @start
+      ENDIF
+
+  IF @mode == 1
+    i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+   
+final:
+  
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/180)
+  z = z/@size
+  i = 0
+  
+  WHILE i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    
+    IF y >= -1 && y <= 0
+      d = x^@power
+    ELSEIF y < -1
+      d = cabs(z + 1i)^@power
+    ELSEIF y > 0
+      d = cabs(z)^@power
+    ENDIF
+    
+    IF d < dist
+      dist = d
+    ENDIF
+    
+  
+    j = @order-1
+    rotincr = j*dr
+    
+    WHILE j > 0
+      j = j - 2
+      IF arg < (j+1)*dr
+        rotincr = j*dr
+      ENDIF
+    ENDWHILE
+    
+   
+    z = z*exp(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  ENDWHILE
+  
+  #index = dist 
+   
+default:
+  title = "KPK Barnsley Tree"
+  
+  param mode
+    caption = "Mode"
+    default = 1
+       enum = "Pixel" "Distance Estimator"
+  endparam
+
+  param start
+    caption = "Barnsley Param."
+    default = (0.6, 1.1)
+  endparam
+
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+
+  param order
+    caption = "Tree Order"
+    default = 3
+  endparam
+
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 40.0
+  endparam
+
+  param magnincr
+    caption = "Tree Magnification Increment"
+    default = 1.9
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+
+  func fn1
+    caption = "Slice Function"
+    default = ident()
+  endfunc
+
+  func fn2
+    caption = "Pinsky Function 1"
+    default = ident()
+  endfunc
+    
+}
+
+kpkpinskysbarnsleytree {
+; Written by KPK September 2000
+;
+; From Samuel Monnier's
+; Fractal Tree coloring
+;
+; Thanks Sam, for your kind permission
+; 
+init:
+
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+
+  IF @mode == 0
+    z = #pixel
+  ENDIF
+
+  float dr = pi/180*@rotincr/2
+
+loop:
+
+IF @loopmode == 0
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+    z = fn1(z - 1) * @start
+   ELSE
+    z = fn2(z + 1) * @start
+   ENDIF
+
+   
+   IF (imag(z)>0.5)
+    z = 2*real(z) + fn1(2*imag(z)-1)
+   ELSEIF (real(z)>0.5)
+    z = 2*real(z)-1 + fn2(2*imag(z))
+   ELSEIF (imag(z)<-0.1)
+    z = 2*imag(z)+1 + fn1(2*real(z))
+   ELSE
+    z = 2*real(z) + fn2(2*imag(z))
+   ENDIF
+
+  IF @mode == 1
+    i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+
+
+ELSEIF @loopmode == 1
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+        z = fn1(z - 1) * @start
+      ELSE
+        z = fn2(z + 1) * @start
+      ENDIF
+
+   IF @mode == 1
+        i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+ENDIF
+   
+final:
+  
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/180)
+  z = z/@size
+  i = 0
+
+  WHILE i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    
+    IF y >= -1 && y <= 0
+      d = x^@power
+    ELSEIF y < -1
+      d = cabs(z + 1i)^@power
+    ELSEIF y > 0
+      d = cabs(z)^@power
+    ENDIF
+    
+    IF d < dist
+      dist = d
+    ENDIF
+    
+  
+    j = @order-1
+    rotincr = j*dr
+    
+    WHILE j > 0
+      j = j - 2
+      IF arg < (j+1)*dr
+        rotincr = j*dr
+      ENDIF
+    ENDWHILE
+    
+   
+    z = z*exp(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  ENDWHILE
+  
+  #index = dist 
+   
+default:
+  title = "KPK Pinsky's Barnsley Tree"
+
+  param mode
+    caption = "Mode"
+    default = 1
+    enum = "Pixel" "Distance Estimator"
+  endparam
+  
+  param loopmode
+    caption = "Variation"
+    default = 0
+       enum = "Pinsky Tree" "Barnsley Tree"
+  endparam
+
+  param start
+    caption = "Barnsley Param."
+    default = (0.6, 1.1)
+  endparam
+
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+
+  param order
+    caption = "Tree Order"
+    default = 3
+  endparam
+
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 40.0
+  endparam
+
+  param magnincr
+    caption = "Tree Magnification Increment"
+    default = 1.9
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+
+  func fn1
+    caption = "Slice Function"
+    default = flip()
+  endfunc
+
+  func fn2
+    caption = "Pinsky Function 1"
+    default = flip()
+  endfunc
+    
+}
+
+kpkpinskysbarnsleytrip {
+; Written by KPK September 2000
+;
+; From Samuel Monnier's
+; Fractal Tree coloring
+;
+; Thanks Sam, for your kind permission
+; 
+init:
+
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+
+  i = 0
+  z = #pixel
+  
+  IF @mode == 0
+    z = #pixel
+  ENDIF
+
+  float dr = pi/180*@rotincr/2
+  
+    n = 2^i
+   zi = fn3(z*n)/n
+    z = n*(z - zi)
+  
+    z = (1/@rat^0.5*real(z) + @rat^0.5*imag(z)*1i)/@size
+    
+    z = z*fn4(-1i*@rot/180*pi)
+
+loop:
+
+
+ IF @invert
+    z = 1/z
+  ENDIF
+
+  
+IF @loopmode == 0
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+    z = fn1(z - 1) * @start
+   ELSE
+    z = fn2(z + 1) * @start
+   ENDIF
+
+   
+   IF (imag(z)>0.5)
+    z = 2*real(z) + fn1(2*imag(z)-1)
+   ELSEIF (real(z)>0.5)
+    z = 2*real(z)-1 + fn2(2*imag(z))
+   ELSEIF (imag(z)<-0.1)
+    z = 2*imag(z)+1 + fn1(2*real(z))
+   ELSE
+    z = 2*real(z) + fn2(2*imag(z))
+   ENDIF
+
+  IF @mode == 1
+    i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+
+ELSEIF @loopmode == 1
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+        z = fn1(z - 1) * @start
+      ELSE
+        z = fn2(z + 1) * @start
+      ENDIF
+
+   IF @mode == 1
+        i = i + 1
+      IF i == @itertr
+        z = #z
+    ENDIF
+  ENDIF
+ENDIF
+
+   
+final:
+
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/180)
+  z = z/@size
+  i = 0
+  
+  WHILE i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    
+    IF y >= -1 && y <= 0
+      d = x^@power
+    ELSEIF y < -1
+      d = cabs(z + 1i)^@power
+    ELSEIF y > 0
+      d = cabs(z)^@power
+    ENDIF
+    
+    IF d < dist
+      dist = d
+    ENDIF
+    
+  
+    j = @order-1
+    rotincr = j*dr
+    
+    WHILE j > 0
+      j = j - 2
+      IF arg < (j+1)*dr
+        rotincr = j*dr
+      ENDIF
+    ENDWHILE
+    
+   
+    z = z*exp(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  ENDWHILE
+
+ #index = dist 
+   
+default:
+  title = "KPK Pinsky's Barnsley Trip"
+
+  param mode
+    caption = "Mode"
+    default = 1
+    enum = "Pixel" "Distance Estimator"
+  endparam
+  
+  param loopmode
+    caption = "Variation"
+    default = 0
+       enum = "Pinsky Tree" "Barnsley Tree"
+  endparam
+
+  param start
+    caption = "Barnsley Param."
+    default = (0.6, 1.1)
+  endparam
+
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+
+  param order
+    caption = "Tree Order"
+    default = 3
+  endparam
+
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 90.0
+  endparam
+
+  param magnincr
+    caption = "Tree Magn. Increment"
+    default = 1.2
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 2.0
+  endparam
+
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+  
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+
+  param rat
+    caption = "Ratio Width/Height"
+    default = 1.0
+  endparam
+  
+  param invert
+    caption = "Invert z"
+    default = false
+  endparam
+  
+  param rotst
+    caption = "Rotation step"
+    default = 0.0
+  endparam
+
+  func fn1
+    caption = "Slice Function"
+    default = flip()
+  endfunc
+
+  func fn2
+    caption = "Pinsky Function"
+    default = flip()
+  endfunc
+
+  func fn3 
+    caption = "Twist Function"
+    default = round()
+  endfunc
+
+  func fn4 
+    caption = "Init Function"
+    default = exp()
+  endfunc
+    
+}
+
+
+
+kpkbarninskystexturetrip {
+; Written by KPK September 2000
+;
+; Release date 29 October
+;
+; From Samuel Monnier's
+; Fractal Tree coloring
+;
+; All texture features 
+; created or modified by Andreas Lober
+; This is worth a GREAT thank you!
+; 
+; Big thank yous to Andreas,
+; Sam and Edward for their kind permission
+; to use their code in this coloring
+;
+; Special thanks goes to Edward Perry for
+; his kind permission to use his MLAB and
+; Banana code
+; 
+init:
+
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+
+  float angle = @angle*pi/180
+
+;Variables for Verlauf
+  float txtr_v_verlauf = 1
+  float txtr_v_hor1 = 0
+  float txtr_v_hor2 = 0
+  float txtr_v_bot  = 0
+  float txtr_v_top  = 0
+  float txtr_v_height = 0
+
+  float txtr_v_vert1 = 0
+  float txtr_v_vert2 = 0
+  float txtr_v_left  = 0
+  float txtr_v_rigt  = 0
+  float txtr_v_width = 0
+
+  float txtr_v_yPos = 0
+  float txtr_v_xPos = 0
+
+  i = 0
+  z = #pixel
+  
+  IF @mode == 0
+    z = #pixel
+  ENDIF
+
+  float dr = pi/180*@rotincr/2
+  
+    n = 2^i
+   zi = fn3(z*n)/n
+    z = n*(z - zi)
+  
+    z = (1/@rat^0.5*real(z) + @rat^0.5*imag(z)*1i)/@size
+    
+    z = z*fn4(-1i*@rot/180*pi)
+
+loop:
+ 
+ IF @invert
+    z = 1/z
+  ENDIF
+
+IF @Globdith && @globalDither > 0
+    z = round(z*@globalDither)/@globalDither
+  ENDIF
+  
+IF @Globdith && @kpkDither > 0
+    z = round(#pixel*@kpkDither)/@kpkDither
+  ENDIF
+
+
+IF @loopmode == 0
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+    z = fn1(z - 1) * @start
+   ELSE
+    z = fn2(z + 1) * @start
+   ENDIF
+
+   IF (imag(z)>0.5)
+    z = 2*real(z) + fn1(2*imag(z)-1)
+   ELSEIF (real(z)>0.5)
+    z = 2*real(z)-1 + fn2(2*imag(z))
+   ELSEIF (imag(z)<-0.1)
+    z = 2*imag(z)+1 + fn1(2*real(z))
+   ELSE
+    z = 2*real(z) + fn2(2*imag(z))
+   ENDIF
+
+  IF @mode == 1
+    i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+
+
+ELSEIF @loopmode == 1
+
+  z = #z
+  x = real(z)
+  y = imag(z)
+
+  IF x < 0
+    x = -x
+  ENDIF
+
+  IF y < 0
+    y = -y
+  ENDIF
+
+  z = x + @fn1(y)
+  
+  arg = atan2(z)
+  
+  IF arg > pi/2 - angle
+    z = z*@fn2(-1i*pi/2)
+  ELSEIF arg < pi/2 - angle && arg > angle
+    z = z*@fn3(-1i*pi/4)
+    z = z*@fkt(angle)/cos(pi/4-angle)
+  ENDIF
+
+  IF @Globdith && @globalDither > 0
+    z = round(z*@globalDither)/@globalDither
+  ENDIF
+  
+  IF @Globdith && @kpkDither > 0
+    z = round(#pixel*@kpkDither)/@kpkDither
+  ENDIF
+
+
+ IF @mode == 1
+    i = i + 1
+    IF i == @itertr
+      z = #z
+    ENDIF
+  ENDIF
+
+
+ELSEIF @loopmode == 2
+
+   IF (real(z) * imag(@start) + real(@start) * imag(z) >= 0)
+        z = fn1(z - 1) * @start
+      ELSE
+        z = fn2(z + 1) * @start
+      ENDIF
+
+  IF @Globdith && @globalDither > 0
+    z = round(z*@globalDither)/@globalDither
+  ENDIF
+  
+  IF @Globdith && @kpkDither > 0
+    z = round(#pixel*@kpkDither)/@kpkDither
+  ENDIF
+
+
+   IF @mode == 1
+        i = i + 1
+      IF i == @itertr
+        z = #z
+    ENDIF
+  ENDIF
+ENDIF
+
+   
+final:
+
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/180)
+  z = z/@size
+  i = 0
+
+  
+  WHILE i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    
+    IF y >= -1 && y <= 0
+      d = x^@power
+    ELSEIF y < -1
+      d = cabs(z + 1i)^@power
+    ELSEIF y > 0
+      d = cabs(z)^@power
+    ENDIF
+    
+    IF d < dist
+      dist = d
+    ENDIF
+    
+  
+    j = @order-1
+    rotincr = j*dr
+    
+    WHILE j > 0
+      j = j - 2
+      IF arg < (j+1)*dr
+        rotincr = j*dr
+      ENDIF
+    ENDWHILE
+    
+   
+    z = z*exp(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  ENDWHILE
+
+  float temp = dist
+  int iter = i
+  complex zStart = z
+  
+
+  float mask = 0
+  bool no_mask = true
+
+  IF (@masking > 0)
+    IF     (@maskType == 0) ; Index
+      mask = temp
+    ELSEIF (@maskType == 1) ; Re z
+      mask = real(zStart)
+    ELSEIF (@maskType == 2) ; Im z
+      mask = imag(zStart)
+    ELSEIF (@maskType == 3) ; Angle
+      mask = atan2(zStart)/(2*#pi)
+      IF mask < 0
+        mask = mask + 1
+      ENDIF
+      mask = mask*360
+    ELSEIF (@maskType == 4) ; Iteration
+      mask = iter
+
+    ELSEIF (@maskType == 5) ; Re Mixel
+      mask = real(zStart+#pixel)/2
+    ELSEIF (@maskType == 6) ; Im Mixel
+      mask = imag(zStart+#pixel)/2
+    ELSEIF (@maskType == 7) ; Abs Mixel
+      mask = cabs(zStart+#pixel)/2
+
+    ELSEIF (@maskType == 8) ; Dist(z,Pixel)
+      mask = cabs(zStart-#pixel)
+    ELSEIF (@maskType == 9) ; |z|
+      mask = cabs(zStart)
+
+    ENDIF
+  ENDIF
+
+  IF     (@masking == 1) ; Lower
+    IF (mask < @threshold_l)
+      #solid = true
+      no_mask = false
+    ENDIF
+  ELSEIF (@masking == 2) ; Upper
+    IF (mask > @threshold_u)
+      #solid = true
+      no_mask = false
+    ENDIF
+  ELSEIF (@masking == 3) ; Between
+    IF (mask > @threshold_l && mask < @threshold_u)
+      #solid = true
+      no_mask = false
+    ENDIF
+  ELSEIF (@masking == 4) ; Outside
+    IF (mask < @threshold_l || mask > @threshold_u)
+      #solid = true
+      no_mask = false
+    ENDIF
+  ELSE
+    no_mask = true
+  ENDIF
+
+
+  IF (no_mask)
+    float to_index = real(@fkt(temp))
+     complex _zz = zStart
+    IF (@base4txtr == 1)
+      _zz = #pixel
+    ELSEIF (@base4txtr == 2)
+      _zz = (#pixel+_zz)/2
+    ELSEIF (@base4txtr == 3)
+      _zz = abs(#pixel-_zz)
+    ELSEIF (@base4txtr == 4)
+      _zz = cabs(#pixel-_zz)
+    ENDIF
+
+
+    IF (@f_rand_verlaufMode > 0 || \
+        @f_Gnarl_verlaufMode > 0 || \
+        @f_PopCorn_verlaufMode > 0 || \
+        @f_SFBM_verlaufMode > 0 || \
+        @f_Primes_verlaufMode > 0 || \
+        @f_Gauss_verlaufMode > 0 || \
+        @f_Check_verlaufMode > 0 || \
+        @f_Pick153_verlaufMode > 0 || \
+        @f_SumDiv_verlaufMode > 0 || \
+        @f_MLAB_verlaufMode > 0 || \
+        @f_Ell_verlaufMode > 0 \
+       )
+      txtr_v_hor1 = imag(@txtr_verlauf_Line1)
+      txtr_v_hor2 = imag(@txtr_verlauf_Line2)
+
+      IF (txtr_v_hor1 < txtr_v_hor2)
+        txtr_v_bot = txtr_v_hor1
+        txtr_v_top = txtr_v_hor2
+      ELSE
+        txtr_v_bot = txtr_v_hor2
+        txtr_v_top = txtr_v_hor1
+      ENDIF
+
+      txtr_v_height = txtr_v_top-txtr_v_bot
+
+
+      txtr_v_vert1 = real(@txtr_verlauf_Line1)
+      txtr_v_vert2 = real(@txtr_verlauf_Line2)
+
+      IF (txtr_v_vert1 < txtr_v_vert2)
+        txtr_v_left = txtr_v_vert1
+        txtr_v_rigt = txtr_v_vert2
+      ELSE
+        txtr_v_left = txtr_v_vert2
+        txtr_v_rigt = txtr_v_vert1
+      ENDIF
+
+      txtr_v_width = txtr_v_rigt-txtr_v_left
+
+
+      complex pixpix = #pixel
+      IF (@txtr_verlauf_Rot%360 != 0)
+        complex rotCentre = @txtr_verlauf_RotCentre
+
+        pixpix = (pixpix-rotCentre)*exp(-1i*#pi*@txtr_verlauf_Rot/180) + rotCentre
+      ENDIF
+      txtr_v_yPos = imag(pixpix)
+      txtr_v_xPos = real(pixpix)
+
+    ELSE
+      txtr_v_verlauf = 1
+    ENDIF
+
+
+
+    IF (@f_randomness != 0)
+      txtr_v_verlauf = 1
+
+      IF (@f_rand_verlaufMode > 0)
+        IF (@f_rand_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot) ;!
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top) ;!
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height ;!
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left) ;! ;!
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt) ;!
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width ;!
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_rand_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_rand_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @f_randomness*txtr_v_verlauf * real(#random)
+    ENDIF
+
+    IF (@txtr_gnarl != 0)
+
+      complex zGnarl = _zz
+
+      IF (@txtr_Gnarl_lattice == 0)
+        zGnarl = zGnarl*@txtr_Gnarl_scale
+      ELSEIF (@txtr_Gnarl_lattice == 1)
+        zGnarl = zGnarl-trunc(zGnarl*@txtr_Gnarl_scale)/@txtr_Gnarl_scale
+      ELSEIF (@txtr_Gnarl_lattice == 2)
+        zGnarl = zGnarl-trunc(zGnarl*@txtr_Gnarl_scale*10)
+      ELSEIF (@txtr_Gnarl_lattice == 3)
+        zGnarl = zGnarl-trunc(@txtr_Gnarl_scale/zGnarl)
+      ELSEIF (@txtr_Gnarl_lattice == 4)
+        zGnarl = zGnarl*@txtr_Gnarl_scale + @txtr_Gnarl_scale/zGnarl
+      ELSEIF (@txtr_Gnarl_lattice == 5)
+        zGnarl = round(zGnarl*@txtr_Gnarl_scale)/@txtr_Gnarl_scale
+
+      ELSEIF (@txtr_Gnarl_lattice == 6)
+
+        complex zp_Gnarl = round(zGnarl*@txtr_Gnarl_scale)
+        complex zc_Gnarl = zGnarl - (zp_Gnarl/@txtr_Gnarl_scale)
+        IF (round(imag(zp_Gnarl))%3==0)
+          zc_Gnarl = (zc_Gnarl + @txtr_Gnarl_scale/2)
+          IF (abs(real(zc_Gnarl)) > @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale + zGnarl
+          ELSEIF (real(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale + zGnarl
+          ELSEIF (imag(zc_Gnarl) > @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale - zGnarl
+          ELSEIF (imag(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale - zGnarl
+          ENDIF
+        ELSEIF (round(real(zp_Gnarl))%3==1)
+          zc_Gnarl = (zc_Gnarl - @txtr_Gnarl_scale/2)
+          IF (abs(imag(zc_Gnarl))  >  @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale + zGnarl
+          ELSEIF (imag(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale + zGnarl
+          ELSEIF (real(zc_Gnarl) > @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale - zGnarl
+          ELSEIF (real(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale - zGnarl
+          ENDIF
+        ELSE
+          zc_Gnarl = (zc_Gnarl*@txtr_Gnarl_scale*2)
+          IF (imag(zc_Gnarl) > @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale + zGnarl
+          ELSEIF (imag(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale + zGnarl
+          ELSEIF (real(zc_Gnarl) > @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl + @txtr_Gnarl_scale - zGnarl
+          ELSEIF (real(zc_Gnarl) < @txtr_Gnarl_scale)
+            zGnarl = zc_Gnarl - @txtr_Gnarl_scale - zGnarl
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      IF (@txtr_gnarl_size != 0 && @txtr_gnarl_size != 1)
+        zGnarl = zGnarl/@txtr_gnarl_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zGnarl
+      ENDIF
+
+      float x = real(zGnarl)
+      float y = imag(zGnarl)
+      float xOld = 0
+
+      int iter3 = @txtr_gnarl_octaves
+      while (iter3 > 0)
+        iter3 = iter3-1
+        xOld = x
+
+        x = x - sin(y    + sin(y))
+        y = y - sin(xOld + sin(xOld))
+      endwhile
+
+      float textureGnarl = 0
+      IF     (@txtr_gnarl_type == 0)
+        textureGnarl = abs(x)
+      ELSEIF (@txtr_gnarl_type == 1)
+        textureGnarl = abs(x)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_gnarl_type == 2)
+        textureGnarl = abs(x-y)
+      ELSEIF (@txtr_gnarl_type == 3)
+        textureGnarl = abs(x-y)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_gnarl_type == 4)
+        textureGnarl = abs(x+y)/2
+      ELSEIF (@txtr_gnarl_type == 5)
+        textureGnarl = abs(x*y)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_gnarl_type == 6)
+        textureGnarl = atan2(x+1i*y)/(2*#pi)
+        IF (textureGnarl < 0)
+          textureGnarl = textureGnarl + 1
+        ENDIF
+      ELSEIF (@txtr_gnarl_type == 7)
+        textureGnarl = sqrt(x^2+y^2)
+      ENDIF
+
+      IF (@txtr_Gnarl_limit != 0)
+        textureGnarl = textureGnarl%@txtr_Gnarl_limit
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Gnarl_verlaufMode > 0)
+        IF (@f_Gnarl_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Gnarl_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Gnarl_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_gnarl*txtr_v_verlauf*textureGnarl
+
+    ENDIF
+
+    IF (@txtr_PopCorn != 0)
+
+      complex zPopCorn = _zz
+
+      IF (@txtr_PopCorn_lattice == 0)
+        zPopCorn = zPopCorn*@txtr_PopCorn_scale
+      ELSEIF (@txtr_PopCorn_lattice == 1)
+        zPopCorn = zPopCorn-trunc(zPopCorn*@txtr_PopCorn_scale)/@txtr_PopCorn_scale
+      ELSEIF (@txtr_PopCorn_lattice == 2)
+        zPopCorn = zPopCorn-trunc(zPopCorn*@txtr_PopCorn_scale*10)
+      ELSEIF (@txtr_PopCorn_lattice == 3)
+        zPopCorn = zPopCorn-trunc(@txtr_PopCorn_scale/zPopCorn)
+      ELSEIF (@txtr_PopCorn_lattice == 4)
+        zPopCorn = zPopCorn*@txtr_PopCorn_scale + @txtr_PopCorn_scale/zPopCorn
+      ELSEIF (@txtr_PopCorn_lattice == 5)
+        zPopCorn  =  round(zPopCorn*@txtr_PopCorn_scale)/@txtr_PopCorn_scale
+
+      ELSEIF (@txtr_PopCorn_lattice == 6)
+
+        complex zp_PopCorn = round(zPopCorn*@txtr_PopCorn_scale)
+        complex zc_PopCorn = zPopCorn - (zp_PopCorn/@txtr_PopCorn_scale)
+        IF (round(imag(zp_PopCorn))%3==0)
+          zc_PopCorn = (zc_PopCorn + @txtr_PopCorn_scale/2)
+          IF (abs(real(zc_PopCorn)) > @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (real(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (imag(zc_PopCorn) > @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale - zPopCorn
+          ELSEIF (imag(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale - zPopCorn
+          ENDIF
+        ELSEIF (round(real(zp_PopCorn))%3==1)
+          zc_PopCorn = (zc_PopCorn - @txtr_PopCorn_scale/2)
+          IF (abs(imag(zc_PopCorn))  >  @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (imag(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (real(zc_PopCorn) > @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale - zPopCorn
+          ELSEIF (real(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale - zPopCorn
+          ENDIF
+        ELSE
+          zc_PopCorn = (zc_PopCorn*@txtr_PopCorn_scale*2)
+          IF (imag(zc_PopCorn) > @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (imag(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale + zPopCorn
+          ELSEIF (real(zc_PopCorn) > @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn + @txtr_PopCorn_scale - zPopCorn
+          ELSEIF (real(zc_PopCorn) < @txtr_PopCorn_scale)
+            zPopCorn = zc_PopCorn - @txtr_PopCorn_scale - zPopCorn
+          ENDIF
+        ENDIF
+      ENDIF ; txtr_popcorn_lattice
+
+      IF (@txtr_PopCorn_size != 0 && @txtr_PopCorn_size != 1)
+        zPopCorn = zPopCorn/@txtr_PopCorn_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zPopCorn
+      ENDIF
+
+      float x = real(zPopCorn)
+      float y = imag(zPopCorn)
+      float xOld = 0
+
+      int iter3 = @txtr_PopCorn_octaves
+      while (iter3 > 0)
+        iter3 = iter3-1
+        xOld = x
+
+        x = x - sin(y    + log(y    + cos(y)))
+        y = y - sin(xOld + log(xOld + cos(xOld)))
+      endwhile
+
+      float texturePopCorn = 0
+      IF     (@txtr_PopCorn_type == 0)
+        texturePopCorn = abs(x)
+      ELSEIF (@txtr_PopCorn_type == 1)
+        texturePopCorn = abs(x)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_PopCorn_type == 2)
+        texturePopCorn = abs(x-y)
+      ELSEIF (@txtr_PopCorn_type == 3)
+        texturePopCorn = abs(x-y)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_PopCorn_type == 4)
+        texturePopCorn = abs(x+y)/2
+      ELSEIF (@txtr_PopCorn_type == 5)
+        texturePopCorn = abs(x*y)/(sqrt(x^2+y^2)+1e-20)
+      ELSEIF (@txtr_PopCorn_type == 6)
+        texturePopCorn = atan2(x+1i*y)/(2*#pi)
+        IF (texturePopCorn < 0)
+          texturePopCorn = texturePopCorn + 1
+        ENDIF
+      ELSEIF (@txtr_PopCorn_type == 7)
+        texturePopCorn = sqrt(x^2+y^2)
+      ENDIF
+
+      IF (@txtr_PopCorn_limit != 0)
+        texturePopCorn = texturePopCorn%@txtr_PopCorn_limit
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_PopCorn_verlaufMode > 0)
+        IF (@f_PopCorn_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_PopCorn_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_PopCorn_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_PopCorn*txtr_v_verlauf*texturePopCorn
+
+    ENDIF
+
+    IF (@txtr_SFBM != 0)
+      float mod = 1
+      float d1 = 0
+      float d2 = 0
+      float d3 = 0
+      float d4 = 0
+      float nindex = 0
+      float textureSFBM = 0
+      float scale = 0
+      cr1 = 0
+      cr2 = 0
+      cr3 = 0
+      cr4 = 0
+      float crp1 = 0
+      float crp2 = 0
+      float crp3 = 0
+      float crp4 = 0
+
+      complex tv1 = 0
+      complex tv2 = 0
+      complex tv3 = 0
+      complex tv4 = 0
+
+      complex seed = @txtr_SFBM_seed
+
+      rotAngleFBM = exp(1i*pi/180*@txtr_SFBM_rot)
+
+      IF (@txtr_SFBM_scaledis == 4) ; min
+         textureSFBM =  1e20
+      ELSEIF (@txtr_SFBM_scaledis == 5) ; max
+         textureSFBM = -1e20
+      ENDIF
+
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+      complex zSFBM = _zz
+
+      IF (@txtr_SFBM_lattice == 0)
+        zSFBM = zSFBM*@txtr_SFBM_scale
+      ELSEIF (@txtr_SFBM_lattice == 1)
+        zSFBM = zSFBM-trunc(zSFBM*@txtr_SFBM_scale)/@txtr_SFBM_scale
+      ELSEIF (@txtr_SFBM_lattice == 2)
+        zSFBM = zSFBM-trunc(zSFBM*@txtr_SFBM_scale*10)
+      ELSEIF (@txtr_SFBM_lattice == 3)
+        zSFBM = zSFBM-trunc(@txtr_SFBM_scale/zSFBM)
+      ELSEIF (@txtr_SFBM_lattice == 4)
+        zSFBM = zSFBM*@txtr_SFBM_scale + @txtr_SFBM_scale/zSFBM
+      ELSEIF (@txtr_SFBM_lattice == 5)
+        zSFBM = round(zSFBM*@txtr_SFBM_scale)/@txtr_SFBM_scale
+
+      ELSEIF (@txtr_SFBM_lattice == 6)
+
+        complex zp_SFBM = round(zSFBM*@txtr_SFBM_scale)
+        complex zc_SFBM = zSFBM - (zp_SFBM/@txtr_SFBM_scale)
+        IF (round(imag(zp_SFBM))%3==0)
+          zc_SFBM = (zc_SFBM + @txtr_SFBM_scale/2)
+          IF (abs(real(zc_SFBM)) > @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale + zSFBM
+          ELSEIF (real(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale + zSFBM
+          ELSEIF (imag(zc_SFBM) > @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale - zSFBM
+          ELSEIF (imag(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale - zSFBM
+          ENDIF
+        ELSEIF (round(real(zp_SFBM))%3==1)
+          zc_SFBM = (zc_SFBM - @txtr_SFBM_scale/2)
+          IF (abs(imag(zc_SFBM))  >  @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale + zSFBM
+          ELSEIF (imag(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale + zSFBM
+          ELSEIF (real(zc_SFBM) > @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale - zSFBM
+          ELSEIF (real(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale - zSFBM
+          ENDIF
+        ELSE
+          zc_SFBM = (zc_SFBM*@txtr_SFBM_scale*2)
+          IF (imag(zc_SFBM) > @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale + zSFBM
+          ELSEIF (imag(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale + zSFBM
+          ELSEIF (real(zc_SFBM) > @txtr_SFBM_scale)
+            zSFBM = zc_SFBM + @txtr_SFBM_scale - zSFBM
+          ELSEIF (real(zc_SFBM) < @txtr_SFBM_scale)
+            zSFBM = zc_SFBM - @txtr_SFBM_scale - zSFBM
+          ENDIF
+        ENDIF
+      ENDIF
+
+      IF (@txtr_SFBM_size != 0 && @txtr_SFBM_size != 1)
+        zSFBM = zSFBM/@txtr_SFBM_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zSFBM
+      ENDIF
+
+      int iter3 = 0
+      complex ttmp = 0
+      WHILE (iter3 < @txtr_SFBM_octaves)
+        scale = @txtr_SFBM_magn^iter3
+        zSFBM = zSFBM*rotAngleFBM
+
+        iter3 = iter3 + 1
+        IF @txtr_SFBM_mod == 1
+          mod = sqrt(iter3)
+        ENDIF
+
+        zc = round(scale*zSFBM)/scale
+
+        zc1 = zc + (.5,.5)/scale
+        zc2 = zc + (-.5,.5)/scale
+        zc3 = zc + (.5,-.5)/scale
+        zc4 = zc + (-.5,-.5)/scale
+
+        ttmp = seed/(mod*zc1+124), cr1 = ttmp-floor(ttmp)
+        ttmp = seed/(mod*zc2+124), cr2 = ttmp-floor(ttmp)
+        ttmp = seed/(mod*zc3+124), cr3 = ttmp-floor(ttmp)
+        ttmp = seed/(mod*zc4+124), cr4 = ttmp-floor(ttmp)
+
+        IF (@txtr_SFBM_mode == 0)
+          tv1 = (zSFBM - zc1)*scale
+          tv2 = (zSFBM - zc2)*scale
+          tv3 = (zSFBM - zc3)*scale
+          tv4 = (zSFBM - zc4)*scale
+          crp1 = real(cr1)*real(tv1) + imag(cr1)*imag(tv1)
+          crp2 = real(cr2)*real(tv2) + imag(cr2)*imag(tv2)
+          crp3 = real(cr3)*real(tv3) + imag(cr3)*imag(tv3)
+          crp4 = real(cr4)*real(tv4) + imag(cr4)*imag(tv4)
+        ENDIF
+
+        ttmp = zSFBM - zc
+        d1 = real(ttmp)*scale + 0.5
+
+        d2 = 1 - d1
+        d3 = imag(ttmp)*scale + 0.5
+        d4 = 1 - d3
+        IF (@txtr_SFBM_power != 1)
+          d1 = d1^@txtr_SFBM_power
+          d2 = d2^@txtr_SFBM_power
+          d3 = d3^@txtr_SFBM_power
+          d4 = d4^@txtr_SFBM_power
+        ENDIF
+
+        IF @txtr_SFBM_mode == 0
+          nindex = 10 + crp1*d1*d3 + crp3*d1*d4 + crp2*d2*d3 + crp4*d2*d4
+        ELSEIF @txtr_SFBM_mode == 1
+          nindex = cabs(cr1*d1*d3 + cr3*d1*d4 + cr2*d2*d3 + cr4*d2*d4)
+        ENDIF
+
+        IF (@txtr_SFBM_scaledis == 0)
+          textureSFBM = textureSFBM + nindex/scale
+        ELSEIF (@txtr_SFBM_scaledis == 1)
+          textureSFBM = textureSFBM + nindex/sqrt(scale)
+        ELSEIF (@txtr_SFBM_scaledis == 2)
+          textureSFBM = textureSFBM + nindex/(scale^(1/scale))
+        ELSEIF (@txtr_SFBM_scaledis == 3)
+          textureSFBM = textureSFBM + nindex/iter3
+        ELSEIF (@txtr_SFBM_scaledis == 4)
+          IF (nindex < textureSFBM)
+            textureSFBM = nindex
+          ENDIF
+        ELSEIF (@txtr_SFBM_scaledis == 5)
+          IF (nindex > textureSFBM)
+            textureSFBM = nindex
+          ENDIF
+        ENDIF
+
+      ENDWHILE
+
+      IF (@txtr_SFBM_limit != 0)
+        textureSFBM = textureSFBM%@txtr_SFBM_limit
+      ENDIF
+
+      ; here starts the verlauf!
+      txtr_v_verlauf = 1
+
+      IF (@f_SFBM_verlaufMode > 0)
+        IF (@f_SFBM_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_SFBM_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_SFBM_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_SFBM*txtr_v_verlauf*textureSFBM
+
+    ENDIF
+
+    IF (@txtr_primes != 0)
+
+      complex zPrimes = _zz
+
+      IF (@txtr_Primes_lattice == 0) ; none
+        zPrimes = zPrimes*@txtr_Primes_scale
+      ELSEIF (@txtr_Primes_lattice == 1) ; normal
+        zPrimes = zPrimes-trunc(zPrimes*@txtr_Primes_scale)/@txtr_Primes_scale
+      ELSEIF (@txtr_Primes_lattice == 2) ; modIFied
+        zPrimes = zPrimes-trunc(zPrimes*@txtr_Primes_scale*10)
+      ELSEIF (@txtr_Primes_lattice == 3) ; Inverse1
+        zPrimes = zPrimes-trunc(@txtr_Primes_scale/zPrimes)
+      ELSEIF (@txtr_Primes_lattice == 4) ; joukowskij
+        zPrimes = zPrimes*@txtr_Primes_scale + @txtr_Primes_scale/zPrimes
+      ELSEIF (@txtr_Primes_lattice == 5)
+        zPrimes = round(zPrimes*@txtr_Primes_scale)/@txtr_Primes_scale
+
+      ELSEIF (@txtr_Primes_lattice == 6)
+
+        complex zp_Primes = round(zPrimes*@txtr_Primes_scale)
+        complex zc_Primes = zPrimes - (zp_Primes/@txtr_Primes_scale)
+        IF (round(imag(zp_Primes))%3==0)
+          zc_Primes = (zc_Primes + @txtr_Primes_scale/2)
+          IF (abs(real(zc_Primes)) > @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale + zPrimes
+          ELSEIF (real(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale + zPrimes
+          ELSEIF (imag(zc_Primes) > @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale - zPrimes
+          ELSEIF (imag(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale - zPrimes
+          ENDIF
+        ELSEIF (round(real(zp_Primes))%3==1)
+          zc_Primes = (zc_Primes - @txtr_Primes_scale/2)
+          IF (abs(imag(zc_Primes))  >  @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale + zPrimes
+          ELSEIF (imag(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale + zPrimes
+          ELSEIF (real(zc_Primes) > @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale - zPrimes
+          ELSEIF (real(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale - zPrimes
+          ENDIF
+        ELSE
+          zc_Primes = (zc_Primes*@txtr_Primes_scale*2)
+          IF (imag(zc_Primes) > @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale + zPrimes
+          ELSEIF (imag(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale + zPrimes
+          ELSEIF (real(zc_Primes) > @txtr_Primes_scale)
+            zPrimes = zc_Primes + @txtr_Primes_scale - zPrimes
+          ELSEIF (real(zc_Primes) < @txtr_Primes_scale)
+            zPrimes = zc_Primes - @txtr_Primes_scale - zPrimes
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      IF (@txtr_Primes_size != 0 && @txtr_Primes_size != 1)
+        zPrimes = zPrimes/@txtr_Primes_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zPrimes
+      ENDIF
+
+
+      float texturePrimes = 0
+
+      float trz = 0
+      float tiz = 0
+
+      float t_rz = 0
+      float t_iz = 0
+
+      float tstartSnip = 10^@txtr_primes_where2start
+      float tendOfSnip = 10^(@txtr_primes_where2start+@txtr_primes_lengthOfSnip)
+
+      IF     (@txtr_primes_mode == 0)
+        trz = |real(zPrimes)|
+        tiz = |imag(zPrimes)|
+      ELSEIF (@txtr_primes_mode == 1)
+        trz = |real(zPrimes)|
+        tiz = trz
+      ELSEIF (@txtr_primes_mode == 2)
+        tiz = |imag(zPrimes)|
+        trz = tiz
+      ELSEIF (@txtr_primes_mode == 3)
+        trz = |zPrimes|
+        tiz = trz
+      ELSEIF (@txtr_primes_mode == 4)
+        trz = atan2(zPrimes)
+        IF (trz < 0)
+          trz = trz + 2*#pi
+        ENDIF
+        tiz = trz
+      ELSEIF (@txtr_primes_mode == 5)
+        trz = real(atan(zPrimes))
+        IF (trz < 0)
+          trz = trz + 2*#pi
+        ENDIF
+
+        tiz = imag(atan(zPrimes))
+        IF (tiz < 0)
+          tiz = tiz + 2*#pi
+        ENDIF
+      ELSEIF (@txtr_primes_mode == 6)
+        trz = atan2(zPrimes)
+        IF (trz < 0)
+          trz = trz + 2*#pi
+        ENDIF
+        tiz = |zPrimes|
+      ENDIF
+
+      t_rz = (trz - trunc(trz*tstartSnip)/tstartSnip)*tendOfSnip
+      t_iz = (tiz - trunc(tiz*tstartSnip)/tstartSnip)*tendOfSnip
+
+      IF (@txtr_primes_withFinalTrunc)
+        t_rz = trunc(t_rz)
+        t_iz = trunc(t_iz)
+      ENDIF
+
+      texturePrimes = 10*((t_rz%821) + (t_iz%823))/1644
+
+      IF (@txtr_Primes_limit != 0)
+        texturePrimes = texturePrimes%@txtr_Primes_limit
+      ENDIF
+
+      to_index = to_index + @txtr_Primes*txtr_v_verlauf*texturePrimes
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Primes_verlaufMode > 0)
+        IF (@f_Primes_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Primes_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Primes_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+    ENDIF ; @txtr_primes != 0
+
+    IF (@txtr_Gauss != 0)
+      complex zGauss = _zz
+
+      IF (@txtr_Gauss_lattice == 0)
+        zGauss = zGauss*@txtr_Gauss_scale
+      ELSEIF (@txtr_Gauss_lattice == 1)
+        zGauss = zGauss-trunc(zGauss*@txtr_Gauss_scale)/@txtr_Gauss_scale
+      ELSEIF (@txtr_Gauss_lattice == 2)
+        zGauss = zGauss-trunc(zGauss*@txtr_Gauss_scale*10)
+      ELSEIF (@txtr_Gauss_lattice == 3)
+        zGauss = zGauss-trunc(@txtr_Gauss_scale/zGauss)
+      ELSEIF (@txtr_Gauss_lattice == 4)
+        zGauss = zGauss*@txtr_Gauss_scale + @txtr_Gauss_scale/zGauss
+      ELSEIF (@txtr_Gauss_lattice == 5)
+        zGauss = round(zGauss*@txtr_Gauss_scale)/@txtr_Gauss_scale
+
+      ELSEIF (@txtr_Gauss_lattice == 6)
+
+        complex zp_Gauss = round(zGauss*@txtr_Gauss_scale)
+        complex zc_Gauss = zGauss - (zp_Gauss/@txtr_Gauss_scale)
+        IF (round(imag(zp_Gauss))%3==0)
+          zc_Gauss = (zc_Gauss + @txtr_Gauss_scale/2)
+          IF (abs(real(zc_Gauss)) > @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale + zGauss
+          ELSEIF (real(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale + zGauss
+          ELSEIF (imag(zc_Gauss) > @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale - zGauss
+          ELSEIF (imag(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale - zGauss
+          ENDIF
+        ELSEIF (round(real(zp_Gauss))%3==1)
+          zc_Gauss = (zc_Gauss - @txtr_Gauss_scale/2)
+          IF (abs(imag(zc_Gauss))  >  @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale + zGauss
+          ELSEIF (imag(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale + zGauss
+          ELSEIF (real(zc_Gauss) > @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale - zGauss
+          ELSEIF (real(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale - zGauss
+          ENDIF
+        ELSE
+          zc_Gauss = (zc_Gauss*@txtr_Gauss_scale*2)
+          IF (imag(zc_Gauss) > @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale + zGauss
+          ELSEIF (imag(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale + zGauss
+          ELSEIF (real(zc_Gauss) > @txtr_Gauss_scale)
+            zGauss = zc_Gauss + @txtr_Gauss_scale - zGauss
+          ELSEIF (real(zc_Gauss) < @txtr_Gauss_scale)
+            zGauss = zc_Gauss - @txtr_Gauss_scale - zGauss
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      IF (@txtr_Gauss_size != 0 && @txtr_Gauss_size != 1)
+        zGauss = zGauss/@txtr_Gauss_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zGauss
+      ENDIF
+
+      float textureGauss = 0
+
+      float t_d = cabs(zGauss)
+      float t_r = real(zGauss)
+      float t_i = imag(zGauss)
+
+      IF (@txtr_Gauss_type == 0)
+        textureGauss = t_d
+      ELSEIF (@txtr_Gauss_type == 1)
+        textureGauss = |t_r|
+      ELSEIF (@txtr_Gauss_type == 2)
+        textureGauss = |t_i|
+      ELSEIF (@txtr_Gauss_type == 3)
+        textureGauss = |t_i-t_r|
+      ELSEIF (@txtr_Gauss_type == 4)
+        textureGauss = |t_i*t_r|
+      ELSEIF (@txtr_Gauss_type == 5)
+        textureGauss = |t_i/t_r|
+      ELSEIF (@txtr_Gauss_type == 6)
+        IF (|t_i| < |t_r|)
+          textureGauss = |t_i|
+        ELSE
+          textureGauss = |t_r|
+        ENDIF
+      ELSEIF (@txtr_Gauss_type == 7)
+        IF (|t_i| > |t_r|)
+          textureGauss = |t_i|
+        ELSE
+          textureGauss = |t_r|
+        ENDIF
+      ELSEIF (@txtr_Gauss_type == 8)
+        textureGauss = atan2(zGauss)/(2*#pi)
+        IF textureGauss < 0
+          textureGauss = textureGauss + 1
+        ENDIF
+      ELSEIF (@txtr_Gauss_type == 9)
+        textureGauss = (|t_i|+|t_r|+t_d)/3
+      ELSEIF (@txtr_Gauss_type == 10)
+        textureGauss = (|t_i|*|t_r|*t_d)^(1/3)
+      ENDIF
+
+      IF (@txtr_Gauss_limit != 0)
+        textureGauss = textureGauss%@txtr_Gauss_limit
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Gauss_verlaufMode > 0)
+        IF (@f_Gauss_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Gauss_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Gauss_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_Gauss*txtr_v_verlauf*textureGauss
+
+    ENDIF
+
+    
+    IF (@txtr_Check!= 0)
+      complex zChecked = round(_zz*@txtr_Check_scale)
+
+      float textureCheck = 0
+      int checkFlag = 0
+      int testCheck = 0
+      int reChecked = trunc(real(zChecked))
+      int imChecked = trunc(imag(zChecked))
+
+      IF (@txtr_Check_test == 0)
+        testCheck = reChecked + imChecked
+      ELSEIF (@txtr_Check_test == 1)
+        testCheck = reChecked * imChecked
+      ENDIF
+
+      complex zCheckShape   = _zz*@txtr_Check_scale
+      complex zShapedCheck  = zChecked - zCheckShape
+      float   reShapedCheck = real(zShapedCheck)
+      float   imShapedCheck = imag(zShapedCheck)
+
+      IF (testCheck%@txtr_Checker == 0) ; Condition for the checkers
+        IF (@txtr_Check_shape == 0) ; Squares only
+          checkFlag =  1
+
+        ELSEIF (@txtr_Check_shape == 1) ; Circle
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; additional condition
+            checkFlag =  1                             ; for circles
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 2)
+          IF    (abs (|reShapedCheck| - |imShapedCheck|) > .1*@txtr_Check_shConst)
+            checkFlag =  1
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 3)
+          checkFlag =  1 ; draw a square
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 4)
+          IF (|reShapedCheck| - |imShapedCheck| > .05*@txtr_Check_shConst) ; segments
+            checkFlag =  1
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 5)
+          checkFlag =  1 ; draw a square
+          IF (|reShapedCheck| - |imShapedCheck| > .05*@txtr_Check_shConst) ; cut out segments
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 6)
+          checkFlag =  1 ; draw a square
+          IF (|reShapedCheck| > .05*@txtr_Check_shConst) ; cut out horizontal lines
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 7)
+          checkFlag =  1 ; draw a square
+          IF (|imShapedCheck| > .05*@txtr_Check_shConst) ; cut out vertical lines
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 8)
+          checkFlag =  1 ; draw a square
+          IF ( |sin(imChecked*2*#pi) - sin(imag(zCheckShape)*2*#pi)| < .5*@txtr_Check_shConst)
+            checkFlag =  0 ; cut out many vertical lines
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 9)
+          checkFlag =  1 ; draw a square
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst)
+            checkFlag =  0 ; cut out a circle
+            IF (|imShapedCheck| > .05*@txtr_Check_shConst)
+              checkFlag =  1 ; fill in something
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 10)
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst)
+            checkFlag =  1 ; draw a circle
+            IF (|imShapedCheck| < .01*@txtr_Check_shConst)
+              checkFlag =  0 ; cut out horizontal
+              IF (|reShapedCheck| < .01*@txtr_Check_shConst)
+                checkFlag =  1 ; fill in vertical
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 11)
+          checkFlag =  1
+          IF (|imShapedCheck| > .01*@txtr_Check_shConst)
+            checkFlag =  0
+            IF (|reShapedCheck| < .01*@txtr_Check_shConst)
+              checkFlag =  1
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 12)
+          IF (|imShapedCheck| > .01*@txtr_Check_shConst)
+            checkFlag =  1
+            IF (|reShapedCheck| < .01*@txtr_Check_shConst)
+              checkFlag =  0
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 13)
+          float txtr_arg = atan2(zShapedCheck)/(2*#pi)
+          IF (txtr_arg < 0)
+             txtr_arg = txtr_arg + 1
+          ENDIF
+          IF (abs(txtr_arg) < .25*#pi/@txtr_Check_shConst)
+            checkFlag =  1
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 14)
+          checkFlag =  1
+          float txtr_arg = atan2(zShapedCheck)/(2*#pi)
+          IF (txtr_arg < 0)
+             txtr_arg = txtr_arg + 1
+          ENDIF
+          IF (abs(txtr_arg) < .25*#pi/@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 15)
+          checkFlag =  1
+          IF (|zShapedCheck| > .1*@txtr_Check_shConst)
+            checkFlag =  0
+            float txtr_arg = atan2(zShapedCheck)/(2*#pi)
+            IF (txtr_arg < 0)
+               txtr_arg = txtr_arg + 1
+            ENDIF
+            IF (abs(txtr_arg) < .25*#pi/@txtr_Check_shConst)
+              checkFlag =  1
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 16)
+          checkFlag =  1
+          IF (|reShapedCheck| - |imShapedCheck| < 0.005*@txtr_Check_shConst || \
+              |reShapedCheck| + |imShapedCheck| < 0.005*@txtr_Check_shConst || \
+              |imShapedCheck| < 0.005*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 17)
+          checkFlag =  1
+          IF ((reShapedCheck) - (imShapedCheck) > 0.1*@txtr_Check_shConst && \
+              (reShapedCheck) + (imShapedCheck) > 0.1*@txtr_Check_shConst && \
+              (imShapedCheck) < 0.1*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 18)
+          checkFlag =  1
+          IF (abs(reShapedCheck) - abs(imShapedCheck) > 0.1*@txtr_Check_shConst && \
+              abs(reShapedCheck) + abs(imShapedCheck) > 0.1*@txtr_Check_shConst && \
+              abs(imShapedCheck) < 0.1*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 19)
+          checkFlag =  1
+          IF (|reShapedCheck| - |imShapedCheck| < 0.1*@txtr_Check_shConst && \
+              |reShapedCheck| + |imShapedCheck| > 0.1*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 20)
+          checkFlag =  1
+          IF ((reShapedCheck) - (imShapedCheck) > 0.1*@txtr_Check_shConst && \
+              (reShapedCheck) + (imShapedCheck) < 0.1*@txtr_Check_shConst && \
+              (imShapedCheck) < 0.1*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 21)
+          IF (|reShapedCheck| - |imShapedCheck| < 0.005*@txtr_Check_shConst || \
+              |imShapedCheck| < 0.005*@txtr_Check_shConst)
+            checkFlag =  1
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 22)
+          checkFlag =  1
+          IF (|sin(reShapedCheck*2*#pi) - cos(imShapedCheck*2*#pi) | > 0.5*@txtr_Check_shConst || \
+              |imShapedCheck| < 0.01*@txtr_Check_shConst)
+            checkFlag =  0
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 23)
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  1
+            IF (|zShapedCheck-.2| < .15*@txtr_Check_shConst) ; fill in another circle
+              checkFlag =  0
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 24)
+          checkFlag =  1 ; draw a square
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  0
+            IF (|zShapedCheck-.2| < .15*@txtr_Check_shConst) ; fill in another circle
+              checkFlag =  1
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 25)
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  1
+            IF (|zShapedCheck-.2| < .15*@txtr_Check_shConst) ; fill in another circle
+              checkFlag =  0
+               IF (|zShapedCheck-.3| < .0125*@txtr_Check_shConst) ; fill in another circle
+                 checkFlag =  1
+               ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 26)
+          checkFlag =  1 ; draw a square
+          IF (|zShapedCheck| < .2*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  0
+            IF (|zShapedCheck-.2| < .15*@txtr_Check_shConst) ; fill in another circle
+              checkFlag =  1
+               IF (|zShapedCheck-.3| < .0125*@txtr_Check_shConst) ; fill in another circle
+                 checkFlag =  0
+               ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 27)
+          IF (|zShapedCheck| < .25*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  1
+            IF (|zShapedCheck| < .22*@txtr_Check_shConst) ; cut out a circle
+              checkFlag =  0
+              IF (|zShapedCheck-.01| < .17*@txtr_Check_shConst) ; cut out a circle
+                checkFlag =  1
+                IF (|zShapedCheck-.1| < .2*@txtr_Check_shConst) ; fill in another circle
+                  checkFlag =  0
+                   IF ((|zShapedCheck-(.16,.2)| < .0055*@txtr_Check_shConst) \
+                      || (|zShapedCheck-(.16,-.2)| < .0055*@txtr_Check_shConst))
+                     checkFlag =  1
+                   ENDIF
+                ENDIF
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 28)
+          checkFlag =  1
+          IF (|zShapedCheck| < .25*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  0
+            IF (|zShapedCheck| < .22*@txtr_Check_shConst) ; cut out a circle
+              checkFlag =  1
+              IF (|zShapedCheck-.01| < .17*@txtr_Check_shConst) ; cut out a circle
+                checkFlag =  0
+                IF (|zShapedCheck-.1| < .2*@txtr_Check_shConst) ; fill in another circle
+                  checkFlag =  1
+                   IF ((|zShapedCheck-(.16,.2)| < .0055*@txtr_Check_shConst) \
+                      || (|zShapedCheck-(.16,-.2)| < .0055*@txtr_Check_shConst))
+                     checkFlag =  0
+                   ENDIF
+                ENDIF
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 29)
+          IF (|zShapedCheck| < .25*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  1
+            IF (|zShapedCheck| < .22*@txtr_Check_shConst) ; cut out a circle
+              checkFlag =  0
+                IF ((|zShapedCheck-(.16,.2)| < .0055*@txtr_Check_shConst) \
+                   || (|zShapedCheck-(.16,-.2)| < .0055*@txtr_Check_shConst) \
+                   || (|zShapedCheck-(.05,-.2)| < .001*@txtr_Check_shConst) \
+                   )
+                  checkFlag =  1
+                ENDIF
+              IF (|zShapedCheck+.5| < .17*@txtr_Check_shConst) ; cut out a circle!!
+                checkFlag =  1
+                IF (|zShapedCheck+.6| < .22*@txtr_Check_shConst) ; fill in another circle!!
+                  checkFlag =  0
+                ENDIF
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ELSEIF (@txtr_Check_shape == 30)
+          checkFlag =  1
+          IF (|zShapedCheck| < .25*@txtr_Check_shConst) ; cut out a circle
+            checkFlag =  0
+            IF (|zShapedCheck| < .22*@txtr_Check_shConst) ; cut out a circle
+              checkFlag =  1
+                IF ((|zShapedCheck-(.16,.2)| < .0055*@txtr_Check_shConst) \
+                   || (|zShapedCheck-(.16,-.2)| < .0055*@txtr_Check_shConst) \
+                   || (|zShapedCheck-(.05,-.2)| < .001*@txtr_Check_shConst) \
+                   )
+                  checkFlag =  0
+                ENDIF
+              IF (|zShapedCheck+.5| < .17*@txtr_Check_shConst) ; cut out a circle!!
+                checkFlag =  0
+                IF (|zShapedCheck+.6| < .22*@txtr_Check_shConst) ; fill in another circle!!
+                  checkFlag =  1
+                ENDIF
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ENDIF
+
+        IF (@txtr_Check_divide == 1)
+          IF (reShapedCheck > imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 2)
+          IF (|reShapedCheck| > imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 3)
+          IF (cabs(reShapedCheck) > imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 4)
+          IF (|reShapedCheck| > |imShapedCheck|)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 5)
+          IF (reShapedCheck < imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 6)
+          IF (|reShapedCheck| < imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 7)
+          IF (cabs(reShapedCheck) < imShapedCheck)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 8)
+          IF (|reShapedCheck| < |imShapedCheck|)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 9)
+          IF (|atan2(zShapedCheck)/#pi|%.15 > .03)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ELSEIF (@txtr_Check_divide == 10)
+          IF (cabs(zShapedCheck)%.1 > .03)
+            checkFlag =  1 - checkFlag
+          ENDIF
+        ENDIF
+
+      ENDIF ; testCheck%@txtr_Checker == 0
+
+      IF (@txtr_Check_invert)
+        checkFlag =  1 - checkFlag
+      ENDIF
+
+
+      textureCheck = checkFlag
+
+      IF (@txtr_Check_col == 1 || @txtr_Check_col == 3)
+        textureCheck = textureCheck*|zChecked|
+      ENDIF
+
+      IF (@txtr_Check_col == 2 || @txtr_Check_col == 3)
+        textureCheck = textureCheck*#numiter
+      ENDIF
+
+      IF (@txtr_Check_col == 4)
+        textureCheck = textureCheck*|zShapedCheck|
+      ENDIF
+
+      IF (@txtr_Check_limit != 0)
+        textureCheck = textureCheck%@txtr_Check_limit
+      ENDIF
+
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Check_verlaufMode > 0)
+        IF (@f_Check_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Check_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Check_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_Check*txtr_v_verlauf*textureCheck
+
+    ENDIF
+
+    IF (@txtr_Pick153 != 0)
+      complex zPick153 = _zz
+
+      float reCalcPick153 = 0
+      float imCalcPick153 = 0
+
+      float reTestPick153 = 0
+      float imTestPick153 = 0
+
+      float rePick153_1 = 0
+      float rePick153_2 = 0
+      float rePick153_3 = 0
+
+      float imPick153_1 = 0
+      float imPick153_2 = 0
+      float imPick153_3 = 0
+
+      float rePick153_R = 0
+      float imPick153_R = 0
+
+      IF (@txtr_Pick153_lattice == 0)
+        zPick153 = zPick153*@txtr_Pick153_scale
+      ELSEIF (@txtr_Pick153_lattice == 1)
+        zPick153 = zPick153-trunc(zPick153*@txtr_Pick153_scale)/@txtr_Pick153_scale
+      ELSEIF (@txtr_Pick153_lattice == 2)
+        zPick153 = zPick153-trunc(zPick153*@txtr_Pick153_scale*10)
+      ELSEIF (@txtr_Pick153_lattice == 3)
+        zPick153 = zPick153-trunc(@txtr_Pick153_scale/zPick153)
+      ELSEIF (@txtr_Pick153_lattice == 4)
+        zPick153 = zPick153*@txtr_Pick153_scale + @txtr_Pick153_scale/zPick153
+      ELSEIF (@txtr_Pick153_lattice == 5)
+        zPick153 = round(zPick153*@txtr_Pick153_scale)/@txtr_Pick153_scale
+
+      ELSEIF (@txtr_Pick153_lattice == 6)
+
+        complex zp_Pick153 = round(zPick153*@txtr_Pick153_scale)
+        complex zc_Pick153 = zPick153 - (zp_Pick153/@txtr_Pick153_scale)
+        IF (round(imag(zp_Pick153))%3==0)
+          zc_Pick153 = (zc_Pick153 + @txtr_Pick153_scale/2)
+          IF (abs(real(zc_Pick153)) > @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale + zPick153
+          ELSEIF (real(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale + zPick153
+          ELSEIF (imag(zc_Pick153) > @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale - zPick153
+          ELSEIF (imag(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale - zPick153
+          ENDIF
+        ELSEIF (round(real(zp_Pick153))%3==1)
+          zc_Pick153 = (zc_Pick153 - @txtr_Pick153_scale/2)
+          IF (abs(imag(zc_Pick153))  >  @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale + zPick153
+          ELSEIF (imag(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale + zPick153
+          ELSEIF (real(zc_Pick153) > @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale - zPick153
+          ELSEIF (real(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale - zPick153
+          ENDIF
+        ELSE
+          zc_Pick153 = (zc_Pick153*@txtr_Pick153_scale*2)
+          IF (imag(zc_Pick153) > @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale + zPick153
+          ELSEIF (imag(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale + zPick153
+          ELSEIF (real(zc_Pick153) > @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 + @txtr_Pick153_scale - zPick153
+          ELSEIF (real(zc_Pick153) < @txtr_Pick153_scale)
+            zPick153 = zc_Pick153 - @txtr_Pick153_scale - zPick153
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      float texturePick153 = 0
+
+      float granulation153 = 1000*@txtr_scale153
+      zCalcPick153 = (trunc(zPick153*granulation153)/granulation153 - trunc(zPick153*@txtr_scale153)) * 1000
+      reCalcPick153 = real(zCalcPick153)
+      imCalcPick153 = imag(zCalcPick153)
+
+      int j = @txtr_numOfTestsPick153
+      WHILE (j > 0)
+        j = j-1
+
+        rePick153_1 = trunc(reCalcPick153/100)
+        rePick153_2 = trunc(reCalcPick153/10 - rePick153_1*10)
+        rePick153_3 = trunc(reCalcPick153/1 - rePick153_1*100 - rePick153_2*10)
+
+        imPick153_1 = trunc(imCalcPick153/100)
+        imPick153_2 = trunc(imCalcPick153/10 - imPick153_1*10)
+        imPick153_3 = trunc(imCalcPick153/1 - imPick153_1*100 - imPick153_2*10)
+
+        reTestPick153 = rePick153_1^3 + rePick153_2^3 + rePick153_3^2
+        imTestPick153 = imPick153_1^3 + imPick153_2^3 + imPick153_3^2
+
+        rePick153_R = reCalcPick153 - reTestPick153
+        imPick153_R = imCalcPick153 - imTestPick153
+
+        reCalcPick153 = reTestPick153
+        imCalcPick153 = imTestPick153
+
+      ENDWHILE ; j > 0
+
+      IF (@txtr_Pick153_col == 0)
+        texturePick153 = abs(rePick153_R)/500
+      ELSEIF (@txtr_Pick153_col == 1)
+        texturePick153 = abs(imPick153_R)/500
+      ELSEIF (@txtr_Pick153_col == 2)
+        texturePick153 = abs(rePick153_R+imPick153_R)/500
+      ELSEIF (@txtr_Pick153_col == 3)
+        texturePick153 = abs(rePick153_R)/500 + abs(imPick153_R)/500
+      ELSEIF (@txtr_Pick153_col == 4)
+        texturePick153 = abs(imPick153_R-rePick153_R)/250
+      ELSEIF (@txtr_Pick153_col == 5)
+        IF abs(imPick153_R) < abs(rePick153_R)
+          texturePick153 = abs(imPick153_R)/500
+        ELSE
+          texturePick153 = abs(rePick153_R)/500
+        ENDIF
+      ELSEIF (@txtr_Pick153_col == 6)
+        IF abs(imPick153_R) > abs(rePick153_R)
+          texturePick153 = abs(imPick153_R)/500
+        ELSE
+          texturePick153 = abs(rePick153_R)/500
+        ENDIF
+      ELSEIF (@txtr_Pick153_col == 7)
+        IF abs(imPick153_R) < abs(rePick153_R)
+          texturePick153 = abs(imPick153_R/rePick153_R)
+        ELSE
+          texturePick153 = abs(rePick153_R/imPick153_R)
+        ENDIF
+      ELSEIF (@txtr_Pick153_col == 8)
+        IF abs(imPick153_R) > abs(rePick153_R)
+          texturePick153 = abs(imPick153_R/rePick153_R)
+        ELSE
+          texturePick153 = abs(rePick153_R/imPick153_R)
+        ENDIF
+      ELSEIF (@txtr_Pick153_col == 9)
+        texturePick153 = abs(rePick153_R*imPick153_R)/250000
+      ELSEIF (@txtr_Pick153_col == 10)
+        texturePick153 = abs(rePick153_R*imPick153_R)/abs((rePick153_R+imPick153_R)*500)
+      ELSEIF (@txtr_Pick153_col == 11)
+        texturePick153 = (rePick153_R+imPick153_R)^2/abs(rePick153_R*imPick153_R)
+      ELSEIF (@txtr_Pick153_col == 12)
+        texturePick153 = (rePick153_R-imPick153_R)^2/(rePick153_R+imPick153_R)^2
+      ENDIF
+
+
+      IF (@txtr_Pick153_limit != 0)
+        texturePick153 = texturePick153%@txtr_Pick153_limit
+      ENDIF
+
+      IF (texturePick153 < 0)
+        texturePick153 = 0
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Pick153_verlaufMode > 0)
+        IF (@f_Pick153_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Pick153_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Pick153_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_Pick153*txtr_v_verlauf*texturePick153
+
+    ENDIF
+
+    IF (@txtr_SumDiv != 0)
+      complex zSumDiv = _zz
+
+      float reCalcSumDiv = 0
+      float imCalcSumDiv = 0
+
+      float reSumDiv_R = 0
+      float imSumDiv_R = 0
+
+      IF (@txtr_SumDiv_lattice == 0)
+        zSumDiv = zSumDiv*@txtr_SumDiv_scale
+      ELSEIF (@txtr_SumDiv_lattice == 1)
+        zSumDiv = zSumDiv-trunc(zSumDiv*@txtr_SumDiv_scale)/@txtr_SumDiv_scale
+      ELSEIF (@txtr_SumDiv_lattice == 2)
+        zSumDiv = zSumDiv-trunc(zSumDiv*@txtr_SumDiv_scale*10)
+      ELSEIF (@txtr_SumDiv_lattice == 3)
+        zSumDiv = zSumDiv-trunc(@txtr_SumDiv_scale/zSumDiv)
+      ELSEIF (@txtr_SumDiv_lattice == 4)
+        zSumDiv = zSumDiv*@txtr_SumDiv_scale + @txtr_SumDiv_scale/zSumDiv
+      ELSEIF (@txtr_SumDiv_lattice == 5)
+        zSumDiv = round(zSumDiv*@txtr_SumDiv_scale)/@txtr_SumDiv_scale
+
+      ELSEIF (@txtr_SumDiv_lattice == 6)
+
+        complex zp_SumDiv = round(zSumDiv*@txtr_SumDiv_scale)
+        complex zc_SumDiv = zSumDiv - (zp_SumDiv/@txtr_SumDiv_scale)
+        IF (round(imag(zp_SumDiv))%3==0)
+          zc_SumDiv = (zc_SumDiv + @txtr_SumDiv_scale/2)
+          IF (abs(real(zc_SumDiv)) > @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (real(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (imag(zc_SumDiv) > @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale - zSumDiv
+          ELSEIF (imag(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale - zSumDiv
+          ENDIF
+        ELSEIF (round(real(zp_SumDiv))%3==1)
+          zc_SumDiv = (zc_SumDiv - @txtr_SumDiv_scale/2)
+          IF (abs(imag(zc_SumDiv))  >  @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (imag(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (real(zc_SumDiv) > @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale - zSumDiv
+          ELSEIF (real(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale - zSumDiv
+          ENDIF
+        ELSE
+          zc_SumDiv = (zc_SumDiv*@txtr_SumDiv_scale*2)
+          IF (imag(zc_SumDiv) > @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (imag(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale + zSumDiv
+          ELSEIF (real(zc_SumDiv) > @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv + @txtr_SumDiv_scale - zSumDiv
+          ELSEIF (real(zc_SumDiv) < @txtr_SumDiv_scale)
+            zSumDiv = zc_SumDiv - @txtr_SumDiv_scale - zSumDiv
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      float textureSumDiv = 0
+
+      float granulationSumDiv = 1000*@txtr_scaleSumDiv
+      zCalcSumDiv = (trunc(zSumDiv*granulationSumDiv)/granulationSumDiv - trunc(zSumDiv*@txtr_scaleSumDiv)) * 1000
+      reCalcSumDiv = real(zCalcSumDiv)
+      imCalcSumDiv = imag(zCalcSumDiv)
+
+      IF (@txtr_SumDiv_mode == 0)
+        reSumDiv_R = 0
+        imSumDiv_R = 0
+      ELSEIF (@txtr_SumDiv_mode == 1)
+        reSumDiv_R = reCalcSumDiv
+        imSumDiv_R = imCalcSumDiv
+      ENDIF
+
+      int j = 0
+      WHILE (j<reCalcSumDiv/2)
+        j = j+1
+        IF (reCalcSumDiv%j == 0)
+          IF (@txtr_SumDiv_mode == 0)
+            reSumDiv_R = reSumDiv_R+j
+          ELSEIF (@txtr_SumDiv_mode == 1)
+            reSumDiv_R = reSumDiv_R/j
+          ENDIF
+        ENDIF
+      ENDWHILE
+
+      j = 0
+      WHILE (j<imCalcSumDiv/2)
+        j = j+1
+        IF (imCalcSumDiv%j == 0)
+          IF (@txtr_SumDiv_mode == 0)
+            imSumDiv_R = imSumDiv_R+j
+          ELSEIF (@txtr_SumDiv_mode == 1)
+            imSumDiv_R = imSumDiv_R/j
+          ENDIF
+        ENDIF
+      ENDWHILE
+
+      IF (@txtr_SumDiv_col == 0)
+        textureSumDiv = abs(reSumDiv_R)/500
+      ELSEIF (@txtr_SumDiv_col == 1)
+        textureSumDiv = abs(imSumDiv_R)/500
+      ELSEIF (@txtr_SumDiv_col == 2)
+        textureSumDiv = abs(reSumDiv_R+imSumDiv_R)/500
+      ELSEIF (@txtr_SumDiv_col == 3)
+        textureSumDiv = abs(reSumDiv_R)/500 + abs(imSumDiv_R)/500
+      ELSEIF (@txtr_SumDiv_col == 4)
+        textureSumDiv = abs(imSumDiv_R-reSumDiv_R)/250
+      ELSEIF (@txtr_SumDiv_col == 5)
+        IF abs(imSumDiv_R) < abs(reSumDiv_R)
+          textureSumDiv = abs(imSumDiv_R)/500
+        ELSE
+          textureSumDiv = abs(reSumDiv_R)/500
+        ENDIF
+      ELSEIF (@txtr_SumDiv_col == 6)
+        IF abs(imSumDiv_R) > abs(reSumDiv_R)
+          textureSumDiv = abs(imSumDiv_R)/500
+        ELSE
+          textureSumDiv = abs(reSumDiv_R)/500
+        ENDIF
+      ELSEIF (@txtr_SumDiv_col == 7)
+        IF abs(imSumDiv_R) < abs(reSumDiv_R)
+          textureSumDiv = abs(imSumDiv_R/reSumDiv_R)
+        ELSE
+          textureSumDiv = abs(reSumDiv_R/imSumDiv_R)
+        ENDIF
+      ELSEIF (@txtr_SumDiv_col == 8)
+        IF abs(imSumDiv_R) > abs(reSumDiv_R)
+          textureSumDiv = abs(imSumDiv_R/reSumDiv_R)
+        ELSE
+          textureSumDiv = abs(reSumDiv_R/imSumDiv_R)
+        ENDIF
+      ELSEIF (@txtr_SumDiv_col == 9)
+        textureSumDiv = abs(reSumDiv_R*imSumDiv_R)/250000
+      ELSEIF (@txtr_SumDiv_col == 10)
+        textureSumDiv = abs(reSumDiv_R*imSumDiv_R)/abs((reSumDiv_R+imSumDiv_R)*500)
+      ELSEIF (@txtr_SumDiv_col == 11)
+        textureSumDiv = (reSumDiv_R+imSumDiv_R)^2/abs(reSumDiv_R*imSumDiv_R)
+      ELSEIF (@txtr_SumDiv_col == 12)
+        textureSumDiv = (reSumDiv_R-imSumDiv_R)^2/(reSumDiv_R+imSumDiv_R)^2
+      ENDIF
+
+
+      IF (@txtr_SumDiv_limit != 0)
+        textureSumDiv = textureSumDiv%@txtr_SumDiv_limit
+      ENDIF
+
+      IF (textureSumDiv < 0)
+        textureSumDiv = 0
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_SumDiv_verlaufMode > 0)
+        IF (@f_SumDiv_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_SumDiv_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_SumDiv_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_SumDiv*txtr_v_verlauf*textureSumDiv
+
+    ENDIF
+
+    IF (@txtr_MLAB!= 0)
+      float   txtrB_ux   = 0.0
+      float   txtrB_uy   = 0.0
+
+      float   txtrB_scax = 0.0
+      float   txtrB_scay = 0.0
+
+      float   txtrB_ax   = 0.0
+      float   txtrB_ay   = 0.0
+
+      float   txtrB_mx   = 0.0
+      float   txtrB_my   = 0.0
+      float   txtrB_mr   = 0.0
+
+      int     txtrB_i    = 0
+      bool    txtrB_done = false
+
+      bool    txtrB_ix   = false
+      bool    txtrB_iy   = false
+
+      ;----------------------------------
+
+      complex zMLAB = _zz
+
+      IF (@txtr_MLAB_lattice == 0)
+        zMLAB = zMLAB*@txtr_MLAB_scale
+      ELSEIF (@txtr_MLAB_lattice == 1)
+        zMLAB = zMLAB-trunc(zMLAB*@txtr_MLAB_scale)/@txtr_MLAB_scale
+      ELSEIF (@txtr_MLAB_lattice == 2)
+        zMLAB = zMLAB-trunc(zMLAB*@txtr_MLAB_scale*10)
+      ELSEIF (@txtr_MLAB_lattice == 3)
+        zMLAB = zMLAB-trunc(@txtr_MLAB_scale/zMLAB)
+      ELSEIF (@txtr_MLAB_lattice == 4)
+        zMLAB = zMLAB*@txtr_MLAB_scale + @txtr_MLAB_scale/zMLAB
+      ELSEIF (@txtr_MLAB_lattice == 5)
+        zMLAB = round(zMLAB*@txtr_MLAB_scale)/@txtr_MLAB_scale
+
+      ELSEIF (@txtr_MLAB_lattice == 6)
+
+        complex zp_MLAB = round(zMLAB*@txtr_MLAB_scale)
+        complex zc_MLAB = zMLAB - (zp_MLAB/@txtr_MLAB_scale)
+        IF (round(imag(zp_MLAB))%3==0)
+          zc_MLAB = (zc_MLAB + @txtr_MLAB_scale/2)
+          IF (abs(real(zc_MLAB)) > @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale + zMLAB
+          ELSEIF (real(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale + zMLAB
+          ELSEIF (imag(zc_MLAB) > @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale - zMLAB
+          ELSEIF (imag(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale - zMLAB
+          ENDIF
+        ELSEIF (round(real(zp_MLAB))%3==1)
+          zc_MLAB = (zc_MLAB - @txtr_MLAB_scale/2)
+          IF (abs(imag(zc_MLAB))  >  @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale + zMLAB
+          ELSEIF (imag(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale + zMLAB
+          ELSEIF (real(zc_MLAB) > @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale - zMLAB
+          ELSEIF (real(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale - zMLAB
+          ENDIF
+        ELSE
+          zc_MLAB = (zc_MLAB*@txtr_MLAB_scale*2)
+          IF (imag(zc_MLAB) > @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale + zMLAB
+          ELSEIF (imag(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale + zMLAB
+          ELSEIF (real(zc_MLAB) > @txtr_MLAB_scale)
+            zMLAB = zc_MLAB + @txtr_MLAB_scale - zMLAB
+          ELSEIF (real(zc_MLAB) < @txtr_MLAB_scale)
+            zMLAB = zc_MLAB - @txtr_MLAB_scale - zMLAB
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      ;zMLAB = zMLAB-trunc(zMLAB*@txtr_MLAB_scale)/@txtr_MLAB_scale
+
+
+      IF (@txtr_MLAB_size != 0 && @txtr_MLAB_size != 1)
+        zMLAB = zMLAB/@txtr_MLAB_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zMLAB
+      ENDIF
+
+      float textureMLAB = 0
+
+      txtrB_ux = real(zMLAB)*@txtr_MLAB_scalo
+      txtrB_uy = imag(zMLAB)*@txtr_MLAB_scalo
+
+      txtrB_ax = floor(txtrB_ux)
+      txtrB_ay = floor(txtrB_uy)
+
+      txtrB_scax = .5
+      txtrB_scay = .5
+
+      WHILE (!txtrB_done && txtrB_i < @txtr_MLAB_divi)
+
+         txtrB_mx = txtrB_ax + txtrB_scax
+         txtrB_my = txtrB_ay + txtrB_scay
+
+         txtrB_mr = txtrB_mx * 3779 + txtrB_my * 9377
+         txtrB_mr = abs(sin(txtrB_mr)) * @txtr_MLAB_vari
+         txtrB_mr = txtrB_mr - trunc(txtrB_mr)
+
+         IF (txtrB_mr < real(@txtr_MLAB_pro0))
+            txtrB_done = true
+         ELSE
+
+            IF     (txtrB_mr < imag(@txtr_MLAB_pro0))
+               txtrB_scax = txtrB_scax / 2
+               txtrB_ix = true
+               txtrB_iy = false
+            ELSEIF (txtrB_mr < real(@txtr_MLAB_pro1))
+               txtrB_scay = txtrB_scay / 2
+               txtrB_ix = false
+               txtrB_iy = true
+            ELSEIF (txtrB_mr < imag(@txtr_MLAB_pro1))
+               txtrB_scax = txtrB_scax / 2
+               txtrB_scay = txtrB_scay / 2
+               txtrB_ix = false
+               txtrB_iy = false
+            ENDIF
+
+            IF (txtrB_ux > txtrB_mx)
+               txtrB_ax = txtrB_mx
+            ENDIF
+
+            IF (txtrB_uy > txtrB_my)
+               txtrB_ay = txtrB_my
+            ENDIF
+
+            txtrB_i = txtrB_i + 1
+
+         ENDIF
+
+      ENDWHILE
+
+      IF (txtrB_ix)
+         txtrB_scay = txtrB_scay / 2
+      ENDIF
+
+      IF (txtrB_iy)
+         txtrB_scax = txtrB_scax / 2
+      ENDIF
+
+      txtrB_ax = abs(txtrB_ax - txtrB_ux)
+      IF (txtrB_ax > (txtrB_scax))
+         txtrB_ax = 2 * txtrB_scax - txtrB_ax
+      ENDIF
+
+      txtrB_ay = abs(txtrB_ay - txtrB_uy)
+      IF (txtrB_ay > (txtrB_scay))
+         txtrB_ay = 2 * txtrB_scay - txtrB_ay
+      ENDIF
+
+      IF (txtrB_ax < txtrB_ay)
+         txtrB_mx = txtrB_ax
+      ELSE
+         txtrB_mx = txtrB_ay
+      ENDIF
+
+      txtrB_my = 1 / (2 ^ (@txtr_MLAB_divi + 1) * @txtr_MLAB_scalo)
+
+      txtrB_mr = txtrB_mx / txtrB_my
+
+      IF (txtrB_mr < @txtr_MLAB_edge)
+      ELSE
+        IF (txtrB_scax < txtrB_scay)
+          txtrB_mr = txtrB_scax / txtrB_scay
+        ELSE
+          txtrB_mr = txtrB_scay / txtrB_scax
+        ENDIF
+      ENDIF
+
+
+      textureMLAB = txtrB_mr
+
+      IF (@txtr_MLAB_limit != 0)
+        textureMLAB = textureMLAB%@txtr_MLAB_limit
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_MLAB_verlaufMode > 0)
+        IF (@f_MLAB_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_MLAB_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_MLAB_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_MLAB*txtr_v_verlauf*textureMLAB
+
+    ENDIF
+
+    IF (@txtr_Banana != 0)
+
+      float   txtrBana_d0   = 0.0
+      float   txtrBana_d1   = 0.0
+
+      float   txtrBana_ux   = 0.0
+      float   txtrBana_uy   = 0.0
+
+      float   txtrBana_sxa = 0.0
+      float   txtrBana_sya = 0.0
+
+      float   txtrBana_sxb  = 0.0
+      float   txtrBana_sxc  = 0.0
+
+      float   txtrBana_syb  = 0.0
+      float   txtrBana_syc  = 0.0
+
+      float   txtrBana_ax   = 0.0
+      float   txtrBana_ay   = 0.0
+
+      float   txtrBana_bx   = 0.0
+      float   txtrBana_by   = 0.0
+
+      float   txtrBana_ex   = 0.0
+
+      float   txtrBana_mx   = 0.0
+      float   txtrBana_my   = 0.0
+      float   txtrBana_mr   = 0.0
+
+      int     txtrBana_i    = 0
+      bool    txtrBana_done = false
+
+      ;----------------------------------
+
+      complex zBanana = _zz
+
+      IF (@txtr_Banana_lattice == 0)
+        zBanana = zBanana*@txtr_Banana_scale
+      ELSEIF (@txtr_Banana_lattice == 1)
+        zBanana = zBanana-trunc(zBanana*@txtr_Banana_scale)/@txtr_Banana_scale
+      ELSEIF (@txtr_Banana_lattice == 2)
+        zBanana = zBanana-trunc(zBanana*@txtr_Banana_scale*10)
+      ELSEIF (@txtr_Banana_lattice == 3)
+        zBanana = zBanana-trunc(@txtr_Banana_scale/zBanana)
+      ELSEIF (@txtr_Banana_lattice == 4)
+        zBanana = zBanana*@txtr_Banana_scale + @txtr_Banana_scale/zBanana
+      ELSEIF (@txtr_Banana_lattice == 5)
+        zBanana = round(zBanana*@txtr_Banana_scale)/@txtr_Banana_scale
+
+      ELSEIF (@txtr_Banana_lattice == 6)
+
+        complex zp_Banana = round(zBanana*@txtr_Banana_scale)
+        complex zc_Banana = zBanana - (zp_Banana/@txtr_Banana_scale)
+        IF (round(imag(zp_Banana))%3==0)
+          zc_Banana = (zc_Banana + @txtr_Banana_scale/2)
+          IF (abs(real(zc_Banana)) > @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale + zBanana
+          ELSEIF (real(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale + zBanana
+          ELSEIF (imag(zc_Banana) > @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale - zBanana
+          ELSEIF (imag(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale - zBanana
+          ENDIF
+        ELSEIF (round(real(zp_Banana))%3==1)
+          zc_Banana = (zc_Banana - @txtr_Banana_scale/2)
+          IF (abs(imag(zc_Banana))  >  @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale + zBanana
+          ELSEIF (imag(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale + zBanana
+          ELSEIF (real(zc_Banana) > @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale - zBanana
+          ELSEIF (real(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale - zBanana
+          ENDIF
+        ELSE
+          zc_Banana = (zc_Banana*@txtr_Banana_scale*2)
+          IF (imag(zc_Banana) > @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale + zBanana
+          ELSEIF (imag(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale + zBanana
+          ELSEIF (real(zc_Banana) > @txtr_Banana_scale)
+            zBanana = zc_Banana + @txtr_Banana_scale - zBanana
+          ELSEIF (real(zc_Banana) < @txtr_Banana_scale)
+            zBanana = zc_Banana - @txtr_Banana_scale - zBanana
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+
+      IF (@txtr_Banana_size != 0 && @txtr_Banana_size != 1)
+        zBanana = zBanana/@txtr_Banana_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zBanana
+      ENDIF
+
+      float textureBanana = 0
+
+      txtrBana_ux = real(zBanana)*@txtr_Banana_scalo
+      txtrBana_uy = imag(zBanana)*@txtr_Banana_scalo
+
+      txtrBana_ax = floor(txtrBana_ux)
+      txtrBana_ay = floor(txtrBana_uy)
+
+      txtrBana_bx =  txtrBana_ax + 1
+      txtrBana_by =  txtrBana_ay + 1
+
+      txtrBana_sxc = 1
+      txtrBana_sxa = real(@txtr_Banana_ratio)
+      txtrBana_sxb = txtrBana_sxc - txtrBana_sxa
+
+      txtrBana_syc = 1
+      txtrBana_sya = imag(@txtr_Banana_ratio)
+      txtrBana_syb = txtrBana_syc - txtrBana_sya
+
+      txtrBana_i = 0
+
+      WHILE (!txtrBana_done && txtrBana_i < @txtr_Banana_divi)
+
+         txtrBana_mx = txtrBana_ax + txtrBana_sxa
+         txtrBana_my = txtrBana_ay + txtrBana_sya
+
+         txtrBana_mr = txtrBana_mx * @txtr_Banana_seed0 + txtrBana_my * @txtr_Banana_seed1
+         txtrBana_mr = abs(sin(txtrBana_mr)) * @txtr_Banana_vari
+         txtrBana_mr = txtrBana_mr - trunc(txtrBana_mr)
+
+         IF (txtrBana_mr < real(@txtr_Banana_pro0)) ; -1-
+            txtrBana_done = true
+         ELSE ; -1-
+
+            IF     (txtrBana_mr < imag(@txtr_Banana_pro0))
+               IF (txtrBana_ux > txtrBana_mx)
+                  txtrBana_ax  = txtrBana_mx
+                  txtrBana_sxc = txtrBana_sxb
+               ELSE
+                  txtrBana_bx  = txtrBana_mx
+                  txtrBana_sxc = txtrBana_sxa
+               ENDIF
+
+               txtrBana_sxa = txtrBana_sxc * real(@txtr_Banana_ratio)
+               txtrBana_sxb = txtrBana_sxc - txtrBana_sxa
+
+            ELSEIF (txtrBana_mr < real(@txtr_Banana_pro1))
+
+               IF (txtrBana_uy > txtrBana_my)
+                  txtrBana_ay  = txtrBana_my
+                  txtrBana_syc = txtrBana_syb
+               ELSE
+                  txtrBana_by  = txtrBana_my
+                  txtrBana_syc = txtrBana_sya
+               ENDIF
+
+               txtrBana_sya = txtrBana_syc * imag(@txtr_Banana_ratio)
+               txtrBana_syb = txtrBana_syc - txtrBana_sya
+
+            ELSEIF (txtrBana_mr < imag(@txtr_Banana_pro1))
+
+               IF (txtrBana_ux > txtrBana_mx)
+                  txtrBana_ax  = txtrBana_mx
+                  txtrBana_sxc = txtrBana_sxb
+               ELSE
+                  txtrBana_bx  = txtrBana_mx
+                  txtrBana_sxc = txtrBana_sxa
+               ENDIF
+
+               txtrBana_sxa = txtrBana_sxc * real(@txtr_Banana_ratio)
+               txtrBana_sxb = txtrBana_sxc - txtrBana_sxa
+
+               IF (txtrBana_uy > txtrBana_my)
+                  txtrBana_ay  = txtrBana_my
+                  txtrBana_syc = txtrBana_syb
+               ELSE
+                  txtrBana_by  = txtrBana_my
+                  txtrBana_syc = txtrBana_sya
+               ENDIF
+
+               txtrBana_sya = txtrBana_syc * imag(@txtr_Banana_ratio)
+               txtrBana_syb = txtrBana_syc - txtrBana_sya
+
+            ENDIF
+         ENDIF ; -1-
+
+         txtrBana_i = txtrBana_i + 1
+
+      ENDWHILE
+
+      txtrBana_ax = abs(txtrBana_ax - txtrBana_ux)
+      txtrBana_ex = 0
+      txtrBana_ay = abs(txtrBana_ay - txtrBana_uy)
+      txtrBana_bx = abs(txtrBana_bx - txtrBana_ux)
+      txtrBana_by = abs(txtrBana_by - txtrBana_uy)
+
+      IF (txtrBana_ay <  txtrBana_ax)
+         txtrBana_ax =  txtrBana_ay
+         txtrBana_ex = .2
+      ENDIF
+
+      IF (txtrBana_bx <  txtrBana_ax)
+         txtrBana_ax = txtrBana_bx
+         txtrBana_ex = .4
+      ENDIF
+
+      IF (txtrBana_by <  txtrBana_ax)
+         txtrBana_ax = txtrBana_by
+         txtrBana_ex = .6
+      ENDIF
+
+      IF (txtrBana_ax < @txtr_Banana_edge/@txtr_Banana_scalo)
+         IF     (@txtr_Banana_otre == 0)
+            txtrBana_d0 =  txtrBana_ax*@txtr_Banana_scalo/@txtr_Banana_edge
+            txtrBana_d1 = 1
+         ELSEIF (@txtr_Banana_otre == 1)
+            txtrBana_d0 = txtrBana_ex
+            txtrBana_d1 = 1
+         ELSEIF (@txtr_Banana_otre == 2)
+            txtrBana_d0 = -1
+            txtrBana_d1 =  1
+         ENDIF
+
+      ELSE
+         IF     (@txtr_Banana_itre == 0)
+            txtrBana_d0 =  txtrBana_ax*@txtr_Banana_scalo/@txtr_Banana_edge
+            txtrBana_d1 = 1
+         ELSEIF (@txtr_Banana_itre == 1)
+            txtrBana_d0 = .8
+            txtrBana_d1 = 1
+         ELSEIF (@txtr_Banana_itre == 2)
+            txtrBana_mr = txtrBana_mr * @txtr_Banana_seed0
+            txtrBana_mr = abs(sin(txtrBana_mr)) * @txtr_Banana_vari
+            txtrBana_d0 = txtrBana_mr - trunc(txtrBana_mr)
+            txtrBana_d1 =  1
+         ELSEIF (@txtr_Banana_itre == 3)
+            txtrBana_d0 = -1
+            txtrBana_d1 =  1
+         ENDIF
+      ENDIF
+
+
+;---------------------------------------
+
+      IF (@txtr_Banana_type == 0)
+        textureBanana = txtrBana_mr
+      ELSEIF (@txtr_Banana_type >= 1 && @txtr_Banana_type <= 6)
+        IF (txtrBana_d0 < 0)
+          #solid = true
+        ELSE
+          IF (txtrBana_d0 < txtrBana_d1)
+             textureBanana = txtrBana_d0 / txtrBana_d1
+          ELSE
+             textureBanana = txtrBana_d1 / txtrBana_d0
+          ENDIF
+        ENDIF
+        IF (@txtr_Banana_type == 2)
+          textureBanana = |textureBanana/txtrBana_mr|
+        ELSEIF (@txtr_Banana_type == 3)
+          textureBanana = |textureBanana + txtrBana_mr^2|
+        ELSEIF (@txtr_Banana_type == 4)
+          textureBanana = |textureBanana + 1/txtrBana_mr|
+        ELSEIF (@txtr_Banana_type == 5)
+          textureBanana = |textureBanana - txtrBana_mr^2|
+        ELSEIF (@txtr_Banana_type == 6)
+          textureBanana = |textureBanana - 1/txtrBana_mr^2|
+        ENDIF
+      ELSEIF (@txtr_Banana_type == 7)
+        textureBanana = |txtrBana_d0 - txtrBana_d1|^2*txtrBana_mr
+      ELSEIF (@txtr_Banana_type == 8)
+        textureBanana = |txtrBana_d1 / txtrBana_d0|
+      ENDIF
+
+      IF (@txtr_Banana_limit != 0)
+        textureBanana = textureBanana%@txtr_Banana_limit
+      ENDIF
+
+      txtr_v_verlauf = 1
+
+      IF (@f_Banana_verlaufMode > 0)
+        IF (@f_Banana_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Banana_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Banana_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_Banana*txtr_v_verlauf*textureBanana
+
+    ENDIF
+
+    IF (@txtr_Ell != 0)
+      complex zElliptic = _zz
+
+      IF (@txtr_Ell_lattice == 0)
+        zElliptic = zElliptic*@txtr_Ell_scale
+      ELSEIF (@txtr_Ell_lattice == 1)
+        zElliptic = zElliptic-trunc(zElliptic*@txtr_Ell_scale)/@txtr_Ell_scale
+      ELSEIF (@txtr_Ell_lattice == 2)
+        zElliptic = zElliptic-trunc(zElliptic*@txtr_Ell_scale*10)
+      ELSEIF (@txtr_Ell_lattice == 3)
+        zElliptic = zElliptic-trunc(@txtr_Ell_scale/zElliptic)
+      ELSEIF (@txtr_Ell_lattice == 4)
+        zElliptic = zElliptic*@txtr_Ell_scale + @txtr_Ell_scale/zElliptic
+      ELSEIF (@txtr_Ell_lattice == 5)
+        zElliptic = round(zElliptic*@txtr_Ell_scale)/@txtr_Ell_scale
+
+      ELSEIF (@txtr_Ell_lattice == 6)
+
+        complex zp_Ell = round(zElliptic*@txtr_Ell_scale)
+        complex zc_Ell = zElliptic - (zp_Ell/@txtr_Ell_scale)
+        IF (round(imag(zp_Ell))%3==0)
+          zc_Ell = (zc_Ell + @txtr_Ell_scale/2)
+          IF (abs(real(zc_Ell)) > @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale + zElliptic
+          ELSEIF (real(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale + zElliptic
+          ELSEIF (imag(zc_Ell) > @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale - zElliptic
+          ELSEIF (imag(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale - zElliptic
+          ENDIF
+        ELSEIF (round(real(zp_Ell))%3==1)
+          zc_Ell = (zc_Ell - @txtr_Ell_scale/2)
+          IF (abs(imag(zc_Ell))  >  @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale + zElliptic
+          ELSEIF (imag(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale + zElliptic
+          ELSEIF (real(zc_Ell) > @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale - zElliptic
+          ELSEIF (real(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale - zElliptic
+          ENDIF
+        ELSE
+          zc_Ell = (zc_Ell*@txtr_Ell_scale*2)
+          IF (imag(zc_Ell) > @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale + zElliptic
+          ELSEIF (imag(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale + zElliptic
+          ELSEIF (real(zc_Ell) > @txtr_Ell_scale)
+            zElliptic = zc_Ell + @txtr_Ell_scale - zElliptic
+          ELSEIF (real(zc_Ell) < @txtr_Ell_scale)
+            zElliptic = zc_Ell - @txtr_Ell_scale - zElliptic
+          ENDIF
+        ENDIF
+
+      ENDIF
+
+      IF (@txtr_Ell_size != 0 && @txtr_Ell_size != 1)
+        zElliptic = zElliptic/@txtr_Ell_size
+      ENDIF
+
+      IF (@reachThrough)
+        _zz = zElliptic
+      ENDIF
+
+      float textureElliptic = 0
+      complex EllipticZ = 0
+
+      float t_r = real(zElliptic)
+      float t_i = imag(zElliptic)
+
+      float t_rr = 0
+      float t_ii = 0
+
+      ;
+      ; transformation
+      ;
+      IF (@txtr_Ell_pseudo)
+
+        ;
+        ; calculate the temp real t_rr
+        ;
+        IF (@txtr_Ell_c * t_r + @txtr_Ell_d == 0)    ; don't divide by 0!!
+          t_rr = @txtr_Ell_a * t_r + @txtr_Ell_b
+        ELSE
+          IF (@txtr_Ell_pseudoMix)
+            IF (@txtr_Ell_mixMode == 0)
+                   ; normal mix
+              t_rr = (@txtr_Ell_a * t_i + @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 1)
+                   ; diff mix
+              t_rr = (@txtr_Ell_a * (t_r-t_i)+ @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 2)
+                   ; sum mix
+              t_rr = (@txtr_Ell_a * (t_r+t_i)+ @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 3)
+                   ; prod mix
+              t_rr = (@txtr_Ell_a * (t_r*t_i)+ @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 4)
+                   ; prod mix
+              t_rr = (@txtr_Ell_a * (t_r^t_i)+ @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+            ENDIF
+          ELSE
+            t_rr = (@txtr_Ell_a * t_r + @txtr_Ell_b) / (@txtr_Ell_c * t_r + @txtr_Ell_d)
+          ENDIF
+        ENDIF
+
+        ;
+        ; calculate the temp imag t_ii
+        ;
+        IF (@txtr_Ell_c * t_i + @txtr_Ell_d == 0)    ; don't divide by 0!!
+          t_ii = @txtr_Ell_a * t_i + @txtr_Ell_b
+        ELSE
+          IF (@txtr_Ell_pseudoMix)
+            IF     (@txtr_Ell_mixMode == 0)
+                   ; normal mix
+              t_ii = (@txtr_Ell_a * t_r + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 1)
+                   ; diff mix
+              t_ii = (@txtr_Ell_a * (t_i-t_r) + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 2)
+                   ; sum mix
+              t_ii = (@txtr_Ell_a * (t_i+t_r) + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 3)
+                   ; prod mix
+              t_ii = (@txtr_Ell_a * (t_i*t_r) + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+            ELSEIF (@txtr_Ell_mixMode == 4)
+                   ; prod mix
+              t_ii = (@txtr_Ell_a * (t_i^t_r) + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+            ENDIF
+          ELSE
+            t_ii = (@txtr_Ell_a * t_i + @txtr_Ell_b) / (@txtr_Ell_c * t_i + @txtr_Ell_d)
+          ENDIF
+        ENDIF
+
+        EllipticZ = t_rr + 1i*t_ii
+      ELSE
+        IF (@txtr_Ell_c * zElliptic + @txtr_Ell_d == 0)    ; don't divide by 0!!
+          EllipticZ = @txtr_Ell_a * zElliptic + @txtr_Ell_b
+        ELSE
+          EllipticZ = (@txtr_Ell_a * zElliptic + @txtr_Ell_b) / (@txtr_Ell_c * zElliptic + @txtr_Ell_d)
+        ENDIF
+      ENDIF
+
+      IF (@txtr_Ell_type == 0)
+        textureElliptic = |EllipticZ-zElliptic|
+      ELSEIF (@txtr_Ell_type == 1)
+        textureElliptic = |real(EllipticZ-zElliptic)|
+      ELSEIF (@txtr_Ell_type == 2)
+        textureElliptic = |imag(EllipticZ-zElliptic)|
+      ELSEIF (@txtr_Ell_type == 3)
+        textureElliptic = |atan(EllipticZ-zElliptic)|
+      ELSEIF (@txtr_Ell_type == 4)
+        textureElliptic = atan2(EllipticZ-zElliptic)/(2*#pi)
+        IF (textureElliptic < 0)
+          textureElliptic = textureElliptic+1
+        ENDIF
+
+      ELSEIF (@txtr_Ell_type == 5)
+        textureElliptic = |EllipticZ/zElliptic|
+      ELSEIF (@txtr_Ell_type == 6)
+        textureElliptic = |real(EllipticZ/zElliptic)|
+      ELSEIF (@txtr_Ell_type == 7)
+        textureElliptic = |imag(EllipticZ/zElliptic)|
+      ELSEIF (@txtr_Ell_type == 8)
+        textureElliptic = |atan(EllipticZ/zElliptic)|
+      ELSEIF (@txtr_Ell_type == 9)
+        textureElliptic = atan2(EllipticZ/zElliptic)/(2*#pi)
+        IF (textureElliptic < 0)
+          textureElliptic = textureElliptic+1
+        ENDIF
+
+      ELSEIF (@txtr_Ell_type == 10)
+        textureElliptic = |zElliptic/EllipticZ|
+      ELSEIF (@txtr_Ell_type == 11)
+        textureElliptic = |real(zElliptic/EllipticZ)|
+      ELSEIF (@txtr_Ell_type == 12)
+        textureElliptic = |imag(zElliptic/EllipticZ)|
+      ELSEIF (@txtr_Ell_type == 13)
+        textureElliptic = |atan(zElliptic/EllipticZ)|
+      ELSEIF (@txtr_Ell_type == 14)
+        textureElliptic = atan2(zElliptic/EllipticZ)/(2*#pi)
+        IF (textureElliptic < 0)
+          textureElliptic = textureElliptic+1
+        ENDIF
+
+      ELSEIF (@txtr_Ell_type == 15)
+        textureElliptic = |sin(zElliptic) + 1i*cos(EllipticZ)|
+      ELSEIF (@txtr_Ell_type == 16)
+        textureElliptic = |real(sin(zElliptic) + 1i*cos(EllipticZ))|
+      ELSEIF (@txtr_Ell_type == 17)
+        textureElliptic = |imag(sin(zElliptic) + 1i*cos(EllipticZ))|
+      ELSEIF (@txtr_Ell_type == 18)
+        textureElliptic = |atan(sin(zElliptic) + 1i*cos(EllipticZ))|
+      ELSEIF (@txtr_Ell_type == 19)
+        textureElliptic = atan2(sin(zElliptic) + 1i*cos(EllipticZ))/(2*#pi)
+        IF (textureElliptic < 0)
+          textureElliptic = textureElliptic+1
+        ENDIF
+
+      ENDIF
+
+      IF (@txtr_Ell_limit != 0)
+        textureElliptic = textureElliptic%@txtr_Ell_limit
+      ENDIF
+
+      ; here starts the Verlauf!
+      txtr_v_verlauf = 1
+
+      IF (@f_Ell_verlaufMode > 0)
+        IF (@f_Ell_verlaufMode == 1) ; Bottom to Top
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 2) ; Top to Bottom
+          IF (txtr_v_yPos<=txtr_v_bot)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 3) ; Between Top&Bottom
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_bot)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_top-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 4) ; Mirror TB
+          float txtr_v_center = (txtr_v_top+txtr_v_bot)/2
+          IF (txtr_v_yPos<=txtr_v_bot || txtr_v_yPos>=txtr_v_top)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_yPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_yPos-txtr_v_center)/txtr_v_height
+          ELSEIF (txtr_v_yPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_yPos)/txtr_v_height
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 5) ; Left to Right
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = (txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 6) ; Right to Left
+          IF (txtr_v_xPos<=txtr_v_left)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = (txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 7) ; Between Left&Right
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 0
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_left)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_rigt-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 8) ; Mirror LR
+          float txtr_v_center = (txtr_v_rigt+txtr_v_left)/2
+          IF (txtr_v_xPos<=txtr_v_left || txtr_v_xPos>=txtr_v_rigt)
+            txtr_v_verlauf = 1
+          ELSEIF (txtr_v_xPos<txtr_v_center) ; below center
+            txtr_v_verlauf = 2*(txtr_v_xPos-txtr_v_center)/txtr_v_width
+          ELSEIF (txtr_v_xPos>txtr_v_center) ; above center
+            txtr_v_verlauf = 2*(txtr_v_center-txtr_v_xPos)/txtr_v_width
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 9) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 0
+          ELSE
+            txtr_v_verlauf = 1-txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ELSEIF (@f_Ell_verlaufMode == 10) ; Circle 1
+          float txtr_v_dist_out = cabs(@txtr_verlauf_Line1-@txtr_verlauf_Line2)
+          float txtr_v_dist_pnt = cabs(@txtr_verlauf_Line1-#pixel)
+
+          IF (txtr_v_dist_pnt >= txtr_v_dist_out)
+            txtr_v_verlauf = 1
+          ELSE
+            txtr_v_verlauf = txtr_v_dist_pnt/txtr_v_dist_out
+          ENDIF
+
+        ENDIF ; @f_Ell_verlaufMode
+
+        txtr_v_verlauf = abs(txtr_v_verlauf)
+        IF (@txtr_verlauf_exponent != 1)
+          txtr_v_verlauf = txtr_v_verlauf^@txtr_verlauf_exponent
+        ENDIF
+
+      ENDIF
+
+      to_index = to_index + @txtr_Ell*txtr_v_verlauf*textureElliptic
+
+    ENDIF
+
+    #index = to_index
+
+  ENDIF ; no_mask
+
+ 
+default:
+  title = "KPK Barninsky's Texture Trip"
+
+  param mode
+    caption = "Mode"
+    default = 1
+    enum = "Pixel" "Distance Estimator"
+  endparam
+  
+  param loopmode
+    caption = "Variation"
+    default = 1
+    enum = "Pinsky Tree""2nd Tree" "Barnsley Tree"
+  endparam
+
+  param start
+    caption = "Barnsley Param."
+    default = (0.6, 1.1)
+  endparam
+
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+
+  param Globdith
+    caption = "Dither on/off"
+    default = false
+  endparam
+
+  param globalDither
+    caption = "Global Dither"
+    default = 0.0
+    hint    = "Check first param Dither on/off. \ 
+               Then choose 1, 10, 50, 100 as experimental values \
+               and then start fine tuning."
+  endparam
+  
+  param kpkDither
+    caption = "KPK's Dither"
+    default = 0.0
+    hint    = "Check first param Dither on/off. \ 
+               Then choose 1, 10, 50, 100 as experimental values \
+               and then start fine tuning."
+  endparam
+
+  param order
+    caption = "Tree Order"
+    default = 3
+  endparam
+
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 90.0
+  endparam
+
+  param magnincr
+    caption = "Tree Magn. Increment"
+    default = 1.2
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 2.0
+  endparam
+
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+  
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+
+  param rat
+    caption = "Ratio Width/Height"
+    default = 1.0
+  endparam
+  
+  param invert
+    caption = "Invert z"
+    default = false
+  endparam
+
+  param angle
+    caption = "Angle"
+    default = 26.6
+  endparam
+  
+  param rotst
+    caption = "Rotation step"
+    default = 0.0
+  endparam
+
+  param txtr_verlauf_Line1
+    caption = "T: Bottom, Left, or Center"
+    default = (0.0,0.0)
+    hint    = "First line for growth calculation. Might be the bottom in TB mode, \
+               might be the left border in LR mode, IS the center in circle mode. \
+               This is a global setting for all textures using *Verlauf*."
+  endparam
+
+  param txtr_verlauf_Line2
+    caption = "T: Top, Right, or Radius"
+    default = (1.0,1.0)
+    hint    = "Second line for growth calculation. Might be the top in TB mode, \
+               might be the right border in LR mode, IS the radius in circle mode. \
+               This is a global setting for all textures using *Verlauf*."
+  endparam
+
+  param txtr_verlauf_exponent
+    caption = "T: Txtr Exponent"
+    default = 1.5
+    hint    = "Choose 1 for linear growth, 1.5-2 for (smoother) *quadratic* growth, \
+               other values to your free fun experiments... \
+               This is a global setting for all textures using *Verlauf*."
+  endparam
+
+  param txtr_verlauf_Rot
+    caption = "T: Txtr Rotation"
+    default = 0.0
+    min     = -45.0
+    max     = 45.0
+  endparam
+
+  param txtr_verlauf_RotCentre
+    caption = "T: Txtr Rot Centre"
+    default = (0.0, 0.0)
+  endparam
+
+  param f_randomness
+    caption = "T: Random Texture"
+    hint = "This adds a random texture the the coloring."
+    default = 0.0
+  endparam
+
+  param f_rand_verlaufMode
+    caption = "T: Random Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param base4txtr
+    caption = "Texture Base"
+    enum    = "Z" "Pixel" "Mixel" "Diff(Z,Pixel)" "Dist(Z,Pixel)"
+    default = 0
+  endparam
+
+  param reachThrough
+    caption = "T: Reach Through Scales"
+    default = false
+    hint    = "Reaches the Scale and Pattern Size from one \
+              Texture to the next. Every Texture changes all \
+              that follow."
+  endparam
+
+  param txtr_gnarl
+    caption = "T: Gnarl Texture"
+    hint = "This adds a Gnarl texture the the coloring."
+    default = 0.0
+  endparam
+
+  param f_Gnarl_verlaufMode
+    caption = "T: Gnarl Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_gnarl_lattice
+    caption = "T: Gnarl Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_gnarl_type
+    caption = "T: Gnarl Type"
+    enum    = "x" "x/d" "x-y" "(x-y)/d" "(x+y)/2" "x*y/d" "Angle" "d"
+    default = 0
+  endparam
+
+  param txtr_gnarl_scale
+    caption = "T: Gnarl Scale"
+    hint = "Scaling Factor for this Gnarl texture."
+    default = 1.0
+  endparam
+
+  param txtr_gnarl_size
+    caption = "T: Gnarl Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_gnarl_octaves
+    caption = "T: Gnarl Octaves"
+    default = 5
+    min     = 1
+  endparam
+
+  param txtr_gnarl_limit
+    caption = "T: Gnarl Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_PopCorn
+    caption = "T: PopCorn Texture"
+    hint = "This adds a PopCorn texture the the coloring."
+    default = 0.0
+  endparam
+
+  param f_PopCorn_verlaufMode
+    caption = "T: PopCorn Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_PopCorn_lattice
+    caption = "T: PopCorn Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_PopCorn_type
+    caption = "T: PopCorn Type"
+    enum    = "x" "x/d" "x-y" "(x-y)/d" "(x+y)/2" "x*y/d" "Angle" "d"
+    default = 0
+  endparam
+
+  param txtr_PopCorn_scale
+    caption = "T: PopCorn Scale"
+    hint = "Scaling Factor for this PopCorn texture."
+    default = 1.0
+  endparam
+
+  param txtr_PopCorn_size
+    caption = "T: PopCorn Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_PopCorn_limit
+    caption = "T: PopCorn Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_PopCorn_octaves
+    caption = "T: PopCorn Octaves"
+    default = 5
+    min     = 1
+  endparam
+
+  param txtr_SFBM
+    caption = "T: SFBM Texture"
+    hint = "This adds a SFBM texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_SFBM_verlaufMode
+    caption = "T: SFBM Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_SFBM_lattice
+    caption = "T: SFBM Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_SFBM_mode
+    caption = "T: SFBM Noise type"
+    default = 1
+    enum = "Perlin's" "Raw... (Sam's)"
+  endparam
+
+  param txtr_SFBM_scale
+    caption = "T: SFBM Scale"
+    hint = "Scaling Factor for this SFBM texture."
+    default = 1.0
+  endparam
+
+  param txtr_SFBM_scaledis
+    caption = "T: SFBM Scale Distribution"
+    default = 0
+    enum = "1/scale" "1/sqrt(scale)" "Fancy" "1/i"
+  endparam
+
+  param txtr_SFBM_size
+    caption = "T: SFBM Pattern Size"
+    default = 0.1
+  endparam
+
+  param txtr_SFBM_magn
+    caption = "T: SFBM Magnification Step"
+    default = 1.2
+  endparam
+
+  param txtr_SFBM_limit
+    caption = "T: SFBM Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_SFBM_rot
+    caption = "T: SFBM Rotation Step"
+    default = 28.0
+  endparam
+
+  param txtr_SFBM_power
+    caption = "T: SFBM Power"
+    default = 1.0
+  endparam
+
+  param txtr_SFBM_mod
+    caption = "Vary Random Numbers?"
+    default = 1
+    enum = "No" "Use sqrt(i)"
+  endparam
+
+  param txtr_SFBM_seed
+    caption = "T: SFBM Seed"
+    default = 123094
+  endparam
+
+  param txtr_SFBM_octaves
+    caption = "T: SFBM Octaves"
+    default = 5
+    min     = 1
+  endparam
+
+  param txtr_Primes
+    caption = "T: Primes Texture"
+    hint = "This adds a Primes texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_Primes_verlaufMode
+    caption = "T: Primes Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Primes_lattice
+    caption = "T: Primes Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_Primes_scale
+    caption = "T: Primes Scale"
+    hint = "Scaling Factor for this Primes texture."
+    default = 1.0
+  endparam
+
+  param txtr_Primes_size
+    caption = "T: Primes Pattern Size"
+    default = 0.5
+  endparam
+
+  param txtr_primes_withFinalTrunc
+    caption = "With Final Truncation"
+    default = TRUE
+  endparam
+
+  param txtr_primes_where2start
+    caption = "T: Start of Snip"
+    default = 1
+    min     = 0
+  endparam
+
+  param txtr_primes_lengthOfSnip
+    caption = "T: Length of Snip"
+    default = 1
+    min     = 1
+  endparam
+
+  param txtr_primes_Mode
+    caption = "T: Primes Mode"
+    enum    = "Real,Imag" "Real" "Imag" "|z|" "Angle" "Angel" "Polar"
+    default = 5
+  endparam
+
+  param txtr_primes_limit
+    caption = "T: Primes Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_Gauss
+    caption = "T: Gauss Texture"
+    hint = "This adds a Gauss texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_Gauss_verlaufMode
+    caption = "T: Gauss Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Gauss_lattice
+    caption = "T: Gauss Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_Gauss_type
+    caption = "T: Gauss Type"
+    enum    = "d" "x" "y" "x-y" "x*y" "y/x" "min x,y" "max x,y" "Angle" \
+              "Pyth. am" "Pyth. gm"
+    default = 0
+  endparam
+
+  param txtr_Gauss_scale
+    caption = "T: Gauss Scale"
+    hint = "Scaling Factor for this Gauss texture."
+    default = 1.0
+  endparam
+
+  param txtr_Gauss_size
+    caption = "T: Gauss Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_Gauss_limit
+    caption = "T: Gauss Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  
+  param txtr_Check
+    caption = "T: Checker Texture"
+    hint = "This adds a Check texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_Check_verlaufMode
+    caption = "T: Checker Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Check_scale
+    caption = "T: Checker Scale"
+    hint = "Scaling Factor for this Check texture."
+    default = 1.0
+  endparam
+
+  param txtr_Checker
+    caption = "T: Checker Modulus"
+    default = 2
+    min     = 2
+  endparam
+
+  param txtr_Check_test
+    caption = "T: Checker Test Mode"
+    enum    = "Sum" "Prod"
+    default = 1
+  endparam
+
+  param txtr_Check_shape
+    caption = "T: Checker Shape"
+    enum    = "Square" "Circle" \
+              "Square in Circle" "Circle in Square" \
+              "Segment" "Time" \
+              "H Bricks" "V Bricks" \
+              "I Ging" "I Went" \
+              "Broken Circle" \
+              "Cross" "Anti-Cross" \
+              "Bite" "Anti-Bite" "Mooon" "Trianguli" "Nose" \
+              "Broken Square" "BonBon" "Quizzle" "Hipster" "Broken Net" \
+              "New Moon" "Ti Moon" "Moon and Venus" "Venus and Moon" \
+              "Smiley" "Inv Smiley" "Frowney" "Inv Frowney"
+    default = 0
+  endparam
+
+  param txtr_Check_shConst
+    caption = "T: Chk-Sh-Const"
+    default = 1.0
+  endparam
+
+  param txtr_Check_col
+    caption = "T: Checker Color Mode"
+    enum    = "Flag" "Magn" "Iter" "Magn*Iter" "Dist Center"
+    default = 0
+  endparam
+
+  param txtr_Check_invert
+    caption = "T: Inverse Checkers?"
+    default = false
+  endparam
+
+  param txtr_Check_divide
+    caption = "T: Divide Checkers?"
+    enum    = "None" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10"
+    default = 0
+  endparam
+
+  param txtr_Check_limit
+    caption = "T: Checker Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_Pick153
+    caption = "T: Pick153 Texture"
+    hint = "This adds a Pick153 texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_Pick153_verlaufMode
+    caption = "T: Pick153 Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Pick153_lattice
+    caption = "T: Pick153 Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_Pick153_scale
+    caption = "T: Pick153 Scale"
+    hint = "Scaling Factor for this Pick153 texture."
+    default = 1.0
+  endparam
+
+  param txtr_scale153
+    caption = "T: Calc Scale 153"
+    hint = "Scaling Factor for Calculation."
+    default = 1.0
+  endparam
+
+  param txtr_numOfTestsPick153
+    caption = "T: Pick153 Tests"
+    hint = "Pick153 texture."
+    default = 1
+  endparam
+
+  param txtr_Pick153_col
+    caption = "T: Pick153 Color Mode"
+    enum    = "Real" "Imag" "Sum" "Abs Sum" "Diff" "Min" "Max" "MinQuot" "MaxQuot" "Prod" "Prod/Sum" "11" "12" "13"
+    default = 2
+  endparam
+
+  param txtr_Pick153_limit
+    caption = "T: Pick153 Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_SumDiv
+    caption = "T: SumDiv Texture"
+    hint = "This adds a SumDiv texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_SumDiv_verlaufMode
+    caption = "T: SumDiv Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_SumDiv_lattice
+    caption = "T: SumDiv Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_SumDiv_scale
+    caption = "T: SumDiv Scale"
+    hint = "Scaling Factor for this SumDiv texture."
+    default = 1.0
+  endparam
+
+  param txtr_scaleSumDiv
+    caption = "T: SumDiv Pattern Size"
+    hint = "Scaling Factor for Calculation."
+    default = 1.0
+  endparam
+
+  param txtr_SumDiv_col
+    caption = "T: SumDiv Color Mode"
+    enum    = "Real" "Imag" "Sum" "Abs Sum" "Diff" "Min" "Max" "MinQuot" "MaxQuot" "Prod" "Prod/Sum" "11" "12" "13"
+    default = 2
+  endparam
+
+  param txtr_SumDiv_mode
+    caption = "T: SumDiv Calc Mode"
+    enum    = "Sum" "Quot"
+    default = 0
+  endparam
+
+  param txtr_SumDiv_limit
+    caption = "T: SumDiv Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_MLAB
+    caption = "T: MLAB Texture"
+    hint = "This adds a MLAB texture to the coloring."
+    default = 0.0
+  endparam
+
+  param f_MLAB_verlaufMode
+    caption = "T: MLAB Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_MLAB_lattice
+    caption = "T: MLAB Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_MLAB_scale
+    caption = "T: MLAB Scale"
+    hint = "Scaling Factor for this MLAB texture."
+    default = 1.0
+  endparam
+
+  param txtr_MLAB_size
+    caption = "T: MLAB Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_MLAB_limit
+    caption = "T: MLAB Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_MLAB_scalo
+     caption = "T: MLAB CalcScale"
+     default = 1.0
+  endparam
+
+  param txtr_MLAB_divi
+     caption = "T: MLAB Divisions"
+     default = 4
+  endparam
+
+  param txtr_MLAB_edge
+     caption = "T: MLAB Edge"
+     default = .8
+  endparam
+
+  param txtr_MLAB_pro0
+     caption = "T: MLAB Prob-ty 0"
+     default = (.25, .5)
+  endparam
+
+  param txtr_MLAB_pro1
+     caption = "T: MLAB Prob-ty 1"
+     default = (.75, 1)
+  endparam
+
+  param txtr_MLAB_vari
+     caption = "T: MLAB Variance"
+     default = 1024.0
+  endparam
+
+  param txtr_Banana
+    caption = "T: Banana Texture"
+    hint = "This adds a Banana texture to the coloring."
+    default = 0.0
+  endparam
+
+  param txtr_Banana_type
+    caption = "T: Banana Type"
+    enum    = "0" "1" "2" "3" "4" "5" "6" "7" "8"
+    default = 1
+  endparam
+
+  param f_Banana_verlaufMode
+    caption = "T: Banana Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Banana_lattice
+    caption = "T: Banana Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_Banana_scale
+    caption = "T: Banana Scale"
+    hint = "Scaling Factor for this Banana texture."
+    default = 1.0
+  endparam
+
+  param txtr_Banana_size
+    caption = "T: Banana Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_Banana_limit
+    caption = "T: Banana Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param txtr_Banana_scalo
+     caption = "T: Banana CalcScale"
+     default = 1.0
+  endparam
+
+  param txtr_Banana_divi
+     caption = "T: Banana Divisions"
+     default = 4
+  endparam
+
+  param txtr_Banana_ratio
+     caption = "T: Ratio"
+     default = (.5, .5)
+  endparam
+
+  param txtr_Banana_edge
+     caption = "T: Banana Edge"
+     default = .8
+  endparam
+
+  param txtr_Banana_itre
+     caption = "T: Inside"
+        enum = "Continuous" "Solid" "Random" "Clear"
+     default = 0
+  endparam
+
+  param txtr_Banana_otre
+     caption = "T: Outside"
+        enum = "Continuous" "Solid" "Clear"
+     default = 0
+  endparam
+
+  param txtr_Banana_pro0
+     caption = "T: Banana Prob-ty 0"
+     default = (.25, .5)
+  endparam
+
+  param txtr_Banana_pro1
+     caption = "T: Banana Prob-ty 1"
+     default = (.75, 1)
+  endparam
+
+  param txtr_Banana_vari
+     caption = "T: Banana Variance"
+     default = 1024.0
+  endparam
+
+  param txtr_Banana_seed0
+     caption = "T: Seed 0"
+     default = 3779
+  endparam
+
+  param txtr_Banana_seed1
+     caption = "T: Seed 1"
+     default = 9377
+  endparam
+
+  param txtr_Ell
+     caption = "T: Elliptic Texture"
+        hint = "This adds a Elliptic texture to the coloring."
+     default = 0.0
+  endparam
+
+  param txtr_Ell_type
+    caption = "T: Elliptic Type"
+    enum    = "Magn Diff" "Real Diff" "Imag Diff" "Angel Diff" "Angle Diff" \
+              "Magn Quot" "Real Quot" "Imag Quot" "Angel Quot" "Angle Quot" \
+              "Magn Qout" "Real Qout" "Imag Qout" "Angel Qout" "Angle Qout" \
+              "Magn Pola" "Real Pola" "Imag Pola" "Angel Pola" "Angle Pola"
+    default = 0
+  endparam
+
+  param f_Ell_verlaufMode
+    caption = "T: Elliptic Verlauf"
+    enum    = "None" "Bottom to Top" "Top to Bottom" "Between Top&Bottom" "Mirror TB" \
+                     "Left to Right" "Right to Left" "Between Left&Right" "Mirror LR" \
+                     "Circle 1" "Circle 2"
+    default = 0
+  endparam
+
+  param txtr_Ell_lattice
+    caption = "T: Elliptic Lattice"
+    enum    = "None" "Normal" "Modified" "Inverse" "Joukowskij" "Dither" "Hex"
+    default = 1
+  endparam
+
+  param txtr_Ell_scale
+    caption = "T: Elliptic Scale"
+    hint = "Scaling Factor for this Elliptic texture."
+    default = 1.0
+  endparam
+
+  param txtr_Ell_size
+    caption = "T: Elliptic Pattern Size"
+    default = 1.0
+  endparam
+
+  param txtr_Ell_a
+    caption = "T: Elliptic a"
+    default = -1
+  endparam
+
+  param txtr_Ell_b
+    caption = "T: Elliptic b"
+    default = -1
+  endparam
+
+  param txtr_Ell_c
+    caption = "T: Elliptic c"
+    default = 1
+  endparam
+
+  param txtr_Ell_d
+    caption = "T: Elliptic d"
+    default = 0
+  endparam
+
+  param txtr_Ell_pseudo
+    caption = "T: Pseudo Elliptic"
+    default = true
+    hint    = "separate transforming real and imag"
+  endparam
+
+  param txtr_Ell_pseudoMix
+    caption = "T: Pseudo Mix Real and Imag"
+    default = false
+    hint    = "only in use with Pseudo Elliptic"
+  endparam
+
+  param txtr_Ell_mixMode
+    caption = "T: Mix Mode for Pseudo Mix"
+    enum = "Normal" "Difference" "Sum" "Product" "Exponent"
+  endparam
+
+  param txtr_Ell_limit
+    caption = "T: Elliptic Limitation"
+    default = 0.0
+    min     = 0.0
+  endparam
+
+  param masking
+    caption = "Masking"
+    enum    = "None" "Lower" "Upper" "Between" "Outside"
+    default = 0
+  endparam
+
+  param maskType
+    caption = "Mask Type"
+    enum    = "Index" "Re z" "Im z" "Angle" "Iteration" \
+              "Re Mixel" "Im Mixel" "Abs Mixel" \
+              "Dist(z,Pixel)" "|z|" "Index/|z|" "Proportions"
+    default = 0
+  endparam
+
+  param threshold_l
+    caption = "Lower Mask Threshold"
+    default = 0.5
+  endparam
+
+  param threshold_u
+    caption = "Upper Mask Threshold"
+    default = 1.0
+  endparam
+
+  func startFct
+    caption = "Start Function"
+    default = ident()
+  endfunc
+  
+  func fkt
+    caption = "Additional Function"
+    default = ident()
+  endfunc
+  
+  func fn1
+    caption = "Slice Function"
+    default = flip()
+  endfunc
+
+  func fn2
+    caption = "Pinsky Function"
+    default = flip()
+  endfunc
+
+  func fn3 
+    caption = "Twist Function"
+    default = round()
+  endfunc
+
+  func fn4 
+    caption = "Init Function"
+    default = exp()
+  endfunc
+    
+  func fkt
+    caption = "Additional Function"
+    default = ident()
+  endfunc
+
+}
+
+
+
+kpksqueezedbanana {
+; Written by KPK, October 2000
+;
+; Corrected for UF 4, March 2004
+;
+; From coloring methods by
+; Samuel Monnier and Edward M.
+; Perry
+; 
+; Thanks to both for their
+; kind permission 
+
+init:
+
+   float   d    = 0.0
+   float   d0   = 0.0
+   float   d1   = 0.0
+
+   float   zx   = 0.0
+   float   zy   = 0.0
+
+   float   ux   = 0.0
+   float   uy   = 0.0
+
+   float   sxa  = 0.0
+   float   sxb  = 0.0
+   float   sxc  = 0.0
+
+   float   sya  = 0.0
+   float   syb  = 0.0
+   float   syc  = 0.0
+
+   float   ax   = 0.0
+   float   ay   = 0.0
+
+   float   bx   = 0.0
+   float   by   = 0.0
+
+   float   ex   = 0.0
+
+   float   mx   = 0.0
+   float   my   = 0.0
+   float   mr   = 0.0
+
+   bool    done = false
+
+   z = 0
+   float arg = 0
+   int i = 0
+   int j = 0
+   float d = 0
+   float dist = 1e20
+   float x = 0
+   float y = 0
+
+   complex z_values[#maxiter + 1]
+   z_values[0] = #z
+
+
+   float dr = pi/180*@rotincr/2
+
+loop:
+  
+
+  i = i + 1
+  z_values[i] = #z
+  
+final:
+
+   IF (@iter >= 0 && @iter < #numiter)
+      z = z_values[@iter]
+   ELSE
+      z = z_values[#numiter]
+   ENDIF
+
+
+    z = z - @center
+    z = z*exp(-1i*@rot*pi/180)
+    z = z/@size
+    i = 0
+  
+  WHILE i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    
+    IF d < dist
+      dist = d
+    ENDIF
+    
+  
+    j = @order-1
+    rotincr = j*dr
+    
+    WHILE j > 0
+      j = j - 2
+      IF arg < (j+1)*dr
+        rotincr = j*dr
+      ENDIF
+    ENDWHILE
+    
+   
+    z = z*@fn1(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  ENDWHILE
+  
+  #index = dist 
+
+   zx = real(z)
+   zy = imag(z)
+
+   ux = zx / @scal
+   uy = zy / @scal
+
+   ax = floor(ux)
+   ay = floor(uy)
+
+   bx = ax + 1
+   by = ay + 1
+
+   sxc = 1
+   sxa = real(@rati)
+   sxb = sxc - sxa
+
+   syc = 1
+   sya = imag(@rati)
+   syb = syc - sya
+
+   i = 0
+
+   WHILE (!done && i < @divi)
+
+      mx = ax + sxa
+      my = ay + sya
+
+      mr = mx * @seed0 + my * @seed1
+      mr = abs(sin(mr)) * @vari
+      mr = mr - trunc(mr)
+
+      IF (mr < real(@pro0))
+         done = true
+
+      ELSE
+         IF     (mr < imag(@pro0))
+            IF (ux > mx)
+               ax  = mx
+               sxc = sxb
+            ELSE
+               bx  = mx
+               sxc = sxa
+            ENDIF
+
+            sxa = sxc * real(@rati)
+            sxb = sxc - sxa
+
+         ELSEIF (mr < real(@pro1))
+
+            IF (uy > my)
+               ay  = my
+               syc = syb
+            ELSE
+               by  = my
+               syc = sya
+            ENDIF
+
+            sya = syc * imag(@rati)
+            syb = syc - sya
+
+         ELSEIF (mr < imag(@pro1))
+
+            IF (ux > mx)
+               ax  = mx
+               sxc = sxb
+            ELSE
+               bx  = mx
+               sxc = sxa
+            ENDIF
+
+            sxa = sxc * real(@rati)
+            sxb = sxc - sxa
+
+            IF (uy > my)
+               ay  = my
+               syc = syb
+
+            ELSE
+               by  = my
+               syc = sya
+            ENDIF
+
+            sya = syc * imag(@rati)
+            syb = syc - sya
+
+         ENDIF
+      ENDIF
+
+      i = i + 1
+   ENDWHILE
+
+  
+   ax = abs(ax - ux)
+   ex = 0
+   ay = abs(ay - uy)
+   bx = abs(bx - ux)
+   by = abs(by - uy)
+
+   IF (ay < ax)
+      ax = ay
+      ex = 0.2
+   ENDIF
+
+   IF (bx < ax)
+      ax = bx
+      ex = 0.4
+   ENDIF
+
+   IF (by < ax)
+      ax = by
+      ex = 0.6
+   ENDIF
+
+
+   IF (ax < @edge * @scal)
+      IF     (@otre == 0)
+         d0 = ax / (@edge * @scal)
+         d1 = 1
+      ELSEIF (@otre == 1)
+         d0 = ex
+         d1 = 1
+      ELSEIF (@otre == 2)
+         d0 = -1
+         d1 =  1
+      ENDIF
+
+   ELSE
+      IF     (@itre == 0)
+         d0 = ax / (@edge * @scal)
+         d1 = 1
+      ELSEIF (@itre == 1)
+         d0 = .8
+         d1 = 1
+      ELSEIF (@itre == 2)
+         mr = mr * @seed0
+         mr = abs(sin(mr)) * @vari
+         d0 = mr - trunc(mr)
+         d1 =  1
+      ELSEIF (@itre == 3)
+         d0 = -1
+         d1 =  1
+      ENDIF
+   ENDIF
+
+
+   IF (d0 < 0)
+      #solid = true
+
+   ELSE
+
+      IF (d0 < d1)
+         d = d0 / d1
+      ELSE
+         d = d1 / d0
+      ENDIF
+
+      IF (@mask == 0)
+         #index = d + (@fuzz * real(#random))
+
+      ELSEIF (@mask == 1)
+         IF (d < real(@limi) || d > imag(@limi))
+            #solid = true
+         ELSE
+            #index = d + (@fuzz * real(#random))
+         ENDIF
+
+      ELSEIF (@mask == 2)
+
+         IF (d > real(@limi) && d < imag(@limi))
+            #solid = true
+         ELSE
+            #index = d + (@fuzz * real(#random))
+         ENDIF
+      ENDIF
+   ENDIF
+
+default:
+
+  title = "KPK Squeezed Banana"
+
+  param iter
+     caption = "Iterations"
+     default = 1
+  endparam
+
+  param order
+    caption = "Banana Order"
+    default = 22
+       hint = "Choose 1 for Rectangular Shapes"
+  endparam
+
+  param rotincr
+    caption = "Squeeze Angle"
+    default = 45.0
+       hint = "Choose 0 for Rectangular Shapes \
+              Higher Numbers for Squeeze"
+  endparam
+
+  param magnincr
+    caption = "Texturizer"
+    default = 1.0
+       hint = "Choose small values! Vary between \
+              1.0 and 2.0"
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+
+  param scal
+     caption = "Scale"
+     default = 2.0
+  endparam
+
+  param divi
+     caption = "Divisions"
+     default = 4
+  endparam
+
+  param rati
+     caption = "Ratio"
+     default = (0.5, 0.5)
+  endparam
+
+  param edge
+     caption = "Edge"
+     default = 0.1
+        hint = "Higher Values for Smoothing"
+  endparam
+
+  param itre
+     caption = "Inside"
+     enum    = "Continuous" "Solid" "Random" "Clear"
+     default = 0
+  endparam
+
+  param otre
+     caption = "Outside"
+     enum    = "Continuous" "Solid" "Clear"
+     default = 0
+  endparam
+
+  param pro0
+     caption = "Probability 0"
+     default = (0.25, 0.5)
+  endparam
+
+  param pro1
+     caption = "Probability 1"
+     default = (0.75, 1)
+  endparam
+
+  param vari
+     caption = "Variance"
+     default = 1024.0
+  endparam
+
+  param seed0
+     caption = "Seed 0"
+     default = 3779
+  endparam
+
+  param seed1
+     caption = "Seed 1"
+     default = 9377
+  endparam
+
+  param mask
+     caption = "Mask"
+     enum    = "None" "Outside" "Inside"
+     default = 0
+  endparam
+
+  param limi
+     caption = "Mask Limits"
+     default = (0.0, 1.0)
+  endparam
+
+  param fuzz
+     caption = "Randomness"
+     default = 0.0
+  endparam
+
+  func fn1
+    caption = "Banana Function"
+    default = exp()
+  endfunc
+
+}

@@ -1,0 +1,180 @@
+Fortuitous Mistakes {
+; By Adam Schwalbe (please email me with comments/bugs/fixes)
+; aschwalbe@alaska.com
+;
+; (Warning! Still a work in progress, Read: buggy)
+; (Also, be patient with this one, lotsa pre-loop calcs.)
+; I stumbled upon this 'fractal' quite by acident.
+; I was writing the code for another formula I hope to post soon,
+; and I did the Algebra incorrectly.  The results I find quite pleasing :-)
+; 
+; The formula takes an equation and recalculates the x and y coordinates 
+; and stores the results in an array (If the coordinates are within the 
+; viewing area.)
+;
+; It then calculates the distance to the closest calculated point
+; for each point stored in the array, and uses that information, 
+; to scale the size of each "point" as it is displayed.  
+;
+; A nice #magn value is 0.3 (Just be prepared, will take a bit)
+;
+; Bugs: 
+; 1)  You can zoom in and out only by changing the magnification.
+; If you pan left or right or rotate, things break.
+; (I hope to have this one fixed within a day or so.)
+; 2)  I could really use some help with this one.  
+; Maxiter controls the number of colours/shades for each point.
+; If the #maxiter value is raised above 15 black areas appear.
+; I really want to be able to add more colour to this one so any 
+; help from you coders out there would be greatly appreciated.
+; Hope you enjoy this one.  Adam.
+ 
+
+global:
+
+  int i
+  int j
+  int steps
+  float y
+  float x
+  float y1
+  float x1
+  float x2 
+  float y2
+  float x3
+  float y3
+  float regraphx[round((@intervale-@intervals)/@step)+1]
+  float regraphy[round((@intervale-@intervals)/@step)+1]
+  float mindistance[round((@intervale-@intervals)/@step)+1]
+  float distance
+
+  i = 0
+  
+  ; This portion recalculates the x,y cooridinates for y = 200*x
+  ; for interval given in the parameters. And stores the new values in
+  ; an array if they are within the viewing area.
+  ;
+  x=@intervals
+  repeat
+      y = 200*x
+      if tan(x) != tan(y)
+        y1 = ((tan(x)*x)+(tan(y)*x))/2
+        x1 = (2 * y1) / (tan(x) + tan(y))
+        if x1 < (2/#magn) && x1 > (-2/#magn) && y1 < (1.5/#magn)&& y1 > (-1.5/#magn) 
+          regraphx[i] = x1
+          regraphy[i] = y1
+          i = i + 1
+        endif
+      endif
+      x = x + @step
+  until x >= @intervale
+  steps = i  
+  
+  i = 0
+  j = 0
+  
+  ; This portion calculates the distance to the nearest recalculated points 
+  ; stored in the above arrays.  It stores the value in a new array to be
+  ; used in calculating the size of the new 'points' when they are displayed
+  ; during the 'loop:' portion.
+  ;
+  repeat
+    x3 = regraphx[j]
+    y3 = regraphy[j]
+    mindistance[j] = 1000
+    repeat
+      x2 = regraphx[i]
+      y2 = regraphy[i]
+      i = i + 1
+      distance = sqrt ((x3-x2)*(x3-x2)+(y3-y2)*(y3-y2))
+      if mindistance[j] > distance && distance != 0
+        mindistance[j] = distance
+      endif  
+    until i >= steps
+    j = j + 1
+    i = 0
+  until j >= steps
+
+init:
+  bool bail = false
+  int maxcoloriter
+  int coloriter = 0
+  z = #pixel
+  float dist
+  float x4 = real(z)
+  float y4 = imag(z)
+  float x5
+  float y5
+  int k = 0
+  int l = 0
+  float mindist = 1000
+  
+  ; This portion calculates the distance from the current pixel to the nearest
+  ; 'point' stored in the array.  If the distance is less than the distance to 
+  ; the nearest point stored in the array above, the pixel is shaded accoring 
+  ; to the ratio of #maxiter to the distance from the current pixel to nearest
+  ; point.
+  ; 
+  ; Bug:  If #maxiter is greater than 15 I get strange results.  I can't figure 
+  ; it out.  Any help would be greatly appreciated.
+  ;
+  repeat
+      x5 = regraphx[k]
+      y5 = regraphy[k]
+      dist = sqrt ((x5-x4)*(x5-x4) + (y5-y4)*(y5-y4))
+      if mindist > dist
+        mindist = dist
+        l = k
+      endif
+      k = k + 1  
+  until k >= steps
+  if mindist <= mindistance[l] 
+    maxcoloriter = #maxiter - round(((mindist/mindistance[l]) * #maxiter)+1) 
+  else
+    maxcoloriter = 0
+  endif
+  
+  coloriter = 0
+  ;if mindist < sqrt(((2/#magn)/#width)^2 + ((1.5/#magn)/#height)^2)
+  ;  maxcoloriter = 4
+  ;else 
+  ;  maxcoloriter = 0
+  ;endif  
+  
+loop:
+
+  if maxcoloriter <= coloriter
+    bail = true
+  endif
+  coloriter = coloriter +1
+    
+bailout:
+  bail == false
+  
+default:
+  title = "Fortuitous Mistakes"
+  helpfile = "adam-help/FM.htm"
+  center = (0,0)
+  method = onepass
+  magn = 0.6
+  maxiter = 15
+    
+  param @intervals
+    caption = "X start"
+    default = -200
+  endparam
+  
+  param @intervale
+    caption = "X end"
+    default = 200
+  endparam
+  
+  param @step
+    caption = "Step for X"
+    default = .001
+  endparam
+}
+  
+  
+  
+

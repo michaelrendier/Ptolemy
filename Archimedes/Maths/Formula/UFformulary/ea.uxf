@@ -1,0 +1,1607 @@
+Foxtrot_transformation {
+
+global:
+  float windowratio = #width/#height
+  float w = 0.0 ; width image
+  if windowratio > 4/3
+    w = 3*windowratio/#magn
+  else
+    w = 4/#magn
+  endif
+  float x0 = -0.5*w+real(#center)
+  float q = w/(3*@ratio+1) , float p = q*@ratio    ; AAAB, AABA, ABAA, BAAA
+  float q1 = w/(2*@ratio+2), float p1 = q1*@ratio  ; AABB, ABAB, ABBA, BAAB, BABA, BBAA
+  float q2 = w/(@ratio+3),   float p2 = q2*@ratio  ; ABBB, BABB, BBAB, BBBA
+  float vshift = @vs
+  complex c = #center
+
+transform:
+  float hshift = 0.0
+  float xp = real(#pixel)
+  float s = 2*(x0-xp)
+  if @mode==0 ; AAAB
+    if xp>=x0 && xp<=x0+0.5*p,                    hshift = s+3*p         ; I     
+    elseif xp>x0+0.5*p && xp<=x0+p,               hshift = 2*p           ; II
+    elseif xp>x0+p && xp<=x0+1.5*p,               hshift = s+4*p         ; III
+    elseif xp>x0-1.5*p && xp<=x0+2*p,             hshift = p             ; IV
+    elseif xp>x0+2*p && xp<=x0+2.5*p,             hshift = s+5*p         ; V
+    elseif xp>x0+3*p+0.5*q && xp<=x0+3*p+q,       hshift = s+6*p+q       ; VIII
+    endif
+  elseif @mode==1 ; AABA1
+    if xp>=x0 && xp<=x0+0.5*p,                    hshift = s+2*p         ; I                 
+    elseif xp>x0+0.5*p && xp<=x0+p,               hshift = p             ; II            
+    elseif xp>x0 + p && xp<=x0+1.5*p,             hshift = s+3*p,        ; III           
+    elseif xp>x0+2*p+0.5*q && xp<=x0+2.5*p+q,     hshift = s+4*p+q       ; VI+VII
+    elseif xp>x0+2.5*p+q && xp<=x0+3*p+q,         hshift = -p-q,         ; VIII
+    endif  
+  elseif @mode==2 ; AABA2
+    if xp>=x0 && xp<=x0+0.5*p,                    hshift = 2*p+q         ; I                
+    elseif xp>x0+0.5*p && xp<=x0+p,               hshift = s+3*p+q       ; II            
+    elseif xp>x0 + p && xp<=x0+1.5*p,             hshift = p+q           ; III           
+    elseif xp>x0+1.5*p && xp<=x0+2*p+0.5*q,       hshift = s+4*p+q       ; IV+V
+    elseif xp>x0+2.5*p+q && xp<=x0+3*p+q,         hshift = s+5*p+2*q     ; VIII      
+    endif
+  elseif @mode==3 ; AABB
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = s+2*p1        ; I
+    elseif xp>x0+0.5*p1 && xp<=x0+p1,             hshift = p1            ; II
+    elseif xp>x0+p1 && xp<=x0+1.5*p1,             hshift = s+3*p1        ; III
+    elseif xp>x0+2*p1+0.5*q1 && xp<=x0+2*p1+q1,   hshift = s+4*p1+q1     ; VI
+    elseif xp>x0+2*p1+q1 && xp<=x0+2*p1+1.5*q1,   hshift = -q1           ; VII
+    elseif xp>x0+2*p1+1.5*q1 && xp<=x0+2*p1+2*q1, hshift = s+4*p1+2*q1   ; VIII
+    endif
+  elseif @mode==4 ; ABAA1
+    if xp>=x0 && xp<=x0+0.5*p ,                   hshift = s+p           ; I               
+    elseif xp>x0+p+0.5*q && xp<=x0+1.5*p+q,       hshift = s+2*p+q       ; IV+V
+    elseif xp>x0+1.5*p+q && xp<=x0+2*p+q,         hshift = -p-q          ; VI
+    elseif xp>x0+2*p+q && xp<=x0+2.5*p+q,         hshift = s+3*p+q       ; VII
+    elseif xp>x0+2.5*p+q && xp<=x0+3*p+q,         hshift = -2*p-q        ; VIII
+    endif 
+  elseif @mode==5 ; ABAA2
+    if xp>=x0 && xp<=x0+0.5*p,                    hshift = p+q           ; I     
+    elseif xp>x0+0.5*p && xp<=x0+p+0.5*q,         hshift = s+2*p+q       ; II+III
+    elseif xp>x0+1.5*p+q && xp<=x0+2*p+q,         hshift = s+3*p+2*q     ; VI
+    elseif xp>x0+2*p+q && xp<=x0+2.5*p+q,         hshift = -p            ; VII
+    elseif xp>x0+2.5*p+q && xp<=x0+4*p+q,         hshift = s+4*p+2*q     ; VIII
+    endif
+  elseif @mode==6 ; ABAB1
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = s+p1          ; I
+    elseif xp>x0+p1+0.5*q1 && xp<=x0+1.5*p1+q1,   hshift = s+2*p1+q1     ; IV+V
+    elseif xp>x0+1.5*p1+q1 && xp<=x0+2*p1+1.5*q1, hshift = -p1-q1        ; VI+VII
+    elseif xp>x0+2*p1+1.5*q1 && xp<=x0+2*p1+2*q1, hshift = s+3*p1+2*q1   ; VIII
+    endif
+  elseif @mode==7 ; ABAB2
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = s+2*p1+q1	 ; I
+    elseif xp>x0+0.5*p1 && xp<=x0+p1+0.5*q1,      hshift = p1+q1         ; II+III
+    elseif xp>x0+p1+0.5*q1 && xp<=x0+1.5*p1+q1,   hshift = s+3*p1+2*q1   ; IV+V
+    elseif xp>x0+2*p1+1.5*q1 && xp<=x0+2*p1+2*q1, hshift = s+4*p1+3*q1   ; VIII
+    endif
+  elseif @mode==8 ; ABAB3
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = p1+q1	 ; I
+    elseif xp>x0+0.5*p1 && xp<=x0+p1+0.5*q1,      hshift = s+2*p1+q1     ; II+III
+    elseif xp>x0+1.5*p1+q1 && xp<=x0+2*p1+1.5*q1, hshift = s+3*p1+2*q1   ; VI+VII
+    elseif xp>x0+2*p1+1.5*q1 && xp<=x0+2*p1+2*q1, hshift = -p1-q1        ; VIII
+    endif
+  elseif @mode==9 ; ABBA1
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = s+p1          ; I                
+    elseif xp>x0+p1+0.5*q1 && xp<=x0+p1+q1,       hshift = s+2*p1+q1     ; IV
+    elseif xp>x0+p1+q1 && xp<=x0+p1+1.5*q1,       hshift = -q1           ; V
+    elseif xp>x0+p1+1.5*q1 && xp<=x0+1.5*p1+2*q1, hshift = s+2*p1+2*q1   ; VI+VII
+    elseif xp>x0+1.5*p1+2*q1 && xp<=x0+2*p1+2*q1, hshift = -p1-2*q1      ; VIII
+    endif
+  elseif @mode==10 ; ABBA2
+    if xp>=x0 && xp<=x0+0.5*p1,                   hshift = p1+2*q1       ; I
+    elseif xp>x0+0.5*p1 && xp<=x0+p1+0.5*q1,      hshift = s+2*p1+2*q1   ; II+III
+    elseif xp>x0+p1+0.5*q1 && xp<=x0+p1+q1,       hshift = q1            ; IV
+    elseif xp>x0+p1+q1 && xp<=x0+p1+1.5*q1,       hshift = s+2*p1+3*q1   ; V
+    elseif xp>x0+1.5*p1+2*q1 && xp<=x0+2*p1+2*q1, hshift = s+3*p1+4*q1   ; VIII
+    endif
+  elseif @mode==11 ; ABBB
+    if xp>=x0 && xp<=x0+0.5*p2,                   hshift = s+p2          ; I
+    elseif xp>x0+p2+0.5*q2 && xp<=x0+p2+q2,       hshift = s+2*p2+q2     ; IV
+    elseif xp>x0+p2+q2 && xp<=x0+p2+1.5*q2,       hshift = -q2           ; V
+    elseif xp>x0+p2+1.5*q2 && xp<=x0+p2+2*q2,     hshift = s+2*p2+2*q2   ; VI
+    elseif xp>x0+p2+2*q2 && xp<=x0+p2+2.5*q2,     hshift = -2*q2         ; VII
+    elseif xp>x0+p2+2.5*q2 && xp<=x0+p2+3*q2,     hshift = s+2*p2+3*q2   ; VIII
+    endif
+  elseif @mode==12 ; BAAA
+    if xp>=x0 && xp<=x0+0.5*q,                    hshift = s+q           ; I
+    elseif xp>x0+0.5*p+q && xp<=x0+p+q,           hshift = s+p+2*q       ; IV
+    elseif xp>x0+p+q && xp<=x0+1.5*p+q,           hshift = -p            ; V
+    elseif xp>x0+1.5*p+q && xp<=x0+2*p+q,         hshift = s+2*p+2*q     ; VI
+    elseif xp>x0+2*p+q && xp<=x0+2.5*p+q,         hshift = -2*p          ; VII
+    elseif xp>x0+2.5*p+q && xp<=x0+3*p+q,         hshift = s+3*p+2*q     ; VIII
+    endif
+  elseif @mode==13 ; BAAB1
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = s+q1          ; I                
+    elseif xp>x0+q1+0.5*p1 && xp<=x0+q1+p1,       hshift = s+2*q1+p1     ; IV
+    elseif xp>x0+q1+p1 && xp<=x0+q1+1.5*p1,       hshift = -p1           ; V
+    elseif xp>x0+q1+1.5*p1 && xp<=x0+1.5*q1+2*p1, hshift = s+2*q1+2*p1   ; VI+VII
+    elseif xp>x0+1.5*q1+2*p1 && xp<=x0+2*q1+2*p1, hshift = -q1-2*p1      ; VIII
+    endif
+  elseif @mode==14 ; BAAB2
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = q1+2*p1       ; I
+    elseif xp>x0+0.5*q1 && xp<=x0+q1+0.5*p1,      hshift = s+2*q1+2*p1   ; II+III
+    elseif xp>x0+q1+0.5*p1 && xp<=x0+q1+p1,       hshift = p1            ; IV
+    elseif xp>x0+q1+p1 && xp<=x0+q1+1.5*p1,       hshift = s+2*q1+3*p1   ; V
+    elseif xp>x0+1.5*q1+2*p1 && xp<=x0+2*q1+2*p1, hshift = s+3*q1+4*p1   ; VIII
+    endif
+  elseif @mode==15 ; BABA1
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = s+q1          ; I
+    elseif xp>x0+q1+0.5*p1 && xp<=x0+1.5*q1+p1,   hshift = s+2*q1+p1     ; IV+V
+    elseif xp>x0+1.5*q1+p1 && xp<=x0+2*q1+1.5*p1, hshift = -q1-p1        ; VI+VII
+    elseif xp>x0+2*q1+1.5*p1 && xp<=x0+2*q1+2*p1, hshift = s+3*q1+2*p1   ; VIII
+    endif
+  elseif @mode==16 ; BABA2
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = s+2*q1+p1	 ; I
+    elseif xp>x0+0.5*q1 && xp<=x0+q1+0.5*p1,      hshift = q1+p1         ; II+III
+    elseif xp>x0+q1+0.5*p1 && xp<=x0+1.5*q1+p1,   hshift = s+3*q1+2*p1   ; IV+V
+    elseif xp>x0+2*q1+1.5*p1 && xp<=x0+2*q1+2*p1, hshift = s+4*q1+3*p1   ; VIII
+    endif
+  elseif @mode==17 ; BABA3
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = q1+p1	 ; I
+    elseif xp>x0+0.5*q1 && xp<=x0+q1+0.5*p1,      hshift = s+2*q1+p1     ; II+III
+    elseif xp>x0+1.5*q1+p1 && xp<=x0+2*q1+1.5*p1, hshift = s+3*q1+2*p1   ; VI+VII
+    elseif xp>x0+2*q1+1.5*p1 && xp<=x0+2*q1+2*p1, hshift = -q1-p1        ; VIII
+    endif
+  elseif @mode==18 ; BABB1
+    if xp>=x0 && xp<=x0+0.5*q2 ,                  hshift = s+q2          ; I               
+    elseif xp>x0+q2+0.5*p2 && xp<=x0+1.5*q2+p2,   hshift = s+2*q2+p2     ; IV+V
+    elseif xp>x0+1.5*q2+p2 && xp<=x0+2*q2+p2,     hshift = -q2-p2        ; VI
+    elseif xp>x0+2*q2+p2 && xp<=x0+2.5*q2+p2,     hshift = s+3*q2+p2     ; VII
+    elseif xp>x0+2.5*q2+p2 && xp<=x0+3*q2+p2,     hshift = -2*q2-p2      ; VIII
+    endif 
+  elseif @mode==19 ; BABB2
+    if xp>=x0 && xp<=x0+0.5*q2,                   hshift = q2+p2         ; I     
+    elseif xp>x0+0.5*q2 && xp<=x0+q2+0.5*p2,      hshift = s+2*q2+p2     ; II+III
+    elseif xp>x0+1.5*q2+p2 && xp<=x0+2*q2+p2,     hshift = s+3*q2+2*p2   ; VI
+    elseif xp>x0+2*q2+p2 && xp<=x0+2.5*q2+p2,     hshift = -q2           ; VII
+    elseif xp>x0+2.5*q2+p2 && xp<=x0+4*q2+p2,     hshift = s+4*q2+2*p2   ; VIII
+    endif
+  elseif @mode==20 ; BBAA
+    if xp>=x0 && xp<=x0+0.5*q1,                   hshift = s+2*q1        ; I
+    elseif xp>x0+0.5*q1 && xp<=x0+q1,             hshift = q1            ; II
+    elseif xp>x0+q1 && xp<=x0+1.5*q1,             hshift = s+3*q1        ; III
+    elseif xp>x0+2*q1+0.5*p1 && xp<=x0+2*q1+p1,   hshift = s+4*q1+p1     ; VI
+    elseif xp>x0+2*q1+p1 && xp<=x0+2*q1+1.5*p1,   hshift = -p1           ; VII
+    elseif xp>x0+2*q1+1.5*p1 && xp<=x0+2*q1+2*p1, hshift = s+4*q1+2*p1   ; VIII
+    endif
+  elseif @mode==21 ; BBAB1
+    if xp>=x0 && xp<=x0+0.5*q2,                   hshift = s+2*q2        ; I                 
+    elseif xp>x0+0.5*q2 && xp<=x0+q2,             hshift = q2            ; II            
+    elseif xp>x0 + q2 && xp<=x0+1.5*q2,           hshift = s+3*q2,       ; III           
+    elseif xp>x0+2*q2+0.5*p2 && xp<=x0+2.5*q2+p2, hshift = s+4*q2+p2     ; VI+VII
+    elseif xp>x0+2.5*q2+p2 && xp<=x0+3*q2+p2,     hshift = -q2-p2,       ; VIII
+    endif  
+  elseif @mode==22 ; BBAB2
+    if xp>=x0 && xp<=x0+0.5*q2,                   hshift = 2*q2+p2       ; I                
+    elseif xp>x0+0.5*q2 && xp<=x0+q2,             hshift = s+3*q2+p2     ; II            
+    elseif xp>x0 + q2 && xp<=x0+1.5*q2,           hshift = q2+p2         ; III           
+    elseif xp>x0+1.5*q2 && xp<=x0+2*q2+0.5*p2,    hshift = s+4*q2+p2     ; IV+V
+    elseif xp>x0+2.5*q2+p2 && xp<=x0+3*q2+p2,     hshift = s+5*q2+2*p2   ; VIII      
+    endif
+  elseif @mode==23 ; BAAA
+    if xp>=x0 && xp<=x0+0.5*q2,                   hshift = s+3*q2        ; I     
+    elseif xp>x0+0.5*q2 && xp<=x0+q2,             hshift = 2*q2          ; II
+    elseif xp>x0+q2 && xp<=x0+1.5*q2,             hshift = s+4*q2        ; III
+    elseif xp>x0-1.5*q2 && xp<=x0+2*q2,           hshift = q2            ; IV
+    elseif xp>x0+2*q2 && xp<=x0+2.5*q2,           hshift = s+5*q2        ; V
+    elseif xp>x0+3*q2+0.5*p2 && xp<=x0+3*q2+p2,   hshift = s+6*q2+p2     ; VIII
+    endif
+  endif
+
+  #pixel = #pixel + hshift + flip(vshift)
+  if @version>100
+    #pixel = (#pixel-(c+@nc))*exp(1i*@arg)+c+@nc
+  endif
+  
+
+default: 
+  title = "Foxtrot transformation"
+  int param version
+    caption="version"
+    default=101
+    visible=false
+  endparam
+  param mode
+    caption = "mode"
+    enum = "AAAB" "AABA1" "AABA2" "AABB" "ABAA1" "ABAA2" "ABAB1" "ABAB2"\
+           "ABAB3" "ABBA1" "ABBA2" "ABBB" "BAAA" "BAAB1" "BAAB2" "BABA1"\
+           "BABA2" "BABA3" "BABB1" "BABB2" "BBAA" "BBAB1" "BBAB2" "BBBA"
+    default = 1
+  endparam
+  float param ratio
+    caption = "ratio A/B"
+    default = 0.618034 ; (golden ratio)
+  endparam
+  float param vs
+    caption = "vertical shift"
+    default = 0.0
+  endparam
+  float param arg
+    caption = "rotation"
+    default = 0.0
+    visible = @version>100
+    hint = "With 'alt + left drag' mapping + fractal rotate, with this 'rotation' the mapping doesn't rotate, only just the fractal rotates." 
+  endparam
+  complex param nc
+    caption = "center of rotation"
+    default = (0.0,0.0)
+    visible = @version>100
+    hint = "default: center of the image"
+  endparam
+}
+
+BarnsleyTechno {
+
+; 2014-10-24
+
+transform:
+  complex d = @origin
+  int iteration=0
+  complex z = #pixel
+  complex ch = real(d) + flip(real(@tseed))
+  complex cl = real(imag(@tseed)) + flip(d)
+  float temp = 0.0
+;
+  while (iteration<@number_iterations)
+    iteration=iteration+1
+; I
+    if @track==0 || @track==2, temp=real(z)
+    elseif @track==1 || @track==3, temp=imag(z)
+    endif
+    if temp>@crit
+       z = @fnh(z^@mh+@ph)*ch
+    else
+       z = @fnl(z^@ml+@pl)*cl    
+    endif
+; II
+    if @track>1
+       if @track==2, temp=imag(z)
+       elseif @track==3, temp=real(z)
+       endif
+       if temp>@crit
+          z = @fnh(z^@mh+@ph)*ch
+       else
+          z = @fnl(z^@ml+@pl)*cl    
+       endif
+    endif
+  endwhile
+  #pixel=z/@scale + @offset
+
+default:
+  title = "Barnsley Techno mapping"
+  int param version,           default=100,                      visible=false,        endparam
+  param track,                 caption="track"
+  enum="real" "imag" "real-imag" "imag-real",                    default = 2,          endparam
+  float param scale,           caption = "scale",                default = 1.0,        endparam  
+  complex param offset,        caption = "offset",               default = (0,0),      endparam
+  complex param tseed,         caption = "t-seed",               default = (-1.8,0.3), endparam
+  int param number_iterations, caption = "number of iterations", default = 4, min = 1, endparam
+  float param crit,            caption = "critical value",       default = -1.5,       endparam
+  complex param origin,        caption = "origin",               default = (0.0,0.0),  endparam
+  heading,                     caption = "branch hi",                                  endheading 
+  func fnh,                    caption = "prim. function hi",    default = abs(),      endfunc
+  complex param ph,            caption = "prim. parameter hi",   default = (-0.5,0.3), endparam
+  float param mh,              caption = "power (hi)",           default = 1.0,        endparam
+  heading,                     caption = "branch lo",                                  endheading 
+  func fnl,                    caption = "prim. function lo",    default = ident(),    endfunc
+  complex param pl,            caption = "prim. parameter lo",   default = (-3,1.5),   endparam
+  float param ml,              caption = "power lo",             default = 1.0,        endparam
+}
+
+Duckymap {
+
+; 2014-10-25
+
+transform:
+  if @version==100
+    complex s = #pixel
+  elseif @version>100
+    complex s = #pixel + @shift
+  endif
+  complex s2=s*s
+  int iter = 0
+  while (iter<=@number_iterations)
+    iter=iter+1
+    s = @fnp(s)
+    if @duckymode==1 || @duckymode==4 || @duckymode==7 || @duckymode==10 || @duckymode==13
+      s=abs(s)
+    elseif @duckymode==2 || @duckymode==5 || @duckymode==8 || @duckymode==11 || @duckymode==14
+      s=real(s)+flip(abs(imag(s)))
+    elseif @duckymode==3 || @duckymode==6 || @duckymode==9 || @duckymode==12 || @duckymode==15
+      s=abs(real(s))+flip(imag(s))
+    endif
+    if @duckymode>3 && @duckymode<7 
+      s = s2/(s+0.01*@p1)
+    elseif @duckymode>6 && @duckymode<10 
+      s = (s2-s+0.01*@p1)/(s+@p2)
+    elseif @duckymode>9 && @duckymode<13
+      s = (s2*s+@p1)/(s2+@p2)
+    elseif @duckymode>12 && @duckymode<=15
+      s = (s2*s2*+@p1)/(s2-@fnt(s)+@p2)
+    endif
+      if @cmode==0, s=s+@fnc(@c), else, s=s*@fnc(@c), endif
+  endwhile 
+  s=@fne(s)
+  if @version>100
+     s = s - @shift
+  endif  
+  #pixel=s/@scale + @offset
+
+default:
+  title = "Ducky Map"
+  int param version,           caption = "Formula Version",        default = 101, visible = false, endparam
+  param duckymode,             caption = "ducky mode",           
+                               enum = "none" \
+                                      "ducky" \
+                                      "ducks" \
+                                      "anatra" \
+                                      "duckytalis" \
+                                      "duckstalis" \
+                                      "anatratalis" \
+                                      "duckytalis var.1" \
+                                      "duckstalis var.1" \
+                                      "anatratalis var.1" \
+                                      "duckytalis var.2" \
+                                      "duckstalis var.2" \
+                                      "anatratalis var.2" \
+                                      "duckytalis var.3" \
+                                      "duckstalis var.3" \
+                                      "anatratalis var.3",         default = 1,                     endparam
+  complex param p1,            caption = "talis param. 1",         default = (0.0,0.0)            
+                               visible = @duckymode>3,                                              endparam
+  complex param p2,            caption = "talis param. 2",         default = (0.0,0.0)
+                               visible = @duckymode>6,                                              endparam 
+  func fnt,                    caption = "talis function",         default = ident()
+                               visible = @duckymode>12,                                             endfunc   
+  int param number_iterations, caption = "number of iterations",   default = 2, min = 1,            endparam
+  complex param scale,         caption = "pseudo scale",           default = (1.0,0.0),             endparam  
+  complex param offset,        caption = "pseudo offset",          default = (0.1,-0.1),            endparam
+  func fnp,                    caption = "pixel function",         default = tan(),                 endfunc
+  complex param c,             caption = "c",                      default = (0.0,0.0),             endparam
+  param cmode,                 caption = "c mode", enum = "+" "*", default = 0,                     endparam
+  complex param shift,         caption = "shift",                  default = (0.0,0.0)
+                               visible = @version>100,                                              endparam
+  func fnc,                    caption = "c function",             default = ident(),               endfunc
+  func fne,                    caption = "end function",           default = ident(),               endfunc
+}
+
+MandelSquareMap {
+
+; Mandelbox Formula by Tom Lowe
+; Bleiswijk, 2014-10-30
+
+transform:
+  complex z=(0.0,0.0)
+  if @image==0; Julia
+     z = #pixel-@offset
+  elseif @image==1; Mandelbrot
+     z=@start
+  endif
+  float x = 0.0, float y = 0.0
+  float m = 0.0, float p=@p
+  float t = 0.0, float t1=0.0, float t2=0.0
+  float s = 0.0
+  int iter = 0
+  int kw=0
+
+; iteratie
+  while (iter<=@number_iterations)
+     iter=iter+1
+     x=real(z), y=imag(z)
+     if x>=0.0 && y>=0.0, kw=1
+     elseif x<0.0 && y>=0.0, x=abs(x), kw=2
+     elseif x<0.0 && y<0.0,  x=abs(x), y=abs(y), kw=3
+     elseif x>=0.0 && y<0.0, y=abs(y), kw=4
+     endif
+     t=@a, if t<p, t=p, endif
+     t1=2*real(@shift), t2=2*imag(@shift)
+     if (x>=t || (x<t && y>=t))
+               if x>t, x=t1-x, endif
+               if y>t, y=t2-y, endif
+     endif
+     if @core==0, m=sqrt(sqr(x)+sqr(y)), endif
+     if (@core==0 && m<@b0) ||\
+        (@core==1 && x<@b1 && y<@b1)
+           if kw==2, x=-x
+           elseif kw==3, x=-x, y=-y
+           elseif kw==4, y=-y
+           endif
+           z = @ko*(x+flip(y))
+     elseif (@core==0 && m<p) ||\
+          (@core==1 && x>=@b1 && y>=@b1)
+          if kw==2, x=-x
+          elseif kw==3, x=-x, y=-y
+          elseif kw==4, y=-y
+          endif
+          z = x+flip(y)
+          if @var>4, m=sqrt(sqr(x)+sqr(y)), endif
+          if @var>8, s=m^@n, endif
+          if @var==0, z=z/|z|
+          elseif @var==1, z=1/|z|
+          elseif @var==2, z=|z|
+          elseif @var==3, z=z
+          elseif @var==4, z=|z|/z
+          elseif @var==5, z=1/m
+          elseif @var==6, z=z/m
+          elseif @var==7, z=m
+          elseif @var==8, z=m/z
+          elseif @var==9, z=1/s
+          elseif @var==10, z=z/s
+          elseif @var==11, z=s
+          elseif @var==12, z=s/z
+          endif
+          z=@q*z
+     endif
+
+     if @image==0; Julia
+          z=@main*@zscale*@fnz(z)+@cscale*@fnc(@seed)
+     elseif @image==1; Mandelbrot
+          z=@main*@zscale*@fnz(z)+@cscale*@fnc(#pixel)-@offset
+     endif
+     #pixel=z/@scale2 + @offset
+
+  endwhile 
+
+default:
+  title = "Mandel Square Mapping"
+  int param version           
+     caption = "Formula Version"
+     default = 100
+     visible = false
+  endparam
+  param image
+     caption="Julia/Mandelbrot"
+     enum= "Julia" "Mandelbrot"
+     default=1
+  endparam
+  int param number_iterations
+     caption = "number iterations"
+     default=5
+  endparam
+  complex param start
+     caption="start"
+     default=(0.0,0.0)
+     visible=@image==1
+  endparam
+  complex param seed
+     caption="seed"
+     default=(0.0,0.0)
+     visible=@image==0
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offsets the Mandelbrot distortion."
+  endparam
+  float param main
+    caption="main shape"
+    default=0.5
+  endparam
+  float param ko
+    caption="kick off [4]"
+    default=4.0
+  endparam
+  complex param shift
+    caption="back shift [1/1]"
+    default=(1.0,1.0)
+  endparam
+  param var
+    caption="active area parameter"          
+    enum="z/|z|" "1/|z|" "|z|" "z" "|z|/z" "1/m" "z/m" \
+         "m" "m/z" "1/(m^n)" "z/(m^n)" "m^n" "(m^n)/z"
+    default=0, min=0, max=12
+  endparam
+  float param n
+    caption="n (for z-var)"
+    default=2
+    visible=@var>8
+  endparam
+  float param q
+    caption="main multiplier"
+    default=1.0
+  endparam
+  float param zscale
+    caption="z-shape"
+    default=1.0
+  endparam
+  func fnz
+    caption="function z"
+    default=ident()
+  endfunc
+  float param cscale
+    caption="c-shape"
+    default=1.0
+  endparam
+  func fnc
+    caption="function c"
+    default=ident()
+  endfunc
+  heading
+    caption="Wall"
+  endheading
+  float param a
+    caption="half side wall [1]"
+    default=1.0
+  endparam
+  heading
+    caption="Core"
+  endheading
+  param core
+    caption="shape core"
+    enum="circle" "square"
+    default=1
+  endparam
+  float param b0
+    caption="radius inner circle [0.5]"
+    default=0.5
+    visible=@core==0
+  endparam
+  float param p
+    caption="radius ref. circle"
+    default=1.0
+    visible=@core==0
+  endparam
+  float param b1
+    caption="half side inner square [0.5]"
+    default=0.5
+    visible=@core==1
+  endparam
+  complex param scale2
+    caption = "pseudo scale"
+    default = (1.0,0.0)
+  endparam  
+}
+
+Weierstrass_func_var {
+
+; A variant based on Andreas Lober's 'Three Weierstrass Functions Transformation'.
+; Only with tracks in default position, in order of succession: pp, pn, np, nn, 
+; the Weierstrass functions are O.K. All other choices for the tracks are 
+; mathematically incorrect, but they sometimes will give useful other mappings.
+; With thanks to Andreas for giving his permission to use his transformation script.
+
+; vs.1.02
+
+transform:
+  complex s = #pixel        ; init s
+
+  int lr = 0
+  int li = 0
+
+  complex lpp = 0
+  complex lpn = 0
+  complex lnp = 0
+  complex lnn = 0
+  complex wz  = 0
+  complex L   = 0
+
+  complex func Lw(int choice, complex lpp, complex lpn, complex lnp, complex lnn)
+       complex Ltemp = 0
+       if choice==1,     Ltemp=lpp
+       elseif choice==2, Ltemp=lpn
+       elseif choice==3, Ltemp=lnp
+       elseif choice==4, Ltemp=lnn
+       endif
+       return Ltemp
+  endfunc
+
+  complex func Wstrass(complex s, complex L, complex u, int W)  
+       complex t1=0, complex t2=0
+       if (L!=0 && (s!=L || W == 2))
+            t1=1/(s-L), t2=1/L
+            if     (W == 0) ; P-Function
+                 u = u + t1^2 - t2^2
+            elseif (W == 1) ; Zeta-Function
+                 u = u + t1 + t2 + s*t2^2
+            elseif (W == 2) ; Sigma-Function
+                 u = u * (1-s/L) * exp(s/L + 0.5*(s/L)^2)
+            endif
+       endif
+       return u
+  endfunc
+
+  if (s == 0)
+       wz = 0
+  else
+       if     (@Weierstrass == 0) ; P-Function
+            wz = 1/s^2
+       elseif (@Weierstrass == 1) ; Zeta-Function
+            wz = 1/s
+       elseif (@Weierstrass == 2) ; Sigma-Function
+            wz = s
+       endif
+  endif
+
+  ; Calculate the P-Function
+  ;
+  if @version<102 || (@version>101 && @balanced)
+       while (lr <= @numIter)
+            while (li <= @numIter)
+                 lpp =  lr*@vector1 + li*@vector2
+                 lpn =  lr*@vector1 - li*@vector2
+                 lnp = -lr*@vector1 + li*@vector2
+                 lnn = -lr*@vector1 - li*@vector2
+                 L = Lw(@pp,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@pn,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@np,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@nn,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 li = li+1
+            endwhile ; li <= iter
+            if @version>100, li = 0, endif
+            lr = lr+1
+       endwhile ; lr <= iter
+  elseif (@version>101 && @balanced==false)
+       while (lr <= @numIterR)
+            while (li <= @numIterI)
+                 lpp =  lr*@vector1 + li*@vector2
+                 lpn =  lr*@vector1 - li*@vector2
+                 lnp = -lr*@vector1 + li*@vector2
+                 lnn = -lr*@vector1 - li*@vector2
+                 L = Lw(@pp,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@pn,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@np,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 L = Lw(@nn,lpp,lpn,lnp,lnn)
+                 wz = Wstrass(s,L,wz,@Weierstrass)
+                 li = li+1
+            endwhile ; li <= iter
+            li = 0
+            lr = lr+1
+       endwhile ; lr <= iter
+  endif
+
+  wz = @main * @zscale * @fnz(wz) + @seed
+ 
+  #pixel = (wz^@exponent)/@scalem
+
+default:
+  title = "3 Weierstrass Functions Variant"
+ 
+  param Weierstrass
+       caption = "Weierstrass Function"
+       enum = "P-Function" "Zeta-Function" "Sigma-Function"
+  endparam
+  int param version
+       default=102
+       visible=false
+  endparam
+  bool param balanced
+       caption="balanced"
+       default=true
+       visible=@version>101
+  endparam
+  param exponent
+       caption="Exponent for P"
+       default=1.0
+  endparam
+  param vector1
+       caption="Lattice Vector 1"
+       default=(1,0)
+  endparam
+  param vector2
+       caption="Lattice Vector 2"
+       default=(0,1)
+  endparam
+  param numIter
+       caption="Summation Limit"
+       default=2
+       visible=@version<102 || (@version>101 && @balanced)
+  endparam
+  param numIterR
+       caption="Summation Limit R"
+       default=2
+       visible=(@version>101 && @balanced==false)
+  endparam
+  param numIterI
+       caption="Summation Limit I"
+       default=2
+       visible=(@version>101 && @balanced==false)
+  endparam
+  param pp
+       caption="track 1 [def. pp]"
+       enum="none" "pp" "pn" "np" "nn"
+       default=1
+  endparam
+  param pn
+       caption="track 2 [def. pn]"
+       enum="none" "pp" "pn" "np" "nn"
+       default=2
+  endparam
+  param np
+       caption="track 3 [def. np]"
+       enum="none" "pp" "pn" "np" "nn"
+       default=3
+  endparam
+  param nn
+       caption="track 4 [def. nn]"
+       enum="none" "pp" "pn" "np" "nn"
+       default=4
+  endparam
+  complex param seed
+       caption="seed"
+       default=(0.0,0.0)
+  endparam
+  float param main
+       caption="main shape"
+       default=0.5
+  endparam
+  float param zscale
+       caption="z-shape"
+       default=1.0
+  endparam
+  complex param scalem
+       caption = "pseudo scale"
+       default = (1.0,0.0)
+  endparam  
+  func fnz
+       caption = "end function"
+       default = ident()
+  endfunc
+} ; weierstrass_func_var
+
+
+Olapol {
+; Olapol is an anagram for "Apollo"
+; The math formulas are based on Ron Barnett's IFS_Apollo mapping. 
+; Thanks to him for his permission to use them.
+; They are treated now in another way.
+; version 101 - Jan.16 2016
+
+Transform:
+
+  float x = real(#pixel),    float y = imag(#pixel)
+  float ra = 0.0,            float rb = 0.0
+  float aa = 0.0,            float t = 0.0
+  float a0 = 0.0,            float b0 = 0.0
+  float a1 = 0.0,            float b1 = 0.0
+  float cs = 0.0,            float sn = 0.0
+  float ax = 0.0,            float ay = 0.0
+  float bx = 0.0,            float by = 0.0
+  float p = 0.0
+  float x1 = 0.0,            float y1 = 0.0
+  float fx = 0.0,            float fy = 0.0  
+  float s1 = real(@scale),   float s2 = imag(@scale)
+  float q1 = real(@q),       float q2 = imag(@q)
+  int i = 0,                 int seed = 0
+  if @version==100
+    seed = 123456789
+  else
+    seed = @sd
+  endif      
+
+  if @version==101 && @gv==true
+    cs = cos(@geo); default hoek geo = 60 graden
+    sn = sin(@geo)
+    ra = 2*sn ; 2x rechth.zijde tegenover hoek
+    rb = 2*(sn+cs); 2*som rechthoekzijden
+    p = rb/(rb+1)
+    a1 = cs,          
+    b1 = sn
+  elseif @version==100 || (@version==101 && @gv==false)
+    ra = @ra; default sqrt(3)
+    rb = ra+1
+    p = @p
+    a1 = 0.5,         
+    b1 = 0.5*ra; resp. cos(60) en sin(60)
+  endif           
+
+  if @version==100 || (@version==101 && @opt==0)
+    while i < @iter
+      seed = random(seed)
+      aa = abs(seed)/#randomrange
+      t = (rb - x)^2 + y^2
+      a0 = q1*(rb - x)/t - p,      b0 = q2*y/t
+      t = a0^2 + b0^2
+      fx = a0/t,                   fy = b0/t
+      ax = fx*a1,                  ay = fy*a1
+      bx = fx*b1,                  by = fy*b1
+      if aa>=0.0 && aa<@thr
+        x1 = x1 + a0,              y1 = y1 + b0
+      elseif aa>=@thr && aa<@cl 
+        x1 = x1 - ax + by,         y1 = y1 + bx + ay
+      elseif aa>=@cl && aa<=1.0  
+        x1 = x1 - ax - by,         y1 = y1 - bx + ay
+      endif
+      i = i+1
+    endwhile
+    x1 = x1/i, y1 = y1/i
+  elseif (@version==101 && @opt==1)
+    t = (rb - x)^2 + y^2
+    a0 = q1*(rb - x)/t - p,        b0 = q2*y/t
+    t = a0^2 + b0^2
+    fx = a0/t,                     fy = b0/t
+    ax = fx*a1,                    ay = fy*a1
+    bx = fx*b1,                    by = fy*b1
+    if @other
+      if @fm==0, x1 = real(@r)*a0, y1 = imag(@r)*b0
+      elseif @fm==1, x1 = real(@r)*ax + imag(@r)+by
+                     y1 = real(@r)*bx + imag(@r)+ay
+      endif
+    else
+      if @key==0,     x1 = a0,       y1 = b0
+      elseif @key==1, x1 = -ax + by, y1 = -bx + ay
+      elseif @key==2, x1 = -ax + by, y1 = -bx - ay
+      elseif @key==3, x1 = -ax - by, y1 = bx + ay
+      elseif @key==4, x1 = -ax - by, y1 = bx - ay
+      endif
+    endif
+  endif
+  #pixel = s1*(real(@z0)+x1) + flip(s2*(imag(@z0)+y1)) 
+
+default:
+  title = "Olapol"
+  int param version
+    default = 101
+    visible = false
+  endparam
+  heading
+    caption = "Addtion or Single?"
+  endheading
+  param opt
+    caption = "option"
+    enum = "Addition" "Single"
+    default = 0
+    visible = @version==101
+  endparam
+  int param sd
+    caption = "seed"
+    default = 123456789
+    visible = (@version>100 && @opt==0)
+  endparam
+  bool param other
+    caption = "other way"
+    default =false
+    visible = (@version==101 && @opt==1)
+  endparam
+  int param iter
+    caption = "# of additions"
+    default = 3, min = 1
+    visible = @version==100 || (@version==101 && @opt==0)
+  endparam
+  float param thr
+    caption = "threshold"
+    default = 0.333
+    min = 0.0, max = 1.0
+    visible = @version==100 || (@version==101 && @opt==0)
+  endparam
+  float param cl
+    caption = "ceiling"
+    default = 0.667
+    min = 0.0, max = 1.0
+    visible = @version==100 || (@version==101 && @opt==0)
+  endparam
+  int param key
+    caption = "key (0-4)"
+    default = 0
+    min = 0, max = 4
+    visible = (@version==101 && @opt==1 && @other==false)
+  endparam
+  param fm
+    caption = "formula"
+    enum = "A" "B"
+    default = 0
+    visible = (@version==101 && @opt==1 && @other==true)
+  endparam
+  complex param r
+    caption = "balance"
+    default = (1.0,1.0)
+    visible = (@version==101 && @opt==1 && @other==true)
+  endparam
+  heading
+    caption = "Other Parameters"
+  endheading
+  bool param gv
+    caption = "geometric mode"
+    default = false
+    visible = @version==101
+  endparam
+  float param ra
+    caption = "parameter 1 [1.732]"
+    default = 1.732050808
+    visible = @gv==false
+  endparam
+  float param p
+    caption = "parameter 2 [0.732]"
+    default = 0.732050807
+    visible = @gv==false
+  endparam
+  float param geo
+    caption = "angle"
+    default = 1.04719755
+    visible = @gv==true
+  endparam
+  heading
+    caption = ""
+  endheading
+  complex param q
+    caption = "parameter 3 [3]"
+    default = (3.0,3.0)
+  endparam
+  complex param z0
+    caption = "center"
+    default = (0.0,0.0)
+  endparam
+  complex param scale
+    caption = "scale"
+    default = (1.0,1.0)
+  endparam    
+
+} ; Olapol
+***********************************************************
+Pallas {
+
+; Pallas is a further development of "Olapol"
+; Bleiswijk, May 19, 2015
+
+transform:
+  float x = real(#pixel),  float y = imag(#pixel)
+  float delta = 1.0e-12
+  float q1 = real(@w),     float q2 = imag(@w)
+  if q1==0.0, q1 = delta,  endif
+  if q2==0.0, q2 = delta,  endif
+  float t = 0.0
+  float a0 = 0.0,          float b0 = 0.0
+  float a1 = real(@u),     float b1 = imag(@u)
+  float a2 = real(@v),     float b2 = imag(@v)
+  float flx = 0.0,         float fly = 0.0
+  float xt = 0.0,          float yt = 0.0
+  float s1 = real(@scale), float s2 = imag(@scale)
+  float z1 = real(@z0),    float z2 = imag(@z0)
+
+  t = x^2+y^2
+  a0 = x/t - q1
+  b0 = y/t - q2
+  t = a0^2+b0^2
+  flx = a0/t, fly = -b0/t
+  xt = @p1*a0
+  xt = xt + @p2*(flx*a1 - fly*b1)
+  xt = xt + @p3*(flx*a2 - fly*b2)
+  yt = @p1*b0
+  yt = yt + @p2*(flx*b1 + fly*a1)
+  yt = yt + @p3*(flx*b2 + fly*a2)
+  if @reduce
+    t = @p1+@p2+@p3
+    xt = xt/t, yt = yt/t
+  endif
+  #pixel = s1*(z1+xt) + flip(s2*(z2+yt)) 
+
+default:
+  title = "Pallas"
+  int param version
+    default=100
+    visible=false
+  endparam
+  complex param scale
+    caption = "scale"
+    default = (1.0,1.0)
+  endparam  
+  complex param z0
+    caption = "center"
+    default = (0.0,0.0)
+  endparam
+  bool param reduce
+    caption = "reduce"
+    default = true
+  endparam
+  heading
+    caption = "Formula I"
+  endheading
+  float param p1
+    caption = "weight formula I"
+    default = 1.0
+  endparam
+  complex param w
+    caption = "parameter I [.732/1]"
+    default = (3.0,1)
+    visible = @p1!=0.0
+  endparam
+  heading
+    caption = "Formula II"
+  endheading
+  float param p2
+    caption = "weight formula II"
+    default = 1.0
+  endparam
+  complex param u
+    caption = "parameter II [-.5/.866]"
+    default = (-0.5,0.866)
+    visible = @p2!=0.0
+  endparam
+  heading
+    caption = "Formula III"
+  endheading
+  float param p3
+    caption = "weight formula III"
+    default = 1.0
+  endparam
+  complex param v
+    caption = "parameter III [-.5/-.866]"
+    default = (-0.5,-0.866)
+    visible = @p3!=0.0
+  endparam
+} ; Pallas
+
+Wallpaper {
+; May 19, 2015
+transform:
+  float x = real(#pixel) + real(@s)
+  float y = imag(#pixel) + imag(@s)
+  float temp = 0.0,    float d = 1e-15
+  float t1 = real(@t), float t2 = imag(@t)
+  float u1 = real(@u), float u2 = imag(@u)
+  float v1 = real(@v), float v2 = imag(@v)
+  float w1 = real(@w), float w2 = imag(@w)
+  float temp = x
+  int m1=0
+  int m2=0
+  if @pm1==0, m1=-1, else, m1=1, endif
+  if @pm2==0, m2=-1, else, m2=1, endif
+  if @mode==0
+    if @hv==0
+      if @var==0,     x = d+t1*sin(x+m1*(d+t2*sin(y))) 
+      elseif @var==1, x = d+t1*cos(x+m1*(d+t2*sin(y))) 
+      elseif @var==2, x = d+t1*cos(x+m1*(d+t2*cos(y))) 
+      elseif @var==3, x = d+t1*sin(x+m1*(d+t2*cos(y)))
+      elseif @var==4, x = d+t1*sin(x+m1*(d+t2*sin(y+@f)))
+      endif
+    else
+      if @var==0,     y = d+u1*sin(y+m2-(d+u2*sin(x)))
+      elseif @var==1, y = d+u1*cos(y+m2-(d+u2*sin(x)))
+      elseif @var==2, y = d+u1*cos(y+m2-(d+u2*cos(x)))
+      elseif @var==3, y = d+u1*sin(y+m2-(d+u2*cos(x)))
+      elseif @var==4, x = d+u1*sin(y+m2*(d+u2*sin(x+@g)))
+      endif
+    endif
+
+  elseif @mode==1 
+  ; 1 sin\sin | sin\sin
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*sin(x))), x = d+t1*sin(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==2 
+  ; 2 sin\sin | cos\sin
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*sin(x))), x = d+t1*sin(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==3
+  ; 3 sin\sin | cos\cos
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*cos(x))), x = d+t1*sin(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==4
+  ; 4 sin\sin | sin\cos
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*cos(x))), x = d+t1*sin(x+m2*(d+t2*sin(y)))
+    endif
+
+  elseif @mode==5
+  ; 5 cos\sin | sin\sin
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*sin(x))), x = d+t1*cos(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==6
+  ; 6 cos\sin | cos\sin
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*sin(x))), x = d+t1*cos(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==7
+  ; 7 cos\sin | cos\cos
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*cos(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*cos(x))), x = d+t1*cos(x+m2*(d+t2*sin(y)))
+    endif
+  elseif @mode==8
+  ; 8 cos\sin | sin\cos
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*sin(y))), y = d+u1*sin(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*cos(x))), x = d+t1*cos(x+m2*(d+t2*sin(y)))
+    endif
+
+  elseif @mode==9
+  ; 9 cos\cos | sin\sin
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*sin(x))), x = d+t1*cos(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==10
+  ; 10 cos\cos | cos\sin
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*sin(x))), x = d+t1*cos(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==11
+  ; 11 cos\cos | cos\cos
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*cos(x))), x = d+t1*cos(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==12
+  ; 12 cos\cos | sin\cos
+    if @jk==0,      x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*cos(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*cos(x))), x = d+t1*cos(x+m2*(d+t2*cos(y)))
+    endif
+
+  elseif @mode==13
+  ; 13 sin\cos | sin\sin
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*sin(x))), x = d+t1*sin(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==14
+  ; 14 sin\cos | cos\sin
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*sin(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*sin(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*sin(x))), x = d+t1*sin(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==15
+  ; 15 sin\cos | cos\cos
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*cos(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*cos(y+m1*(d+u2*cos(x))), x = d+t1*sin(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==16
+  ; 16 sin\cos | sin\cos
+    if @jk==0,      x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*cos(temp)))
+    elseif @jk==1,  x = d+t1*sin(x+m1*(d+t2*cos(y))), y = d+u1*sin(y+m2*(d+u2*cos(x)))
+    elseif @jk==2,  y = d+u1*sin(y+m1*(d+u2*cos(x))), x = d+t1*sin(x+m2*(d+t2*cos(y)))
+    endif
+  elseif @mode==17
+  ; 17 general
+    if @jk==0,      x = d+t1*sin(x+w1+m1*(d+t2*sin(y+v1))), y = d+u1*sin(y+w2+m2*(d+u2*sin(temp+v2)))
+    elseif @jk==1,  x = d+t1*sin(x+w1+m1*(d+t2*sin(y+v1))), y = d+u1*sin(y+w2+m2*(d+u2*sin(x+v2)))
+    elseif @jk==2,  y = d+u1*sin(y+w2+m1*(d+u2*sin(x+v2))), x = d+t1*sin(x+w1+m2*(d+t2*sin(y+v1)))
+    endif
+
+  endif
+
+  #pixel = x + flip(y)  
+
+default:
+  title = "Wall Paper" 
+  int param version
+    default=100
+    visible=false
+  endparam
+  complex param s
+    caption = "scale"
+    default = (1.0,1.0)
+  endparam
+  param mode
+    caption = "mode"
+    enum = "freeze" "gonio 1" "gonio 2" "gonio 3" "gonio 4" "gonio 5" "gonio 6" "gonio 7"\
+           "gonio 8" "gonio 9" "gonio 10" "gonio 11" "gonio 12" "gonio 13" "gonio 14" \
+           "gonio 15" "gonio 16" "gonio 17"
+    default = 1
+  endparam  
+  param hv
+    caption = "horizontal / vertical"
+    enum = "horizontal" "vertical"
+    default = 0
+    visible = @mode==0
+  endparam
+  param pm1
+    caption = "#1 plus or minus"
+    enum = "minus" "plus"
+    default = 1
+    visible = @mode>0 || (@mode==0 && @hv==0)
+  endparam
+  param pm2
+    caption = "#2 plus or minus"
+    enum = "minus" "plus"
+    default = 1
+    visible = @mode>0 || (@mode==0 && @hv==1)
+  endparam
+  param var
+    caption = "variant"
+    enum = "a" "b" "c" "d" "e"
+    default = 0
+    visible = @mode==0
+  endparam
+  param jk
+    caption = "variant"
+    enum = "original" "joker I" "joker II"
+    visible = @mode>0 
+    default = 0
+  endparam
+  complex param t
+    caption = "parameter 1"
+    default = (1.0,1.0)
+  endparam
+  complex param u
+    caption = "parameter 2"
+    default = (1.0,1.0)
+  endparam
+  complex param v
+    caption = "angle shift 1"
+    default = (0.0,0.0)
+    visible = @mode==17 
+  endparam
+  complex param w
+    caption = "angle shift 2"
+    default = (0.0,0.0)
+    visible = @mode==17
+  endparam
+  float param f
+    caption = "angle shift 1"
+    default = 0.0
+    visible = @mode==0 && @hv==0 && @var==4
+  endparam
+  float param g
+    caption = "angle shift 2"
+    default = 0.0
+    visible = @mode==0 && @hv==1 && @var==4
+  endparam
+} ; Wallpaper
+
+;Iterated_Möbius_Transformation {
+;  July 30, 2015
+;  For a more extended M-transformation see jlp.uxf
+;  that one doesn't have the possibility to iterate
+
+transform:
+  int iter = 0
+  complex px = #pixel
+  while iter<=@maxitr
+    px = (@a*px+@b)/(@c*px+@d)
+    iter = iter + 1
+  endwhile
+  px = px
+  #pixel = px
+
+default:
+  title = "Iterated Möbius' Transformation"
+  int param version
+    default=100
+    visible=false
+  endparam
+  int param maxitr
+    caption = "number of iterations"
+    default = 0
+  endparam
+  heading
+    caption = "Möbius parameters"
+  endheading
+  complex param a
+    caption = "a"
+    default = (1,0)
+  endparam
+  complex param b
+    caption = "b"
+    default = (1,0)
+  endparam
+  complex param c
+    caption = "c"
+    default = (0,0)
+  endparam
+  complex param d
+    caption = "d"
+    default = (1,0)
+  endparam
+;} ; Iterated Möbius' Transformation
+
+RotatePartly {
+; Recommended to use it (if necessary) as last mapping.
+; Then all other mappings don't rotate, only the fractal does.
+
+global:
+   complex c = #center
+transform:
+   #pixel = (#pixel-(c+@nc))*exp(1i*@arg)+c+@nc
+default:
+  title = "Rotate Partly"
+  int param rotate_version
+    default=100
+    visible=false
+  endparam
+  float param arg
+    caption = "rotation"
+    default = 0.0
+    hint = "With 'alt + left drag' mapping + fractal rotate, with this 'rotation' it rotates partly, depending of the position in the list of mappings." 
+  endparam
+  complex param nc
+    caption = "center of rotation"
+    default = (0.0,0.0)
+    hint = "default: center of the image"
+  endparam
+}
+
+Symmaton {
+global:
+   float ratio = #height/#width ; 0.75
+   complex c = #center
+   if ratio>0.75
+      float sx = 1.5/#magn/ratio      
+      float sy = 1.5/#magn  
+    else
+      float sx = 2/#magn 
+      float sy = 2*ratio/#magn
+   endif
+   float cx = real(c)
+   float cy = imag(c)
+   float xL = cx - sx
+   float yD = cy - sy
+   float b = 2*sx/@n
+   float h = 2*sy/@n
+
+transform:
+   float x = real(#pixel) - xL
+   float y = imag(#pixel) - yD
+   int j = 0
+   while j<@n
+      j = j + 1
+      if j<@n
+         if x>j*b && x<=(j+1)*b, x = x - j*b, endif
+         if y>j*h && y<=(j+1)*h, y = y - j*h, endif
+      endif
+   endwhile
+   x = @n*x, y = @n*y
+   if @phm
+      if y>=sy && y<=2*sy
+         if x>=sx && x<=2*sx;     field I
+            x = x - sx, y = y - sy
+         elseif x>=0.0 && x<sx;   field II
+            y = y - sy
+         endif
+      elseif y>=0.0 && y<=sy && x>sx && x<=2*sx; field IV
+         x = x - sx
+      endif
+   else
+      if y>=sy && y<=2*sy
+         if x>=sx && x<=2*sx;     field I
+            x = 2*sx - x, y = 2*sy - y
+         elseif x>=0.0 && x<sx;   field II
+            y = 2*sy - y
+         endif
+      elseif y>=0.0 && y<=sy && x>sx && x<=2*sx; field IV
+         x = 2*sx - x
+      endif
+   endif
+   x = 2*x, y = 2*y 
+   if @configu==1
+      x = 2*sx - x, y = 2*sy - y
+   elseif @configu==2
+      y = 2*sy - y
+   elseif @configu==3
+      x = 2*sx - x
+   endif
+   complex z = x + xL + flip(y + yD)
+   #pixel = (z-(c+@nc))*exp(1i*@arg)+c+@nc
+
+default:
+  title = "Symmaton"
+  int param symmaton_version
+    default=100
+    visible=false
+  endparam
+  int param n
+    caption = "n fields (total: n x n)"
+    default = 2
+    min = 1
+    hint = "n x n means n horizontally, n vertically. Default n = 2,so then there are 4 fields."
+  endparam
+  param configu
+    caption = "configuration"
+    enum = "I" "II" "III" "IV"
+    default = 0
+    visible = @phm==false
+  endparam
+  float param arg
+    caption = "rotation"
+    default = 0.0
+    hint = "With 'alt + left drag' mapping + fractal rotate, with this 'rotation' the it rotates partly, depending of the position in the list of mappings." 
+  endparam
+  complex param nc
+    caption = "center of rotation"
+    default = (0.0,0.0)
+    hint = "default: center of the image"
+  endparam
+  bool param phm
+    caption = "Photomaton"
+    default = false
+  endparam
+}; Symmaton - transformation
+
+Cheby {
+transform:
+  complex z = #pixel
+  int j = 1
+  complex px = (0,0)
+  complex t[12]
+  complex u[12]
+  if @deviant
+     t[0] = (1,1)
+  else
+     t[0] = (1,0)
+  endif
+  t[1] = @qt*z
+  u[0] = (1,0)
+  u[1] = @qu*z
+  while j<12
+     j = j + 1
+     t[j] = 2*z*t[j-1] - t[j-2]
+     u[j] = 2*z*u[j-1] - u[j-2]
+  endwhile
+  if @shape==0
+     px = t[@p+@v]
+  elseif @shape==1
+     px = u[@q+@w]
+  elseif @shape==2
+     px = t[@p+@v] + u[@q+@w]
+  elseif @shape==3
+     px = t[@p+@v] * u[@q+@w]
+  elseif @shape==4
+     px = t[@p+@v] / u[@q+@w]
+  endif
+  #pixel = px
+
+default:
+  title = "Cheby"
+  int param Cheby_version
+     default=100
+     visible=false
+  endparam
+  param shape
+     caption = "shape"
+     enum = "1st kind" "2nd kind" "addition" "multiply" "ratio"
+     default = 0
+  endparam
+  param p
+    caption = "Cheby 1st kind"
+    enum = "T1" "T2" "T3" "T4" "T5" "T6" "T7" "T8" "T9" "T10" "T11"
+    default = 1
+    visible = @shape !=1
+    hint = "only T[n] if 'change t[]' in its default."
+  endparam
+  param q
+    caption = "Cheby 2st kind"
+    enum = "U1" "U2" "U3" "U4" "U5" "U6" "U7" "U8" "U9" "U10" "U11"
+    default = 0
+    hint = "only U[n] if 'change u[]' in its default."
+    visible = @shape !=0
+  endparam
+  bool param deviant
+    caption = "deviant"
+    default = false
+    visible = @shape !=1 && @p>0
+  endparam
+  float param qt
+     caption = "t[1] coefficient"
+     default = 1.0
+    visible = @shape !=1
+  endparam
+  float param qu
+     caption = "u[1] coefficient"
+     default = 2.0
+    visible = @shape !=0
+  endparam
+  int param v
+     caption = "change t[]"
+     default = 1
+     visible = @shape !=1
+  endparam
+  int param w
+     caption = "change u[]"
+     default = 1
+     visible = @shape>0 
+  endparam
+}; Cheby(chev) - transformation
+
+KarmanTrefftzMod {
+  transform:
+    complex px=#pixel
+    if @modeA==0; original
+       complex p = (1+1/px)^@n
+       complex q = (1-1/px)^@n
+    elseif @modeA==1
+       complex p = (@a + @b/px)^@n
+       complex q = (@a - @b/px)^@n
+    endif
+    if @modeB==0; original
+       px=@n*(p+q)/(p-q)
+    elseif @modeB==1
+       px=@m*(p+q)/(p-q)
+    endif
+    #pixel = px
+
+  default:
+    title = "Karman Trefftz Modified"
+    int param version
+       default=100
+       visible=false
+    endparam
+    param modea
+      caption = "A-mode"
+      default = 0
+      enum = "original" "variant"
+    endparam
+    param modeb
+      caption = "B-mode"
+      default = 0
+      enum = "original" "variant"
+    endparam
+    complex param a
+      caption = "a"
+      default = (1.0,0.0)
+      visible = @modea==1
+    endparam
+    complex param b
+      caption = "b"
+      default = (1.0,0.0)
+      visible = @modea==1
+    endparam
+    float param n
+      caption = "n"
+      default = 2
+    endparam
+    float param m
+      caption = "m"
+      default = 2
+      visible = @modeb==1
+    endparam
+}
+
+Windmillmap {
+
+transform:
+   complex zp = #pixel
+   int iter = 0
+   while (iter<=@number_iterations)
+      iter=iter+1
+      float x = real(zp)
+      float y = imag(zp)
+      if x>=0.0 && y>=0.0 ; quadrant I
+         zp = @fna(zp)
+      elseif x<0.0 && y>=0.0 ; quadrant II
+         zp = @fna(y+flip(-x))
+      elseif x<0.0 && y<0.0 ;  ; quadrant III
+         zp = @fna(abs(zp))
+      elseif x>=0.0 && y<0.0 ; quadrant IV
+         zp = @fna(-y+flip(x))
+      endif
+      zp = zp+@c
+   endwhile
+   #pixel = @fne(zp) + @offset
+
+default:
+  title = "Windmill Map"
+  int param version
+     caption = "Formula Version"
+     default = 100
+     visible = false
+  endparam
+  int param number_iterations
+     caption = "number of iterations"
+     default = 2
+     min = 1
+  endparam
+  func fna,
+     caption = "pixel function"
+     default = tan()
+  endfunc
+  complex param c
+     caption = "c"
+     default = (0.0,0.0)
+  endparam
+  complex param offset
+     caption = "offset"
+     default = (0.0,0.0)
+  endparam
+  func fne
+     caption = "end function"
+     default = ident()
+  endfunc
+}

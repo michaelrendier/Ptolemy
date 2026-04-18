@@ -1,0 +1,526 @@
+comment {
+  gwfa.ucl  Vers. 00.12.27a
+  Coloring Schemes  for Ultra Fractal 2
+  by G.W.F. Albrecht
+  December 27, 2000
+
+  For more information about this formula collection,
+  please visit its home page:
+  
+      http://home.wtal.de/spiriteye/fractal/index.html
+
+or
+
+     http://www.gwfa.de
+
+}
+
+gwfa_Phi_Gradient(BOTH) { ;  G.W.F. Albrecht
+
+init:
+loop:
+final:
+; smoothing option adapted from Sylvie Gallet's "Outside = iter smooth"
+  float const = 1.71828183520599250
+  float logb10 = log(@bailout)/log(10)
+  float iter = #numiter
+
+  if @smooth
+    iter = iter + 0.35/logb10^0.3  - 0.43/logb10 * log(|#z|/@bailout)
+  endif
+
+
+  float u = iter / #maxiter
+
+  if u  > 0
+    #index =  const / ( u * ( EXP(1/u) -1 ) )
+  else
+    #index = 0
+  endif
+
+default:
+  title = "Reciprocal Phi Coloring 1"
+  param bailout
+    caption = "Bailout"
+    hint = "This should be equal to the bailout value used by the \
+            fractal formula in the Formula tab. A good value is 100."
+    default = 100.0
+    min = 1
+  endparam
+  param smooth
+    caption = "Smooth coloring"
+    hint = "This defines whether or not the image will be colored \
+            smoothly. Enable it to get smooth true-color images; disable \
+            it to use only 256 possible colors, just like in Fractint."
+    default = true
+  endparam
+
+
+}
+
+
+gwfa-PhiAngle(OUTSIDE){ ; G.W.F. Albrecht
+
+init:
+  complex zold = (0,0)
+  complex zold2 = (0,0)
+  complex u = (0,0)
+  complex zp = #pixel
+  float range = 0.0
+  float pi2 = #pi * 2
+  
+loop:
+  zold2 = zold; save previous iteration
+  zold = #z; save current iteration
+
+
+
+final:
+if  (@mode == 0)
+  zold = #z - zold
+elseif ( @mode == 1)
+  zold = #z - zold2
+elseif  ( @mode == 2 )
+  zold = #z - zp
+elseif  ( @mode == 3 )
+  zold = zp
+elseif  ( @mode == 4)
+  zold = #z/(@bailout+flip(@bailout))
+endif
+
+
+zold = fn1(zold)
+
+if (@phimode == 0)
+if  cabs(zold) > 0
+   u = (EXP(zold) - 1) / zold
+else
+  u = 1
+endif
+elseif (@phimode == 1)
+if  cabs(zold) > 0
+   u = zold/(EXP(zold) - 1) 
+else
+  u = 1
+endif
+
+
+endif
+
+
+  u = fn2(u)
+
+  range = atan2(u)
+  IF (range < 0)
+    range = range + pi2
+  ENDIF
+
+
+  #index = range / (pi2); scale so full angle range is 0..1
+
+default:
+  title = "Phi by Two Step"
+
+ param mode
+    caption = "Mode"
+    default = 0
+    enum = "Previous Iteration" "PenUltimate Iteration" "Refer to Pixel" "Pixel" "Rel.Bailout"
+  endparam
+
+ param phimode
+    caption = "Use of Phi"
+    default = 0
+    enum = "Straight" "Reciprocal" 
+  endparam
+
+
+
+ param bailout
+    caption = "Bailout"
+    hint = "This should be equal to the bailout value used by the \
+            fractal formula in the Formula tab. A good value is 100."
+    default = 100.0
+    min = 1
+  endparam
+
+
+ func fn1
+    caption = "Additional Function 1"
+    default = ident()
+  endfunc
+
+ func fn2
+    caption = "Additional Function 2"
+    default = ident()
+  endfunc
+
+
+}
+
+gwfa-PhiOrbit(BOTH){ ; G.W.F. Albrecht
+
+init:
+
+  if @center 
+    center = #center
+  else
+    center = @tcenter
+  endif 
+
+  complex zold = (0,0)
+  complex zold2 = (0,0)
+  complex zz = (0,0)
+  complex u = (0,0)
+  complex zp = #pixel
+  float range = 0.0
+  float pi2 = #pi * 2
+
+  float RMax = -1e32
+  float RMin = 1e32
+  float IMax = -1e32
+  float IMin = 1e32
+  float NMax = 0.0
+  float NMin = 1e32
+  float LpMax = 0.0
+  float LpMin = 1e32
+  float Lp = 0.0
+
+  float R =  0.0
+  float I = 0.00
+  float N = 0
+
+
+
+
+  
+loop:
+
+  zold2 = zold; save previous iteration
+  zold = #z; save current iteration
+  
+
+
+
+
+if  (@mode == 0)
+  zz = #z - zold
+elseif ( @mode == 1)
+  zz = #z - zold2
+elseif  ( @mode == 2 )
+  zz = #z - zp
+elseif  ( @mode == 3 )
+  zz = zp
+elseif  ( @mode == 4)
+  zz = #z/(@bailout+flip(@bailout))
+endif
+
+
+zz = fn1(zz)
+
+if (@phimode == 0)
+if  cabs(zz) > 0
+   u = (EXP(zz) - 1) / zz
+else
+  u = 1
+endif
+elseif (@phimode == 1)
+if  cabs(zz) > 0
+   u = zz/(EXP(zz) - 1) 
+else
+  u = 1
+endif
+endif
+
+
+  u = fn2(u)
+
+
+ u  = u - center
+
+
+
+  R = real (u)
+  I = imag(u)
+  N = cabs(u)
+if (@cmode == 4)
+  Lp = ( (abs(real(u)))^@coeffp + (abs(imag(u)))^@coeffp)^(1/@coeffp)
+endif
+
+  if  R < RMin
+   RMin = R
+ endif
+
+  if  R > RMax
+   RMax = R
+ endif
+
+  if  I < IMin
+   IMin = I
+ endif
+
+  if  I > IMax
+   IMax = I
+ endif
+
+    if  N < NMin
+   NMin = N
+ endif
+
+  if  N > NMax
+   NMax = N
+ endif
+
+
+  if  Lp < LpMin
+   LpMin = Lp
+ endif
+
+
+  if  Lp > LpMax
+   LpMax = Lp
+ endif
+
+
+
+
+
+final:
+
+
+
+if (@cmode == 0)
+  range = atan2(u)
+  IF (range < 0)
+    range = range + pi2
+  ENDIF
+  #index = range / (pi2); scale so full angle range is 0..1
+
+elseif (@cmode == 1)
+range = (real (u) - RMin) / ( RMax - RMin)
+  #index = range 
+
+elseif (@cmode == 2)
+range = (imag (u) - IMin) / ( IMax - IMin)
+  #index = range 
+
+elseif (@cmode == 3)
+range = (cabs (u) - NMin) / ( NMax - NMin)
+  #index = range 
+
+elseif (@cmode == 4)
+  Lp = ( (abs(real(u)))^@coeffp + (abs(imag(u)))^@coeffp)^(1/@coeffp)
+range = ( Lp - LpMin) / ( LpMax - LpMin)
+  #index = range 
+
+
+
+
+endif
+
+
+
+default:
+  title = "Phi On Orbit"
+
+ param mode
+    caption = "Orbit Mode"
+    default = 0
+    enum = "Previous Iteration" "PenUltimate Iteration" "Refer to Pixel" "Pixel" "Rel.Bailout"
+  endparam
+
+ param cmode
+    caption = "Coloring Mode"
+    default = 0
+    enum = "Angle" "Real" "Imaginary" "Euclidean" "lp-Norm"
+  endparam
+
+
+
+ param phimode
+    caption = "Use of Phi"
+    default = 0
+    enum = "Straight" "Reciprocal" 
+  endparam
+
+
+
+ param bailout
+    caption = "Bailout"
+    hint = "This should be equal to the bailout value used by the \
+            fractal formula in the Formula tab. A good value is 100."
+    default = 100.0
+    min = 1
+  endparam
+
+ param coeffp
+    caption = "p for lp-Norm"
+    default = 2.0
+    min = 0.00000000000000000000000000000000000001
+  endparam
+
+
+  param center
+    caption = "Use Screen Center"
+    default = false
+  endparam  
+
+  param tcenter
+    caption = "Custom Center"
+    default = (0.0,0.0)
+  endparam  
+
+
+
+ func fn1
+    caption = "Additional Function 1"
+    default = ident()
+  endfunc
+
+ func fn2
+    caption = "Additional Function 2"
+    default = ident()
+  endfunc
+
+
+}
+
+
+
+gwfa-PhiAngle2(BOTH){ ; G.W.F. Albrecht
+
+init:
+  complex zold = (0,0)
+  complex zold2 = (0,0)
+  complex u = (0,0)
+  complex zp = #pixel
+  float range = 0.0
+  float pi2 = #pi * 2
+  
+loop:
+  zold2 = zold; save previous iteration
+  zold = #z; save current iteration
+
+
+
+final:
+if  (@mode == 0)
+  zold = #z - zold
+elseif ( @mode == 1)
+  zold = #z - zold2
+elseif  ( @mode == 2 )
+  zold = #z - zp
+elseif  ( @mode == 3 )
+  zold = zp
+elseif  ( @mode == 4)
+  zold = #z/(@bailout+flip(@bailout))
+endif
+
+
+zold = fn1(zold)
+
+if (@phimode == 0)
+if  cabs(zold) > 0
+   u = (EXP(zold) - 1) / zold
+else
+  u = 1
+endif
+elseif (@phimode == 1)
+if  cabs(zold) > 0
+   u = zold/(EXP(zold) - 1) 
+else
+  u = 1
+endif
+
+
+endif
+
+
+  u = fn2(u)
+
+  complex v = fn3(real(u))
+  complex w = fn4(imag(u))
+  w = real(v) + flip(real(w)) 
+
+
+
+
+if (@phimode == 0)
+if  cabs(w) > 0
+   u = (EXP(w) - 1) / w
+else
+  u = 1
+endif
+elseif (@phimode == 1)
+if  cabs(w) > 0
+   u = w/(EXP(w) - 1) 
+else
+  u = 1
+endif
+endif
+
+
+
+
+
+
+
+  range = atan2(u)
+  IF (range < 0)
+    range = range + pi2
+  ENDIF
+
+
+  #index = range / (pi2); scale so full angle range is 0..1
+
+default:
+  title = "Var. Phi by Two Step"
+
+ param mode
+    caption = "Mode"
+    default = 0
+    enum = "Previous Iteration" "PenUltimate Iteration" "Refer to Pixel" "Pixel" "Rel.Bailout"
+  endparam
+
+ param phimode
+    caption = "Use of Phi"
+    default = 0
+    enum = "Straight" "Reciprocal" 
+  endparam
+
+
+
+ param bailout
+    caption = "Bailout"
+    hint = "This should be equal to the bailout value used by the \
+            fractal formula in the Formula tab. A good value is 100."
+    default = 100.0
+    min = 1
+  endparam
+
+
+
+ func fn1
+    caption = "Additional Function 1"
+    default = ident()
+  endfunc
+
+ func fn2
+    caption = "Additional Function 2"
+    default = ident()
+  endfunc
+
+
+ func fn3
+    caption = "Additional Function 3"
+    default = ident()
+  endfunc
+
+ func fn4
+    caption = "Additional Function 4"
+    default = ident()
+  endfunc
+
+
+
+
+}

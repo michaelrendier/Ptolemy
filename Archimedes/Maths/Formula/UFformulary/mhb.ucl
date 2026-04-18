@@ -1,0 +1,300 @@
+parametric-curve {
+;	colors by the orbit's closest approach to a user-defined parametric curve
+;
+;	None of this would have happened without the previous work
+;	of many people, including (but not limited to):
+;	Damien M. Jones
+;	Kerry Mitchell
+;	Mark Townsend
+;	Ron Barnett
+;	and Andreas Lober
+;	Thank you for all your contributions.
+;
+;	Thanks also to W. O. Love,
+;	who knows much more about coding than I do.
+;
+;	M. Bell August 2009
+;
+init:
+  float a = 0.0
+  float r = 0.0
+  float sr = 0.0
+  float si = 0.0
+  float u = 0.0
+  float v = 0.0
+  int iter = 0
+  int itermin = 0
+  float r1 = @angle / 90.0
+  complex rot = (0,1) ^ r1
+  float rmin = 1.0e+20
+  float twopi = 2.0 * #pi
+  complex c1 = (0.0,0.0)
+  complex c2 = (0.0,0.0)
+  complex s = (0.0,0.0)
+  complex z2 = (0.0,0.0)
+  complex zmin = (0.0,0.0)
+  complex thispoint = (0.0,0.0)
+  bool usesolid = true
+;
+; arrays for storing the curve as a function of parameter t
+;
+  float t[10001]
+  float x[10001]
+  float y[10001]
+;
+; fill the arrays
+;
+  int i = 0
+  while (i < @ndots + 1)
+    t[i] = (i / @ndots) * twopi * @cycle
+;       Lissajous
+;
+        if (@curve == 0)
+            x[i] = (sin(@x_per * t[i]))
+            y[i] = (cos(@y_per * t[i]))
+;
+; 	Epicycloid
+;
+        elseif (@curve == 1)
+            x[i] = (1/@x_per) * ((@x_per + @y_per) * cos(t[i]) - @extra * cos((@x_per/@y_per + 1) * t[i]))
+            y[i] = (1/@x_per) * ((@x_per + @y_per) * sin(t[i]) - @extra * sin((@x_per/@y_per + 1) * t[i]))
+;
+;	Hypocycloid
+;
+        elseif (@curve == 2)
+            x[i] = (1/@x_per) * ((@x_per - @y_per) * cos(t[i]) + @extra * cos((@x_per/@y_per - 1) * t[i]))
+            y[i] = (1/@x_per) * ((@x_per - @y_per) * sin(t[i]) - @extra * sin((@x_per/@y_per - 1) * t[i]))
+;
+;       Cycloid
+;
+        elseif (@curve == 3)
+	    x[i] = (@x_per * t[i] - @extra * sin(t[i])) / twopi
+	    y[i] = (@x_per - @extra * cos(t[i])) / twopi
+
+        endif
+
+    i = i + 1
+  endwhile
+
+loop:
+  iter = iter + 1
+
+  z2 = (#z - @trapcenter) * rot         ; center & rotation
+
+    IF (@gauss > 0)			; repeating trap
+        z2 = ((z2 / @gauss) - round(z2 / @gauss)) * @gauss
+    ENDIF
+
+    IF (@asp != 1.0)
+        z2 = real(z2) + flip(imag(z2) * @asp) ; apply aspect ratio
+    ENDIF
+
+    IF (@size != 1.0)			; scale trap
+        z2 = (z2 / @size)
+    ENDIF
+
+  u = real(z2)
+  v = imag(z2)
+;
+; The curve is parameterized with x(t) and y(t).  Step through several t
+; values to find the nearest approach of the orbit to the curve.
+;
+  i = 0
+  if (@mode == 0)				; individual dots
+    while (i < @ndots + 1)
+      r = (x[i] - u) * (x[i] - u) + (y[i] - v) * (y[i] - v)
+;      r = sqrt(r)
+      if(r < rmin)
+        rmin = r
+        itermin = iter
+        zmin = z2
+        thispoint = zmin - (x[i] + flip(y[i]))
+      endif
+      i = i + 1
+    endwhile
+;
+  elseif ( @mode == 1 )		; line segments
+    while ( i < @ndots)
+      c1 = x[i] + flip(y[i])
+      c2 = x[i + 1] + flip(y[i + 1])
+      s = (z2 - c1) / (c2 - c1)
+      sr = real(s)
+      si = imag(s)
+      if ( sr < 0.0 )
+        r = sqr(sr) + sqr(si)
+      elseif( sr > 1.0 )
+        r = sqr(sr - 1.0) + sqr(si)
+      else
+        r = sqr(si)
+      endif
+;      r = sqrt(r) * cabs(c2 - c1)
+      r = sqr(sqrt(r) * cabs(c2 - c1))
+      if ( r < rmin )
+        rmin = r
+        itermin = iter
+        zmin = z2
+        thispoint = zmin - ((x[i + 1] + x[i])/2 + flip((y[i + 1] + y[i])/2))
+      endif
+      i = i + 1
+    endwhile
+  endif
+
+
+
+final:
+
+  rmin = rmin ^ @thick
+
+  if (@colorby == 1)            ; iteration @ min
+    #index = 0.1 * itermin
+
+  elseif (@colorby == 2)        ; angle @ min
+    a = atan2(zmin)
+    if (a < 0.0)
+      a = a + twopi
+    endif
+    #index = a / twopi
+
+  elseif (@colorby == 3)        ; angle @ dot
+    a = atan2(thispoint)
+    if (a < 0.0)
+      a = a + twopi
+    endif
+    #index = a / twopi
+
+  else                       ; minimum distance
+    #index = rmin / @threshold
+  endif
+
+  if (!@solidcolor); solid color not allowed
+    #solid = false
+  else
+    if (rmin > @threshold)
+      #solid = usesolid
+    else
+      #solid = false
+    endif
+  endif
+
+default:
+  title="Parametric Curves"
+
+  helpfile="http://polychroma.com/fractals/parametric.php"
+
+  heading
+    caption = "Curve Options"
+  endheading
+
+  param curve
+    caption = "Curve"
+    enum    = "Lissajous" "Epicycloid" "Hypocycloid" "Cycloid"
+    default = 0
+  endparam
+
+  param x_per
+    caption = "X Period"
+    default = 4.0
+    min = 1.0e-10
+  endparam
+
+  param y_per
+    caption = "Y Period"
+    default = 3.0
+    min = 1.0e-10
+    visible = @curve == "Epicycloid" || @curve == "Hypocycloid" || @curve == "Lissajous"
+  endparam
+
+  param extra
+    caption = "Trochoid Parameter"
+    default = 1.0
+    min     = 1e-10
+    hint    = "Changes the 'loopiness'"
+    visible = @curve == "Epicycloid" || @curve == "Hypocycloid" || @curve == "Cycloid"
+  endparam
+
+  param cycle
+    caption = "Cycles"
+    default = 1.0
+    hint = "For Epicycloid and Hypocycloid, this should generally equal the Y period."
+  endparam
+
+  param ndots
+    caption = "Number of Points"
+    default = 240
+    hint = "Increase for smoother line, decrease \
+           for dots. Should be between 1 & 10000."
+    min = 1
+    max = 10000
+  endparam
+
+  heading
+    caption = "Trap Options"
+  endheading
+
+  param trapcenter
+    caption = "Curve Center"
+    default = (0,0)
+  endparam
+
+  param angle
+    caption = "Rotation"
+    default = 0.0
+  endparam
+
+  param size
+    caption = "Size"
+    default = 1.0
+    min = 0.0
+  endparam
+
+  param asp
+    caption = "Aspect Ratio"
+    default = 1.0
+    min     = 0.0
+  endparam
+
+  param gauss
+    caption = "Repeat Spacing"
+    default = 0.0
+    min = 0.0
+    hint = "This is the spacing at which the trap will repeat, \
+            all across the complex plane.  If zero, trap does \
+	    not repeat."
+  endparam
+
+  heading
+    caption = "Coloring Options"
+  endheading
+
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "dots" "lines"
+  endparam
+
+  param colorby
+    caption = "Color by"
+    default = 0
+    enum = "closest" "iteration" "angle to trap" \
+           "angle to points"
+  endparam
+
+  param thick
+    caption = "Thickness"
+    default = 0.3
+    min = 0.0
+    hint = "Affects the dot size or line thickness, \
+      similar to the Threshold parameter."
+  endparam
+
+  param threshold
+    caption = "Threshold"
+    default = 0.25
+    min = 0.0
+  endparam
+
+  param solidcolor
+    caption = "Use solid color?"
+    default = true
+  endparam
+}

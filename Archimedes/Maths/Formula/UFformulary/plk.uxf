@@ -1,0 +1,107 @@
+plk-circle-limit{; Paul L. Kloeg, november, 23 1999
+; This transformation is inspired by the work of M.C. Escher.
+; He made some figures with the title : Circle Limits I...IV.
+; Starting with a figure in the middle, that figure is repeated in a smaller
+; size and a larger number, in a ring around the middle figure.
+; That process is repeated a number of times ending in a limit.
+
+
+transform:
+  float RR=cabs(#pixel)
+       ;   RR is distance from pixel to (0,0)
+  float h3=1-(RR-@R1)*(1-@factor)/@thick
+  int ringnumber=floor(log(h3)/log(@factor))
+       ;   ringnumber is the ringnumber of the location of the pixel
+       ;   (ringnumber starts with 0 for the first ring)
+if (ringnumber >= @ringmax  || RR<@R1 || h3<0)
+       ;  if point outside last ring, outside the limit, inside first ring
+       ;  the point is colored to the specification in the tab "mapping"
+#solid=true
+else
+  float Rin= @R1 +@thick*(1-@factor^ringnumber)/(1-@factor)
+  float Rout= @R1+@thick*(1-@factor^(ringnumber+1))/(1-@factor)
+       ;    Rin and Rout are the inner and outer radius of the ring of the
+       ;    location of the pixel
+  float alfa=(atan2(#pixel))*180/#pi
+       ;    alfa is angle in degrees of the pixel
+  float dx=sqrt(|@RB-@LB|)
+  float dy=sqrt(|@LT-@LB|)
+       ;    dx and dy are the horizontal and vertical dimension of the
+       ;    figure to be projected
+  float h4=(#pi*(Rin+Rout)*dy)/((Rout-Rin)*dx)
+       ;    h4 is the first guess of the number of sectors in the concerned
+       ;    ring.  the number is calculted so that the deformation of the
+       ;    figure is minimal
+if h4<@SYM
+int  nsector=floor(h4)
+else
+int nsector=@SYM*floor(h4/@SYM)
+       ;    the number of sectors is a multiple of input value SYM or less
+endif
+if nsector<=0
+nsector=1
+endif
+       ;    nsector is number of sectors in the ring
+  float h1=360/nsector
+       ;    h1 is the angle of the sectors in the concerned ring
+  int h2=floor(alfa/h1)
+       ;     h2 is the sector number where the pixel is
+  float alfa1=h1*h2
+  float alfa2=h1*(h2+1)
+       ;   alfa 1 and alfa 2 are the right and left angle of the sector
+  float err=1.e-10  ; introduced to avoid some "strange" behavoir
+
+#pixel=@RB+(@LB-@RB+err)*(alfa-alfa1)/(alfa2-alfa1)+\
+           (@LT-@LB+err)*(RR-Rin)/(Rout-Rin)
+endif
+
+default:
+title="circle-limit"
+
+param RB
+caption="right bottom"
+default=(1.,-1.)
+endparam
+
+param LB
+caption="left bottom"
+default=(-1.,-1.)
+endparam
+
+param LT
+caption="left top"
+default=(-1.,1.)
+endparam
+
+param R1
+caption="inner radius first ring"
+default=0.3
+endparam
+
+param thick
+caption="thickness first ring "
+default=0.5
+min=0.
+endparam
+
+param factor
+caption="decrease factor"
+default=0.3
+min=0.
+hint="factor for decrease in thickness of next ring "
+endparam
+
+param ringmax
+caption="maximum number of rings"
+default=100
+min=1
+endparam
+
+param SYM
+caption="symmetry"
+default=1
+min=1
+hint="higher number gives a more regular pattern"
+endparam
+
+}

@@ -1,0 +1,109 @@
+comment { Copyright © 2025 by Rick Sidwell
+
+  Plug-in classes for Ultra Fractal 5.0 and above
+
+  Last update 26 Feb 2025
+
+; This work is licensed under the MIT license
+; https://opensource.org/license/mit
+
+}
+
+class RDS_TrapShapeNestedCircles(common.ulb:TrapShape) {
+public:
+  import "common.ulb"
+
+  func RDS_TrapShapeNestedCircles(Generic pparent)
+    TrapShape.TrapShape(pparent)
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    pz = pz * (0,1) ^ 0.5
+    float d = cabs(pz) - @p_radius;
+    if (d > 0)
+      return d
+    else
+      d = -d
+    endif
+
+    complex bottomleft = -@p_radius / sqrt(2.0) + flip(-@p_radius / sqrt(2.0))
+    int n = 2
+    float cur_radius = @p_radius / 2.0
+    int level = 1
+    while (level < @p_levels)
+      float delta = cur_radius * sqrt(2.0)
+      complex circle_pos = bottomleft - (cur_radius / sqrt(2.0) + flip(cur_radius / sqrt(2.0)))
+      complex newp = (pz - circle_pos) / delta
+      complex newf = newp - trunc(newp)
+
+      ; End if point is outside all circles at this level
+      if (real(newp) < 0 || real(newp) > n+1 || imag(newp) < 0 || imag(newp) > n+1)
+        return d
+      endif
+
+      ; Check bottom left circle
+      if (real(newp) > 1 && imag(newp) > 1)
+        float newd = abs(delta * cabs(newf) - cur_radius)
+        if (newd < d)
+          d = newd
+        endif
+      endif
+
+      ; check bottom right circle
+      if (real(newp) < n && imag(newp) > 1)
+        float newd = abs(delta * cabs(newf - (1,0)) - cur_radius)
+        if (newd < d)
+          d = newd
+        endif
+      endif
+
+      ; check top left circle
+      if (real(newp) > 1 && imag(newp) < n)
+        float newd = abs(delta * cabs(newf - (0,1)) - cur_radius)
+        if (newd < d)
+          d = newd
+        endif
+      endif
+
+      ; check top right circle
+      if (real(newp) < n && imag(newp) < n)
+        float newd = abs(delta * cabs(newf - (1,1)) - cur_radius)
+        if (newd < d)
+          d = newd
+        endif
+      endif
+
+      n = n * 2
+      cur_radius = cur_radius / 2.0
+      level = level + 1
+    endwhile
+
+    return d
+  endfunc
+
+default:
+	title = "Nested Circles"
+
+	int param v_rds_trapshapenestedcircles
+		caption = "Version (RDS_TrapShapeNestedCircles)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_rds_trapshapenestedcircles < 100
+	endparam
+
+  float param p_radius
+    caption = "Radius"
+    default = 1.0
+    min = 0.1
+    hint = "Radius of outer circle"
+  endparam
+
+	int param p_levels
+		caption = "Levels"
+		default = 6
+    min = 1
+    max = 10
+		hint = "How many levels of nesting to use."
+	endparam
+}

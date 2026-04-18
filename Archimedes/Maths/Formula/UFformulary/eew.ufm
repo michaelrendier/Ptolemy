@@ -1,0 +1,5242 @@
+comment{
+Erik E Wahl
+
+These 29 formulas represent a labor of love.
+I have taken time-honored favorites by original authors KPK, Ed Algra,
+Mark Townsend, and Marco Annelli, and others and added my own bells and whistles.
+Specifically, I have implemented Toby Marshall's AutoSwitch capability, when
+feasible, which effectively halves the number of formula files! I've also
+provided an Initial Function to each formula. This provides Point, 4-way, and Vertical and
+Horizontal Strip  symmetries to each fractal as desired. Whenever possible,
+functions and user parameters have been added to increase the formula's flexibility and
+usefulness.
+I recommend using either Lyapunov( in dmj.ucl) or Exponential Smoothing ( in
+standard.ucl) for both Inside and  Outside coloring to start with.
+
+My plan in the upcoming months is to convert these formulas into
+corresponding plugins which will provide even more flexibility and
+enjoyment for interested fractal artists. Stay tuned and update your
+weekly collections often!
+
+If you have any questions or issues with these formulas, please feel free to
+leave me a note at mindpoet61.deviantart.com or email me at
+mindpoet61@gmail.com
+If you enjoy using these, please tell your friends about my work and feel free
+to share any parameters using these formulas.
+
+Last upload Aug 20 2014
+Formulas for UF 5.04 ( might not be backwards-compatible with version 2.0 or earlier)
+}
+eew_barnsley2 {
+;;
+init:
+float d = 0.0
+float bshift = 0.0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;
+if (@barn_shift == 0)
+      bshift = @shval
+elseif (@barn_shift == 1)
+      bshift = cabs(0.5 + 0.25*sqr(c))
+elseif (@barn_shift == 2)
+     bshift = cabs(0.5 + 0.25*exp(-sqr(c)))
+elseif (@barn_shift == 3)
+     bshift = cabs(0.5 + 0.5*sin(c))
+endif
+;;
+loop:
+if  @av == true
+  #z = abs(#z)
+endif
+#z = @f(#z)
+if @flv == 0
+  d = real(#z)
+elseif @flv == 1
+  d = imag(#z)
+elseif @flv == 2
+  d = real(#z)*imag(c) + real(c)*imag(#z)
+elseif @flv == 3
+  d = real(#z)*imag(c) - real(c)*imag(#z)
+endif
+;
+if d >= 0
+  #z = @bfn(#z - bshift)*c + @px*c
+else
+  #z = @bfn(#z + bshift)*c + @px*c
+endif
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "MindPoet's Barnsley Too"
+rating = recommended
+maxiter = 15
+;
+heading
+  caption = " "
+  text = "This is a simplified version of Olivier Steiger's 'Barnsley(**)' \
+           formulas (in ost.ufm). Lyapunov (in dmj.ucl) or Exponential Smoothing \
+           (in standard.ucl) is recommended for both Inside and Outside Coloring."
+endheading
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+       switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+  sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+  and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.6,1.1)
+  visible = ( @mode == "Julia" )
+endparam
+param  px
+  caption = "Pixel/Seed Multiplier"
+  default = 0.0
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 1e12
+  min = 1.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func bfn
+  caption = "Barnsley function"
+  default = ident()
+endfunc
+param barn_shift
+  caption = "Barnsley Shift"
+  enum = "Classic" "Parabola" "Gaussian" "Sine"
+  default = 0
+endparam
+param shval
+  caption = "Shift Value"
+  visible = (@barn_shift == 0)
+  default = 0.4
+  min = 0.0
+endparam
+param flv
+  caption = "Flavor"
+  enum = "A" "B" "C" "D"
+  default = 0
+endparam
+func f
+  caption = "Loop Function"
+  default = ident()
+endfunc
+;;
+switch:
+type = "eew_barnsley2"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  bailout = bailout
+  av = av
+;
+  flv = flv
+  bfn = bfn
+  barn_shift = barn_shift
+  shval = shval
+  f = f
+}
+
+Separated_Divergent{
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+z = (@f(real(z)) + flip(@g(imag(z))))^@power + @px*c
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "Separated Divergent"
+method = onepass
+periodicity = 0
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func f
+  caption = "Real Function"
+  default = sin()
+endfunc
+;
+func g
+  caption = "Imaginary Function"
+  default = ident()
+endfunc
+;;
+switch:
+type = "Separated_Divergent"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  f = f
+  g = g
+}
+
+Apophymator{
+;;
+init:
+c = (0,0)
+float EPS = 1e-20
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;
+int jseed = 0
+;
+if @var == 13
+  jseed = @JuliaNRndSeed
+endif
+;
+float x = 0.0
+float y = 0.0
+float xt = 0.0
+float yt = 0.0
+float r =  0.0
+float rr = 0.0
+float rh = 0.0
+float rp = 0.0
+float rl = 0.0
+float th = 0.0
+float th2 = 0.0
+float thdpi = 0.0
+float thdpi2 = 0.0
+float s = 0.0
+float cc = 0.0
+float d = 0.0
+float t = 0.0
+float dx = 0.0
+float dy = 0.0
+float dr = 0.0
+;;
+loop:
+r = cabs(z)
+rr = r*r
+rh = sqrt(r)
+rl = log(r)
+th = atan2(z)
+th2 = atan2(flip(z))
+thdpi = th/#PI
+thdpi2 = th2/#PI
+x = real(z)
+y = imag(z)
+;
+if @var == 0
+;Linear
+  xt = x
+  yt = y
+elseif @var == 1
+;Sinusoidal
+  xt = sin(x)
+  yt = sin(y)
+elseif @var == 2
+;Spherical;
+  xt = x / (rr + EPS)
+  yt = y / (rr + EPS)
+elseif @var == 3
+;Swirl
+  xt = sin(rr)*x - cos(rr)*y
+  yt = cos(rr)*x + sin(rr)*y
+elseif @var == 4
+;Horseshoe
+  xt = (x^2 - y^2) /(r + EPS)
+  yt = 2*x*y /(r + EPS)
+elseif @var == 5
+;Polar
+  xt = thdpi
+  yt = r - 1
+elseif @var == 6
+;Handkerchief
+  xt = sin(th + r) * r
+  yt = cos(th - r) * r
+elseif @var == 7
+;Heart...does not look heartlike :(
+  d = r*th
+  xt =  r * sin(d)
+  yt =  -r * cos(d)
+elseif @var == 8
+;Disc
+  xt = sin(#pi*r) * thdpi2
+  yt = cos(#pi*r) * thdpi2
+elseif @var == 9
+;Spiral
+  xt = (x + r*sin(r)) / (rr + EPS)
+  yt = (y - r*cos(r)) / (rr + EPS)
+elseif @var == 10
+;Hyperbolic
+  xt = y/(rr + EPS)
+  yt = x
+elseif @var == 11
+;Diamond
+  xt = sin(th) * cos(r)
+  yt = cos(th) * sin(r)
+elseif @var == 12
+;Ex
+  s = sin(th + r)^3
+  cc = cos(th - r)^3
+  xt = r * (s + cc);
+  yt = r * (s - cc);
+elseif @var == 13
+;JuliaN
+if jseed > 0
+  d = (th/2 + #pi)/@N
+else
+  d = th/2/@N
+endif
+  xt = x + rh^@N*cos(d)
+  yt = y + rh^@N*sin(d)
+jseed = random(jseed)
+elseif @var == 14
+;Bent
+  if x < 0
+    xt = 2*x
+  else
+    xt = x
+  endif
+  if y < 0
+    yt = y/2
+  else
+    yt = y
+  endif
+elseif @var == 15
+;Waves
+    xt = x + @WaveA*sin(y/(@waveB + EPS))
+    yt = y + @WaveC*sin(x/(@waveD + EPS))
+elseif @var == 16
+;Fisheye
+  t = 2 / (r + 1)
+  xt =  t * y
+  yt = t * x
+elseif @var == 17
+;Popcorn
+  dx = tan(3 * y)
+  dy = tan(3 * x)
+  xt = x + real(@PopcornStep) * sin(dy)
+  yt = y + imag(@PopcornStep) * sin(dx)
+elseif @var == 18
+;Exponential
+  d = exp(x - 1)
+  xt = cos(#pi*y) * d
+  yt = sin(#pi*y) * d
+elseif @var == 19
+;Power
+  rp = r^sin(th)
+  xt = rp * cos(th)
+  yt = rp * sin(th)
+elseif @var == 20
+;Cosine
+  xt = cos(#pi*x) * cosh(y)
+  yt = -sin(x) * sinh(y)
+elseif @var == 21
+;Rings
+  dr = 2*r - @RingPar*trunc(r/(2*@RingPar))*2-r
+  xt = dr * cos(th)
+  yt = dr * sin(th)
+elseif @var == 22
+;Fan
+  d = @FanA*#pi
+  if ((th+@FanB)%(d)) > d/2
+    t = th - d/2
+  else
+    t = th + d/2
+  endif
+  xt =  r * cos(t)
+  yt = r * sin(t)
+elseif @var == 23
+;Eyefish
+  t = 2 / (r + 1)
+  xt = r*x
+  yt = r*y
+elseif @var == 24
+;Bubble
+  d = 4 / (rr+ 4)
+  xt =  d*x
+  yt = d*y
+elseif @var == 25
+;Cylinder
+  xt = sin(x)
+  yt = y
+elseif @var == 26
+;Perspective
+  d = 1/(@foc-sin(th/2)*y)
+  xt = d*@foc*x
+  yt = d*@foc*cos(th/2)*y
+elseif @var == 27
+ ;Tangent
+  xt = sin(x)/cos(y)
+  yt = sin(y)/cos(x)
+elseif @var == 28
+;Galaxy
+  xt = r*cos(th+rl)
+  yt = r*sin(th+rl)
+endif
+z = xt + flip(yt)
+z = z^@power + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Apophymator"
+method = onepass
+periodicity = 0
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-0.3,-0.78)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+;
+param var
+  caption = "Variation"
+  enum = "Linear" "Sinusoidal" "Spherical" "Swirl" "Horseshoe" "Polar" "Handkerchief" "Heart" "Disc" \
+         "Spiral" "Hyperbolic" "Diamond" "Ex" "JuliaN" "Bent" "Waves" "Fisheye" "Popcorn" "Exponential" "Power" \
+         "Cosine" "Rings" "Fan" "Eyefish" "Bubble" "Cylinder" "Perspective" "Tangent" "Galaxy"
+  default = 1
+endparam
+;
+param JuliaNRndSeed
+  caption = "Random Seed"
+  visible = (@var == 13)
+  default = 0
+endparam
+param N
+  caption = "JuliaN Power"
+  visible = (@var == 13)
+  default = 1
+  min = 1
+endparam
+;
+param PopcornStep
+  caption = "Step"
+  visible = (@var == 17)
+  min = 1E-20
+  default = (0.05,0.05)
+endparam
+;
+param RingPar
+  caption = "Parameter"
+  visible = (@var == 21)
+  default = 1.0
+endparam
+;
+param FanA
+  caption = "A"
+  visible = (@var == 22)
+  min = 1E-20
+  default = 0.5
+endparam
+param FanB
+  caption = "B"
+  visible = (@var == 22)
+  default = 0.5
+endparam
+;
+param WaveA
+  caption = "A"
+  visible = (@var == 15)
+  default = 0.5
+endparam
+param WaveB
+  caption = "B"
+  visible = (@var == 15)
+  default = 0.5
+endparam
+param WaveC
+  caption = "C"
+  visible = (@var == 15)
+  default = 0.5
+endparam
+param WaveD
+  caption = "D"
+  visible = (@var == 15)
+  default = 0.5
+endparam
+;
+param foc
+  caption = "Focus"
+  visible = (@var == 26)
+  default = 1.0
+endparam
+;;
+switch:
+type = "Apophymator"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+;
+  var = var
+  JuliaNRndseed = JuliaNRndseed
+  N = N
+  PopcornStep =PopcornStep
+  RingPar = RingPar
+  FanA = FanA
+  FanB =FanB
+  WaveA =WaveA
+  WaveB =WaveB
+  WaveC =WaveC
+  WaveD =WaveD
+  foc = foc
+}
+
+Random_Divergent {
+;;
+global:
+float values[#maxiter]
+int i = 0
+;
+int seed = @rseed
+while i< #maxiter
+  seed = random(seed)
+  values[i] = seed / #randomrange
+  i = i + 1
+endwhile
+;;
+init:
+int iter = 0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  #z = abs(#z)
+endif
+float r = @k*values[iter]
+#z = @f((#z+r+flip(r))^@power) + @px*c
+iter = iter + 1
+;;
+bailout:
+  |z|< @bailout
+;;
+default:
+title = "Random Divergent"
+method = onepass
+periodicity =0
+maxiter = 15
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2.0,0.0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func f
+  caption = "Divergent Function"
+  default = ident()
+endfunc
+param k
+  caption = "Strength"
+  default = 0.5
+endparam
+param rseed
+  caption = "Random Seed"
+  default = 123456
+endparam
+;;
+switch:
+type = "Random_Divergent"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  rseed = rseed
+  f = f
+  k = k
+}
+
+Sliced_Divergent {
+; Sliced Divergent fractal.
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+;
+if (real(z) < @cut )
+  z = z+@offset
+elseif (real(z) >= @cut)
+  z = z-@offset
+
+endif
+;
+z = @f(z)^@power + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Sliced Divergent"
+center = (0.0, 0.0)
+method = onepass
+periodicity = 0
+maxiter = 15
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint ="Make sure the setting is not the same as Current Mode or \
+         switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0.0,0.0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 1e12
+  min = 1.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+;
+param  cut
+  caption ="Margin"
+  default = 0.25
+endparam
+param offset
+  caption ="Offset"
+  default = 0.25
+endparam
+func f
+  caption = "Divergent Function"
+  default = cotan()
+endfunc
+;;
+switch:
+type = "Sliced_Divergent"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+  cut = cut
+  offset = offset
+  f = f
+}
+
+Generic_Convergent {
+; Generic Convergent fractal.
+; z => z - (f(z) - startroot)/f'(z)
+;;
+init:
+c = (0,0)
+if @mode == "Maria"
+   if @mflav == "Regular"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+   c = @initf(#pixel)
+elseif @mode == "Newton"
+   z = @initf(#pixel)
+   c = @initf(@root)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+zold = z
+if @op == 0
+  h0 = @f(z)+ @g(z)
+  h1 = @f(z+@d)+ @g(z+@d)
+elseif @op == 1
+  h0 = @f(z)- @g(z)
+  h1 = @f(z+@d)- @g(z+@d)
+elseif @op == 2
+  h0 = @f(z)*@g(z)
+  h1 = @f(z+@d)*@g(z+@d)
+elseif @op == 3
+  h0 = @f(z)/@g(z)
+  h1 = @f(z+@d)/@g(z+@d)
+elseif @op == 4
+  h0 = @f(z)^@g(z)
+  h1 = @f(z+@d)^@g(z+@d)
+else
+  h0 =  @f(@g(z))
+  h1 =  @f(@g(z+@d)+@d)
+endif
+z = z - @d*(h0 - c)/(h1 - h0)
+;;
+bailout:
+|z - zold| >= @bailout
+;;
+default:
+title = "Generic Convergent"
+periodicity = 0
+method = onepass
+maxiter = 100
+;
+heading
+  caption = "Convergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Maria""Newton"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Maria""Newton"
+  default = 0
+endparam
+param mflav
+  caption = "Maria Flavor"
+  enum = "Regular" "Pixel"
+  default = 0
+  visible = (@mode == "Maria" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0.01,0)
+  visible = ( @mode == "Maria" && @mflav == "Regular" )
+endparam
+param root
+  caption = "Newton root"
+  default = (1,0)
+  visible = ( @mode == "Newton" )
+endparam
+param bailout
+  caption = "Convergent Bailout"
+  default = 1e-20
+  min = 1e-20
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func  f
+  caption ="F"
+  default = sqr()
+endfunc
+param op
+  caption = "operator"
+  enum = "+" "-" "*" "/" "^" "o"
+  default = 2
+endparam
+func  g
+  caption ="G"
+  default = ident()
+endfunc
+param d
+  caption = "Differential"
+  default = 1e-10
+  min = 1e-10
+endparam
+;;
+switch:
+type = "Generic_Convergent"
+  mode = switchto
+  switchto = mode
+  root = #pixel
+  mflav = mflav
+  initf = initf
+  bailout = bailout
+  av = av
+;
+  f = f
+  g = g
+  op = op
+  d = d
+}
+
+Tessarine {
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+z = @f(z^2 + 2*sqr(imag(z))) + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Tessarine"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.43,-0.33)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 128.0
+  min = 1.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func f
+  caption = "Tessarine Function"
+  default = conj()
+endfunc
+;;
+switch:
+type = "Tessarine"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  bailout = bailout
+  av = av
+;
+  f = f
+}
+
+Affine_Orbit_Trap {
+; Written by Erik Wahl
+; http:/mindpoet61.deviantart.com
+;
+; Julia fractal for generalized affinity function
+; aConj(z) + bz +c
+; Inspired by the fractals of Marco Anelli which were originally written for
+; use with Ramiro Perez's InvIFS program.
+; This formula generates some pretty cool TechnoArt images.
+;I recommend Expo Smoothing for both INSIDE and OUTSIDE
+;coloring to start with. When you have the fractal set, experiment with
+; Orbit Traps.
+global:
+a1 = 0.5*((@A1 - @D1) + flip(@B1 + @C1))
+b1 = 0.5*((@A1 + @D1) - flip(@B1 - @C1))
+c1 = @E1 + flip(@F1)
+a2 = 0.5*((@A2 - @D2) + flip(@B2 + @C2))
+b2 = 0.5*((@A2 + @D2) - flip(@B2 - @C2))
+c2 = @E2 + flip(@F2)
+a3 = 0.5*((@A3 - @D3) + flip(@B3 + @C3))
+b3 = 0.5*((@A3 + @D3) - flip(@B3 - @C3))
+c3 = @E3 + flip(@F3)
+a4 = 0.5*((@A4 - @D4) + flip(@B4 + @C4))
+b4 = 0.5*((@A4 + @D4) - flip(@B4 - @C4))
+c4 = @E4 + flip(@F4)
+a5 = 0.5*((@A5 - @D5) + flip(@B5 + @C5))
+b5 = 0.5*((@A5 + @D5) - flip(@B5 - @C5))
+c5 = @E5 + flip(@F5)
+;
+float u1 = @w1/(@w1 + @w2 + @w3 + @w4 + @w5)
+float u2 = @w2/(@w1 + @w2 + @w3 + @w4 + @w5)
+float u3 = @w3/(@w1 + @w2 + @w3 + @w4 + @w5)
+float u4 = @w4/(@w1 + @w2 + @w3 + @w4 + @w5)
+float u5 = @w5/(@w1 + @w2 + @w3 + @w4 + @w5)
+;
+complex d1 = a1*conj(c1) - conj(b1)*c1
+float   e1 = |b1| - |a1|
+complex d2 = a2*conj(c2) - conj(b2)*c2
+float   e2 = |b2| - |a2|
+complex d3 = a3*conj(c3) - conj(b3)*c3
+float   e3 = |b3| - |a3|
+complex d4 = a4*conj(c4) - conj(b4)*c4
+float   e4 = |b4| - |a4|
+complex d5 = a5*conj(c5) - conj(b5)*c5
+float   e5 = |b5| - |a5|
+;
+complex g1 = 0.5*@k*(0,1)^(@a/90)*(a1+b1+2*c1 - flip(a1-b1))
+complex g2 = 0.5*@k*(0,1)^(@a/90)*(a2+b2+2*c2 - flip(a2-b2))
+complex g3 = 0.5*@k*(0,1)^(@a/90)*(a3+b3+2*c3 - flip(a3-b3))
+complex g4 = 0.5*@k*(0,1)^(@a/90)*(a4+b4+2*c4 - flip(a4-b4))
+complex g5 = 0.5*@k*(0,1)^(@a/90)*(a5+b5+2*c5 - flip(a5-b5))
+;;
+init:
+float   o1 = 0
+float   o2 = 0
+float   o3 = 0
+float   o4 = 0
+float   o5 = 0
+;
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+;;
+; These are the inverted Affine Traps
+if  @av == true
+  z = abs(z)
+endif
+t1 = (-a1*conj(z) + conj(b1)*z + d1)/e1
+t2 = (-a2*conj(z) + conj(b2)*z + d2)/e2
+t3 = (-a3*conj(z) + conj(b3)*z + d3)/e3
+t4 = (-a4*conj(z) + conj(b4)*z + d4)/e4
+t5 = (-a5*conj(z) + conj(b5)*z + d5)/e5
+;
+o1 = |t1 - g1|/u1
+o2 = |t2 - g2|/u2
+o3 = |t3 - g3|/u3
+o4 = |t4 - g4|/u4
+o5 = |t5 - g5|/u5
+if     (o1 <= o2 && o1 <= o3 && o1 <= o4 && o1 <= o5)
+  z = t1
+elseif (o2 <= o1 && o2 <= o3 && o2 <= o4 && o2 <= o5)
+  z = t2
+elseif (o3 <= o1 && o3 <= o2 && o3 <= o4 && o3 <= o5)
+  z = t3
+elseif (o4 <= o1 && o4 <= o2 && o4 <= o3 && o4 <= o5)
+  z = t4
+else
+  z = t5
+endif
+z = z^@power + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+  title = "Affine Orbit Trap"
+  method = onepass
+  periodicity = 0
+  maxiter = 15
+  magn = 0.3
+  center = (0,4.5)
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = 1.0
+endparam
+param bailout
+  caption = "Bailout"
+  default = 128.0
+endparam
+;
+heading
+  caption = "------------Fractal Parameters"
+endheading
+heading
+  caption = "Transform 1"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param w1, caption = "Weight", default = 1.0, min = 1e-10, endparam
+param A1, caption = "A", default = 0.05, endparam
+param B1, caption = "B", default = 0.0, endparam
+param C1, caption = "C", default = 0.0, endparam
+param D1, caption = "D", default = 0.38, endparam
+param E1, caption = "E", default = 0.0, endparam
+param F1, caption = "F", default = 0.0, endparam
+;
+heading
+  caption = "Transform 2"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param w2, caption = "Weight", default = 0.85, min = 1e-10, endparam
+param A2, caption = "A", default = 0.85, endparam
+param B2, caption = "B", default = 0.04, endparam
+param C2, caption = "C", default = -0.04, endparam
+param D2, caption = "D", default = 0.85, endparam
+param E2, caption = "E", default = 0.0, endparam
+param F2, caption = "F", default = 1.6, endparam
+;
+heading
+  caption = "Transform 3"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param w3, caption = "Weight", default = 0.7, min = 1e-10, endparam
+param A3, caption = "A", default = 0.2, endparam
+param B3, caption = "B", default = -0.26, endparam
+param C3, caption = "C", default = 0.23, endparam
+param D3, caption = "D", default = 0.22, endparam
+param E3, caption = "E", default = 0.0, endparam
+param F3, caption = "F", default = 1.6, endparam
+;
+heading
+  caption = "Transform 4"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param w4, caption = "Weight", default = 0.7, min = 1e-10, endparam
+param A4, caption = "A", default = -0.15, endparam
+param B4, caption = "B", default = 0.28, endparam
+param C4, caption = "C", default = 0.26, endparam
+param D4, caption = "D", default = 0.24, endparam
+param E4, caption = "E", default = 0.0, endparam
+param F4, caption = "F", default = 0.44, endparam
+;
+heading
+  caption = "Transform 5"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param w5, caption = "Weight", default = 1e-10, min = 1e-10, endparam
+param A5, caption = "A", default = 0.5, endparam
+param B5, caption = "B", default = 0.0, endparam
+param C5, caption = "C", default = 0.0, endparam
+param D5, caption = "D", default = 0.5, endparam
+param E5, caption = "E", default = 0.0, endparam
+param F5, caption = "F", default = -0.5, endparam
+;
+heading
+  caption = "Adjustment Parameters"
+endheading
+param k
+  caption = "Cell Size"
+  default = 2.1
+endparam
+param a
+  caption = "Cell Angle"
+  default = 0.0
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;;
+switch:
+type = "Affine_Orbit_Trap"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  w1=w1,A1=A1,B1=B1,C1=C1,D1=D1,E1=E1,F1=F1
+  w2=w2,A2=A2,B2=B2,C2=C2,D2=D2,E2=E2,F2=F2
+  w3=w3,A3=A3,B3=B3,C3=C3,D3=D3,E3=E3,F3=F3
+  w4=w4,A4=A4,B4=B4,C4=C4,D4=D4,E4=E4,F4=F4
+  w5=w5,A5=A5,B5=B5,C5=C5,D5=D5,E5=E5,F5=F5
+;
+  k = k
+  a = a
+}
+  
+HyperProjective {
+;;
+init:
+c = (1e-7,0)
+if @mode == "Mandelbrot"
+  if @mflav == "Classic"
+     z = @initf(@start)
+  else
+     z = @initf(#pixel)
+  endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+zn = @ca*conj(z)^2+@cb*z^2+@cc
+zd = @cd*conj(z)+@ce*z+@cf
+z = @fn(zn)/@fd(zd)
+z = z^@power + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "HyperProjective"
+maxiter = 6
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (1e-7,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Power"
+  default = (1.5,0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e7
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param ca, caption = "a", default = 1.0, endparam
+param cb, caption = "b", default = 1.0, endparam
+param cc, caption = "c", default = 0.0, endparam
+param cd, caption = "d", default = 1.0, endparam
+param ce, caption = "e", default = 0.0, endparam
+param cf, caption = "f", default = 0.0, endparam
+func fn
+  caption = "Numerator Function"
+  default = sin()
+endfunc
+func fd
+  caption = "Denominator Function"
+  default = sin()
+endfunc
+;;
+switch:
+type = "HyperProjective"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  ca = ca, cb = cb, cc = cc, cd = cd, ce = ce, cf = cf
+  fn = fn
+  fd = fd
+}
+  
+Cremona{
+;;
+init:
+c = (0.01,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+zn = @ca*conj(z)+@cb*z+@cc
+zd = @cd*conj(z)+@ce*z+@cf
+z = @fn(zn)/@fd(zd)
+z = z^@power + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Cremona"
+maxiter = 6
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (1e-7,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Power"
+  default = (2,0)
+endparam
+param bailout,
+  caption = "Bailout"
+  default = 1e7
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param ca, caption = "a", default = 1.0, endparam
+param cb, caption = "b", default = 1.0, endparam
+param cc, caption = "c", default = 0.0, endparam
+param cd, caption = "d", default = 1.0, endparam
+param ce, caption = "e", default = 0.0, endparam
+param cf, caption = "f", default = 0.0, endparam
+func fn
+  caption = "Numerator Function"
+  default = sin()
+endfunc
+func fd
+  caption = "Denominator Function"
+  default = sin()
+endfunc
+;;
+switch:
+type = "Cremona"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  ca = ca, cb = cb, cc = cc, cd = cd, ce = ce, cf = cf
+  fn=fn, fd=fd
+
+}
+
+eew_barnsley {
+; MindPoet's Barnsley Too is a fixed version of this formula.
+; I'm keeping this so DA artists using this version won't
+; have broken parameters.
+init:
+float d = 0.0
+float bshift = 0.0
+c = (0,0)
+if @mode == "Mandelbrot"
+#z = @initf(@startseed)
+c = @initf(#pixel)
+elseif @mode == "Julia"
+#z = @initf(#pixel)
+c = @initf(@startseed)
+endif
+;
+IF (@barn_shift == 0)
+      bshift = @shval
+ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(c))
+ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(c)))
+ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(c))
+ENDIF
+;
+loop:
+  #z = @f(#z)
+  IF @flv == 0
+  d = real(#z)
+  ELSEIF @flv == 1
+  d = imag(#z)
+  ELSEIF @flv == 2
+  d = real(#z) * imag(c) + real(c) * imag(#z)
+  ELSEIF @flv == 3
+  d = real(#z) * imag(c) - real(c) * imag(#z)
+  ENDIF
+  
+  IF d >= 0
+    #z = @bfn(#z + bshift) * c
+  ELSE
+    #z = @bfn(#z - bshift) * c
+  ENDIF
+;
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+default:
+  title = "MindPoet's Barnsley"
+  maxiter = 15
+  ;
+param mode
+caption = "Current Mode"
+enum = "Mandelbrot""Julia"
+default = 0
+endparam
+param switchto
+caption = "Switch To"
+enum = "Mandelbrot""Julia"
+default = 1
+visible = false
+endparam
+param startseed
+    caption = "Start/Seed"
+    default = (0.6, 1.1)
+endparam
+;
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+  sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+  and cotanh for vertical strip symmetry."
+endfunc
+;
+func bfn
+caption = "Barnsley function"
+default = ident()
+endfunc
+param barn_shift
+    caption = "Barnsley Shift"
+    enum = "Classic" "Parabola" "Gaussian" "Sine"
+    default = 0
+endparam
+param shval
+  caption = "Shift Value"
+  visible = (@barn_shift == 0)
+  default = -0.4
+endparam
+param flv
+  caption = "Flavor"
+  enum = "A" "B" "C" "D"
+  default = 0
+endparam
+  func f
+  caption = "Function"
+  default = ident()
+  endfunc
+  param test
+    caption = "Bailout Test"
+    hint = "Keep Bailout below 1e7 for best results."
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    hint = "Keep fairly low for most interesting results."
+    default = 12.0
+    min = 1.0
+  endparam
+switch:
+  type = "eew_barnsley"
+  mode = switchto
+  switchto = mode
+  startseed = #pixel
+  flv = flv
+  bfn = bfn
+  barn_shift = barn_shift
+  shval = shval
+  f = f
+  bailout = bailout
+  test = test
+}
+
+origbarnsley {
+; Erik Wahl 2010
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+if     real(#z) >= real(c)
+  #z = @hi*@fnh(#z)^@power + @px*c
+else
+  #z = @lo*@fnl(#z)^@power + @px*c
+endif
+;;
+bailout:
+|#z| < @bailout
+;;
+default:
+title = "Original Barnsley"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.6,-1.2)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 0.6
+endparam
+param power
+  caption = "Exponent"
+  default = (2.1,-0.5)
+endparam
+param bailout
+  caption = "Bailout Value"
+  default = 128.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param hi
+  caption = "Hi Value"
+  default = 1.5
+endparam
+func fnh
+  caption = "High function"
+  default = asin()
+endfunc
+param lo
+  caption = "Lo Value"
+  default = -0.5
+endparam
+func fnl
+  caption = "Low function"
+  default = tanh()
+endfunc
+;;
+switch:
+type = "origbarnsley"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  hi = hi
+  fnh = fnh
+  lo = lo
+  fnl = fnl
+}
+
+
+mt-eew-barnsleyish {
+; Mark Townsend, 12 May 2000
+; Erik Wahl,     13 Nov 2009
+; Updated        11 Aug 2014
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+if     real(#z) > real(@crit) && imag(#z) >= imag(@crit)
+  #z = @f(#z + imag(@crit))
+elseif real(#z) < real(@crit) && imag(#z) <= imag(@crit)
+  #z = @f(#z - real(@crit))
+endif
+#z = #z^@power + @px*c
+;;
+bailout:
+|#z| < @bailout
+;;
+default:
+title = "Improved Barnsley"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.87,0.51)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2.0,0.0)
+endparam
+param bailout
+  caption = "Bailout Value"
+  default = 128.0
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param crit
+  caption = "Critical Value"
+  default = 0.0
+endparam
+func f
+  caption = "Function"
+  default = cos()
+endfunc
+;;
+switch:
+type = "mt-eew-barnsleyish"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  crit = crit
+  f = f
+}
+
+Genaffineski {
+; Written by Eric E. Wahl
+; http:/mindpoet61.deviantart.com
+;
+; Divergent fractal for generalized affinity function
+; aConj(#z) + bz +c
+; Inspired by the fractals of Marco Anelli which were originally written for
+; use with Ramiro Perez's InvIFS program.
+; This formula generates some pretty cool TechnoArt images.
+;I recommend Lyapunov in dmj.ucl for both INSIDE and OUTSIDE
+;coloring to start with. When you have the fractal set, experiment with
+; Orbit Traps.
+;;
+global:
+a1 = 0.5*((@A1 - @D1) + flip(@B1 +@C1))
+b1 = 0.5*((@A1 + @D1) - flip(@B1 - @C1))
+c1 = @E1 + flip(@F1)
+a2 = 0.5*((@A2 - @D2) + flip(@B2 +@C2))
+b2 = 0.5*((@A2 + @D2) - flip(@B2 - @C2))
+c2 = @E2 + flip(@F2)
+a3 = 0.5*((@A3 - @D3) + flip(@B3 +@C3))
+b3 = 0.5*((@A3 + @D3) - flip(@B3 - @C3))
+c3 = @E3 + flip(@F3)
+complex d1 = a1*conj(c1) - conj(b1)*c1
+float   e1 = |b1| - |a1|
+complex d2 = a2*conj(c2) - conj(b2)*c2
+float   e2 = |b2| - |a2|
+complex d3 = a3*conj(c3) - conj(b3)*c3
+float   e3 = |b3| - |a3|
+;;
+init:
+float   o1 = 0
+float   o2 = 0
+float   o3 = 0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+; These are the inverted Affine Traps
+if  @av == true
+  z = abs(z)
+endif
+t1 = (-a1*conj(#z) + conj(b1)*#z +d1)/e1
+t2 = (-a2*conj(#z) + conj(b2)*#z +d2)/e2
+t3 = (-a3*conj(#z) + conj(b3)*#z +d3)/e3
+;
+o1 = |t1 - c|
+o2 = |t2 - c|
+o3 = |t3 - c|
+if     (o1 <= o2 && o1 <= o3)
+  #z = t1
+elseif (o2 <= o1 && o2 <= o3)
+  #z = t2
+else
+  #z = t3
+endif
+#z = @f(#z)^@power + @px*c
+;;
+bailout:
+|#z| <= @bailout
+;;
+default:
+title = "Genaffineski"
+method = onepass
+periodicity = 0
+magn = 2.0
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+caption = "Current Mode"
+enum = "Mandelbrot""Julia"
+default = 1
+endparam
+param switchto
+caption = "Switch To"
+enum = "Mandelbrot""Julia"
+default = 0
+hint = "Make sure the setting is not the same as Current Mode or \
+       switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+  sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+  and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.16,-0.11)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Power"
+  default = 2.0
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Transform 1"
+  $ifdef VER40
+    expanded = false
+   $endif
+endheading
+param A1, caption = "A1", default = 0.5, endparam
+param B1, caption = "B1", default = 0.0, endparam
+param C1, caption = "C1", default = 0.0, endparam
+param D1, caption = "D1", default = 0.5, endparam
+param E1, caption = "E1", default = 0.0, endparam
+param F1, caption = "F1", default = 0.0, endparam
+;
+heading
+  caption = "Transform 2"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param A2, caption = "A2", default = 0.5, endparam
+param B2, caption = "B2", default = 0.0, endparam
+param C2, caption = "C2", default = 0.0, endparam
+param D2, caption = "D2", default = 0.5, endparam
+param E2, caption = "E2", default = 0.5, endparam
+param F2, caption = "F2", default = 0.0, endparam
+;
+heading
+  caption = "Transform 3"
+   $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param A3, caption = "A3", default = 0.5, endparam
+param B3, caption = "B3", default = 0.0, endparam
+param C3, caption = "C3", default = 0.0, endparam
+param D3, caption = "D3", default = 0.5, endparam
+param E3, caption = "E3", default = 0.0, endparam
+param F3, caption = "F3", default = 0.5, endparam
+;
+heading
+endheading
+func  f
+  caption = "Function"
+  default = tan()
+endfunc
+;;
+switch:
+type = "Genaffineski"
+   mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  A1 = A1, B1 = B1, C1 = C1, D1 = D1, E1 = E1, F1 = F1
+  A2 = A2, B2 = B2, C2 = C2, D2 = D2, E2 = E2, F2 = F2
+  A3 = A3, B3 = B3, C3 = C3, D3 = D3, E3 = E3, F3 = F3
+;
+  f = f
+}
+  
+Colonel_Moebius {
+;
+; created by Erik Wahl
+; mindpoet61.deviantart.com
+; July 5 2014
+;
+; Keep iterations low for interesting inside structure
+; and shorter render times
+; Use Lyapunov  in dmj.ucl for Inside to get
+; most interesting structure.
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if @av == true
+     #z = abs(#z)
+endif
+if     @kfunc == 0
+  #z = exp((@a+@b*log(#z))/(@c+@d*log(#z)))^@power + @px*c
+elseif @kfunc == 1
+  #z = cos((@a+@b*acos(#z))/(@c+@d*acos(#z)))^@power + @px*c
+elseif @kfunc == 2
+  #z = tan((@a+@b*atan(#z))/(@c+@d*atan(#z)))^@power + @px*c
+elseif @kfunc == 3
+  #z = cosh((@a+@b*acosh(#z))/(@c+@d*acosh(#z)))^@power + @px*c
+elseif @kfunc == 4
+  #z = sqrt((@a+@b*#z*#z)/(@c+@d*#z*#z))^@power + @px*c
+elseif @kfunc == 5
+  #z = sqr((@a+@b*sqrt(#z))/(@c+@d*sqrt(#z)))^@power + @px*c
+elseif @kfunc == 6
+  #z = log((@a+@b*exp(#z))/(@c+@d*exp(#z)))^@power + @px*c
+elseif @kfunc == 7
+  #z = acos((@a+@b*cos(#z))/(@c+@d*cos(#z)))^@power + @px*c
+elseif @kfunc == 8
+  #z = atan((@a+@b*tan(#z))/(@c+@d*tan(#z)))^@power + @px*c
+else
+  #z = acosh((@a+@b*cosh(#z))/(@c+@d*cosh(#z)))^@power + @px*c
+endif
+;;
+bailout:
+|#z| <= @bailout
+;;
+default:
+title = "Colonel Moebius"
+maxiter = 10
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (1e-7,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+  min = 1.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+endparam
+ ;
+heading
+  caption = "Fractal Parameters"
+endheading
+param kfunc
+  caption = "Colonel Function"
+  enum = "exp" "cos" "tan" "cosh" "sqrt" "sqr" "log" "acos" "atan" "acosh"
+  default = 4
+endparam
+param a
+  caption = "A"
+  default = (-0.52,0.03)
+endparam
+param b
+  caption = "B"
+  default = (0.60,0.33)
+endparam
+param c
+  caption = "C"
+  default = (1.08,0.0)
+endparam
+param d
+  caption = "D"
+  default = (-0.11,0.16)
+endparam
+;;
+switch:
+type = "Colonel_Moebius"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  kfunc = kfunc
+  a = a
+  b = b
+  c = c
+  d = d
+}
+
+eew-techno{
+;
+; This formula is a radical simplification of
+; Ed Algra's Barnsley-Techno-UF4 formula (ea.ufm)
+; in which I isolated the parameters specifically
+; responsible for generating the classic default
+; techno fractal.
+;
+; Final tweak 4/16/2016
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+float val = 0.0
+ch = real(@px*c) + flip(real(@bseed))
+cl = real(imag(@bseed)) + flip(@px*c)
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+val = real(sin(@kt*imag(z)))
+; hi
+if val > @crit
+  z = @fh(@fnh(z^@mh+@ph)*ch)
+; lo
+else
+  z = @fl(@fnl(z^@ml+@pl)*cl)
+endif
+;;
+bailout:
+|#z| <= @bailout
+;;
+default:
+title = "Simple Techno"
+rating = recommended
+method = onepass
+periodicity = 0
+maxiter = 15
+;
+heading
+caption = " "
+text = "This formula is a simplified version of Ed Algra's Barnsley Deluxe \
+        meant primarily to highlight the 'Techno' style everyone likes so much. \
+        Set 'Maximum Iterations' between 10 and 20 for best results. "
+endheading
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param bailout
+  caption = "Bailout Value"
+  default = 1000.0
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+caption = "Barnsley Parameters"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param kt
+  caption = "Scaling"
+  default = 1.0
+endparam
+param crit
+  caption = "Critical value"
+  default = -0.3
+endparam
+param bseed
+  caption = "Barnsley Seed"
+  default = (-1.8,0.3)
+endparam
+;
+heading
+  caption = "High Parameters"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+func fnh
+  caption = "Inner Function"
+  default = ident()
+endfunc
+param ph
+  caption = "Offset"
+  default = (-1.1,-0.1)
+endparam
+func fh
+  caption = "Outer Function"
+  default = abs()
+endfunc
+param mh
+  caption = "Exponent"
+  default = (1,0)
+endparam
+;
+heading
+  caption = "Low Parameters"
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+func fnl
+  caption = "Inner Function"
+  default = ident()
+endfunc
+param pl
+  caption = "Offset"
+  default = (-3,1.5)
+endparam
+func fl
+  caption = "Outer Function"
+  default = ident()
+endfunc
+param ml
+  caption = "Exponent"
+  default = (1,0)
+endparam
+;;
+switch:
+type = "eew-techno"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  bailout = bailout
+  av = av
+;
+  kt = kt
+  crit = crit
+  bseed = bseed
+;
+  fnh = fnh
+  ph = ph
+  fh = fh
+  mh = mh
+;
+  fnl = fnl
+  pl = pl
+  fl = fl
+  ml = ml
+}
+
+eew-cubic {
+; Erik Wahl, Aug 3 2014
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+#z = @kc*@cf(#z^3) + @kq*@qf(#z^2) + @kl*@lf(#z) + @px*c
+;;
+bailout:
+|#z|< @bailout
+;;
+default:
+title = "MindPoet's Cubic"
+maxiter = 15
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0.8)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.7
+endparam
+param bailout
+  caption = "Bailout Value"
+  default = 128.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param kl
+  caption = "Linear Coefficient"
+  default = (0.77, 0.69)
+endparam
+param kq
+  caption = "Quadratic Coefficient"
+  default = (-1.22,0.26)
+endparam
+param kc
+  caption = "Cubic Coefficient"
+  default = (0.36,-0.13)
+endparam
+func  lf
+  caption = "Linear function"
+  default = sin()
+endfunc
+func  qf
+  caption = "Quadratic function"
+  default = atanh()
+endfunc
+func  cf
+  caption = "Cubic function"
+  default = cabs()
+endfunc
+;;
+switch:
+type = "eew-cubic"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  bailout = bailout
+;
+  lf = lf
+  qf = qf
+  cf = cf
+  kl = kl
+  kq = kq
+  kc = kc
+  av = av
+}
+
+eew-mt-ring { ; Mark Townsend, 11 Jul 1999
+; Erik Wahl, Aug 3 2014
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+float s = 0.0
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+z = z^@power + @px*c + s
+s = cabs(z)-@rad
+if     @flavor == 0
+  s = |s|
+else
+  s = cabs(s)
+endif
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "Ring"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+  sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+  and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.5,0.12)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (1,0)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 128.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+   caption = "Fractal Parameters"
+endheading
+param rad
+  caption = "Radius"
+  default = 0.75
+endparam
+param  flavor
+  caption = "Ring flavor"
+  enum = "A" "B"
+  default = 1
+endparam
+
+ ;;
+switch:
+type = "eew-mt-ring"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  rad = rad
+  flavor = flavor
+}
+
+eew-mt-hopalong { ; Mark Townsend, 8 May 1999
+;
+; Formulas devised by Barry Martin. I found
+; them in A. K. Dewdney's "The Armchair
+; Universe."
+;
+; Divergent version by Erik Wahl Aug 3 2014
+init:
+float x = 0.0
+float y = 0.0
+float xt = 0.0
+float yt = 0.0
+float sgnx = 0.0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+x = real(z)/@scalex
+y = imag(z)/@scaley
+if x < 0
+  sgnx = -1
+else
+  sgnx = 1
+endif
+
+if     @method == 0     ;Hopalong
+  xt = y - sgnx * (abs(@B1 * x + @C1))^0.5
+  yt = @A1 - x
+elseif @method == 1   ;Popcorn
+  xt = x - @Hx * real(@pfn1(@Dx*y + @pfn2(@Cx*y)))
+  yt = y - @Hy * real(@pfn3(@Dy*x + @pfn4(@Cy*x)))
+elseif @method == 2   ;Gingerbread
+  xt = 1.0 - y + abs(x)
+  yt = x
+elseif @method == 3   ;Three Ply
+  xt = y - sgnx*abs(sin(x)*cos(@B3) + @C3 - x*sin(@A3 + @B3 + @C3))
+  yt = @A3 - x
+elseif @method == 4  ;Quadrup Two
+  xt = x - sgnx*sin(log(abs(@B4 * y - @C4))) * atan(abs(sqr(@C4 * x - @B4)))
+  yt = @A4 - x
+elseif @method == 5    ;Martin
+  xt = y - real(@Mfn(x))
+  yt = @Mp - x
+endif
+  ;
+  z = (@xfn(xt) + flip(@yfn(yt)))^@power + @px*c
+;;
+bailout:
+|#z| < @bailout
+;;
+default:
+title = "MindPoet's Hopalong"
+maxiter = 15
+magn = 1.0
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0.0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 0.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2.0,0.0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param scalex
+  caption = "X Scale"
+  default = 1.0
+endparam
+param scaley
+  caption = "Y Scale"
+  default = 1.0
+endparam
+param method
+    caption = "Attractor Method"
+    enum = "Hopalong" \
+           "Popcorn" \
+           "Gingerbread" \
+           "Three Ply" \
+           "Quadrup Two" \
+           "Martinesque"
+    default = 0
+endparam
+param A1
+  caption = "1st Hopalong Coeff"
+  default = 0.4
+  visible = (@method == 0)
+endparam
+param B1
+  caption = "2nd Hopalong Coeff"
+  default = 1.0
+  visible = (@method == 0)
+endparam
+param C1
+  caption = "3rd Hopalong Coeff"
+  default = 0.0
+  visible = (@method == 0)
+endparam
+;
+param Hx
+  caption = "Outer X coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+param Cx
+  caption = "1st Inner X coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+param Dx
+  caption = "2nd Inner X coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+param Hy
+  caption = "Outer Y coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+param Cy
+  caption = "1st Inner Y coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+param Dy
+  caption = "2nd Inner X coeff"
+  default = 1.0
+  visible = (@method == 1)
+endparam
+func  pfn1
+  caption = "1st Popcorn Function"
+  default = ident()
+  visible = (@method == 1)
+endfunc
+func  pfn2
+  caption = "2nd Popcorn Function"
+  default = ident()
+  visible = (@method == 1)
+endfunc
+func  pfn3
+  caption = "3rd Popcorn Function"
+  default = ident()
+  visible = (@method == 1)
+endfunc
+func  pfn4
+  caption = "4th Popcorn Function"
+  default = ident()
+  visible = (@method == 1)
+endfunc
+;
+param A3
+  caption = "1st 3-Ply Coeff"
+  default = 0.5
+  visible = (@method == 3)
+endparam
+param B3
+  caption = "2nd 3-Ply Coeff"
+  default = 1.2
+  visible = (@method == 3)
+endparam
+param C3
+  caption = "3rd 3-Ply Coeff"
+  default = 0.3
+  visible = (@method == 3)
+endparam
+;
+param A4
+  caption = "1st Quad Coeff"
+  default = 0.5
+  visible = (@method == 4)
+endparam
+param B4
+  caption = "2nd Quad Coeff"
+  default = 1.2
+  visible = (@method == 4)
+endparam
+param C4
+  caption = "3rd Quad Coeff"
+  default = 0.3
+  visible = (@method == 4)
+endparam
+;
+func Mfn
+  caption = "Martin function"
+  default = ident()
+  visible = (@method == 5)
+endfunc
+param Mp
+  caption = "Martin Coeff"
+  default = 1.0
+  visible = (@method == 5)
+endparam
+;
+func xfn
+  caption = "X Function"
+  default = cabs()
+endfunc
+func yfn
+  caption = "Y Function"
+  default = cos()
+endfunc
+;;
+switch:
+type = "eew-mt-hopalong"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  scalex = scalex
+  scaley = scaley
+  a = a
+  b = b
+  c = c
+  f = f
+  g = g
+}
+
+eew-mt-gnarl { ; Mark Townsend, 15 Aug 1999
+;
+; Yet more variations of Pickover's Popcorn.
+; Last update on 31 December 1999
+;
+; Modified and generalized by Erik Wahl, Aug 3 2014
+;;
+init:
+float x = 0.0
+float y = 0.0
+float xt = 0.0
+float yt = 0.0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+x = real(#z)/@scalex
+y = imag(#z)/@scaley
+xt = x + @hx * real(@fn1(y + @fn2(@a * (y + @fn3(@b * y)))))
+yt = y + @hy * real(@fn1(x + @fn2(@a * (x + @fn3(@b * x)))))
+z = (xt + flip(yt))^@power + @px*c
+;;
+bailout:
+ |#z| < @bailout
+;;
+default:
+  title = "Totally Gnarly"
+  maxiter = 20
+  magn = 0.35
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+caption = "Current Mode"
+enum = "Mandelbrot""Julia"
+default = 1
+endparam
+param switchto
+caption = "Switch To"
+enum = "Mandelbrot""Julia"
+default = 0
+hint = "Make sure the setting is not the same as Current Mode or \
+       switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+  sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+  and cotanh for vertical strip symmetry."
+endfunc
+param start
+ caption = "Starting value"
+ default = (0,0)
+ visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+ caption = "Julia seed"
+ default = (0.0,0.0)
+ visible = ( @mode == "Julia" )
+endparam
+param px
+   caption = "Pixel/Seed Multiplier"
+   default = 1.0
+endparam
+param  power
+    caption = "Exponent"
+    default = (1,0)
+endparam
+param bailout
+    caption = "Bailout"
+    default = 128.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param a
+    caption = "Alpha"
+    default = 3.5
+endparam
+param b
+    caption = "Beta"
+    default = 3.5
+endparam
+param hx
+    caption = "X Step size"
+    default = 0.15
+endparam
+param hy
+    caption = "Y Step size"
+    default = 0.15
+endparam
+param scalex
+    caption = "X Scale"
+    default = 0.94
+endparam
+param scaley
+    caption = "Y Scale"
+    default = 0.94
+endparam
+func fn1
+    caption = "First Function"
+    default = cos()
+endfunc
+func fn2
+    caption = "Second Function"
+    default = sin()
+endfunc
+func fn3
+    caption = "Third Function"
+    default = sin()
+endfunc
+;
+switch:
+type = "eew-mt-gnarl"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  a = a
+  b = b
+  hx = hx
+  hy = hy
+  scalex = scalex
+  scaley = scaley
+  fn1 = fn1
+  fn2 = fn2
+  fn3 = fn3
+}
+
+eew-mt-fractalia {
+; Mark Townsend, 9 Feb 1999
+;
+; This formula is from Clifford A. Pickover's
+; book "Keys to Infinity". It's hard to find
+; interesting spots just by entering random
+; parameters, so I've implemented six versions
+; of the formula in a loop of switches.
+;
+; Corrected and enhanced by Erik Wahl, Aug 3 2014
+; plenty of "interesting spots" now, so no need for more
+; than one version. ;) . just make sure to use both inside and
+; outside coloring.
+init:
+cc = (0,0)
+float x = 0.0
+float y = 0.0
+float xt = 0.0
+float yt = 0.0
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  cc = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+   cc = @initf(@seed)
+endif
+;
+float b  = real(@bh)
+float h  = imag(@bh)
+float c  = real(@ci)
+float i  = imag(@ci)
+float d  = real(@dj)
+float j  = imag(@dj)
+float e1 = real(@ek)
+float k  = imag(@ek)
+float f  = real(@fl)
+float l  = imag(@fl)
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+x  = real(z)/@scalex
+y  = imag(z)/@scaley
+xt = b*x + c*x^2 + d*x*y + e1*y + f*y^2
+yt = h*x + i*x^2 + j*x*y + k*y + l*y^2
+z = xt + flip(yt)
+z = (@mf(z))^@power +  @px*cc
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "Fractalia"
+maxiter = 15
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-0.33,1.07)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (1,0)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 1e12
+endparam
+param  av
+  caption = "Duckify?"
+  hint = "Checking this guarantees 4-way symmetry for all Julia fractals."
+  default = true
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param scalex
+  caption = "X Scale"
+  default = 1.0
+endparam
+param scaley
+  caption = "Y Scale"
+  default = 1.0
+endparam
+func mf
+  caption = "Main Function"
+  default = acosh()
+endfunc
+param bh
+  caption = "b and h"
+  default = (0.48,0.10)
+endparam
+param ci
+  caption = "c and i"
+  default = (0.39,-0.69)
+endparam
+param dj
+  caption = "d and j"
+  default = (0.47,0.21)
+endparam
+param ek
+  caption = "e and k"
+  default = (-0.43,-0.34)
+endparam
+param fl
+  caption = "f and l"
+  default = (0.77,0.76)
+endparam
+;;
+switch:
+type = "eew-mt-fractalia"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  scalex = scalex
+  scaley = scaley
+  mf = mf
+  bh = bh
+  ci = ci
+  dj = dj
+  ek = ek
+  fl = fl
+ }
+
+eew-mt-gen-celtic { ; Mark Townsend, 24 Jun 1999
+; Erik Wahl, Aug 2014
+; From a formula by Paul Carlson
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+
+if @flav == 0
+  z = z - @fn1(real(z)) + abs(@fn2(real(z)))
+else
+  z = z - @fn1(imag(z)) + abs(@fn2(imag(z)))
+endif
+z = z^@power + @px*c
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "Generalized Celtic"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.25,0.0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 100.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+param  flav
+  caption = "Nationality"
+  enum = "Irish" "Scotch"
+  default = 1
+endparam
+func fn1
+    caption = "First function"
+    default = ident()
+endfunc
+func fn2
+    caption = "Second function"
+    default = ident()
+endfunc
+;;
+switch:
+  type = "eew-mt-gen-celtic"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  flav = flav
+  fn1 = fn1
+  fn2 = fn2
+}
+
+DivergentBox {
+;
+; Object version of Mandelbox Formula by Tom Lowe
+; Found in the fractalforums ~2010
+; https://sites.google.com/site/mandelbox/what-is-a-mandelbox
+; Erik Wahl, August 2014
+; Generalized to provide availability of Julia mode aka
+; "JulieBox" as well as original Mandelbrot mode aka "MandelBox
+init:
+c = (0,0)
+result = (0,0)
+float tempreal = 0.0
+float tempimag = 0.0
+float magnitude = 0.0
+float newmagnitude = 0.0
+;
+if @mode == "MandelBox"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "JulieBox"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+; boxfold
+tempreal = real(z)
+tempimag = imag(z)
+
+if     (tempreal > @sizex)
+  tempreal = 2*@sizex-tempreal
+elseif (tempreal < -@sizex)
+  tempreal = -2*@sizex-tempreal
+endif
+if     (tempimag > @sizey)
+     tempimag = 2*@sizey-tempimag
+elseif (tempimag < -@sizey)
+     tempimag = -2*@sizey-tempimag
+endif
+tempreal = tempreal*@fold
+tempimag = tempimag*@fold
+; spherefold
+magnitude = sqrt(sqr(tempreal) + sqr(tempimag))
+newmagnitude = magnitude
+if     (magnitude < @irad)
+  newmagnitude = magnitude/@irad^2
+elseif (magnitude < @orad)
+  newmagnitude = @orad/magnitude
+endif
+
+tempreal = (tempreal/magnitude)*newmagnitude
+tempimag = (tempimag/magnitude)*newmagnitude
+result = tempreal+flip(tempimag)
+z = (result*@scale)^@power + @px*c
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "Mister Lowe's Marvelous Box"
+magn = 0.5
+maxiter = 5
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "MandelBox" "JulieBox"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "MandelBox" "JulieBox"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "MandelBox Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "MandelBox" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (1e-6,0)
+  visible = ( @mode == "MandelBox" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-0.86,-0.82)
+  visible = ( @mode == "JulieBox" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.5
+endparam
+param power
+  caption = "Exponent"
+  default = (0.92,-0.05)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 1e12
+  min = 1.0
+  exponential = true
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+float param sizex
+  caption = "Horiz Length"
+  default = 0.75
+endparam
+float param sizey
+  caption = "Vert Length"
+  default = 1.0
+endparam
+param fold
+  caption = "Fold"
+  default = 0.5
+endparam
+param irad
+  caption = "Inner Radius"
+  default = 0.7
+endparam
+param orad
+  caption = "Outer Radius"
+  default = 1.1
+endparam
+param scale
+  caption = "Scale"
+  default = 2.0
+endparam
+;;
+switch:
+type = "DivergentBox"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  sizex = sizex
+  sizey = sizey
+  fold = fold
+  irad = irad
+  orad = orad
+  scale = scale
+}
+
+eew-carr1 {
+; Had a little fun with the user interface. ;0)
+;;
+init:
+c = (0,0)
+p = @initf(#pixel)
+if     @colr == 0
+  z = @f1(@p1*p + @p2)/(conj(@p1/@f2(p)) +  @p2)
+  c = @f1(p)
+elseif @colr == 1
+  z = @f1(p + @p1)/conj(1/@f2(p))
+  c = @f2(p)
+elseif @colr == 2
+   z = @f1(@p1/@f2(p))
+   c = conj(@p2/@f2(p))
+elseif @colr == 3
+   z = @f1(@p1 - @f2(p))
+   c = @p2-@f2(1/p)
+elseif @colr == 4
+   z = @f1(@p1/@f2(p))
+   c = conj(@p1*@f1(p) - @p2*@f2(#z))
+else
+   z = @f1(conj(@f2(@p1/p)))
+   c = @p1*@f1(p) - @p2*@f2(#z)
+endif
+;;
+loop:
+if     @make == 0
+  z = @f3(z^@p3 + @p4)/@f4(@p3)
+elseif @make == 1
+  z = @f3(z^@p3 + @f4(@p4))/@p3
+elseif @make == 2
+  z = (@f3(z)^@p3 + @p4)/(p - @f4(c))
+elseif @make == 3
+  z = @p3*@f3(z) + @p4*@f4(c)
+elseif @make == 4
+  z = (@f3(c)-z*p)/(p-@f4(c))
+else
+  z = @p3*(@f3(z) + c)/@p4/@f4(c)
+endif
+z = z^@power + @seat
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Carr Factory"
+maxiter = 12
+magn = 0.5
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+func initf
+  caption = "Pixel Function"
+  default = sqr()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param seat
+  caption = "Carr Seat"
+  default = (0.61,-0.25)
+endparam
+param power
+  caption = "Exponent"
+  default = (1,0)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+endparam
+;
+heading
+  caption = "Ignition Parameters"
+endheading
+func f1
+  caption = "1st Function"
+  default = sinh()
+endfunc
+func f2
+  caption = "2nd Function"
+  default = sin()
+endfunc
+param p1
+  caption = "1st Coefficient"
+  default = (3,0)
+endparam
+param p2
+  caption = "2nd Coefficient"
+  default = (2.3,0.5)
+endparam
+;
+heading
+  caption = "Driving Parameters"
+endheading
+func f3
+  caption = "1st Function"
+  default = acos()
+endfunc
+func f4
+  caption = "2nd Function"
+  default = sqr()
+endfunc
+param p3
+  caption = "1st Coefficient"
+  default = (1,0)
+endparam
+param p4
+  caption = "2nd Coefficient"
+  default = (2,0)
+endparam
+;
+heading
+  caption = "Options"
+endheading
+param colr
+  caption = "Color"
+  enum = "A" "B" "C" "D" "E" "F"
+  default = 0
+endparam
+param make
+  caption = "Make"
+  enum = "A" "B" "C" "D" "E" "F"
+  default = 5
+endparam
+}
+
+eew-magnet{
+; Magnetic Set type 1.
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+   z = @initf(#pixel)
+    c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+zold = z
+z = sqr((z^2 + @mfn(z) - @off)/(2*z + @mfn(z) - 2*@off)) + @px*c
+;;
+bailout:
+|#z| < @divbail && |#z - zold| > @convbail
+;;
+default:
+title = "MindPoet's Magnet"
+magn = 0.5
+maxiter = 15
+periodicity = 0
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 1
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.13,-0.09)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 0.9
+endparam
+param divbail
+  caption = "Divergent Bailout"
+  default = 1e12
+  min = 1
+endparam
+param convbail
+  caption = "Convergent Bailout"
+  default = 1e-12
+  min = 1e-12
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func mfn
+  caption = "Function"
+  default = sqr()
+endfunc
+param off
+  caption = "Offset"
+  default = 0.5
+endparam
+;;
+switch:
+type = "eew-magnet"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  divbail = divbail
+  convbail = convbail
+  av = av
+;
+  off = off
+  mfn = mfn
+}
+
+eew_ducky {
+;
+; Erik Wahl Aug 2014
+;  Based on  Rain's Ducky
+;;
+init:
+tm = (0,0)
+tpx = (0,0)
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+tm = abs(@fnd(@dp*z^@power))
+tpx = @fnpx(@pxp*(z + @pxsh))
+z = @mp*(@fnm(tm + tpx)) + @px*c
+;;
+bailout:
+|z| < @bailout
+;;
+default:
+title = "MindPoet's Ducky"
+maxiter = 15
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+ endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2,0)
+endparam
+param  bailout
+  caption = "Bailout value"
+  default = 128.0
+endparam
+;
+heading
+  caption = "Main Term"
+endheading
+func fnm
+  caption = "Main Function"
+  default = sin()
+endfunc
+func fnd
+  caption = "Ducky Function"
+  default = ident()
+endfunc
+param mp
+  caption = "Main Parameter"
+  default = (1,0)
+endparam
+param dp
+  caption = "Ducky Parameter"
+  default = (1,0)
+endparam
+;
+heading
+  caption = "Pixel Term"
+  expanded = false
+endheading
+func fnpx
+  caption = "Pixel Function"
+  default = zero()
+endfunc
+param pxp
+  caption = "Pixel Parameter"
+  default = (0,0)
+endparam
+param pxsh
+  caption = "Pixel Shift"
+  default = (0,0)
+endparam
+;;
+switch:
+type = "eew_ducky"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+;
+  fnm = fnm
+  fnd = fnd
+  mp = mp
+  dp = dp
+;
+  fnpx = fnpx
+  pxp = pxp
+  pxsh = pxsh
+}
+
+Tess_4d {
+; Erik Wahl, March 2016
+;; Many thanks to Ken Carlson
+; for the AutoSwitch code
+;;
+init:
+c = (0,0)
+z = w = zt = wt = @initf(#pixel)
+
+if @mode =="Mandelbrot"
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  c = @initf(@seed)
+endif
+;;
+loop:
+zt = sqr(@f(z)) - sqr(@g(w)) + @zpx*c
+wt = 2*@f(z)*@g(w) + @wpx*c
+w = zt
+z = wt
+;
+IF @duckz
+z = abs(z)
+ENDIF
+IF @duckw
+w = abs(w)
+ENDIF
+;;
+bailout:
+cabs(z)*cabs(w) <= @bailout
+;;
+default:
+title = "4D Tessarine"
+maxiter = 100
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param seed
+  caption = "Julia seed"
+  default = (-0.5,0.5)
+  visible = (@mode == "Julia")
+endparam
+param zpx
+  caption = "Z Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param wpx
+  caption = "W Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param duckz
+caption = "Duckify Z?"
+default =  false
+endparam
+param duckw
+caption = "Duckify W?"
+default =  false
+endparam
+param  bailout
+  caption = "Bailout"
+  default =  1e12
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func f
+  caption = "Z Function"
+  default = ident()
+endfunc
+func g
+  caption = "W Function"
+  default = ident()
+endfunc
+;;
+switch:
+type = "Tess_4d"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  zpx = zpx
+  wpx = wpx
+  duckz = duckz
+  duckw = duckw
+  bailout = bailout
+;
+  f = f
+  g = g
+}
+
+Generic_Diverginsky {
+;
+; Totally Generic Divergent set.
+; created by Erik Wahl
+; June 6 2012
+; Many thanks to KPK for the Tiling, Inski and  to Ken Carlson
+; for the AutoSwitch code
+; final version Aug 4 2014( I promise!) ")
+;
+; For standard tiling start with a square image and leave
+; Tile Size at its default value.
+; Also be sure to click the Reset Location button if coming from another formula.
+init:
+c = (0,0)
+i = (0,1)
+r = i^(@rot/90.0)
+offs = @xoff + flip(@yoff)
+float tlsize = 4/@reptl
+;
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;tile initialization
+if @tiled && @mode == 0
+  c0 = round(c/tlsize)*tlsize
+  c = 2*(c - c0)/tlsize
+  c = c/(@sc*r) - offs
+endif
+;
+if @tiled && @mode == 1
+  z0 = round(z/tlsize)*tlsize
+  z = 2*(z - z0)/tlsize
+  z = z/(@sc*r) - offs
+endif
+;;
+loop:
+if @insky
+  if  imag(z) > @ycut
+    z = @isc*real(z) + flip(imag(z)/@isc - @ioff)
+  elseif  real(z) > @xcut
+    z = real(z)/@isc - @ioff + flip(@isc*imag(z))
+  endif
+endif
+;
+if     @op == 0
+  z = (@m1*@fn1(z)+ @m2*@fn2(z))^@power + @psfn(c)
+elseif @op == 1
+  z = (@m1*@fn1(z) - @m2*@fn2(z))^@power + @psfn(c)
+elseif @op == 2
+  z = (@m1*@fn1(z)*@m2*@fn2(z))^@power + @psfn(c)
+elseif @op == 3
+  z = (@m1*@fn1(z)/@m2*@fn2(z))^@power + @psfn(c)
+elseif @op == 4
+  z = (@m1*@fn1(z)^(@m2*@fn2(z)))^@power + @psfn(c)
+else
+  z = (@m1*@fn1(@m2*@fn2(z)))^@power + @psfn(c)
+endif
+if @brahma
+  z = z - 0.375*z/|z|
+endif
+;;
+bailout:
+  |z| <= @bailout
+;;
+default:
+title = "Generic Diverginsky"
+rating = recommended
+maxiter = 15
+;
+heading
+  caption = " "
+  text = "For best results for seamless tiling, use a square image. Also be sure to click the \
+          Reset Location button if coming from another formula."
+endheading
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0.22,-0.11)
+  visible = ( @mode == "Julia" )
+endparam
+param power
+  caption = "Power"
+  default = (1.0,0.68)
+endparam
+param bailout
+  caption = "Bailout"
+  default = 1e12
+  min = 1.0
+endparam
+;
+heading
+endheading
+;
+heading
+  caption = "Fractal Parameters"
+  text = "These parameters allow you to design the original fractal \
+          before scrambling and tiling."
+endheading
+param m1
+  caption = "1st Multiplier"
+  default = 0.5
+endparam
+func fn1
+  caption = "1st Function"
+  default = ident()
+endfunc
+param op
+  caption = "Operator"
+  enum = "Add" "Subtract" "Multiply" "Divide" "Power" "Compose"
+  default = 0
+endparam
+param m2
+  caption = "2nd Multiplier"
+  default = 0.5
+endparam
+func fn2
+  caption = "2nd Function"
+  default = ident()
+endfunc
+func psfn
+  caption = "Pixel/Seed Function"
+  default = ident()
+endfunc
+param brahma
+  caption = "Brahmabrot the fractal"
+  default = false
+endparam
+;
+heading
+endheading
+;
+param insky
+  caption = "Scramble the fractal?"
+  default = true
+endparam
+param tiled
+  caption = "Do Tiling?"
+  default = true
+endparam
+;
+heading
+  caption = "Scrambling Parameters"
+  text = "Play with these parameters to scramble the original fractal"
+ $ifdef VER40
+    expanded = false
+  $endif
+  visible = @insky
+endheading
+param isc
+  caption = "Scale"
+  default = 2.0
+  visible = @insky
+endparam
+param ioff
+  caption = "Offset"
+  default = 1.0
+  visible = @insky
+endparam
+param xcut
+  caption = "Horiz. Cutoff"
+  default = 0.5
+  visible = @insky
+endparam
+param ycut
+  caption = "Vert. Cutoff"
+  default = 0.5
+  visible = @insky
+endparam
+;
+heading
+  caption = "Tiling Parameters"
+  text = "Adjust these parameters to determine which part of the \
+          fractal you want visible within the tile, as well as how many times \
+          to repeat the fractal within the image."
+  visible = @tiled
+  $ifdef VER40
+    expanded = false
+  $endif
+endheading
+param reptl
+  caption = "Tile Repeat"
+  default = 3
+  min = 2
+  visible = @tiled
+endparam
+param xoff
+  caption = "Horiz. Offset"
+  default = 0.0
+  visible = @tiled
+endparam
+param yoff
+  caption = "Vert. Offset"
+  default = 0.0
+  visible = @tiled
+endparam
+param sc
+  caption = "Scale"
+  default = 1.0
+  visible = @tiled
+endparam
+param rot
+  caption = "Rotation"
+  default = 0.0
+  visible = @tiled
+endparam
+;
+
+;;
+switch:
+type = "Generic_Diverginsky"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  power = power
+  bailout = bailout
+  ;
+  insky = insky
+  isc = isc
+  ioff = ioff
+  xcut = xcut
+  ycut = ycut
+  ;
+  tiled = tiled
+  reptl = reptl
+  xoff = xoff
+  yoff = yoff
+  sc = sc
+  rot = rot
+  ;
+  m1 = m1
+  fn1 = fn1
+  op = op
+  m2 = m2
+  fn2 = fn2
+  psfn = psfn
+  brahma = brahma
+}
+eew-gnd-popcorn {
+; Gilles Nadeau, July, 2004
+;Modified and generalized by Erik Wahl Aug 2014
+;;
+init:
+float x = 0.0
+float y = 0.0
+float xt = 0.0
+float yt = 0.0
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+x = real(z)/@scalex
+y = imag(z)/@scaley
+xt = x + @hf*real(@fo(@co*y + @fi(@ci*y)))
+yt = y + @hg*real(@go(@do*x + @gi(@di*x)))
+z = (xt + flip(yt))^@power + @px*c
+;;
+bailout:
+|z| < @bailout
+;
+default:
+  title = "Julie-Pop Popcorn"
+  maxiter = 15
+;
+heading
+  text = "Keep iterations between 10 and 30 for best details. \
+          Use the Explore tool on the 'Exponent' parameter for \
+          interesting results."
+endheading
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 0
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 1
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (0,0)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param power
+  caption = "Exponent"
+  default = (2.0,0.0)
+endparam
+param  bailout
+  caption = "Bailout value"
+  default = 1e12
+endparam
+param av
+  caption = "Duckify?"
+  default = false
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Horizontal Parameters"
+endheading
+param scalex
+  caption = "Scale"
+  default = 1.0
+endparam
+param hf
+  caption = "Step size"
+  default = 0.1
+endparam
+param co
+  caption = "Outer Factor"
+  default = 2.0
+endparam
+param ci
+  caption = "Inner Factor"
+  default = 2.0
+endparam
+func fo
+  caption = "Outer Function"
+  default = sin()
+endfunc
+func fi
+  caption = "Inner Function"
+  default = tan()
+endfunc
+;
+heading
+  caption = "Vertical Parameters"
+endheading
+param scaley
+  caption = "Scale"
+  default = 1.0
+endparam
+param hg
+  caption = "Step size"
+  default = 0.1
+endparam
+param do
+  caption = "Outer Factor"
+  default = 2.0
+endparam
+param di
+  caption = "Inner Factor"
+  default = 2.0
+endparam
+func go
+  caption = "Outer Function"
+  default = sin()
+endfunc
+func gi
+  caption = "Inner Function"
+  default = tan()
+endfunc
+;;
+switch:
+type = "eew-gnd-popcorn"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  power = power
+  bailout = bailout
+  av = av
+;
+  scalex = scalex
+  hf = hf
+  co = co
+  ci =ci
+  fo =fo
+  fi = fi
+;
+  scaley = scaley
+  hg = hg
+  do = do
+  di = di
+  go = go
+  gi = gi
+}
+
+sdc-hopalongs {
+
+init:
+
+  complex z = (0.0, 0.0)
+  complex c = @initf(#pixel)
+
+  int iter = 0
+  complex p = @initfn(c)
+   float sx = 0.0
+  float x = real(p)
+  float y = imag(p)
+
+loop:
+  iter = iter + 1
+
+  x = real(@loopfnx(x))
+  y = real(@loopfny(y))
+
+
+  if x < 0.0
+    sx = -1.0
+  else
+    sx = 1.0
+  endif
+
+  float tx = x
+  float ty = y
+
+  if (@method == 0)      ; Hopalong
+    x = y - sx * sqrt(abs(@pB * x - @pC))
+    y = @pA - tx
+  elseif (@method == 1)  ; Popcorn
+    x = tx - @pH * real(@m1fn1(ty + @m1fn2(@pC1*ty)))
+    y = ty - @pH * real(@m1fn3(tx + @m1fn4(@pC1*tx)))
+  elseif (@method == 2)  ; Gingerbread
+    x = 1.0 - ty + abs(tx)
+    y = tx
+  elseif (@method == 3)  ; Three Ply
+    x = ty - sx*abs(sin(tx)*cos(@pB3) + @pC3 - tx*sin(@pA3 + @pB3 + @pC3))
+    y = @pA3 - tx
+  elseif (@method == 4)  ; Quadrup Two
+    x = tx - sx*sin(log(abs(@pB4 * ty - @pC4))) * atan(abs(sqr(@pC4 * tx - @pB4)))
+    y = @pA4 - tx
+  else                   ; Martin
+    x = ty - real(@fnA5(tx))
+    y = @pA5 - tx
+  endif
+
+  tx = x
+  ty = y
+
+  sx = 1.0              ; get the sign of x
+  if (x < 0.0)
+    sx = -1.0
+  endif
+
+  if (@perturb == 1)                ; Functions
+    x = x + real(@fnx(x))*@px
+    y = y + real(@fny(x))*@py
+  elseif (@perturb == 2)            ; Hopalong
+    x = x + (ty - sx * sqrt(abs(@ppB2 * tx - @ppC2)))*@px
+    y = y + (@ppA2 - tx)*@py
+  elseif (@perturb == 3)            ; Popcorn
+    x = x + real(tx - @ppH * @p3fn1(ty + @p3fn2(@ppC3*ty)))*@px
+    y = y + real(ty - @ppH * @p3fn3(tx + @p3fn4(@ppC3*tx)))*@py
+  elseif (@perturb == 4)            ; Gingerbread
+    x = x + (1.0 - ty + abs(tx))*@px
+    y = y + (tx)*@py
+  elseif (@perturb == 5)             ; Three Ply
+    x = x + real(ty - sx*abs(sin(tx)*cos(@ppB5) + @ppC5 - tx*sin(@ppA5 + @ppB5 + @ppC5)))*@px
+    y = y + real(@ppA5 - tx)*@py
+  elseif (@perturb == 6 )            ; Quadrup Two
+    x = x + (tx - sx*sin(log(abs(@ppB6 * ty - @ppC6))) * atan(abs(sqr(@ppC6 * tx - @ppB6))))*@px
+    y = y + (@ppA6 - tx)*@py
+  else                               ; Martinesque
+    x = x + real(ty - @pfn7(tx))*@px
+    y = y + (@ppA7 - tx)*@py
+  endif
+
+  z = @finalfn(x + flip(y))
+
+bailout:
+  iter < #maxiter
+
+default:
+  title = "Hopalongs"
+  method = multipass
+  periodicity = 0
+  magn = 1
+  maxiter = 20
+
+  float param version
+    default = 0.0
+    visible = false
+  endparam
+
+  param method
+    caption = "Attractor Method"
+    enum = "Hopalong" \
+           "Popcorn" \
+           "Gingerbread" \
+           "Three Ply" \
+           "Quadrup Two" \
+           "Martinesque"
+    endparam
+
+  float param pA
+    caption = "A"
+    default = 0.4
+    visible = @method==0     ; Hopalong
+  endparam
+
+  float param pB
+    caption = "B"
+    default = 1.0
+    visible = @method==0     ; Hopalong
+  endparam
+
+  float param pC
+    caption = "C"
+    default = 0.0
+    visible = @method==0     ; Hopalong
+  endparam
+
+  float param pH
+    caption = "H"
+    default = 0.05
+    visible = @method==1      ; Popcorn
+  endparam
+
+  float param pC1
+    caption = "c"
+    default = 3.0
+    visible = @method==1      ; Popcorn
+  endparam
+
+  func m1fn1
+    caption = "Popcorn Fn 1"
+    default = sin()
+    visible = @method==1      ; Popcorn
+  endfunc
+
+  func m1fn2
+    caption = "Popcorn Fn 2"
+    default = tan()
+    visible = @method==1      ; Popcorn
+  endfunc
+
+  func m1fn3
+    caption = "Popcorn Fn 3"
+    default = sin()
+    visible = @method==1      ; Popcorn
+  endfunc
+
+  func m1fn4
+    caption = "Popcorn Fn 4"
+    default = tan()
+    visible = @method==1      ; Popcorn
+  endfunc
+
+  float param pA3
+    caption = "A"
+    default = -0.2
+    visible = @method==3     ; Three Ply
+  endparam
+
+  float param pB3
+    caption = "B"
+    default = -0.2
+    visible = @method==3     ; Three Ply
+  endparam
+
+  float param pC3
+    caption = "C"
+    default = .42
+    visible = @method==3     ; Three Ply
+  endparam
+
+  float param pA4
+    caption = "A"
+    default = 1.0
+    visible = @method==4     ; Quadrup Two
+  endparam
+
+  float param pB4
+    caption = "B"
+    default = 1.0
+    visible = @method==4     ; Quadrup Two
+  endparam
+
+  float param pC4
+    caption = "C"
+    default = 1.0
+    visible = @method==4     ; Quadrup Two
+  endparam
+
+  float param pA5
+    caption = "A"
+    default = 3.14
+    visible = @method==5     ; Martin Two
+  endparam
+
+  func fnA5
+    caption = "Martin Function"
+    default = sin()
+    visible = @method==5     ; Martinesque
+  endfunc
+
+  func initfn
+    caption = "Initial Function"
+    default = ident()
+  endfunc
+
+  func finalfn
+    caption = "Final Function"
+    default = ident()
+  endfunc
+
+  func loopfnx
+    caption = "Loop X function"
+    default = ident()
+  endfunc
+
+  func loopfny
+    caption = "Loop Y function"
+    default = ident()
+  endfunc
+
+  param perturb
+    caption = "Perturbation Method"
+    enum = "None" \
+           "Functions" \
+           "Hopalong" \
+           "Popcorn" \
+           "Gingerbread" \
+           "Three Ply" \
+           "Quadrup Two" \
+           "Martinesque"
+    default = 1
+  endparam
+
+  float param px
+    caption = "X perturbation"
+    default = 0.0
+    visible = (@perturb != 0)
+  endparam
+
+  func fnx
+    caption = "X perturb fn"
+    default = ident()
+    visible = (@perturb == 1)
+  endfunc
+
+  float param py
+    caption = "Y perturbation"
+    default = 0.0
+    visible = (@perturb != 0)
+  endparam
+
+  func fny
+    caption = "Y perturb fn"
+    default = ident()
+    visible = (@perturb == 1)
+  endfunc
+
+  float param ppA2
+    caption = "A"
+    default = 0.4
+    visible = @perturb==2     ; Hopalong
+  endparam
+
+  float param ppB2
+    caption = "B"
+    default = 1.0
+    visible = @perturb==2     ; Hopalong
+  endparam
+
+  float param ppC2
+    caption = "C"
+    default = 0.0
+    visible = @perturb==2     ; Hopalong
+  endparam
+
+  float param ppH
+    caption = "H"
+    default = 0.05
+    visible = @perturb==3      ; Popcorn
+  endparam
+
+  float param ppC3
+    caption = "C"
+    default = 3.00
+    visible = @perturb==3      ; Popcorn
+  endparam
+
+  func p3fn1
+    caption = "Popcorn Fn 1"
+    default = sin()
+    visible = @perturb==3      ; Popcorn
+  endfunc
+
+  func p3fn2
+    caption = "Popcorn Fn 2"
+    default = tan()
+    visible = @perturb==3      ; Popcorn
+  endfunc
+
+  func p3fn3
+    caption = "Popcorn Fn 3"
+    default = sin()
+    visible = @perturb==3      ; Popcorn
+  endfunc
+
+  func p3fn4
+    caption = "Popcorn Fn 4"
+    default = tan()
+    visible = @perturb==3      ; Popcorn
+  endfunc
+
+  float param ppA5
+    caption = "A"
+    default = -0.2
+    visible = @perturb==5     ; Three Ply
+  endparam
+
+  float param ppB5
+    caption = "B"
+    default = -0.2
+    visible = @perturb==5     ; Three Ply
+  endparam
+
+  float param ppC5
+    caption = "C"
+    default = -0.42
+    visible = @perturb==5     ; Three Ply
+  endparam
+
+  float param ppA6
+    caption = "A"
+    default = 1.0
+    visible = @perturb==6     ; Quadrup Two
+  endparam
+
+  float param ppB6
+    caption = "B"
+    default = 1.0
+    visible = @perturb==6     ; Quadrup Two
+  endparam
+
+  float param ppC6
+    caption = "C"
+    default = 1.0
+    visible = @perturb==6     ; Quadrup Two
+  endparam
+
+  float param ppA7
+    caption = "A"
+    default = 3.14
+    visible = @perturb==7     ; Quadrup Two
+  endparam
+
+  func pfn7
+    caption = "Martin Function"
+    default = sin()
+    visible = @perturb==7
+  endfunc
+}
+
+Cubic_Tessarine{
+;;
+init:
+c = (0,0)
+if @mode == "Mandelbrot"
+   if @mflav == "Classic"
+     z = @initf(@start)
+   else
+     z = @initf(#pixel)
+   endif
+  c = @initf(#pixel)
+elseif @mode == "Julia"
+  z = @initf(#pixel)
+   c = @initf(@seed)
+endif
+;;
+loop:
+if  @av == true
+  z = abs(z)
+endif
+z = @f(z^3 + 6*real(z)*sqr(imag(z))+flip(imag(z)^3)) + @px*c
+;;
+bailout:
+|z| <= @bailout
+;;
+default:
+title = "Cubic Tessarine"
+;
+heading
+  caption = "Divergent Parameters"
+endheading
+param mode
+  caption = "Current Mode"
+  enum = "Mandelbrot""Julia"
+  default = 1
+endparam
+param switchto
+  caption = "Switch To"
+  enum = "Mandelbrot""Julia"
+  default = 0
+  hint = "Make sure the setting is not the same as Current Mode or \
+          switching will not work properly."
+endparam
+param mflav
+  caption = "Mandelbrot Flavor"
+  enum = "Classic" "Pixel"
+  default = 0
+  visible = (@mode == "Mandelbrot" )
+endparam
+func initf
+  caption = "Initial Function"
+  default = ident()
+  hint = "Set to abs for four-way symmetry, sqr for point symmetry, \
+          sin,cos,tan,cotan for horizontal strip symmetry, and sinh,cosh, tanh, \
+          and cotanh for vertical strip symmetry."
+endfunc
+param start
+  caption = "Starting value"
+  default = (0,0)
+  visible = ( @mode == "Mandelbrot" && @mflav == "Classic" )
+endparam
+param seed
+  caption = "Julia seed"
+  default = (-1.43,-0.33)
+  visible = ( @mode == "Julia" )
+endparam
+param px
+  caption = "Pixel/Seed Multiplier"
+  default = 1.0
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 128.0
+  min = 1.0
+endparam
+param av
+  caption = "Duckify?"
+  default = true
+  hint = "Check this to insure ALL Julias have 4-way symmetry."
+endparam
+;
+heading
+  caption = "Fractal Parameters"
+endheading
+func f
+  caption = "Tessarine Function"
+  default = conj()
+endfunc
+;;
+switch:
+type = "Cubic_Tessarine"
+  mode = switchto
+  switchto = mode
+  seed = #pixel
+  mflav = mflav
+  initf = initf
+  px = px
+  bailout = bailout
+  av = av
+;
+  f = f
+}
+

@@ -1,0 +1,1731 @@
+; Here are some very simple colorroutines to Ultra Fractal. I made them mostly \
+; to be able to understand something about how colorroutines works. \
+; The normal library that comes with Ultra Fractal includes much more advanced routines. \
+
+; Most of the routines includes something called "Iteration trap". \
+; The idea is to put in two numbers between 0.0 och 1.0 to be able to control where the \
+; iterations shall begin and end. For example if you have a layer where you want the \
+; iterations to start at 20 and end at 50 and the maximal iterations are 100 \
+; then you put in 0.2 and 0.5. 0.2*100=20 and 0.5*100=50. \
+; This can sometimes be useful when you don´t want some iterations to merge or you want to get \
+; rid of "blurriness". The default is 0.0 and 1.0. Then all iterations will work. \
+
+; Connected to this are "Solid ignore-color" and "Color-index".\
+; If "Solid ignore-color" is activated then the skipped iterations will be colored with the \
+; solid-color (normally black). If not, the index in "Color-index" will be used \
+; to set the color. Default is solid and the default of color-index is 0. \
+
+
+Basic(OUTSIDE) {
+
+; About "Iteration Trap", "Solid ignore-color" and "Color index", please look in the fortext.\
+
+; This is the normal colorroutine. No effects or filters. What differs is the iteration trap \
+; and the upper limit routine and maybe some more possibilities to control the speed of the \
+; coloring. \
+
+; "upper limit" lies between 0.0 and 1.0. When upper limit is reached the coloring will slow \
+; down to avoid too fast coloring in highiterated areas. For example in a mandelbrotpicture \
+; the coloring will go very fast when you come closer to the set (the normally black area). \
+; With a value of 0.1 in "upper limit" and 100 as maxiterations, the program will use normal \
+; coloring in the first 10 iterations (0.1*100) and then slow down. The default is 1.0. \
+; Then the coloring is normal. \
+
+; "speed" controlles how fast the coloring normally is. The higher value, the faster coloring. \
+
+; "acc" is the acceleration of coloring. 1.0 is normal coloring. More than 1.0 increases the \
+; speed and less than 1.0 decreases it. \
+
+; "logspeed" is activated if the iterations are higher than "upper limit". Below 1.0 will slow \
+; down the coloring. Above 1.0 will increase it.\
+
+; "logacc" is activated if the iterations are higher than "upper limit". The higher number the \
+; slower speed. So this is opposite to normal acc. In fact the number put in will be the \
+; degree of the logaritm-function that is used. The higher degree of the logaritm the slower \
+; it will go. This can be extremly useful near the set as the coloring  slow down\
+; the closer one is to the set. A sensitive use of this number gives nice results. \
+
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  float upper=@upper*hightrap
+  float h=0
+
+loop:
+ 
+final:
+  if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+    if #numiter>upper
+      h=#numiter*@lk
+      if h==0
+        #index=0
+      else
+        #index=log(h)/log(@lp)
+      endif
+    else
+      if @p==1
+        #index=@k*#numiter
+      else
+        #index=@k*#numiter^@p
+      endif
+    endif
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+
+default:
+  title = "Basic"
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param upper
+    caption="upper limit."
+    hint="Between 0.0 and 1.0 (upper*maxiter). After upper limit, log is activated \
+          and slows down the coloring."
+    default=1.0
+    max=1.0
+    min=0.0
+  endparam
+  
+  param k
+    caption="speed"
+    hint="Speed of color. The higher number the faster colorchange."
+    default=0.01
+  endparam
+  
+  param p
+    caption="acc"
+    default=1.0
+    hint="Acc of color. Below 1.0 slows down coloring."
+  endparam
+  
+  param lk
+    caption="logspeed"
+    hint="Upper speed of color. Below 1.0 slows down coloring."
+    default=1.0
+  endparam
+  
+  param lp
+    caption="logacc"
+    hint="Upper acc of color. The higher number  the slower colorchange. It is the lognumber."
+    default=2.0
+    min=1.0
+  endparam
+}
+
+
+
+Basic2(OUTSIDE) {
+
+
+init:
+  float lowtrap=@lowtrap
+  float hightrap=@hightrap
+  if hightrap==0
+    hightrap=#maxiter
+  endif
+  float up=@up
+  float down=@down
+  if up==0
+    up=#maxiter
+  endif
+  float h=0
+
+loop:
+ 
+final:
+  if (#numiter<lowtrap)||(#numiter>hightrap)||(@mask==false)
+    if #numiter<up && #numiter>down && @noblurr==true
+      h=#numiter*@lk
+      if h==0
+        #index=0
+      else
+        #index=log(h)/log(@lp)
+      endif
+    else
+      if @p==1
+        #index=@k*#numiter
+      else
+        #index=@k*#numiter^(1/@p)
+      endif
+    endif
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+
+default:
+  title = "Basic2"
+  
+
+  heading
+    caption="Anti-blurr Coloring"
+  endheading
+  
+  param up
+    caption="Upper Border."
+    default=0.0
+    hint="Upper border for anti-blurr coloring. Above it - normal coloring. If the value is 0.0 then Maxiteration will be the \
+          upper border."
+  endparam
+  
+  param down
+    caption="Lower Border."
+    default=0.0
+    hint="Lower border for anti-blurr coloring. Below it - normal coloring."
+  endparam
+  
+  param lp
+    caption="Log-Brake"
+    hint="Antiblurr brake of coloring. The higher number the slower colorchange."
+    default=2.0
+    min=1.0
+  endparam
+  
+  param lk
+    caption="Log-Speed"
+    hint="Antiblurr-speed of color. The higher number the faster colorchange."
+    default=1.0
+    min=0.0
+  endparam
+  
+
+  param noblurr
+    caption="No Blurr"
+    default=false
+    hint="Activates a logaritmic coloring that will be slower to higher iterations. \
+    Set the territory  in Upper and Lower border."
+  endparam
+  
+  heading
+    caption="Normal Coloring"
+  endheading
+  
+  param p
+    caption="Brake"
+    default=1.0
+    hint="Slows downt the color.The higher number the slower colorchange."
+  endparam
+  
+  param k
+    caption="speed"
+    hint="Speed of color. The higher number the faster colorchange."
+    default=0.01
+  endparam
+  
+
+  
+  heading
+    caption="Masking"
+  endheading
+  
+  param hightrap
+    caption="Upper Mask Border."
+    default=0.0
+    hint="High border for masking. If 0.0 then Maxiterations will be the upper border."
+  endparam
+  
+  param lowtrap
+    caption="Lower Mask Border."
+    default=0.0
+    hint="Low border for masking."
+  endparam
+  
+  param mask
+    caption="Mask"
+    default=false
+    hint="Sets a mask between the both borders. If set together with Solid ignore-coler \
+    then the territory  will have the solid color and be used as mask. \
+    In Solid Color on the layer properties then you may click it and change the opacity \
+    settings. With zero% there will be total transparence in the mask even if the layer \
+    properties is normal with 100% transparence."
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set together with Mask then the territory  will have the solid color and be \
+    used as mask. In Solid Color on the layer properties then you may click it and change \
+    the opacity settings. With zero% there will be total transparence in the mask even \
+    if the layer properties is normal with 100% transparence."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color indexed in the gradient. \
+    Then it cannot be used as mask anymore, just for different blending-effects."
+    default=0.0
+  endparam
+  
+
+  
+
+  
+
+}
+
+
+
+
+
+
+Inside(INSIDE) {
+
+; This is a simple inside colorroutine. By putting in different numbers one can get different \
+; effects. It simply deals with the contents of z. \
+
+init:
+  
+loop:
+  
+final:
+
+  #index=@absz*cabs(#z)+@imagz*imag(#z)+@realz*real(#z)
+
+default:
+  title = "Inside"
+  
+  param absz
+    caption="cabs z"
+    default=1.0
+    hint="zabs-coloring."
+  endparam
+  
+  param realz
+    caption="real z"
+    default=0.0
+    hint="real z-coloring."
+  endparam
+  
+  param imagz
+    caption="imag z"
+    default=0.0
+    hint="imag z-coloring."
+  endparam
+}
+
+
+
+
+
+
+
+Bubbles(BOTH) {
+
+; This is a simple bubbleroutine. It makes bubbels. It is a simplification of Kerry Mitchells \
+; Bubbles that is included in UF. You can choose to have only bubbles or bubbles and the \
+; normal coloring. The iteration trap is included (see the starttext). \
+
+; "radie" is the size of the bubbles. \
+; "colweight" effects the coloring. \
+; "Normal iterations" controls the normal coloring. If 0 only bubbles. \
+; "loopmax" controls the structures. The less number the less small structures. \
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  float r=@radie
+  bool flag=false
+  float rz=0.0
+  float index=0.0
+  float iter=@numiter
+  int loo=0
+  int lo=trunc(@loo*real(hightrap))
+loop:
+  loo=loo+1
+  if loo<lo
+    rz=cabs(@func1(#z))
+    if rz<r
+      flag=true
+      r=rz
+    endif
+  endif
+
+  
+final:
+if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+  if flag
+    index=@col*cabs(@func2(r))
+    if iter>0
+      iter=iter*#numiter/#maxiter
+      #index=index+iter
+    else
+      #index=index
+    endif
+  else
+    #index=0
+    #solid=true
+  endif
+else
+  if @solid
+    #solid=true
+  else
+    #index=@colindex
+  endif
+endif
+  
+default:
+  title = "Bubbles"
+  
+  func func1
+    caption="z-func"
+    default=ident()
+    hint="Function that works on z"
+  endfunc
+  
+  func func2
+    caption="color-func"
+    default=ident()
+    hint="Function that works on coloring"
+  endfunc
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param radie
+    caption="radie"
+    default=1.0
+    hint="Start or radie of z."
+  endparam
+  
+  param col
+    caption="colweight"
+    default=1.0
+    hint="Weight for colors."
+  endparam
+  
+  param numiter
+    caption="Normal Iterations."
+    default=0.0
+    hint="Value for numiter. If numiter is 0 then only bubbles."
+  endparam
+  
+  param loo
+    caption="loopmax"
+    default=1.0
+    hint="How many times the loop will be taken to account.The less times - \
+          the less small structures."
+    max=1.0
+    min=0.0
+  endparam
+
+}
+
+
+
+
+
+ZTrap(BOTH) {
+
+; ZTrap is a simle traproutine. It can be used both outside and inside. Mostly it can be \
+; useful inside, but there are exceptions. \
+; It includes the "Iteration Trap" (see starttext). \
+
+; "choice" is the sort of traproutine you want to use. \
+; "Trap color" controls the color of the effects. \
+; "Upper traplimit" controls how small structures it shall be. \
+; "Iterat coloring": If not choosen the coloring is trapdependent. \
+; "Trap only" colors only the effect of the trap. \
+; The rest of the options is the same as in the Basic-routine. \
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  bool t=false
+  float mup=@maxup*hightrap
+  float upper=@upper*hightrap
+  float h=0.0
+
+loop:
+
+  if @choice==0
+    if |#z|<@trap
+      t=true
+    endif
+  elseif @choice==1
+    if abs(real(#z))<@trap
+      t=true
+    endif
+  elseif @choice==2
+    if  abs(imag(#z))<@trap
+      t=true
+    endif
+  elseif @choice==3
+    if abs(atan2(#z))<@trap
+      t=true
+    endif
+  endif
+
+  
+final:
+if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+  if #numiter>mup
+    t=false
+  endif
+  if t
+    if @numcoloring
+      #index=@trapcolor*#numiter
+    elseif @choice == 0
+      #index=@trapcolor*|#z|
+    elseif @choice==1
+      #index=@trapcolor*abs(real(#z))
+    elseif @choice==2 
+      #index=@trapcolor*abs(imag(#z))
+    elseif @choice==3
+      #index=@trapcolor*abs(atan2(#z))
+    endif
+  else
+    if !@TrapOnly
+      if #numiter>upper
+        h=#numiter*@lk
+        if h==0
+          #index=0
+        else
+
+          #index=log(h)/log(@lp)
+        endif
+      else
+        if @p==1
+          #index=@k*#numiter
+        else
+          #index=@k*#numiter^@p
+        endif
+      endif
+    else
+      #index=0
+      #solid=true
+    endif
+  endif
+else
+  if @solid
+    #solid=true
+  else
+    #index=@colindex
+  endif
+endif
+
+default:
+  title = "ZTrap"
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param choice
+    enum="abs z" "z-real" "z-imag" "z-angle"  "no-trap"
+    default=2
+    hint="Different traps."
+  endparam
+  
+  param trap
+    caption="trap-value"
+    default=0.001
+    hint="Size of trap"
+  endparam
+  
+  param trapcolor
+    caption="trap-color"
+    default=0.001
+    hint="color of trap"
+  endparam
+  
+  param maxup
+    caption="upper Trap-limit"
+    default=1.0
+    max=1.0
+    min=0.0
+    hint="highest iteration"
+  endparam
+  
+  param numcoloring
+    caption="Iterat coloring"
+    default=false
+    hint="If false coloring is trapdependent"
+  endparam
+  
+  param TrapOnly
+    caption="Trap only."
+    default=false
+    hint="Only trapcolor."
+  endparam
+  
+  
+  param upper
+    caption="upper limit col."
+    hint="Between 0.0 and 1.0 (upper*maxiter). After upper log is activated \
+          and slows down the coloring."
+    default=1.0
+    max=1.0
+    min=0.0
+  endparam
+  
+  param k
+    caption="speed"
+    hint="Speed of color. The higher number the faster colorchange."
+    default=0.01
+  endparam
+  
+  
+  param p
+    caption="acc"
+    default=1.0
+    hint="Acc of color. Below 1.0 slows down coloring."
+  endparam
+  
+
+  param lk
+    caption="logspeed"
+    hint="Upper speed of color. Below 1.0 slows down coloring."
+    default=1.0
+  endparam
+  
+  param lp
+    caption="logacc"
+    hint="Upper acc of color. The higher number  the slower colorchange. It is the lognumber."
+    default=2.0
+    min=1.0
+  endparam
+}
+
+
+
+
+
+
+ZTrap2(BOTH) {
+
+; Differs slightly from ZTrap.\
+
+; ZTrap2 is a simple traproutine. It can be used both outside and inside. Mostly it can be \
+; useful inside, but there are exceptions. \
+; It includes the "Iteration Trap" (see starttext). \
+
+; "choice" is the sort of traproutine you want to use. \
+; "Trap color" controls the color of the effects. \
+; "Upper traplimit" controls how small structures it shall be. \
+; "Iterat coloring": If not choosen the coloring is trapdependent. \
+; "Trap only" colors only the effect of the trap. \
+; The rest of the options is the same as in the Basic-routine. \
+
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  bool t=false
+  float mup=@maxup*hightrap
+  float upper=@upper*hightrap
+  float h=0.0
+  float trap=@trap
+
+loop:
+  if @choice==0
+    if |#z|<trap
+      trap=|#z|
+      t=true
+    endif
+  elseif @choice==1
+    if abs(real(#z))<trap
+      trap=abs(real(#z))
+      t=true
+    endif
+  elseif @choice==2
+    if  abs(imag(#z))<trap
+      trap=abs(imag(#z))
+      t=true
+    endif
+  elseif @choice==3
+    if abs(atan2(#z))<trap
+      trap=abs(atan2(#z))
+      t=true
+    endif
+  endif
+
+  
+final:
+if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+  if #numiter>mup
+    t=false
+  endif
+  if t
+    if @numcoloring
+      #index=@trapcolor*#numiter
+    else
+      #index=@trapcolor*trap
+    endif
+  else
+    if !@TrapOnly
+      if #numiter>upper
+        h=#numiter*@lk
+        if h==0
+          #index=0
+        else
+          #index=log(h)/log(@lp)
+        endif
+      else
+        if @p==1
+          #index=@k*#numiter
+        else
+          #index=@k*#numiter^@p
+        endif
+      endif
+    else
+      #index=0
+      #solid=true
+    endif
+  endif
+else
+  if @solid
+    #solid=true
+  else
+    #index=@colindex
+  endif
+endif
+default:
+  title = "ZTrap2"
+
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param choice
+    enum="abs z" "z-real" "z-imag" "z-angle"  "no-trap"
+    default=2
+    hint="Different traps."
+  endparam
+  
+  param trap
+    caption="trap-value"
+    default=0.001
+    hint="Size of trap"
+  endparam
+  
+  param trapcolor
+    caption="trap-color"
+    default=0.001
+    hint="color of trap"
+  endparam
+  
+  param maxup
+    caption="upper Trap-limit"
+    default=1.0
+    max=1.0
+    min=0.0
+    hint="highest iteration"
+  endparam
+  
+  param numcoloring
+    caption="Iterat coloring"
+    default=false
+    hint="If false coloring is trapdependent"
+  endparam
+  
+  param TrapOnly
+    caption="Trap only."
+    default=false
+    hint="Only trapcolor."
+  endparam
+  
+  
+  param upper
+    caption="upper limit col."
+    hint="Between 0.0 and 1.0 (upper*maxiter). After upper log is activated \
+          and slows down the coloring."
+    default=1.0
+    max=1.0
+    min=0.0
+  endparam
+  
+  param k
+    caption="speed"
+    hint="Speed of color. The higher number the faster colorchange."
+    default=0.01
+  endparam
+  
+  
+  param p
+    caption="acc"
+    default=1.0
+    hint="Acc of color. Below 1.0 slows down coloring."
+  endparam
+  
+
+  param lk
+    caption="logspeed"
+    hint="Upper speed of color. Below 1.0 slows down coloring."
+    default=1.0
+  endparam
+  
+  param lp
+    caption="logacc"
+    hint="Upper acc of color. The higher number  the slower colorchange. It is the lognumber."
+    default=2.0
+    min=1.0
+  endparam
+}
+
+
+
+
+Pixels(BOTH) {
+
+; Includes "Iteration trap" (see starttext) and have some different z-functions and constants \
+; to experiment with. It is a routine that is dependent of the value of the pixel \
+; that is iterated. \
+
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  float mu=1.0
+  float mu1=0.0
+  
+loop:
+  if @choice==0
+    mu1=@b*(cabs(@d*sqrt(@func2(#pixel)))+@c*|@func1(#z)|)
+  elseif @choice==1
+    mu1=@b*(cabs(@d*sqrt(@func2(#pixel)))+@c*sqr(real(@func1(#z))))
+  elseif @choice==2
+    mu1=@b*(cabs(@d*sqrt(@func2(#pixel)))+@c*sqr(imag(@func1(#z))))
+  else 
+    mu1=@b*(cabs(@d*sqrt(@func2(#pixel)))+@c*sqr(atan2(@func1(#z))))
+  endif
+  if mu1<mu
+    mu=mu1
+  endif
+  
+final:
+  if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+    #index=@a*cabs(@func3(mu))
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+  
+default:
+  title = "Pixels"
+  
+  func func1
+    caption="z-func"
+    default=ident()
+    hint="Works on z"
+  endfunc
+  
+  func func2
+    caption="pixel-func"
+    default=ident()
+    hint="Works on current pixel"
+  endfunc
+  
+  func func3
+    caption="Color-func"
+    default=ident()
+    hint="Works on the final coloring"
+  endfunc
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param choice
+    enum="cabs" "real" "imag" "atan2"
+    hint="Different - well - colorfunctions..."
+    default=0
+  endparam
+    
+  
+  param a
+    caption="a"
+    hint="Different parameters to experiment with."
+    default=1.0
+  endparam
+  
+    param b
+    caption="b"
+    hint="Different parameters to experiment with."
+    default=1.0
+  endparam
+  
+  param c
+    caption="c"
+    hint="Different parameters to experiment with."
+    default=1.0
+  endparam
+  
+    param d
+    caption="d"
+    hint="Different parameters to experiment with."
+    default=(0.0,0.0)
+  endparam
+    
+}
+
+Funcs(BOTH) {
+
+; Funcs is a routine that is dependent of the content of z and gives the opportunity to try \
+; different functions and constants on this content. It is also dependent of iterations and \
+; the maxiteration. Therefore the color can change if the maxiteration changes. \
+; The constants may sometimes have large values to work. \
+
+
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  float rr=0.0
+  float ii=0.0
+  float mu=0.0
+
+loop:
+    rr=real(#z)
+    ii=imag(#z)
+    rr=@b*cabs(@func1(rr))
+    ii=@c*cabs(@func2(ii))
+    if ii<rr
+      mu=ii
+    else
+      mu=rr
+    endif
+final:
+  if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+    #index=@a*real(@func3(mu))*#numiter/#maxiter
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+  
+  
+default:
+  title = "Funcs"
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  func func1
+    caption="function 1"
+    default=abs()
+  endfunc
+    
+  func func2
+    caption="function 2"
+    default=abs()
+  endfunc
+  
+  func func3
+    caption="function 3"
+    default=abs()
+  endfunc  
+
+  param a
+    caption="a"
+    default=1.0
+  endparam
+  
+  param b
+    caption="b"
+    default=1.0
+  endparam
+  
+  param c
+    caption="c"
+    default=1.0
+  endparam
+}
+
+AllInOne(BOTH) {
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  complex zold=0
+  complex zold1=0
+  complex zold2=0
+  complex zold3=0
+  complex zold4=0
+  complex zold5=0
+  complex zold6=0
+  complex zold7=0
+  complex zold8=0
+  complex zold9=0
+  complex zold10=0
+  complex zold11=0
+  complex zold12=0
+  complex zold13=0
+  complex zold14=0
+  complex zold15=0
+  complex zold16=0
+  complex zold17=0
+  complex zold18=0
+  complex zold19=0
+  complex zold20=0
+  float ind=0
+loop:
+  zold20=zold19
+  zold19=zold18
+  zold18=zold17
+  zold17=zold16
+  zold16=zold15
+  zold15=zold14
+  zold14=zold13
+  zold13=zold12
+  zold12=zold11
+  zold11=zold10
+  zold10=zold9
+  zold9=zold8
+  zold8=zold7
+  zold6=zold5
+  zold5=zold4
+  zold4=zold3
+  zold3=zold2
+  zold2=zold1
+  zold1=zold
+  zold=#z
+
+  
+final:
+  if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+    if @znumber==1
+      zold=zold1
+    elseif @znumber==2
+      zold=zold2
+    elseif @znumber==3
+      zold=zold3
+    elseif @znumber==4
+      zold=zold4
+    elseif @znumber==5
+      zold=zold5
+    elseif @znumber==6
+      zold=zold6
+    elseif @znumber==7
+      zold=zold7
+    elseif @znumber==8
+      zold=zold8
+    elseif @znumber==9
+      zold=zold9
+    elseif @znumber==10
+      zold=zold10
+    elseif @znumber==11
+      zold=zold11
+    elseif @znumber==12
+      zold=zold12
+    elseif @znumber==13
+      zold=zold13
+    elseif @znumber==14
+      zold=zold14
+    elseif @znumber==15
+      zold=zold15
+    elseif @znumber==16
+      zold=zold16
+    elseif @znumber==17
+      zold=zold17
+    elseif @znumber==18
+      zold=zold18
+    elseif @znumber==19
+      zold=zold19
+    elseif @znumber==20
+      zold=zold20
+    endif
+    ind=@zconst*cabs(@zfunc(atan(#z-zold)))
+    if @pixels
+      ind=cabs(@pixconst*@pixfunc(atan(#pixel)))+ind
+    endif
+    if @nums
+      ind=@numconst*cabs(@numfunc(log(#numiter)))+ind
+    endif
+    #index=ind
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+
+default:
+  title = "AllInOne"
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param znumber
+    caption = "oldz-number"
+    default=20
+    min=0
+    max=20
+    hint="Between 0-20. Which oldz shall be subtracted fromz."
+  endparam
+  
+  param @pixels
+    caption="Pixel-routine."
+    default=true
+    hint="If pixels shall be incorporated."
+  endparam
+
+  param @nums
+    caption="Numiter-routine."
+    default=true
+    hint="If numiter shall be incorporated."
+  endparam
+
+  param zconst
+    caption="z-const"
+    default=1.0
+    hint="Weight for z."
+  endparam
+  
+  param pixconst
+    caption="pix-const"
+    default=1.0
+    hint="Weight for pixel."
+  endparam
+  
+  param numconst
+    caption="num-const"
+    default=1.0
+    hint="Weight for numiter."
+  endparam
+  
+  func zfunc
+    caption = "z-func"
+    default=ident()
+    hint="Function on z."
+  endfunc
+  
+  func pixfunc
+    caption = "pix-func"
+    default=ident()
+    hint="Function on pixel."
+  endfunc
+  
+  func numfunc
+    caption = "num-func"
+    default=ident()
+    hint="Function on numiter."
+  endfunc
+}
+
+Sub(BOTH) {
+init:
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+  if lowtrap>hightrap
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  endif
+  complex a=0
+  complex b=@start
+loop:
+  a=@func1(#z-#pixel)
+  if real(a)<real(b)
+    b=a
+  endif
+final:
+  if (#numiter>=lowtrap)&&(#numiter<=hightrap)
+    #index=@weight*cabs(@func2(b))*#numiter
+  else
+    if @solid
+      #solid=true
+    else
+      #index=@colindex
+    endif
+  endif
+default:
+  title = "Sub"
+  
+  param itrap
+    caption="Iteration Trap."
+    hint="Between 0.0 and 1.0 (itrap*maxiter). The real part is the lowest part of the\
+          iterations that will be effected. The imag part is the highest part.\
+          everything below and above will be ignored. This can be used to control\
+          coloring with different layers."
+    default=(0.0,1.0)
+  endparam
+  
+  param solid
+    caption="Solid ignore-color."
+    hint="If set the ignored iterations in itrap will have the solid color."
+    default=true
+  endparam
+  
+  param colindex
+    caption="Color index."
+    hint="If not Solid ignore-color this will be the color."
+    default=0.0
+  endparam
+  
+  param start
+    caption="Start-value"
+    hint="Start for comparing differences."
+    default=(1.0,0.0)
+  endparam
+  
+  param weight
+    caption="Weight"
+    hint="Weight for coloring."
+    default=0.1
+  endparam
+  
+  func func1
+    caption="Compare-function."
+    hint="Function for comparing"
+    default=acosh()
+  endfunc
+  
+  func func2
+    caption="Color-function."
+    hint="Function for coloring"
+    default=recip()
+  endfunc
+}
+
+Log(BOTH) {
+init:
+  float apix=log(cabs(@func1(#pixel)))
+  float a=0
+  float b=0
+loop:
+
+final:
+  a=log(cabs(@func1(#z)))
+  b=log(abs(apix-a))
+  #index=@k*b/log(#numiter)
+default:
+  title = "Log"
+  
+  func func1
+    caption="func1"
+    default=ident()
+  endfunc
+  
+  param k
+    caption="Const"
+    default=1.0
+    hint="Balancing constant"
+  endparam
+  
+  
+}
+
+
+No1(BOTH) {
+init:
+  float a=0
+  float r=100
+loop:
+  a=abs(cabs(@f1(#z))-abs(atan2(@f2(#z))))
+  if a<r
+    r=a
+  endif
+  
+final:
+  #index=abs(@b*r-cabs(log(#z)))/#numiter
+  
+default:
+  title = "No1"
+  
+  func f1
+    caption="func1"
+    default=ident()
+  endfunc
+  
+  func f2
+    caption="func2"
+    default=ident()
+  endfunc
+  
+  param b
+    caption="const"
+    default=1.0
+  endparam
+  
+}
+
+
+No2(BOTH) {
+init:
+  float aa=0
+  float ar=100000
+loop:
+  if @choice==0
+    aa=abs(real(#z)*real(#pixel)+imag(#z)*imag(#pixel))
+  elseif @choice==1
+    aa=abs(real(#z)*imag(#pixel)+imag(#z)*real(#pixel))
+  endif
+  if @mpixel
+    aa=aa*cabs(@f2(#pixel))
+  endif
+  if aa<ar
+    ar=aa
+  endif
+  
+final:
+  #index=@a*cabs(@f1(ar))
+default:
+  title = "No2"
+  
+  func f1
+    caption="Col-func"
+    default=ident()
+  endfunc
+  
+  func f2
+    caption="Pix-func"
+    default=ident()
+  endfunc
+  
+  param choice
+    enum="One" "Two"
+    default=0
+  endparam
+  
+  param mpixel
+    caption="Pix-mult"
+    default=false
+  endparam
+  
+  param a
+    caption="Col-const"
+    default=1.0
+  endparam
+}
+
+
+No3(BOTH) {
+init:
+  float a=0
+  float r=0
+  r=1000
+loop:
+  a=abs(real(@func2(@const2*#z)))/cabs(#z)
+  if a<r
+    r=a
+  endif
+  a=abs(imag(@func2(@const2*#z)))/cabs(#z)
+  if a<r
+    r=a
+  endif
+final:
+  #index=cabs(@func1(@const1*r+flip(0)))
+default:
+  title = "No3"
+  
+  func func1
+    caption="func1"
+    default=ident()
+  endfunc
+  
+  func func2
+    caption="func2"
+    default=ident()
+  endfunc
+  
+  param const1
+    caption="const1"
+    default=1.0
+  endparam
+  
+  param const2
+    caption="const2"
+    default=(1,0)
+  endparam
+}
+
+
+
+No4(BOTH) {
+init:
+  float a=0
+  float r=0
+  r=1000
+loop:
+  if @choice==0
+    a=|real(@func2(abs(@const2*#z)))|/|#z|
+  elseif @choice==1
+    a=|imag(@func2(@const2*#z))|/|#z|
+  elseif @choice==2
+    a=|atan2(@func2(@const2*#z))|/|#z|
+  elseif @choice==3
+    a=|cabs(@func2(@const2*#z))|/|#z|
+  endif
+  if a<r
+    r=a
+  endif
+
+final:
+  #index=|@func1(@const1*r+flip(0))|
+default:
+  title = "No4"
+  
+  func func1
+    caption="func1"
+    default=ident()
+  endfunc
+  
+  func func2
+    caption="func2"
+    default=ident()
+  endfunc
+  
+  param choice
+    enum="real" "imag" "atan" "abs"
+    default=0
+  endparam
+  
+  param const1
+    caption="const1"
+    default=1.0
+  endparam
+  
+  param const2
+    caption="const2"
+    default=(1,0)
+  endparam
+}
+
+
+
+Alternate(BOTH) {
+init:
+  float a=0
+  float b=0
+  float m=0
+  bool flag=false
+  
+loop:
+  
+final:
+  a=#numiter
+  if a<@limit&&a>=@limit0
+    m=trunc(a/@gear)
+    b=trunc(m/2)*2-m
+    if b==0
+      #index=(a-@limit0)/(@limit-@limit0)*0.33
+    else
+      #index=(a-@limit0)/(@limit-@limit0)*0.33+0.34
+    endif
+  elseif a>=@limit
+      #index=0.67+#numiter/#maxiter*0.33
+  else
+    flag=true
+  endif
+  if flag==true
+    if @alt==0
+      #index=#numiter/#maxiter*0.33
+    elseif @alt==1
+      #index=#numiter/#maxiter*0.33+0.34
+    else
+      #index=#numiter/#maxiter*0.33+0.67
+    endif
+  endif
+default:
+  title = "Alternate"
+  
+  param limit0
+    caption="floor"
+    default=0.0
+    hint="Starting point for the alternating coloring. The gradient is divided into three equal parts. \
+    The leftmost for even alternate levels. The middle for the odd. And the rightmost for the coloring outside the levels \
+    (closest to the set)."
+  endparam
+  
+  param limit
+    caption="roof"
+    default=50.0
+    hint="End point for the alternating coloring."
+  endparam
+  
+  param gear
+    caption="gear"
+    default=1
+    hint="The amount of iterations in every level."
+    min=1
+  endparam
+  
+  param alt
+    enum="alt1" "alt2" "alt3"
+    default=0
+    hint="What part of the gradient that should be adressed before the alternating coloring. The gradient is divided into \
+    three parts. Left, middle and right."
+  endparam
+}
+
+
+
+
+Period(INSIDE) {
+init:
+  int n=0
+  int p=trunc(#maxiter*@start/100)
+  complex t=0
+  bool flag=false
+  bool flag2=false
+  float k=0
+  if @auto==true
+    k=1/(#maxiter/@k)
+  else
+    k=@k
+  endif
+
+loop:
+  if (flag==false)&&(flag2==false)
+    if n==p
+      t=#z
+    elseif n>p
+      if abs(real(t)-real(#z))<k
+        if abs(imag(t)-imag(#z))<k
+          flag=true
+          if (@research==true)&&(n-p<@period)
+            flag=false
+            flag2=true
+          endif
+        endif
+      endif
+    endif
+    n=n+1
+    if (@research==true)&&((n-p)>@period)
+      flag2=true
+    endif
+  endif
+  
+final:
+  if flag==true
+    n=n-p-2
+    #index=(n%@cycle)/@cycle
+  else
+    #solid=true
+  endif
+  
+default:
+  title = "Period"
+  
+
+
+
+  param period
+    caption="Period"
+    default=2
+    hint="Periodicity. Works only with Research enabled."
+    min=1
+  endparam
+  
+  param research
+    caption="Research"
+    default=false
+    hint="For finding a special periodicity set in Period. The area will be shown in significant color."
+  endparam
+  
+  param cycle
+    caption="Cycle"
+    default=5
+    hint="The amount of times before the cycles starts to repeat. Should be increased at higher magnifications."
+    min=1
+
+  endparam
+  
+  param auto
+    caption="Autoprecision"
+    default=true
+    hint="Precision is automatic. May be finetuned in Precision."
+  endparam
+  
+  param k
+    caption="Precision"
+    default=1e-6
+    hint="The precision between comparing numbers in a cycle. May be lower at low magnifications and higher at \
+    high magnifications."
+  endparam
+  
+  param start
+    caption="Start"
+    default=90.0
+    hint="The start of count of cycles in % of Maxiterations."
+    max=100.0
+  endparam
+}
+
+
+
+
+
+
+

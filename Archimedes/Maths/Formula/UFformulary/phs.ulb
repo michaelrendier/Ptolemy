@@ -1,0 +1,281 @@
+mb_bs_parallel_coupled {
+;
+; Coupled Mandelbrot and Burning Ship
+;
+; z --> Mandelbrot loop
+; y --> Burning Ship loop
+;
+; Every @n iterations, z is set to a weighted average of current z and y
+;
+; @nbmax limits the amount of BS iterations that is done between each
+; coupling, the maximum is equal to @n
+;
+init:
+  z = #pixel
+  y = #pixel
+  int k = 0
+  nb = 0
+loop:
+  z = z^@exp + #pixel
+  if nb < @nbmax
+    y = abs(y)^@exp + #pixel
+    nb = nb + 1
+  endif
+  k = k + 1
+  if k == @n
+    z = @t*z + (1-@t)*y
+    k = 0
+    nb = 0
+  endif
+bailout:
+  |z| < @bailout
+default:
+  title = "MB+BS, coupling every N iter"
+  magn = 0.5
+  maxiter = 149
+  param bailout
+    caption = "Bailout value"
+    default = 128
+    min = 1
+  endparam
+  int param n
+    caption = "coupling frequency"
+    default = 1
+    hint = "Every n iterations, the Burning Ship and Mandelbrot are averaged\
+            using weight t."
+  endparam
+  float param t
+    caption = "t (MB Weight)"
+    default = 0.999
+    min = 0.
+    max = 1.
+    hint = "Weight of the Mandelbrot value, the Burning Ship value will be\
+            Set to 1 - t. Higher values distort the fractal more strongly,\
+            smaller values make the fractal look more like a Mandelbrot set\
+            and deeper zooms will be required to reveal distortion."
+  endparam
+  int param nbmax
+    caption = "Max BS iterations between coupling steps"
+    default = 1000000000
+    hint = "Limit the amount of Burning Ship iterations between each coupling,\
+            if this value is larger than n, n wil limit this instead."
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2.,0.)
+    hint = "Exponent of the underlying Mandebrot and Burning Ship fractals. \
+            Higher values seem to produce less interesting results, or the \
+            interesting parts are harder to find."
+  endparam
+switch:
+  type = "mb_bs_parallel_coupled_julia"
+  seed = pixel
+  bailout = bailout
+  exp = exp
+  t = t
+  n = n
+}
+
+mb_bs_parallel_coupled_julia {
+init:
+  z = #pixel
+  k = 0
+loop:
+  z = z^@exp + @seed
+  if nb < @nbmax
+    y = abs(y)^@exp + @seed
+    nb = nb + 1
+  endif
+  k = k + 1
+  if k == @n
+    z = @t*z + (1-@t)*y
+    k = 0
+  endif
+bailout:
+  |z| <= @bailout
+default:
+  title = "MB/BS weighted coupling every N iter julia"
+  maxiter = 149
+  param seed
+    caption = "Julia Seed"
+    default = (0.25, 0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  int param n
+    caption = "coupling frequency"
+    default = 1
+    hint = "Every n iterations, the Burning Ship and Mandelbrot are averaged\
+            using weight t."
+  endparam
+  float param t
+    caption = "t (MB Weight)"
+    default = 0.999
+    min = 0.
+    max = 1.
+    hint = "Weight of the Mandelbrot value, the Burning Ship value will be\
+            Set to 1 - t. Higher values distort the fractal more strongly,\
+            smaller values make the fractal look more like a Mandelbrot set\
+            and deeper zooms will be required to reveal distortion."
+  endparam
+  int param nbmax
+    caption = "Max BS iterations between coupling steps"
+    default = 1000000000
+    hint = "Limit the amount of Burning Ship iterations between each coupling,\
+            if this value is larger than n, n wil limit this instead."
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2.,0.)
+    hint = "Exponent of the underlying Mandebrot and Burning Ship fractals. \
+            Higher values seem to produce less interesting results, or the \
+            interesting parts are harder to find."
+  endparam
+switch:
+  type = "mb_bs_parallel_coupled"
+  bailout = bailout
+  exp = exp
+  t = t
+  n = n
+}
+
+coupling_loops {
+init:
+  z = pixel
+  k = 0
+  kmax = 0.
+  loop:
+  if k < kmax
+     z = z^@exp1 + #pixel
+     k = k + 1
+  else
+     z = z^@exp1 + @c*z^@exp2 + #pixel
+     kmax = kmax + @dkmax
+     k = 0
+  endif
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= 0) ||                                            \
+  (@test == 8 && |(z - z_old)| <= @bailout)
+default:
+  title = "coupling loops"
+  maxiter = 15000
+  center = (-0.5, 0)
+  float param dkmax
+    caption = "Coupling Shift"
+    default = 50.
+    min = 0
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+switch:
+  type = "coupling_loops_julia"
+  seed = #pixel
+  di = di
+  bailout = bailout
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+}
+
+coupling_loops_julia {
+init:
+  z = pixel
+  k = 0
+  kmax = 0.
+  loop:
+  if k < kmax
+     z = z^@exp1 + @seed
+     k = k + 1
+  else
+     z = z^@exp1 + @c*z^@exp2 + @seed
+     kmax = kmax + @dkmax
+     k = 0
+  endif
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= 0) ||                                            \
+  (@test == 8 && |(z - z_old)| <= @bailout)
+default:
+  title = "coupling loops julia"
+  maxiter = 149
+  center = (-0.5, 0)
+  float param dkmax
+    caption = "Coupling Shift"
+    default = 50.
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (-0.750456803963, 0.0328866621095)
+  endparam
+switch:
+  type = "coupling_loops"
+  seed = #pixel
+  di = di
+  bailout = bailout
+  exp1 = exp1
+  exp2 = exp2
+  exp3 = exp3
+  c = c
+}

@@ -1,0 +1,1211 @@
+comment {
+
+MMF colouring V2.0
+(26th November 2004)
+Added auto-power to the standard smoothing in
+Smoothed Decomposition.
+
+(18th January 2004)
+Added the "Fix iteration" options to Orbitals.
+Plus added new formula - Smoothed Decomposition
+
+(8th September 2002)
+Added "plain" orbit traps and an extra smoothing
+option using an algorithm suggested by Earl Hinrichs
+to "Orbitals".
+
+(21st March 2002)
+Added the "Poly Predictors" to "Orbitals".
+
+(7th March 2002)
+Added Predictor 5 to "Orbitals"
+
+(4th March 2002)
+Added the Predictor options to "Orbitals"
+
+Dave Makin (Makin' Magic)
+
+http://www.crosswinds.net/~makinmagic/
+http://website.lineone.net/~dave_makin/
+http://skyscraper.fortunecity.com/terabyte/966/
+
+}
+
+MMFc-SmoothDecomp(OUTSIDE) {
+;
+; If you have UF 3+ then please use MMF3 Extended Cilia
+;
+; This formula smooths binary decomposition, producing
+; results similar to DMJ-Cilia (sawtooth/interpolation
+; /sinewave) but works with any formulas in which
+; standard smooth colouring works, not just those with
+; an exponent of 2. Works for convergence and/or divergence.
+; As with other similar algorithms the bailouts and
+; power (exponent/degree) should match those in your
+; fractal formula.
+;
+init:
+  float il = real(1/log(@power))       ; for smoothing
+  float lp = log(0.5*log(@bailout))
+  if !@dauto
+    lp = il*lp
+  endif
+  float cil = real(1/log(@cpower))
+  float clp = log(-0.5*log(@smallbail))
+  if !@cauto
+    clp=cil*clp
+  endif
+  float f = 0
+  float d = 0
+  float d1 = 0
+  complex z1 = (0,0); old iterations
+  complex z2 = (0,0)
+  complex z3 = (0,0)
+  complex z4 = (0,0)
+  complex z5 = (0,0)
+  complex z6 = (0,0)
+
+loop:
+    z6 = z5
+    z5 = z4
+    z4 = z3; save them
+    z3 = z2
+    z2 = z1
+    z1 = #z
+
+final:
+  IF (@olditer == 0)
+    z6 = z2
+    z5 = z1
+    z4 = #z
+  ELSEIF (@olditer == 1)
+    z6 = z3
+    z5 = z2
+    z4 = z1
+  ELSEIF (@olditer == 2)
+    z6 = z4
+    z5 = z3
+    z4 = z2
+  ELSEIF (@olditer == 3)
+    z6 = z5
+    z5 = z4
+    z4 = z3
+  ENDIF
+
+  if (@type>0) && (|#z-z1|<0.5)
+    if @cauto
+      f = (clp-log(-0.5*log(|#z-z1|)))/log(log(|#z-z1|)/log(|z1-z2|))
+    else
+      f = (clp - cil*log(-0.5*log(|#z-z1|)))
+    endif
+    z4 = z4 - z5
+    z5 = z5 - z6
+  elseif @type!=1 && (|#z-z1|>0.5)
+    if @dauto
+      f = (lp - log(0.5*log(|#z|)))/log(log(|#z|)/log(|z1|))
+    else
+      f = (lp - il*log(0.5*log(|#z|)))
+    endif
+  else
+    #solid = true
+  endif
+  d = cos(atan2(z4)/2)-@distort*f
+  d1 = cos(atan2(z5)/2)
+  #index = abs(d + (d-d1)*f)
+
+default:
+  title = "MMF - Smoothed Decomposition"
+  param distort
+    caption = "Pattern distortion"
+    default = 0.0
+    hint = "Changes the pattern produced."
+  endparam
+  param olditer
+    caption = "Use Older Iterations"
+    default = 0
+    enum = "No" "1 older" "2 older" "3 older" "4 older"
+    hint = "Uses older iterations for decomposition angle; this \
+            has the effect of spreading out the pattern.  Best \
+          used to compensate for higher bailouts."
+  endparam
+  param type
+    caption = "Colour type"
+    default = 0
+    enum = "Divergent" "Convergent" "Both"
+    hint = "Colours when bailout of the selected type is detected. \
+            Any areas not coloured are set to solid."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 65536.0
+    hint = "This should match the bailout in the fractal formula"
+  endparam
+  param dauto
+    caption = "Auto-power (div)"
+    default = false
+    hint = "When enabled you should get accurate smoothing in any divergent \
+            areas provided the bailout is correct. Note that when this is \
+            enabled the 'Power' parameter is unused."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This should match the power/degree/exponent in the \
+            fractal formula."
+  endparam
+  param smallbail
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "This should match the small bailout in your fractal formula."
+  endparam
+  param cauto
+    caption = "Auto-power (conv)"
+    default = false
+    hint = "When enabled you should get accurate smoothing in any convergent \
+            areas provided the bailout is correct. Note that when this is \
+            enabled the 'Convergent Power' parameter is unused."
+  endparam
+  param cpower
+    caption = "Convergent Power"
+    default = (2,0)
+    hint = "This should match the power/exponent/degree for the \
+            convergent areas of your fractal formula."
+  endparam
+}
+
+MMFa-for3D {
+;
+; Probably the most complex colouring ever !
+; This colouring only really applies to the
+; MMF "3D" fractal types and will not produce
+; very interesting results for other fractals.
+;
+final:
+  #index = real(#z)
+default:
+  title = "MMF 3D colouring"
+}
+
+MMFb-Orbitals {
+;
+; If using UF 3.0 or later please use MMF3-Orbitals+ instead.
+;
+; This is essentially orbit trapping, but using
+; the z values from previous iteration/s to set
+; the value of the trap.
+; I've employed the same technique as Damien did
+; in his curvature average algorithm to get smooth
+; colouring, ie. using the smooth iteration fraction
+; to combine results from consecutive iterations.
+; Hence the smooth method only works perfectly with
+; those fractal types for which smooth iteration
+; colouring works and you should set the power and bailout
+; parameters to the values used in your main formula
+; (preferably with a high bailout value).
+; However it may produce interesting results on other
+; fractal types too (in which case it's worth playing
+; with the power and bailout values).
+;
+; Updated 8th September 2002
+; Added "plain" orbit traps since this allows options for
+; plain orbit traps not available elsewhere.
+; Also added an alternative smoothing method - for use with
+; formulas that pass a smoothing fraction as final z. Such
+; a formula is the MMF-Transformation formula which impliments
+; a smoothing algorithm suggested by Earl Hinrichs, see:
+;
+; http://computerart.org/smoothcolor.html
+;
+; Updated 21st March 2002
+; Added the "Poly predictor" options.
+; These trap to a predictor based on:
+; a*z^power + b OR a*z^power + b*z + c
+; The power to use is a user parameter and the values
+; of a, b and c are calculated based on old z values.
+; Please note that if you are using a standard formula
+; of the same sort as the predictor, with the same power,
+; then no colouring will result.
+;
+; Updated 7th March 2002
+; Added Predictor 5
+; Predictors 3 & 4 were based on the assumption that the
+; orbit of Z follows basic spirals around the origin.
+; Predictor 5 is based on the assumption that the orbit is
+; spiralling around a point other than the origin.
+; Predictor 5 traps to:
+; (zold*(zold-zold1)+zold1^2-zold*zold2)/(zold1-zold2)
+;
+; Updated 4th March 2002
+; Added the "Predictor" options.
+; Predictor 1 traps to Zold+(Zold-Zold1)
+; Predictor 2 traps to Zold+(Zold-Zold1)+(Zold-Zold1)-(Zold2-Zold1)
+; Predictor 3 traps to Zold*(Zold/Zold1)
+; Predictor 4 traps to Zold*(Zold/Zold1)*(Zold/Zold1)/(Zold1/Zold2)
+;
+; Updated 18th November 2000
+; Added iteration skipping and index masking as well as more
+; options for "Colour by", options to change the "Diviter" value
+; and the "Funky Function".
+;
+; Updated 14th November 2000 - Added "Shapes" and "Colour by".
+;
+; Shape algorithms imported from "Orbit Traps" with
+; thanks to Damien.
+;
+; Created 10th/11th November 2000
+;
+; (c) Dave Makin (Makin' Magic)
+; http://www.crosswinds.net/~makinmagic/
+; http://website.lineone.net/~dave_makin/
+;
+; Poly predictor derivation:
+; 1. zold1 = a*zold2^n + b
+; 2. zold  = a*zold1^n + b
+; Eliminating b gives:
+; zold-zold1 = a(zold1^n-zold2^n)
+; Hence:
+; a = (zold-zold1)/(zold1^n-zold2^n)
+; Eliminating a gives:
+; (zold1-b)/zold2^n = (zold-b)/zold1^n
+; Hence:
+; zold1^(n+1) - b*zold1^n = zold*zold2^n - b*zold2^n
+; Giving:
+; b = (zold1^(n+1)-zold*zold2^n)/(zold1^n-zold2^n)
+; The predictor is:
+; trap = a*zold^n + b
+; ie.
+; trap = (zold^n*(zold-zold1)+zold1^(n+1)-zold*zold2^n)/(zold1^n-zold2^n)
+;
+; Second Poly predictor derivation:
+; 1. zold2 = a*zold3^n + b*zold3 + c
+; 2. zold1 = a*zold2^n + b*zold2 + c
+; 3. zold  = a*zold1^n + b*zold1 + c
+; From 1:
+; 1a. c = zold2 - a*zold3^n - b*zold3
+; Substituting in 2 and 3:
+; 4. zold1 = a*zold2^n + b*zold2 + zold2 - a*zold3^n - b*zold3
+; 5. zold  = a*zold1^n + b*zold1 + zold2 - a*zold3^n - b*zold3
+; From 4 and 5, eliminating a:
+; ((zold1-zold2)-b(zold2-zold3))/(zold2^n-zold3^n)
+; = ((zold-zold2)-b(zold1-zold3))/(zold1^n-zold3^n)
+; Rearranging:
+; (zold1-zold2)(zold1^n-zold3^n)-b(zold2-zold3)(zold1^n-zold3^n)
+; = (zold-zold2)(zold2^n-zold3^n)-b(zold1-zold3)(zold2^n-zold3^n)
+; Hence:
+; b = ((zold-zold2)(zold2^n-zold3^n)-(zold1-zold2)(zold1^n-zold3^n))
+;    /((zold1-zold3)(zold2^n-zold3^n)-(zold2-zold3)(zold1^n-zold3^n))
+; From 4 and 5, eliminating b:
+; ((zold1-zold2)-a(zold2^n-zold3^n))/(zold2-zold3)
+; = ((zold-zold2)-a(zold1^n-zold3^n))/(zold1-zold3)
+; Rearranging:
+; (zold1-zold2)(zold1-zold3)-a(zold2^n-zold3^n)(zold1-zold3)
+; = (zold-zold2)(zold2-zold3)-a(zold1^n-zold3^n)(zold2-zold3)
+; Hence:
+; a = ((zold1-zold2)(zold1-zold3)-(zold-zold2)(zold2-zold3))
+;    /((zold2^n-zold3^n)(zold1-zold3)-(zold1^n-zold3^n)(zold2-zold3))
+; The predictor is:
+; trap = a*zold^n + b*zold + c
+; Substituting for c from 1a gives
+; trap = a*zold^n + b*zold + zold2 - a*zold3^n - b*zold3
+; Simplifying:
+; trap = a(zold^n-zold3^n) + b(zold-zold3) + zold2
+; Replacing a and b:
+; trap = ((zold^n-zold3^n)((zold1-zold2)(zold1-zold3)-(zold-zold2)(zold2-zold3))
+;         +(zold-zold3)((zold-zold2)(zold2^n-zold3^n)-(zold1-zold2)(zold1^n-zold3^n)))
+;       /((zold2^n-zold3^n)(zold1-zold3)-(zold1^n-zold3^n)(zold2-zold3))
+;       + zold2
+;
+init:
+  complex z = fn3(#z) ; z
+  complex zold = z    ; previous z
+  complex zold1 = z   ; 2nd previous z
+  complex zold2 = z   ; 3rd previous z
+  complex zold3 = z   ; 4th previous z
+  complex zd = (0,0)  ; for the value of (z-zold)
+  complex ft = @fix   ; for the standard trap
+  complex fto = @fixo ; offset for the standard trap
+  complex fts = @fixs ; scale for the standard trap
+  complex ftp = @fixp ; power for the standard trap
+  if @version == 9
+    ft = #pixel*ft    ; Julia style for the trap value iteration
+  elseif @version == 10
+    fto = #pixel*fto  ; Standard Mandelbrot style for the trap value iteration
+  elseif @version == 11
+    fts = #pixel*fts  ; Lambda Mandelbrot style for the trap value iteration
+  elseif @version == 12
+    ftp = #pixel*ftp  ; Power Mandelbrot style for the trap value iteration
+  endif
+  float ang = 0       ; for the angle (rads)
+  float angold = 0    ; previous angle (rads)
+  float v = 0         ; main value in use
+  float vold = 0      ; previous distance
+  float d = 0         ; temporary store for distance
+  float tv = 0        ; value to use (max, min, total etc.)
+  if @mode == 0       ; min
+    tv = 1e100
+  endif
+  float mn = 1e100    ; min for nearest
+  float otv = 0       ; previous value to use
+  int i = 0           ; full iteration counter
+
+  bool notyet = true  ; flag for "found first/last above/below"
+
+  float radius = sqr(@radius)
+  complex t = (0,0)
+  complex rh = 0.5*((0,1)^(@order/8))/@radius
+
+  int vi = 0          ; iteration value for colouring
+  int ovi = 0         ; previous iteration value
+  complex vz = (0,0)  ; z value for colouring
+  complex ovz = (0,0) ; previous z value
+  int i1 = 0          ; restricted iteration counter
+  int oi1 = 0         ; previous iteration counter
+  int i2 = 0          ; actual trap counter
+  int oi2 = 0         ; previous trap counter
+  float mv = 0        ; for various totals
+  float omv = 0       ; previous total
+  bool usesolid = false  ; flag for solid
+  float maskval = 0.0 ; value to mask
+  float index = 0.0   ; for final #index
+  int maskl = round(@rmasklo*51200)  ; for repeating trap
+  int maskh = round(@rmaskhi*51200)  ; for repeating trap
+
+  float ct = @traprot*#pi/180.0
+  float st = sin(ct)
+  ct = cos(ct)
+
+  float il = real(1/log(@power))        ; for smoothing
+  float lp = il*log(log(@bailout)/2.0)  ; for smoothing
+
+loop:
+
+  z = fn3(#z)        ; apply the Funky Function
+
+; If using standard trap (version > 7) then move the trap
+; Check value against bailout to avoid overflow
+
+  if (@version > 7) && (|ft|<@bailout)
+    ft = fts*@fn4(ft)^ftp+fto
+  endif
+
+; get the orbital change and angle
+; ie. trap against old z, the "predictor" or the trap value
+
+  if @version == 0
+    zd = z - zold + @trapoff
+  elseif @version == 1
+    zd = z - (zold + (zold - zold1)) + @trapoff
+  elseif @version == 2
+    zd = z - (zold + (zold - zold1) + (zold - zold1) - (zold1 - zold2)) + @trapoff
+  elseif @version == 3
+    if zold1 == 0
+      zd = @trapoff
+    else
+      zd = z - zold*zold/zold1 + @trapoff
+    endif
+  elseif @version == 4
+    if zold1 == 0
+      zd = @trapoff
+    else
+      zd = z - zold2*(zold/zold1)^3 + @trapoff
+    endif
+  elseif @version == 5
+    if (zold1-zold2)==0
+      zd = @trapoff
+    else
+      zd = z - (zold*(zold-zold1)+zold1^2-zold*zold2)/(zold1-zold2) + @trapoff
+    endif
+  elseif @version == 6
+    if (zold1^@pp-zold2^@pp)==0
+      zd = @trapoff
+    else
+      zd = z - (zold^@pp*(zold-zold1)+zold1^(@pp+1)-zold*zold2^@pp)/(zold1^@pp-zold2^@pp) + @trapoff
+    endif
+  elseif @version == 7
+    if ((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))==0
+      zd = @trapoff
+    else
+      zd = z - ((zold^@pp-zold3^@pp)*((zold1-zold2)*(zold1-zold3)-(zold-zold2)*(zold2-zold3)) \
+                +(zold-zold3)*((zold-zold2)*(zold2^@pp-zold3^@pp)-(zold1-zold2)*(zold1^@pp-zold3^@pp))) \
+              /((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3)) \
+             - zold2 + @trapoff
+    endif
+  elseif @version > 7
+    zd = z - ft + @trapoff
+  endif
+
+  if @traprot != 0
+    zd = real(zd)*ct - imag(zd)*st + flip(real(zd)*st +imag(zd)*ct)
+  endif
+
+  ang = atan2(zd)
+
+; Modify the angle as selected
+
+  if ang < 0 && @angmod > 0
+    if @angmod == 1
+      ang = abs(ang)
+    elseif @angmod == 2
+      ang = ang + #pi*2
+    endif
+  endif
+
+; Store previous values required for smoothing
+
+  if @colour == 0 || @mode == 2        ; Value (or Total)
+    otv = tv
+  elseif @colour == 1 || @colour == 6  ; Iteration
+    ovi = vi
+  elseif @colour == 2      ; Zmag
+    ovz = vz
+  elseif @colour == 3 || @colour == 4  ; Sum or Average
+    omv = mv
+  endif
+  if @limiter == 1         ; #Iterations tested
+    oi1 = i1
+  endif
+  if @limiter == 2 || (@colour > 3 && @colour != 6)     ; Trap count needed
+    oi2 = i2
+  endif
+
+; Now check if trapping is enabled
+
+  if i >= @fi && (i - @fi)%(@di + @si) < @di  ; start iteration & iteration skip
+
+; Initially set the main value v to the required distance
+
+  if @type == 1 || @type == 6 || @type == 9      ; real
+    zd = real(zd)
+  elseif @type == 2 || @type == 7 || @type == 10 ; imaginary
+    zd = imag(zd)
+  endif
+
+  if @shape == 0                                 ; point
+    v = cabs(zd)
+  elseif @shape == 1                             ; ring
+    v = abs(cabs(zd) - @radius)
+  elseif @shape == 2                             ; ring 2
+    v = 0.25*abs(|zd| - radius)
+  elseif @shape == 3                             ; egg
+    v = 0.25*(cabs(zd - flip(@radius*2)) + cabs(zd)*@order*0.5)
+  elseif @shape == 4                             ; hyperbola
+    v = 0.5*abs(real(zd)*imag(zd) - @radius)
+  elseif @shape == 5                             ; cross
+    v = abs(real(zd))
+    d = abs(imag(zd))
+    if d < v
+      v = d
+    endif
+  elseif @shape == 6                             ; astroid
+    v = abs(real(zd))^@order + abs(imag(zd))^@order
+  elseif @shape == 7                             ; diamond
+    v = abs(real(zd) + abs(imag(zd)))
+  elseif @shape == 8                             ; box
+    v = abs(real(zd))
+    d = abs(imag(zd))
+    if d > v
+      v = d
+    endif
+    v = abs(v - @radius)
+  elseif @shape == 9                             ; lines
+    v = abs(abs(imag(zd)) - @radius)
+  elseif @shape == 10                             ; waves
+    v = abs(abs(imag(zd) + sin(real(zd)*@freq)*@order*0.25) - @radius)
+  elseif @shape == 11                            ; mirrored waves
+    v = abs(abs(imag(zd)) - @radius + sin(real(zd)*@freq)*@order*0.25)
+  elseif @shape == 12                            ; mirrored waves 2
+    d = @radius - sin(real(zd)*@freq)*@order*0.25
+    v = abs(abs(imag(zd)) - d)
+    d = abs(abs(imag(zd)) + d)
+    if d < v
+      v = d
+    endif
+  elseif @shape == 13                            ; radial waves
+    v = abs(cabs(zd) * (1 - sin(atan2(zd)*@freq)*@order*0.125) - @radius)
+  elseif @shape == 14                            ; radial waves 2
+    d = sin(atan2(zd)*@freq)*@order*0.125
+    v = abs(cabs(zd) * (1 - d) - @radius)
+    d = abs(cabs(zd) * (1 + d) - @radius)
+    if d < v
+      v = d
+    endif
+  elseif @shape == 15                            ; ring ripples
+    v = cabs(zd)
+    if v < @order
+      v = cos(v*radius*@freq)*sqr(1 - v/@order)
+    else
+      v = 0
+    endif
+  elseif @shape == 16                            ; grid ripples
+    v = cabs(zd)
+    if v < @order
+      v = (cos(real(zd)*radius*@freq) + 0.5*cos(imag(zd)*radius*@freq))*sqr(1 - v/@order)
+    else
+      v = 0
+    endif
+  elseif @shape == 17                            ; radial ripples
+    v = cabs(zd)
+    if v < @order
+      v = cos(4*atan2(zd)*@freq)*sqr(1 - v/@order)
+    else
+      v = 0
+    endif
+  elseif @shape == 18                            ; pinch
+    v = atan2(zd)
+    if v < 0
+      v = v + 2*#pi
+    endif
+    v = sqrt(cabs(zd))/abs(sin(v*@order*0.5))
+  elseif @shape == 19                            ; spiral
+    t = zd * (0,1)^(@radius/cabs(zd))
+    v = atan(abs(imag(t)/real(t)))
+  elseif @shape == 20                            ; heart
+    t = rh*(real(zd) + flip(abs(imag(zd))))
+    v = abs(real(t) - sqr(imag(t)) + 3)
+  endif
+
+; Now apply scaling if enabled
+
+  if @scale
+    v = v/cabs(z)
+  endif
+
+; Use the angle for the types that require it
+
+  if @type > 2
+    if @type == 3            ; just the angle
+      v = real(fn2(ang))
+    elseif @type == 4        ; change in the angle
+      v = real(fn2(abs(ang-angold)))
+    elseif @type < 8         ; "vector" - ie. dist * angle
+      v = abs(v*real(fn2(ang)))
+    else                     ; "energy" - ie. dist change * angle change
+      d = v                  ; NB. old distance value needed
+      v = abs((v-vold)*real(fn2(abs(ang-angold))))
+      vold = d
+    endif
+  endif
+
+; Now apply the overall function
+
+  v = abs(real(fn1(v)))
+
+; Now store the required value for the current mode.
+; NB. on the first pass the max/min values are set irrespective.
+
+  if @mode == 0                            ; Minimum
+    if (v < tv) && ((zold1 != 0) || (@version < 3) || (@version > 7)) \
+       && ((zold1-zold2!=0) || (@version != 5)) \
+       && ((zold1^@pp-zold2^@pp!=0) || (@version != 6)) \
+       && ((((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))!=0) || (@version != 7))
+      tv = v
+      if @colour == 1 || @colour == 6      ; Iteration
+        vi = i + 1
+      elseif @colour == 2                  ; log(Zmag)
+        vz = #z
+      elseif @colour == 3 || @colour == 4  ; Sum or Average
+        mv = mv + v
+      endif
+      if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+        i2 = i2 + 1
+      endif
+    endif
+  elseif @mode == 1                        ; Maximum
+    if (v > tv) && ((zold1 != 0) || (@version < 3) || (@version > 7)) \
+       && ((zold1-zold2!=0) || (@version != 5)) \
+       && ((zold1^@pp-zold2^@pp!=0) || (@version != 6)) \
+       && ((((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))!=0) || (@version != 7))
+      tv = v
+      if @colour == 1 || @colour == 6      ; Iteration
+        vi = i + 1
+      elseif @colour == 2                  ; log(Zmag)
+        vz = #z
+      elseif @colour == 3 || @colour == 4  ; Sum or Average
+        mv = mv + v
+      endif
+      if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+        i2 = i2 + 1
+      endif
+    endif
+  elseif @mode == 2   ; Trapping all (Total)
+    tv = tv + v
+    if @limiter == 2 || (@colour > 3 && @colour != 6)        ; need trap count
+      i2 = i2 + 1
+    endif
+  elseif @mode == 3 || @mode == 5 || @mode == 8         ; Above
+    if (v > @threshold) && ((zold1 != 0) || (@version < 3) || (@version > 7)) \
+       && ((zold1-zold2!=0) || (@version != 5)) \
+       && ((zold1^@pp-zold2^@pp!=0) || (@version != 6)) \
+       && ((((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))!=0) || (@version != 7))
+      if @mode == 3 || @mode == 5
+        if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+          i2 = i2 + 1
+        endif
+        if @colour == 3 || @colour == 4      ; Sum or Average
+          mv = mv + v
+        endif
+      endif
+      if @mode == 3                        ; First
+        if notyet
+          if @colour == 0                  ; Value
+            tv = v
+          elseif @colour == 1 || @colour == 6      ; Iteration
+            vi = i + 1
+          elseif @colour == 2              ; log(Zmag)
+            vz = #z
+          endif
+          notyet = false
+        endif
+      elseif @mode == 5                    ; Last
+        if @colour == 0                    ; Value
+          tv = v
+        elseif @colour == 1 || @colour == 6      ; Iteration
+          vi = i + 1
+        elseif @colour == 2                ; log(Zmag)
+          vz = #z
+        endif
+        notyet = false
+      elseif @mode == 8
+        if (v - @threshold) < mn
+          mn = v - @threshold
+          if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+            i2 = i2 + 1
+          endif
+          if @colour == 0
+            tv = v
+          elseif @colour == 1 || @colour == 6      ; Iteration
+            vi = i + 1
+          elseif @colour == 2
+            vz = #z
+          elseif @colour == 3 || @colour == 4  ; Sum or Average
+            mv = mv + v
+          endif
+          notyet = false
+        endif
+      endif
+    endif
+  elseif @mode == 4 || @mode == 6 || @mode == 7         ; Below
+    if (v < @threshold) && ((zold1 != 0) || (@version < 3) || (@version > 7)) \
+       && ((zold1-zold2!=0) || (@version != 5)) \
+       && ((zold1^@pp-zold2^@pp!=0) || (@version != 6)) \
+       && ((((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))!=0) || (@version != 7))
+      if @mode == 4 || @mode == 6
+        if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+          i2 = i2 + 1
+        endif
+        if @colour == 3 || @colour == 4      ; Sum or Average
+          mv = mv + v
+        endif
+      endif
+      if @mode == 4                        ; First
+        if notyet
+          if @colour == 0                  ; Value
+            tv = v
+          elseif @colour == 1 || @colour == 6      ; Iteration
+            vi = i + 1
+          elseif @colour == 2              ; log(Zmag)
+            vz = #z
+          endif
+          notyet = false
+        endif
+      elseif @mode == 6                    ; Last
+        if @colour == 0                    ; Value
+          tv = v
+        elseif @colour == 1 || @colour == 6      ; Iteration
+          vi = i + 1
+        elseif @colour == 2                ; log(Zmag)
+          vz = #z
+        endif
+        notyet = false
+      elseif @mode == 7
+        if (@threshold - v) < mn
+          mn = @threshold - v
+          if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+            i2 = i2 + 1
+          endif
+          if @colour == 0
+            tv = v
+          elseif @colour == 1 || @colour == 6      ; Iteration
+            vi = i + 1
+          elseif @colour == 2
+            vz = #z
+          elseif @colour == 3 || @colour == 4  ; Sum or Average
+            mv = mv + v
+          endif
+          notyet = false
+        endif
+      endif
+    endif
+  elseif @mode == 9                            ; Nearest
+    if (abs(v - @threshold) < mn) && ((zold1 != 0) || (@version < 3) || (@version > 7)) \
+       && ((zold1-zold2!=0) || (@version != 5)) \
+       && ((zold1^@pp-zold2^@pp!=0) || (@version != 6)) \
+       && ((((zold2^@pp-zold3^@pp)*(zold1-zold3)-(zold1^@pp-zold3^@pp)*(zold2-zold3))!=0) || (@version != 7))
+      mn = abs(v - @threshold)
+      if @limiter == 2 || (@colour > 3 && @colour != 6)      ; need trap count
+        i2 = i2 + 1
+      endif
+      if @colour == 0
+        tv = v
+      elseif @colour == 1 || @colour == 6      ; Iteration
+        vi = i + 1
+      elseif @colour == 2
+        vz = #z
+      elseif @colour == 3 || @colour == 4  ; Sum or Average
+        mv = mv + v
+      endif
+      notyet = false
+    endif
+  endif
+
+; increment counter
+
+  if @limiter == 1
+    i1 = i1 + 1
+  endif
+
+  endif  ; start iteration & iteration skip
+
+; store old values and increment the counter
+
+  zold3 = zold2
+  zold2 = zold1
+  zold1 = zold
+  zold = z
+  angold = ang
+  i = i + 1
+
+final:
+
+  if @limiter == 0
+    oi1 = i - 1
+  elseif @limiter == 1
+    i = i1
+  else
+    i = i2
+    oi1 = oi2
+  endif
+
+  if @colour == 1              ; Iteration
+    if @mode == 2              ; Total
+      tv = i/#maxiter
+      otv = oi1/#maxiter
+    else
+      tv = vi/#maxiter
+      otv = ovi/#maxiter
+    endif
+  elseif @colour == 2          ; log(Zmag)
+    if @mode == 2              ; Total
+      tv = log(log(|fn3(#z)|)/2)  ; This is basically unchanged for
+      otv = log(log(|zold|)/2) ; compatability with earlier versions
+    else
+      tv = log(#e + cabs(vz)) - 1    ; ensure positive log
+      otv = log(#e + cabs(ovz)) - 1  ; starting from zero
+    endif
+  elseif @colour == 5          ; Trap count
+    tv = i2/#maxiter
+    otv = oi2/#maxiter
+  elseif @colour == 6          ; Fix Iteration
+    if @mode == 2              ; Total
+      tv = i/400
+      otv = oi1/400
+    else
+      tv = vi/400
+      otv = ovi/400
+    endif
+  elseif @colour == 7          ; Fix Trap count
+    tv = i2/400
+    otv = oi2/400
+  elseif @mode != 2
+    if @colour == 3            ; Sum
+      tv = mv
+      otv = omv
+    elseif @colour == 4        ; Average
+      tv = mv/i2
+      otv = omv/oi2
+    endif
+  endif
+
+  if @smooth || @finalz        ; use smoothing fraction
+    if @diviter
+      tv = tv/i      ; diviter on (converts Total to average)
+      if @finalz
+        otv = otv/oi1
+        index = abs(real(@fn5(otv + (tv - otv)*#z)))
+      else
+        index = tv + (tv - otv/oi1)*(lp - il*log(log(|#z|)/2))
+      endif
+    else
+      if @finalz
+        index = abs(real(@fn5(otv + (tv - otv)*#z)))
+      else
+        index = abs(tv + (tv - otv)*(lp - il*log(log(|#z|)/2)))
+      endif
+    endif
+  elseif @diviter
+    index = tv/i    ; diviter on (converts Total to average)
+  else
+    index = tv
+  endif
+
+  if @mode > 2               ; Above or Below or Nearest
+    if notyet                ; if threshold not passed
+      if @filltype == 0
+        index = @threshold
+      elseif @filltype == 1
+        usesolid = true
+      else
+        index = @filler/400.0
+      endif
+    endif
+  endif
+
+  if !usesolid
+    maskval = index        ; maskval used for future upgrades
+    if @maskarea == 1
+      if maskval < @masklo
+        usesolid = true
+      endif
+    elseif @maskarea == 2
+      if maskval >= @maskhi
+        usesolid = true
+      endif
+    elseif @maskarea == 3
+      if maskval >= @masklo && maskval < @maskhi
+        usesolid = true
+      endif
+    elseif @maskarea == 4
+      if maskval < @masklo || maskval >= @maskhi
+        usesolid = true
+      endif
+    endif
+    if @rptmask > 0
+      i = round((@rmaskoff + maskval)*51200) % maskh
+      if @rptmask == 1
+        if i < maskl
+          usesolid = true
+        endif
+      elseif @rptmask == 2
+        if i >= maskl
+          #solid = true
+        endif
+      endif
+    endif
+  endif
+
+  if usesolid
+    #solid = true
+  else
+    #index = index
+  endif
+
+default:
+  title = "MMF Orbitals"
+  param version
+    caption = "Version"
+    default = 0
+    enum = "Original (Z-Zold)" "Predictor1" "Predictor2" "Predictor3" \
+            "Predictor4" "Predictor5" "Poly Predictor 1" "Poly predictor 2" \
+            "Orbit 1" "Orbit 2" "Orbit 3" "Orbit 4" "Orbit 5"
+    hint = "Original traps to Zold, Predictor1 traps to \
+            Zold+(Zold-Zold1), Predictor2 traps to \
+            Zold+(Zold-Zold1)+(Zold-Zold1)-(Zold1-Zold2), \
+            Predictor3 traps to Zold*(Zold/Zold1) and Predictor4 \
+            traps to Zold*(Zold/Zold1)*((Zold/Zold1)/(Zold1/Zold2))."
+  endparam
+  param type
+    caption = "Type"
+    default = 0
+    enum = "Complex" "Real" "Imag" "Angle" "Angle Change" \
+           "Comp Vector" "Real Vector" "Imag Vector" \
+           "Comp Energy" "Real Energy" "Imag Energy"
+    hint = "The 'vector' and 'energy' modes are a combination \
+            of the distance value and the changes in angle. They \
+            have no real mathematical significance, they're \
+            just visually interesting combinations."
+  endparam
+  param mode
+    caption = "Mode"
+    default = 2
+    enum = "Minimum" "Maximum" "Total" "First Above" "First Below" \
+           "Last Above" "Last Below" "Nearest Below" "Nearest Above" \
+           "Nearest"
+    hint = "Use to select the trapping method, use 'Total' to trap all. \
+            Modify the 'Threshold' for First/Last/Nearest Above/Below."
+  endparam
+  param colour
+    caption = "Colour by"
+    default = 0
+    enum = "Value" "Iteration" "log(Zmag)" "Sum" "Average" "Trap count" \
+           "'Fix' Iteration" "'Fix' Trap count"
+    hint = "When using 'Total' mode only colour by 'Value' makes sense. \
+            When using 'Iteration' 'Average' or 'Trap Count' it's better \
+            to disable 'Diviter'. For 'Sum', 'Average' and 'Trap count' \
+            using a 'First' mode is the same as the equivalent 'Last' mode."
+  endparam
+  param diviter
+    caption = "Diviter"
+    default = true
+    hint = "If enabled then the final values used are divided by \
+            the selected count, hence converting the values produced \
+            by mode 'Total' into average values. It's better to disable \
+            it when using colour by 'Iteration', 'Average' or 'Trap count'."
+  endparam
+  param limiter
+    caption = "Value for 'Diviter'"
+    default = 0
+    enum = "Full #Iterations" "#Iterations to trap" "Trap count"
+    hint = "Provides alternative values of 'Diviter' for when \
+            skipping iterations or using conditional trapping."
+  endparam
+  param fi
+    caption = "Start Iteration"
+    default = 0
+    min = 0
+    hint = "Iteration from which to begin trapping, use 0 \
+            to start on the first, 1 for the second etc."
+  endparam
+  param di
+    caption = "Iterations to trap"
+    default = 100
+    min = 1
+    hint = "Number of iterations to trap, note that if \
+            'Iterations to skip' is set to zero then this \
+            value is irrelevant as all iterations from the \
+            'Start Iteration' will be trapped."
+  endparam
+  param si
+    caption = "Iterations to skip"
+    default = 0
+    min = 0
+    hint = "Number of iterations to skip, if set to \
+            zero then all iterations from the 'Start \
+            Iteration' will be trapped."
+  endparam
+  param smooth
+    caption = "Smoothing"
+    default = true
+    hint = "Enable this if you get iteration banding."
+  endparam
+  param finalz
+    caption = "Final z smoothing"
+    default = false
+    hint = "Use this with a main formula that passes a smoothing \
+            fraction as the final z value. At the time of writing \
+            this is just MMF - Transformation."
+  endparam
+  param scale
+    caption = "Scale distance"
+    default = true
+    hint = "Divides the distance values by cabs(z) when \
+            enabled, disabling may produce some banding \
+            with results similar to types of cilia colouring. \
+            Doesn't affect the Angle or Angle Change types."
+  endparam
+  param fix
+    caption = "Orbit value"
+    default = (0,0)
+    hint = "This is the (start) value of the trap for the Orbit Versions. \
+            In version Orbit 2 this value is multiplied by #pixel. \
+            (Equivalent to scaling a standard Julia)"
+  endparam
+  param fixo
+    caption = "Orbit offset"
+    default = (0,0)
+    hint = "This is the offset applied to the Orbit trap value on each iteration in \
+            the Orbit Versions. In version Orbit 3 this value is multiplied by \
+            #pixel. (Equivalent to scaling a standard Mandelbrot)"
+  endparam
+  param fixs
+    caption = "Orbit scale"
+    default = (1,0)
+    hint = "This is the scale applied to the Orbit trap value on each iteration in \
+            the Orbit Versions. In version Orbit 4 this value is multiplied by \
+            #pixel. (Equivalent to scaling a Lambda Mandelbrot ie. s in s*z^n + c)"
+  endparam
+  param fixp
+    caption = "Orbit power"
+    default = (1,0)
+    hint = "This is the power applied to the Orbit trap value on each iteration in \
+            the Orbit Versions. In version Orbit 5 this value is multiplied by \
+            #pixel. (Equivalent to scaling a power Mandelbrot)"
+  endparam
+  param angmod
+    caption = "Angle modifier"
+    default = 0
+    enum = "As is" "Absolute" "All angles"
+    hint = "Sometimes two or all of these will produce the \
+            same result but which depends on other settings. \
+            Doesn't apply to the Complex, Real or Imag types."
+  endparam
+  param threshold
+    caption = "Threshold"
+    default = 1.5
+    min = 0.0
+    hint = "Threshold value for First/Last/Nearest Above/Below modes. \
+            NB. Values around 1.0 can produce effects that \
+            are a result of the limited accuracy of the FPU \
+            (or at least that appears to be the case)."
+  endparam
+  param traprot
+    caption = "Trap rotation"
+    default = 0.0
+    hint = "Rotates the trapped value, the effect varies considerably depending \
+            on other settings."
+  endparam
+  param trapoff
+    caption = "Trap offset"
+    default = (0,0)
+    hint = "Offsets the trapped value, the effect varies considerably depending \
+            on other settings."
+  endparam
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Point" "Ring" "Ring 2" "Egg" "Hyperbola" "Cross" "Astroid" \
+           "Diamond" "Box" "Lines" "Waves" "Mirrored Waves" "Mirrored Waves 2" \
+           "Radial Waves" "Radial Waves 2" "Ring Ripples" "Grid Ripples" \
+           "Radial Ripples" "Pinch" "Spiral" "Heart"
+    hint = "The shapes do not apply to the 'Angle' or 'Angle Change' types."
+  endparam
+  param radius
+    caption = "Shape Radius"
+    default = 1.0
+    hint = "This essentially controls the size of the shapes, applies \
+            to all the shapes except Point, Cross, Diamond and Pinch."
+  endparam
+  param order
+    caption = "Shape Order"
+    default = 4.0
+    min = 0.0
+    hint = "Applies to Egg, Astroid, Waves, Ripples and Pinch. \
+            Controls the 'egginess', the astroid exponent (try 0.6667), \
+            the height of waves/ripples and the number of leaves for pinch."
+  endparam
+  param freq
+    caption = "Shape Frequency"
+    default = 1.0
+    min = 0.0
+    hint = "Controls the frequency of ripples and waves."
+  endparam
+  param filltype
+    caption = "Fill Method"
+    default = 0
+    enum = "Threshold" "Solid" "Gradient Value"
+    hint = "Fill colouring for when the Threshold test is not \
+            fulfilled ie. applies to First/Last Above/Below."
+  endparam
+  param filler
+    caption = "Gradient Value"
+    default = 0
+    min = 0
+    max = 399
+    hint = "Sets the gradient colour number for Fill Method \
+            'Gradient Value' ie. 0 to 399."
+  endparam
+;  param maskval
+;    caption = "Value for masking"
+;    default = 0
+;    enum = "Index"
+;    hint = "For changing the value used to control masking, applies \
+;            to both the Mask Area and the Repeating Mask."
+;  endparam
+  param maskarea
+    caption = "Mask Area"
+    default = 0
+    enum = "None" "Below" "Above" "Between" "Outside"
+    hint = "Can be used in combination with the Repeating Mask."
+  endparam
+  param masklo
+    caption = "Lower mask value"
+    default = 1.0
+    hint = "This should be less than 'Upper mask value'."
+  endparam
+  param maskhi
+    caption = "Upper mask value"
+    default = 1.5
+    hint = "This should be more than 'Lower mask value'."
+  endparam
+  param rptmask
+    caption = "Repeating Mask"
+    default = 0
+    enum = "None" "Lower sections" "Upper sections"
+    hint = "Try small values for mask 'texturing'. You can \
+            use this in combination with the Mask Area."
+  endparam
+  param rmasklo
+    caption = "Lower Mask Rpt"
+    default = 0.1
+    hint = "This should be less than 'Upper Mask Rpt'."
+  endparam
+  param rmaskhi
+    caption = "Upper Mask Rpt"
+    default = 0.2
+    hint = "This should be more than 'Lower Mask Rpt'."
+  endparam
+  param rmaskoff
+    caption = "Repeat Mask Offset"
+    default = 0.0
+    hint = "This allows you to adjust the position of the \
+            repeating mask."
+  endparam
+  param pp
+    caption = "Predictor power"
+    default = (2,0)
+    hint = "For the poly predictors only. If using a main formula \
+            of the form m*Z^n+c then \
+            poly predictor 1 with a predictor power of n will \
+            result in no colouring - the same applies to a main formula of \
+            the form m*Z^n+b*Z+c for poly predictor 2."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This should match the exponent of your formula."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 65536.0
+    hint = "This should match the bailout for your formula."
+  endparam
+  func fn1
+    caption = "Overall Function"
+    default = ident()
+    hint =  "Try the trig and hyper functions. \
+            Please note that some of UF's inbuilt functions \
+            only really apply to complex numbers and this \
+            function is used on a real number so not all \
+            settings are applicable."
+  endfunc
+  func fn2
+    caption = "Angle Function"
+    default = ident()
+    hint = "Applied to the angle values, isn't used \
+            for the Complex, Real or Imag types. \
+            Try the trig and hyper functions. \
+            Please note that some of UF's inbuilt functions \
+            only really apply to complex numbers and this \
+            function is used on a real number so not all \
+            settings are applicable."
+  endfunc
+  func fn3
+    caption = "Funky Function"
+    default = ident()
+    hint = "This function is applied to the value of Z to use for \
+            the trapping in all cases, however colour by 'log(Zmag)' \
+            uses the unadulterated #z for the Zmag value itself \
+            except when using type 'Total'."
+  endfunc
+  func fn4
+    caption = "Orbit trap function"
+    default = ident()
+    hint = "This function is applied to the Orbit trap value each \
+            iteration when using the Orbit Versions of the formula."
+  endfunc
+  func fn5
+    caption = "Final z smooth fn"
+    default = ident()
+    hint = "This function is applied to the complex value calculated \
+            when using the final z smoothing."
+  endfunc
+}

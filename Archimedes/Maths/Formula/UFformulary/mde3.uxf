@@ -1,0 +1,195 @@
+Comment {
+
+ Helpfiles / Fichiers d'aide:
+ http://www.pruniermei.ca/mde-help.zip
+ Pour me contacter / To contact me:
+ http://www.pruniermei.ca
+
+}
+
+mde-trigrammes {
+; Michèle Dessureault, 2003-07-04
+transform:
+  bool _solid
+  if @centrecran
+    cen = #center
+  else
+    cen = @centre
+  endif
+  z = (#pixel-cen)*exp(1i*pi/180*@rot)/@echelle
+  #solid = false
+  if @enveloppe == 1 && cabs(z) <= 0.5
+    _solid = true
+  endif 
+  if @enveloppe == 0 && abs(real(z)) <= 0.5 && abs(imag(z)) <= 0.5 
+    _solid = true
+  endif
+  if abs(imag(z)) < 0.18 && abs(imag(z)) > 0.16
+    _solid = false
+  endif
+  if @trigramme == 1 || @trigramme == 2 || @trigramme == 4 || @trigramme == 7 
+    if abs(real(z)) < 0.01 && imag(z) >= 0.18
+      _solid = false
+    endif
+  endif  
+  if @trigramme == 1 || @trigramme == 2 || @trigramme == 5 || @trigramme == 6 
+    if abs(real(z)) < 0.01 && abs(imag(z)) <= 0.16
+      _solid = false
+    endif
+  endif
+  if @trigramme == 1 || @trigramme == 3 || @trigramme == 4 || @trigramme == 6 
+    if abs(real(z)) < 0.01 && imag(z) <= -0.18
+      _solid = false
+    endif
+  endif
+  if @region == 0
+    #solid = _solid
+  else
+    #solid = !_solid
+  endif 
+default:
+  title = "Trigrammes"
+  helpfile = "mde-help/mde3-trigrammes.htm"
+  int param trigramme
+    caption = "Trigram"
+    enum = "Heaven" "Earth" "Thunder" "Wind" "Water" "Fire" "Mountain" "Lake"
+  endparam
+  int param enveloppe
+    caption = "Envelope"
+    enum = "Square" "Circle"
+  endparam
+  param region
+    caption = "Visible Region"
+    default = 0
+    enum = "Outside" "Inside"
+  endparam  
+  float param echelle
+    caption = "Scale"
+    default = 1
+  endparam 
+  param centre
+    caption = "Center"
+    default = (0,0)
+    visible = (@centrecran == false)
+  endparam
+  bool param centrecran
+    caption = "Use Screen Center"
+    default = true
+  endparam   
+  float param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam  
+}
+
+mde-Triskell{
+; from ying-yang scissor by Samuel Monnier, 8.8.01
+; par Michèle Dessureault, 2006-03
+transform:
+  if @centrecran
+    cen = #center
+  else
+    cen = @centre
+  endif
+  z = (#pixel-cen)*exp(1i*pi/180*@rot)/@size
+  bool bail_externe = false
+  bool bail1 = false
+  bool bail2 = false
+  bool bail3 = false
+  bool bail_cregion1 = false
+  bool bail_cregion2 = false
+  bool bail_cregion3 = false
+  float angle60 = (#pi * 60) / 180
+  float angle180 = (#pi * 180) / 180
+  float angle300 = (#pi * 300) / 180
+ 
+  if cabs(z) < 1           ; cercle interne transparent
+    bail_externe = true
+  endif
+  circ = .46
+  centre1 = .53 * (cos(angle60) + sin(angle60)*1i)
+  centre2 = .53 * (cos(angle180) + sin(angle180)*1i)
+  centre3 = .53 * (cos(angle300) + sin(angle300)*1i)
+  if cabs(centre1+z) >= circ    ; trois cercles opaques de chaque région
+    bail1 = true
+  endif
+  if cabs(centre2+z) >= circ
+    bail2 = true
+  endif
+  if cabs(centre3+z) >= circ
+    bail3 = true
+  endif
+  if cabs(centre1+z) < @csize  ; les trois cercles à l'intérieur des régions
+    bail_cregion1 = true
+  endif
+  if cabs(centre2+z) < @csize
+    bail_cregion2= true
+  endif
+  if cabs(centre3+z) < @csize
+    bail_cregion3= true
+  endif
+  if bail_externe && bail2 && imag(z) <= (real(z) * 0.57735 - 0.375) \
+     && imag(z) <= 0 && real(z) >= -0.5
+    bail1 = false         ; queue de la région 1
+  endif
+  if bail_externe && bail1 && real(z) <= -0.3 && imag(z) <= 0.85
+    bail3 = false         ; queue de la région 3
+  endif
+  if bail_externe && bail3 && imag(z) >= (real(z) * -0.57735 + 0.375) \
+    && imag(z) >= 0 && real(z) >= -0.5
+    bail2 = false         ; queue de la région 2
+  endif
+  if @region == 0
+    if bail1 || bail_cregion1
+      #solid = true
+    endif
+  elseif @region == 1
+    if bail_cregion2 || bail2
+      #solid = true
+    endif
+  elseif @region == 2
+    if bail_cregion3 || bail3
+      #solid = true
+    endif
+  elseif @region == 3
+    if bail_externe
+      #solid = true
+    endif
+  endif
+  
+default:
+  title = "Triskell"
+  helpfile = "mde-help/mde3-triskell.htm"
+  
+  int param region
+    caption = "Visible Region"
+    default = 0
+    enum = "1st" "2nd" "3rd" "Outside"
+  endparam
+  
+  float param csize
+    caption = "Circle Size"
+    default = .075
+  endparam
+
+  bool param centrecran
+    caption = "Use Screen Center"
+    default = true
+  endparam 
+  
+  complex param centre
+    caption = "Center"
+    default = (0,0)
+    visible = (@centrecran == false)
+  endparam
+  
+  float param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  
+  float param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam  
+}

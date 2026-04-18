@@ -1,0 +1,1097 @@
+Lake {
+;
+; Transformation written by Sylvie Gallet
+; December 1999
+; Fourth version
+;
+; Additional parameters by Ralph Feltens
+;
+
+transform:
+
+  sh1 = 1i*imag(@shift)
+  sh2 = real(@shift)
+
+  if (@use_sc)
+    centr = #center
+  else
+    centr = @wl
+  endif
+
+  if (@use_la)
+    ang = #angle
+  else
+    ang = @rot * pi / 180
+  endif
+
+  if (ang != 0)
+    #pixel = (#pixel - centr) * e^(-ang*1i) + centr - sh1/#magn
+  else
+    #pixel = #pixel - sh1/#magn  
+  endif
+  y = imag(#pixel)
+  if (y < imag(centr))
+    dy = imag(centr) - y + sh2/#magn
+    y = 2 * imag(centr) - y
+    y = y + @a * dy * sin (@f * (dy * #magn)^@damping)
+    #pixel = real(#pixel) + flip(y)
+  endif
+  if (ang != 0)
+    #pixel = (#pixel - centr + sh1/#magn) * e^(ang*1i) + centr
+  else
+    #pixel = #pixel + sh1/#magn      
+  endif
+
+default:
+  title = "Lake raf"
+
+  param wl
+    caption = "Water level"
+    default = (0.0,0.0)
+  endparam
+
+  param use_sc
+    caption = "Use screen center"
+    default = true
+    hint = "If set, the waterline will allways go through the screen center"
+  endparam
+
+  param rot
+    caption = "Angle"
+    default = 0.0
+    min = -360.0
+    max = 360.0
+  endparam
+
+  param use_la
+    caption = "Use Location tab angle"
+    default = true
+    hint = "If set, the waterline will allways be horizontal"
+  endparam
+
+  param a
+    caption = "Amplitude"
+    default = 0.2
+    hint = "The height of the waves"
+  endparam
+
+  param f
+    caption = "Frequency"
+    default = 300
+    min = 0.0
+  endparam
+
+  param damping
+    caption = "Damping Exponent"
+    default = 0.2
+    hint = "use values from 0 to 1; lower values will \
+            produce broader waves in the foreground"
+  endparam
+
+  param shift
+    caption = "Shift"
+    default = (0.0,0.0)
+    hint = "The lower value will shift the waterline (irrespective of \
+    magnification); use values from -1 to 1. The upper value will adapt \
+    the waves' frequency and Amplitude - when merging layers, the sum \
+    of the two values should always be the same in every layer"
+  endparam
+  
+}
+
+shapes1 { ; red williams, modified by Ralph Feltens
+
+; This transform allows the artist to define up to ten
+; geometrical figures within a fractal image.  Either the
+; area outside each figure or the figure itself may be
+; assigned the solid color.  This allows the artist to
+; "cut out" portions of the layer and use them as "appliques"
+; or to cut "holes" through a layer allowing lower layers
+; to show through.
+;
+; For the 'general' shape the region is defined by:
+; (x/a)^p + (y/b)^p < 1
+;
+; x is horizontal distance from the center of shape
+; y is vertical distance from center of shape
+; (x,y include any rotation that has been done to the shape)
+; a,b are the semi-axes
+;
+; p is some power:
+;    0 < p < 1  - concave sides
+;        p = 1  - straight sides
+;        p > 1  - convex sides
+;
+; The astroid, rhombus & ellipse are all special cases of the above.
+; A rectangle can be obtained with a slight modification
+;
+; 11-25-99:
+; Added functionality by Ralph Feltens: Shape's position can now
+; be fixed relative to screen position (i.e. independent of position and
+
+; magnification of the image)
+;
+complex c0 = @center0    ; assume center is fixed
+complex c1 = @center1    ; assume center is fixed
+complex c2 = @center2    ; assume center is fixed
+complex c3 = @center3    ; assume center is fixed
+complex c4 = @center4    ; assume center is fixed
+complex c5 = @center5    ; assume center is fixed
+complex c6 = @center6    ; assume center is fixed
+complex c7 = @center7    ; assume center is fixed
+complex c8 = @center8    ; assume center is fixed
+complex c9 = @center9    ; assume center is fixed
+
+float mag0 = 1           ; assume shapesize is independent of magnification
+float mag1 = 1           ; assume shapesize is independent of magnification
+float mag2 = 1           ; assume shapesize is independent of magnification
+float mag3 = 1           ; assume shapesize is independent of magnification
+float mag4 = 1           ; assume shapesize is independent of magnification
+float mag5 = 1           ; assume shapesize is independent of magnification
+float mag6 = 1           ; assume shapesize is independent of magnification
+float mag7 = 1           ; assume shapesize is independent of magnification
+float mag8 = 1           ; assume shapesize is independent of magnification
+float mag9 = 1           ; assume shapesize is independent of magnification
+
+float ang0 = 0           ; assume shape's position is independent of rotation
+float ang1 = 0           ; assume shape's position is independent of rotation
+float ang2 = 0           ; assume shape's position is independent of rotation
+float ang3 = 0           ; assume shape's position is independent of rotation
+float ang4 = 0           ; assume shape's position is independent of rotation
+float ang5 = 0           ; assume shape's position is independent of rotation
+float ang6 = 0           ; assume shape's position is independent of rotation
+float ang7 = 0           ; assume shape's position is independent of rotation
+float ang8 = 0           ; assume shape's position is independent of rotation
+float ang9 = 0           ; assume shape's position is independent of rotation
+
+IF (@shapesize0)         ; shape will be adapted to image size/magnification
+  mag0 = #magn
+ENDIF
+IF (@shapesize1)         ; shape will be adapted to image size/magnification
+  mag1 = #magn
+ENDIF
+IF (@shapesize2)         ; shape will be adapted to image size/magnification
+  mag2 = #magn
+ENDIF
+IF (@shapesize3)         ; shape will be adapted to image size/magnification
+  mag3 = #magn
+ENDIF
+IF (@shapesize4)         ; shape will be adapted to image size/magnification
+  mag4 = #magn
+ENDIF
+IF (@shapesize5)         ; shape will be adapted to image size/magnification
+  mag5 = #magn
+ENDIF
+IF (@shapesize6)         ; shape will be adapted to image size/magnification
+  mag6 = #magn
+ENDIF
+IF (@shapesize7)         ; shape will be adapted to image size/magnification
+  mag7 = #magn
+ENDIF
+IF (@shapesize8)         ; shape will be adapted to image size/magnification
+  mag8 = #magn
+ENDIF
+IF (@shapesize9)         ; shape will be adapted to image size/magnification
+  mag9 = #magn
+ENDIF
+
+IF (@centermove0)        ; relative center requested
+  c0 = #center           ; center is image center
+  ang0 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove1)        ; relative center requested
+  c1 = #center           ; center is image center
+  ang1 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove2)        ; relative center requested
+  c2 = #center           ; center is image center
+  ang2 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove3)        ; relative center requested
+  c3 = #center           ; center is image center
+  ang3 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove4)        ; relative center requested
+  c4 = #center           ; center is image center
+  ang4 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove5)        ; relative center requested
+  c5 = #center           ; center is image center
+  ang5 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove6)        ; relative center requested
+  c6 = #center           ; center is image center
+  ang6 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove7)        ; relative center requested
+  c7 = #center           ; center is image center
+  ang7 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove8)        ; relative center requested
+  c8 = #center           ; center is image center
+  ang8 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove9)        ; relative center requested
+  c9 = #center           ; center is image center
+  ang9 = #angle          ; compensation for image rotation
+ENDIF
+
+bool in = false
+
+IF (@shape0!=0)
+  complex pix1 = (#pixel - c0) * exp(flip(-ang0))
+  complex pix2 = (pix1 - @shift0/mag0) * exp(flip(-@tilt0*pi/180))
+  complex pix3 = (real(pix2)/@width0 + flip(imag(pix2)/@height0)) * mag0
+
+    IF (@shape0==1)
+    IF ( |pix3| < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape0==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+       in = true
+    ENDIF
+
+  ELSEIF (@shape0==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape0==4)
+    IF ((abs(real(pix3))^@power0 + abs(imag(pix3))^@power0) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape1!=0) && in != true
+  complex pix1 = (#pixel - c1) * exp(flip(-ang1))
+  complex pix2 = (pix1 - @shift1/mag1) * exp(flip(-@tilt1*pi/180))
+  complex pix3 = (real(pix2)/@width1 + flip(imag(pix2)/@height1)) * mag1
+
+  IF (@shape1==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==4)
+    IF ((abs(real(pix3))^@power1 + abs(imag(pix3))^@power1) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape2!=0) && in != true
+  complex pix1 = (#pixel - c2) * exp(flip(-ang2))
+  complex pix2 = (pix1 - @shift2/mag2) * exp(flip(-@tilt2*pi/180))
+  complex pix3 = (real(pix2)/@width2 + flip(imag(pix2)/@height2)) * mag2
+
+  IF (@shape2==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==4)
+    IF ((abs(real(pix3))^@power2 + abs(imag(pix3))^@power2) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape3!=0) && in != true
+  complex pix1 = (#pixel - c3) * exp(flip(-ang3))
+  complex pix2 = (pix1 - @shift3/mag3) * exp(flip(-@tilt3*pi/180))
+  complex pix3 = (real(pix2)/@width3 + flip(imag(pix2)/@height3)) * mag3
+
+  IF (@shape3==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==4)
+    IF ((abs(real(pix3))^@power3 + abs(imag(pix3))^@power3) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape4!=0) && in != true
+  complex pix1 = (#pixel - c4) * exp(flip(-ang4))
+  complex pix2 = (pix1 - @shift4/mag4) * exp(flip(-@tilt4*pi/180))
+  complex pix3 = (real(pix2)/@width4 + flip(imag(pix2)/@height4)) * mag4
+
+  IF (@shape4==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==4)
+    IF ((abs(real(pix3))^@power4 + abs(imag(pix3))^@power4) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape5!=0) && in != true
+  complex pix1 = (#pixel - c5) * exp(flip(-ang5))
+  complex pix2 = (pix1 - @shift5/mag5) * exp(flip(-@tilt5*pi/180))
+  complex pix3 = (real(pix2)/@width5 + flip(imag(pix2)/@height5)) * mag5
+
+  IF (@shape5==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==4)
+    IF ((abs(real(pix3))^@power5 + abs(imag(pix3))^@power5) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape6!=0) && in != true
+  complex pix1 = (#pixel - c6) * exp(flip(-ang6))
+  complex pix2 = (pix1 - @shift6/mag6) * exp(flip(-@tilt6*pi/180))
+  complex pix3 = (real(pix2)/@width6 + flip(imag(pix2)/@height6)) * mag6
+
+  IF (@shape6==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==4)
+    IF ((abs(real(pix3))^@power6 + abs(imag(pix3))^@power6) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape7!=0) && in != true
+  complex pix1 = (#pixel - c7) * exp(flip(-ang7))
+  complex pix2 = (pix1 - @shift7/mag7) * exp(flip(-@tilt7*pi/180))
+  complex pix3 = (real(pix2)/@width7 + flip(imag(pix2)/@height7)) * mag7
+
+  IF (@shape7==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==4)
+    IF ((abs(real(pix3))^@power7 + abs(imag(pix3))^@power7) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape8!=0) && in != true
+  complex pix1 = (#pixel - c8) * exp(flip(-ang8))
+  complex pix2 = (pix1 - @shift8/mag8) * exp(flip(-@tilt8*pi/180))
+  complex pix3 = (real(pix2)/@width8 + flip(imag(pix2)/@height8)) * mag8
+
+  IF (@shape8==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==4)
+    IF ((abs(real(pix3))^@power8 + abs(imag(pix3))^@power8) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape9!=0) && in != true
+  complex pix1 = (#pixel - c9) * exp(flip(-ang9))
+  complex pix2 = (pix1 - @shift9/mag9) * exp(flip(-@tilt9*pi/180))
+  complex pix3 = (real(pix2)/@width9 + flip(imag(pix2)/@height9)) * mag9
+
+
+  IF (@shape9==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==4)
+    IF ((abs(real(pix3))^@power9 + abs(imag(pix3))^@power9) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+IF @mode == 1
+  IN = !in
+ENDIF
+IF in == false
+  #solid = true
+ENDIF
+default:
+  title = "Shapes raf"
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Opaque" "Transparent"
+  endparam
+  param shape0
+    caption = "Shape 0"
+    default = 1
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center0
+    caption = "Center 0"
+    default = (0.0,0.0)
+  endparam
+  param width0
+    caption = "Width 0"
+    default = 1.0
+  endparam
+  param height0
+    caption = "Height 0"
+    default = 1.0
+  endparam
+  param tilt0
+    caption = "Tilt Angle 0 (degrees)"
+    default = 0.0
+  endparam
+  param power0
+    caption = "Power 0"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove0
+    caption = "Use Screen Center 0"
+    default = FALSE
+    hint = "If set, the shape's center will be at the center of \
+            the window - useful in conjunction with *Adapt shape size*"
+  endparam
+  param shapesize0
+    caption = "Adapt shape size 0"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center*"
+  endparam
+  param shift0
+    caption = "shift 0"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape1
+    caption = "Shape 1"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center1
+    caption = "Center 1"
+    default = (0.0,0.0)
+  endparam
+  param width1
+    caption = "Width 1"
+    default = 1.0
+  endparam
+  param height1
+    caption = "Height 1"
+    default = 1.0
+  endparam
+  param tilt1
+    caption = "Tilt Angle 1 (degrees)"
+    default = 0.0
+  endparam
+  param power1
+    caption = "Power 1"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove1
+    caption = "Use Screen Center 1"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize1
+    caption = "Adapt shape size 1"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift1
+    caption = "shift 1"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape2
+    caption = "Shape 2"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center2
+    caption = "Center 2"
+    default = (0.0,0.0)
+  endparam
+  param width2
+    caption = "Width 2"
+    default = 1.0
+  endparam
+  param height2
+    caption = "Height 2"
+    default = 1.0
+  endparam
+  param tilt2
+    caption = "Tilt Angle 2 (degrees)"
+    default = 0.0
+  endparam
+  param power2
+    caption = "Power 2"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove2
+    caption = "Use Screen Center 2"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize2
+    caption = "Adapt shape size 2"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift2
+    caption = "shift 2"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape3
+    caption = "Shape 3"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center3
+    caption = "Center 3"
+    default = (0.0,0.0)
+  endparam
+  param width3
+    caption = "Width 3"
+    default = 1.0
+  endparam
+  param height3
+    caption = "Height 3"
+    default = 1.0
+  endparam
+  param tilt3
+    caption = "Tilt Angle 3 (degrees)"
+    default = 0.0
+  endparam
+  param power3
+    caption = "Power 3"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove3
+    caption = "Use Screen Center 3"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize3
+    caption = "Adapt shape size 3"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift3
+    caption = "shift 3"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape4
+    caption = "Shape 4"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center4
+    caption = "Center 4"
+    default = (0.0,0.0)
+  endparam
+  param width4
+    caption = "Width 4"
+    default = 1.0
+  endparam
+  param height4
+    caption = "Height 4"
+    default = 1.0
+  endparam
+  param tilt4
+    caption = "Tilt Angle 4 (degrees)"
+    default = 0.0
+  endparam
+  param power4
+    caption = "Power 4"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove4
+    caption = "Use Screen Center 4"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize4
+    caption = "Adapt shape size 4"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift4
+    caption = "shift 4"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape5
+    caption = "Shape 5"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center5
+    caption = "Center 5"
+    default = (0.0,0.0)
+  endparam
+  param width5
+    caption = "Width 5"
+    default = 1.0
+  endparam
+  param height5
+    caption = "Height 5"
+    default = 1.0
+  endparam
+  param tilt5
+    caption = "Tilt Angle 5 (degrees)"
+    default = 0.0
+  endparam
+  param power5
+    caption = "Power 5"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove5
+    caption = "Use Screen Center 5"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize5
+    caption = "Adapt shape size 5"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift5
+    caption = "shift 5"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape6
+    caption = "Shape 6"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center6
+    caption = "Center 6"
+    default = (0.0,0.0)
+  endparam
+  param width6
+    caption = "Width 6"
+    default = 1.0
+  endparam
+  param height6
+    caption = "Height 6"
+    default = 1.0
+  endparam
+  param tilt6
+    caption = "Tilt Angle 6 (degrees)"
+    default = 0.0
+  endparam
+  param power6
+    caption = "Power 6"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove6
+    caption = "Use Screen Center 6"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize6
+    caption = "Adapt shape size 6"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift6
+    caption = "shift 6"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape7
+    caption = "Shape 7"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center7
+    caption = "Center 7"
+    default = (0.0,0.0)
+  endparam
+  param width7
+    caption = "Width 7"
+    default = 1.0
+  endparam
+  param height7
+    caption = "Height 7"
+    default = 1.0
+  endparam
+  param tilt7
+    caption = "Tilt Angle 7 (degrees)"
+    default = 0.0
+  endparam
+  param power7
+    caption = "Power 7"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove7
+    caption = "Use Screen Center 7"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize7
+    caption = "Adapt shape size 7"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift7
+    caption = "shift 7"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape8
+    caption = "Shape 8"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center8
+    caption = "Center 8"
+    default = (0.0,0.0)
+  endparam
+  param width8
+    caption = "Width 8"
+    default = 1.0
+  endparam
+  param height8
+    caption = "Height 8"
+    default = 1.0
+  endparam
+  param tilt8
+    caption = "Tilt Angle 8 (degrees)"
+    default = 0.0
+  endparam
+  param power8
+    caption = "Power 8"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove8
+    caption = "Use Screen Center 8"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize8
+    caption = "Adapt shape size 8"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift8
+    caption = "shift 8"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape9
+    caption = "Shape 9"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center9
+    caption = "Center 9"
+    default = (0.0,0.0)
+  endparam
+  param width9
+    caption = "Width 9"
+    default = 1.0
+  endparam
+  param height9
+    caption = "Height 9"
+    default = 1.0
+  endparam
+  param tilt9
+    caption = "Tilt Angle 9 (degrees)"
+    default = 0.0
+  endparam
+  param power9
+    caption = "Power 9"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove9
+    caption = "Use Screen Center 9"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize9
+    caption = "Adapt shape size 9"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift9
+    caption = "shift 9"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+}
+
+Frames {  ; Similiar to Sylvie Gallet's Tryptich,
+          ; makes it possible to subdivide the image
+          ; into columns and rows (up to 12);
+          ; generate corresponding frames with 
+          ; "Frame" coloring method in Raf.ucl
+          ; Ralph Feltens March 2000
+
+transform:
+
+  bool use_c = @central
+  float w = #width/(1+@ncols)
+  float h = #height/(1+@nrows)
+  float iw = 4 / #magn             ;image width as complex number, assuming normal image aspect ratio
+  float ih = 3 / #magn             ;image height as complex number, assuming normal image aspect ratio
+  int cn = @colno
+  int rn = @rowno
+  int nc = @ncols
+  int nr = @nrows
+  
+  if #height/#width > 0.75                   ;other image aspect ratios
+     ih = (4 * #height) / (#width * #magn)
+  endif   
+  if #height/#width < 0.75                   ;other image aspect ratios
+     iw = (3 * #width) / (#height * #magn)
+  endif
+   
+  if (abs(real(@shift))<1)         ;values between -1 and 1 will not shift
+     float pxshft = 0
+     float ixshft = 0
+  else
+     float pxshft = #width/real(@shift)
+     float ixshft = iw/real(@shift)
+  endif
+  if (abs(imag(@shift))<1)         ;values between -1 and 1 will not shift
+     float pyshft = 0
+     float iyshft = 0
+  else
+     float pyshft = #height/imag(@shift)
+     float iyshft = ih/imag(@shift)
+  endif
+     
+  float xp = real(#screenpixel) - pxshft
+  float yp = imag(#screenpixel) - pyshft
+
+  if cn > nc                       ;so "column number" will not exceed "number of columns"
+     cn = nc
+  endif   
+  if rn > nr                       ;so "row number" will not exceed "number of rows"
+     rn = nr
+  endif  
+
+  if (round(xp/w - 0.5) != cn) || (round(yp/h - 0.5) != rn)
+      #solid = true
+  elseif (use_c == true)
+    #pixel = (#pixel - #center) * e^-flip(#angle) + #center
+    #pixel = #pixel + ((nc/2) - cn) * (iw/(nc + 1)) - ixshft
+    #pixel = #pixel - flip(((nr/2) - rn) * (ih/(nr + 1))) + flip(iyshft)
+    #pixel = (#pixel - #center) * e^flip(#angle) + #center
+  endif
+
+default:
+  title = "Frames"
+param colno
+  caption = "Column Number"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+endparam
+param ncols
+  caption = "Number of Columns"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 1
+endparam
+param rowno
+  caption = "Row Number"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+endparam
+param nrows
+  caption = "Number of Rows"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 1
+endparam
+param central
+  caption = "Use central part of the fractal"
+  default = false
+endparam
+param shift
+  caption = "Shift right and down"
+  hint = "shift this fraction of the image's size to the right and down; \
+         e.g. (4,3) will shift the frame to the right by a quarter of the \
+         width and down by a third of the height of the image \
+         *values between -1 and 1 will yield no shifting*"
+endparam
+}

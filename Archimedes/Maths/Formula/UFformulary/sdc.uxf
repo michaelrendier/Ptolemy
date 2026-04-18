@@ -1,0 +1,203 @@
+sdc-moebiusToolbox {
+;
+; Susan Chambless, April, 2005
+; First attempts at Moebius transforms
+;
+; "If I have seen further it is by standing on the 
+;  shoulders of Giants." --Isaac Newton
+;
+; Adapted from Indra's Pearls: The Vision of Felix Klein, 
+;   David Mumford, Caroline Series, David Wright
+;
+; Felix Christian Klein (1849-1925) 
+;
+; August Ferdinand Moebius (1790-1868)
+;   attendend Gauss lectures on astronomy as a student
+;   in Goettingen.
+
+global:
+  complex a1 = @a1
+  complex b1 = @b1
+  complex c1 = @c1
+  complex d1 = @d1
+    
+  if (@type1 == 1)         ; double spiral
+    P = @fix11
+    Q = @fix12
+    k = @k11
+    a1 = k*P - Q
+    b1 = P - k*P
+    c1 = k*Q - Q
+    d1 = P - k*Q
+  elseif (@type1 == 2)    ; inversion on a circle
+    c = @c12
+    r = @r12
+    a1 = -c
+    b1 = c*c - r*r
+    c1 = -1.0
+    d1 = c
+  elseif (@type1 == 3)     ; Cayley Map
+    a1 = (0.0, 1.0)
+    b1 = (0.0, 1.0)
+    c1 = (-1.0, 0.0)
+    d1 = (1.0, 0.0)
+  elseif (@type1 == 4)      ; unit circle group
+    u = @u14
+    v = sqrt(u*u - 1)
+    a1 = conj(u)
+    b1 = -v
+    c1 = -conj(v)
+    d1 = u
+  elseif (@type1 == 5)
+    P = @P15
+    Q = @Q15
+    r = @r15
+    s = @s15
+    a1 = -P
+    b1 = Q*P - r*s
+    c1 = -1.0
+    d1 = Q
+  endif
+  
+  if (@normalize == true)
+    complex det = (0, 0)
+    det = a1*d1 - b1*c1
+    a1 = a1 / sqrt(det)
+    b1 = b1 / sqrt(det)
+    c1 = c1 / sqrt(det)
+    d1 = d1 / sqrt(det)
+  endif
+    
+transform:
+  complex z = #pixel
+  
+  int i = @iterations
+  while ( i > 0 )
+  
+    z = (a1*z+b1)/(c1*z+d1)
+    
+    i = i - 1
+  endwhile
+    
+  #pixel = z
+  
+default:
+; This section contains default settings that make the
+; transformation and its parameters easier to use.
+  title = "Moebius Toolbox"
+  
+  float param version
+    caption = "Version"
+    visible = false
+    default = 1.0
+  endparam
+  
+  param type1 
+    caption = "Moebius type1"
+    enum  = "Generic" \
+            "Double Spiral" \
+            "Inversion on a Circle" \
+            "Cayley Map" \
+            "Unit Circle Group" \
+            "Pairing Circles"
+    default = 1
+  endparam
+  
+  bool param normalize
+    caption = "Normalize?"
+    default = true
+  endparam
+  
+  int param iterations
+    caption = "Iterations"
+    default = 1
+  endparam
+  
+  complex param a1
+    caption = "A"
+    default = (0.0, 1.0)
+    visible = @type1 == 0
+  endparam
+
+  complex param b1
+    caption = "B"
+    default = (0.0, 0.0)
+    visible = @type1 == 0
+  endparam
+
+  complex param c1
+    caption = "C"
+    default = (0.0, 0.0)
+    visible = @type1 == 0
+  endparam
+
+  complex param d1
+    caption = "D"
+    default = (0.0, 1.0)
+    visible = @type1 == 0
+  endparam
+
+  complex param fix11
+    caption = "1st Fixed Point"
+    default = (-1.0, 0.0)
+    visible = @type1==1
+  endparam
+
+  complex param fix12
+    caption = "2nd Fixed Point"
+    default = (1.0, 0.0)
+    visible = @type1==1
+  endparam
+  
+  complex param k11
+    caption = "Scale"
+    default = (1.0, 0.4)
+    visible = @type1==1
+  endparam
+  
+  complex param c12
+    caption = "Center of Circle"
+    default = (0.0, 0.0)
+    visible = @type1 == 2
+  endparam
+  
+  float param r12
+    caption = "Radius of Circle"
+    default = 1.0
+    visible = @type1 == 2
+  endparam
+  
+  complex param u14
+    caption = "U"
+    default = (1.0, 0.0)
+    visible = @type1 == 4
+  endparam
+  
+  complex param P15
+    caption = "Center of Circle 1"
+    default = (-1.0, 0.0)
+    visible = @type1 == 5
+  endparam
+  
+  float param r15
+    caption = "Radius of Circle 1"
+    default = 1.0
+    visible = @type1 == 5
+  endparam
+  
+  complex param Q15
+    caption = "Center of Circle 2"
+    default = (1.0, 0.0)
+    visible = @type1 == 5
+  endparam
+  
+  float param s15
+    caption = "Radius of Circle 2"
+    default = 1.5
+    visible = @type1 == 5
+  endparam
+  
+  
+  
+}
+

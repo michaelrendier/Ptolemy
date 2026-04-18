@@ -1,0 +1,301 @@
+
+ContinuedFraction {
+transform:
+  int count = 0
+  complex z = @init(#pixel)
+  while (count < @iterations)
+    if (@iterfunc(z) != 0)
+      z = @a + @b/@iterfunc(z)
+      count = count + 1
+    else
+      #solid = true
+      count = 2*@iterations
+    endif
+  endwhile
+  if (count <= @iterations)
+    #pixel = z
+  endif
+default:
+  param iterations
+    caption = "Iterations"
+    default = 5
+    hint = "Number of times the formula is applied to the pixel"
+  endparam
+  param a
+    caption = "a"
+    default = (1.0, 0.0)
+    hint = "Formula is a + b/z"
+  endparam
+  param b
+    caption = "b"
+    default = (1.0, 0.0)
+    hint = "Formula is a + b/z"
+  endparam
+  func init
+    caption = "Initial function"
+    default = ident()
+    hint = "Transforms z prior to applying the iterations."
+  endfunc
+  func iterfunc
+    caption = "Iterated function"
+    default = ident()
+    hint = "This function is applied at each step of the transform"
+  endfunc
+  title = "Continued Fraction"
+}
+
+S-CurveClipping {
+transform:
+  float curvevalue = 0.0
+  complex mycenter = #screenmax/2.0
+  float newpixelx = (real(#screenpixel) - real(mycenter))/real(mycenter)
+  float newpixely = (imag(mycenter) - imag(#screenpixel))/imag(mycenter)
+  float screenFrequency = 0.0
+  float ffreq = @frequency
+  IF @orientation == 0
+    screenFrequency = ffreq*#pi
+    curvevalue = @amp*sin(screenFrequency*newpixely)
+    IF ((@region == 0) && (newpixelx <= curvevalue))
+      #solid = true
+    ENDIF
+    IF ((@region == 1) && (newpixelx >= curvevalue))
+      #solid = true
+    ENDIF
+  ELSE
+    screenFrequency = ffreq*#pi
+    curvevalue = real(@amp*sin(screenFrequency*newpixelx))
+    IF ((@region == 0) && (newpixely >= curvevalue))
+      #solid = true
+    ENDIF
+    IF ((@region == 1) && (newpixely <= curvevalue))
+      #solid = true 
+    ENDIF
+  ENDIF
+default:
+  param amp
+    caption = "Amplitude"
+    default = 0.5
+    hint = "Amplitude of curve.  1 = total width or height of screen."
+    max = 1.0
+    min = -1.0
+  endparam
+  param frequency
+    caption = "Frequency"
+    default = 1.0
+    hint = "vary this number to increase or decrease the frequency of the curve."
+  endparam
+  param orientation
+    caption = "Orientation"
+    enum = "Vertical" "Horizontal"
+    default = 0
+  endparam
+  param region
+    caption = "Clipping Region"
+    enum = "Left/Above" "Right/Below"
+    default = 0
+  endparam
+  title = "S-Curve Clipping"
+}
+
+StereoPairs {
+;Mark Hammond
+;Here's some basics about the parameters and how to use this formula
+;Eye-Separation---A rule of thumb is that the larger the image the larger this should be.
+;                 I found for me that 150 is good for a 640 x 480 image.  If it's hard to 
+;                 get the 3D effect in focus try increasing or decreasing it
+;Left----This should be the real value of the Upper Left field in the Locations Tab.  One day
+;        I'll try to write this so that you don't need to enter that value.
+;Right---This should be the real value of the Lower Right field in the Locations Tab.
+;Rotation---This should equal the value of the rotation in the Location Tab.  Once this parameter is set
+;           the rotation in the Location Tab should be set to 0.
+;Width----A parameter that helps determine how much is clipped from the left and right of the 
+;         final image.  A larger value results in more being clipped.
+;Focal Len---A smaller value results in more being clipped from the left and the right.
+;Visual Aid----If on, draws a little circle on each half as a visual aid.  The idea
+;              is to look at the image just right until an illusory third circle appears
+;              in the middle of the two real ones.
+;Visual Aid Radius----The radius in pixels of the circles used for the visual aid.
+transform:
+  float xunits = (@right - @left)/real(#screenmax)
+  float shift = (@eye/2.0)*xunits
+  float ycoord = 2*imag(#pixel) - imag(#center)
+  if @aid
+    complex cc1 = real(#screenmax)/4.0+@eye/4.0+flip(imag(#screenmax)/4.0+@radius)
+    complex cc2 = 3.0*real(#screenmax)/4.0-@eye/4.0+flip(imag(#screenmax)/4.0+@radius)
+    if cabs(#screenpixel-cc1) <= @radius || cabs(#screenpixel-cc2) <= @radius
+      #solid=true
+    endif
+  endif
+  if real(#pixel) < real(#center)
+    #pixel = 2*real(#pixel) - @left + flip(ycoord)-shift
+  else
+    #pixel = 2*(real(#pixel) - real(#center)) + @left + flip(ycoord)+shift    
+  endif
+  if @rotation != 0
+    complex r = exp(1i*@rotation*#pi/180)
+    #pixel = (#pixel - #center)*r + #center
+  endif
+; clip ends
+  float mywidth = @percent*real(#screenmax)/100
+  complex delta = mywidth/(4*@foclen*tan(#pi/6))
+  if (real(#screenpixel) <=  2*delta) || (real(#screenpixel) >= real(#screenmax) - 2*delta)
+    #solid = true
+  endif
+  if @cropping
+    if (imag(#screenpixel) <= imag(#screenmax)/4) || (imag(#screenpixel) >= 3*imag(#screenmax)/4)
+      #solid = true
+    endif
+  endif
+default:
+  title = "Stereo Pairs"
+  param eye
+    caption = "Eye Separation"
+    default = 50
+    hint = "Approximate distance between viewers eyes in pixels"
+  endparam
+  param left
+    caption = "Left"
+    default = -2.0
+    hint = "This should be the real part of the upper left field in the location tab"
+  endparam
+  param right
+    caption = "Right"
+    default = 2.0
+    hint = "This should be the real part of the lower right field in the location tab."
+  endparam
+  param rotation
+    caption = "Rotation"
+    default = 0.0
+    hint = "Rotates the image by this many degrees before splitting"
+  endparam
+  param percent
+    caption = "Width"
+    default = 95
+    hint = "Percentage of the total width that you want to be visible in the final image."
+    min = 50
+    max = 100
+  endparam
+  param foclen
+    caption ="Focal Length"
+    default = 12
+    min = 0
+    hint = "Approximate viewing distance from screen in inches."
+  endparam
+  param cropping
+    caption = "Cropping"
+    default = true
+    hint = "Crops the image in the vertical direction \
+            since the transformation might add vertical components not included in original image." 
+  endparam
+  param aid
+    caption = "Visual Aid"
+    default = false
+    hint = "Draws a small circle on each half as an aid for \
+            viewing the image."
+  endparam
+  param radius
+    caption = "Visual Aid Radius"
+    default = 10
+    hint = "Radius of circles used as a visual aid."
+  endparam
+}
+
+
+StereoPairsV2.0 {
+;Mark Hammond
+;Here's some basics about the parameters and how to use this formula
+;Eye-Separation---A rule of thumb is that the larger the image the larger this should be.
+;                 I found for me that 150 is good for a 640 x 480 image.  If it's hard to 
+;                 get the 3D effect in focus try increasing or decreasing it
+;Rotation---This should equal the value of the rotation in the Location Tab.  Once this parameter is set
+;           the rotation in the Location Tab should be set to 0.
+;Width----A parameter that helps determine how much is clipped from the left and right of the 
+;         final image.  A larger value results in more being clipped.
+;Focal Len---A smaller value results in more being clipped from the left and the right.
+;Visual Aid----If on, draws a little circle on each half as a visual aid.  The idea
+;              is to look at the image just right until an illusory third circle appears
+;              in the middle of the two real ones.
+;Visual Aid Radius----The radius in pixels of the circles used for the visual aid.
+transform:
+  float ratio = real(#screenmax)/imag(#screenmax)
+  float xunits = 0
+  float left = 0
+  if ratio > 4.0/3.0
+    xunits = 3.0*ratio/#magn/real(#screenmax)
+    left = real(#center) - 1.5*ratio/#magn
+  else
+    xunits = 4.0/#magn/real(#screenmax)
+    left = real(#center) - 2.0/#magn
+  endif
+  float shift = (@eye/2.0)*xunits
+  float ycoord = 2*imag(#pixel) - imag(#center)
+  if @aid
+    complex cc1 = real(#screenmax)/4.0+@eye/4.0+flip(imag(#screenmax)/4.0+@radius)
+    complex cc2 = 3.0*real(#screenmax)/4.0-@eye/4.0+flip(imag(#screenmax)/4.0+@radius)
+    if cabs(#screenpixel-cc1) <= @radius || cabs(#screenpixel-cc2) <= @radius
+      #solid=true
+    endif
+  endif
+  if real(#pixel) < real(#center)
+    #pixel = 2*real(#pixel) - left + flip(ycoord)-shift
+  else
+    #pixel = 2*(real(#pixel) - real(#center)) + left + flip(ycoord)+shift    
+  endif
+  if @rotation != 0
+    complex r = exp(1i*@rotation*#pi/180)
+    #pixel = (#pixel - #center)*r + #center
+  endif
+; clip ends
+  float mywidth = @percent*real(#screenmax)/100
+  complex delta = mywidth/(4*@foclen*tan(#pi/6))
+  if (real(#screenpixel) <=  2*delta) || (real(#screenpixel) >= real(#screenmax) - 2*delta)
+    #solid = true
+  endif
+  if @cropping
+    if (imag(#screenpixel) <= imag(#screenmax)/4) || (imag(#screenpixel) >= 3*imag(#screenmax)/4)
+      #solid = true
+    endif
+  endif
+default:
+  title = "Stereo PairsV2.0"
+  param eye
+    caption = "Eye Separation"
+    default = 50
+    hint = "Approximate distance between viewers eyes in pixels"
+  endparam
+  param rotation
+    caption = "Rotation"
+    default = 0.0
+    hint = "Rotates the image by this many degrees before splitting"
+  endparam
+  param percent
+    caption = "Width"
+    default = 95
+    hint = "Percentage of the total width that you want to be visible in the final image."
+    min = 50
+    max = 100
+  endparam
+  param foclen
+    caption ="Focal Length"
+    default = 12
+    min = 0
+    hint = "Approximate viewing distance from screen in inches."
+  endparam
+  param cropping
+    caption = "Cropping"
+    default = true
+    hint = "Crops the image in the vertical direction \
+            since the transformation might add vertical components not included in original image." 
+  endparam
+  param aid
+    caption = "Visual Aid"
+    default = false
+    hint = "Draws a small circle on each half as an aid for \
+            viewing the image."
+  endparam
+  param radius
+    caption = "Visual Aid Radius"
+    default = 10
+    hint = "Radius of circles used as a visual aid."
+  endparam
+}

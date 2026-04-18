@@ -1,0 +1,3089 @@
+comment {
+  Name:
+    pwc.ucl
+    
+  Version:
+    1.5
+  
+  Description:
+    Ultra Fractal conversions of Paul Carlson's coloring formulas.
+
+  Author:
+    Paul Carlson
+    Marcelo Anelli
+    Luke Plant
+    Mark Townsend
+    Ken Childress
+     
+  Last Modification: 
+    04 October 2001
+
+  History:  
+    Version 1.0 - Initial Release & Numerous Updates
+    Version 1.1 - Added randomness parameter to methods to add
+                  a random texture to the coloring.  It is off 
+                  by default.
+    Version 1.2 - Modified AtanMethods Variant #2 to adjust iter
+                  from "iter" to "iter + 1" to correctly duplicate
+                  the Pokorny Cones examples.
+
+                  Added a Variant #5 to AtanMethods to work work
+                  with Newton formulas, "Newton Mset 3", specifically.
+    Version 1.3 - Added BubbleTraps.
+    Version 1.4 - Added SpheroidTraps.
+    Version 1.5 - Corrected error in Ring Coloring.
+}
+
+ZtoIndex { ; Paul Carlson
+; modified by Marcelo Anelli
+final:
+  if (@forma==0)
+    #index = ((real(#z)+1) % @sele) / @rango
+  elseif (@forma==1)
+    #index = ((imag(#z)+1) % @sele) / @rango
+  elseif (@forma==2)
+    #index = ((|#z|+1) % @sele) / @rango
+  elseif (@forma==3)
+    #index = ((cabs(#z)+1) % @sele) / @rango
+  elseif (@forma==4)
+    #index = ((cabs(@fn1(#z))+1) % @sele) / @rango
+  endif
+default:
+  title="ZtoIndex"
+  param forma
+    default = 0
+    caption = "Calculation"
+    enum = "Real" "Imaginary" "|z|" "cabs(z)" "function"
+  endparam
+  param rango
+    caption = "Full color range"
+    default = 256
+  endparam
+  param sele
+    caption = "Use color range"
+    default = 256
+  endparam
+  func fn1
+    caption = "Transfer function"
+    default = ident()
+  endfunc
+}
+
+FlexBalls{; Paul Carlson
+; converted to  colouring method by Luke Plant
+init:
+    bool done = FALSE
+    float r = @Radius
+    float t = @Width
+    float d0 = r + t
+    float d1 = 0.382683432365 * t
+    float d2 = 0.923879532511 * t
+    float dsqd = d0 * d0 + t * t - (d0 + d0) * d2
+    int iter = 0
+    float i = 253
+    float range_num =0
+    float adjust =0
+    float dist =0
+    float ratio =0
+
+loop:
+    IF (((abs(cabs(#z) - r) < t) && iter > @Skip) && done == FALSE)
+        done = TRUE
+        float zr = real(#z)
+        float zi = imag(#z)
+        float azr = abs(zr)
+        float azi = abs(zi)
+        IF (azr >= azi)
+            dist = (azr - d2) * (azr - d2) + (azi - d1) * (azi - d1)
+            adjust = 1
+        ELSE
+            dist = (azr - d1) * (azr - d1) + (azi - d2) * (azi - d2)
+            adjust = 0
+       ENDIF
+       IF     (zr >= 0 && zi >= 0)
+           range_num = 1 - adjust
+       ELSEIF (zr < 0 && zi >= 0)
+           range_num = 2 + adjust
+       ELSEIF (zr < 0 && zi < 0)
+           range_num = 5 - adjust
+       ELSE
+           range_num = 6 + adjust
+       ENDIF
+       ratio = sqrt(dist / dsqd)
+       i = 29 * ratio + range_num * 30
+    ENDIF
+    iter = iter + 1
+
+final:
+    #index = ((i+1) % 256) / 256
+
+default:
+    title = "FlexBalls"
+
+    param Radius
+    caption = "Ring radius"
+    default = 0.12
+    hint = "Ring radius"
+    endparam
+
+    param Width
+    caption = "Ring width"
+    default = 0.1
+    hint = "Ring width"
+    endparam
+
+    param Skip
+    caption = "Iterations to skip"
+    default = 50
+    hint = "Number of iterations to skip"
+    endparam
+
+}
+
+Bubs1 {; Paul W. Carlson
+init:
+    float index_factor = 249.0/@max_min_w
+    float min_w = 1.0e20
+    colour = 0.0
+loop:
+    float temp = cabs(#z)
+    IF (temp < min_w)
+       min_w = temp
+    ENDIF
+    IF (min_w < @max_min_w)
+      colour = index_factor * min_w
+    ELSE
+      colour = 253.0
+    ENDIF
+final:
+    #index = ((real(colour)+1) % 256) / 256
+
+default:
+    title="Bubs1"
+
+    param max_min_w
+    caption="Bubble radius"
+    default=0.188
+    endparam
+}
+
+BubbleTraps {
+; Paul W. Carlson
+; Coloring method extracted from "BubsJulia".
+; By Ken Childress 29 Feb 2000
+init:
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float min_z = 1.0e20
+  float index_factor = (colors_in_range - 1) / @max_min_z
+  float save_range = 0.0
+  float range_num = 0.0
+  float temp = 0.0
+  int iter = 0
+  float color_index = 253.0
+  bool trapped = false
+  
+loop:
+  IF (!trapped)
+    ;****************************************************
+    ; Save the smallest value of sqrt(|z|).
+    ;****************************************************
+    temp = sqrt(|#z|)
+    IF (temp < min_z)
+      min_z = temp
+      save_range = range_num
+    ENDIF
+    
+    ;****************************************************
+    ; If the orbit point exceeds the maximum value, set z to
+    ; the index into the colormap and set the bailout flag.
+    ;****************************************************
+    IF (|#z| > @max_z)
+      IF (min_z < @max_min_z)
+        color_index = index_factor * min_z + save_range * colors_in_range
+      ELSE
+        color_index = 253
+      ENDIF
+      
+      trapped = true
+    ENDIF  
+  ENDIF
+
+  iter = iter + 1
+  range_num = iter % num_ranges
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Bubble Traps"
+
+  param max_min_z
+    caption = "Bubble Radius"
+    default = 0.188
+    hint = "The largest value of contours that will \
+            be plotted. Typical values are 0.05 to 0.25."
+  endparam
+  
+  param max_z
+    caption = "Maximum Z"
+    default = 16.0
+    hint = "The maximum value of z."
+  endparam
+  
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (8,30)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+SpheroidTraps {
+; Paul W. Carlson
+; Coloring method extracted from Fractint formula "Cdp_Jul_Mand".
+; By Ken Childress 13 Jun 2000
+init:
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @max_ratio
+  float range_num = 0.0
+  float ratio = 0.0
+  int iter = 0
+  float color_index = 253.0
+  bool trapped = false
+  complex prev_z = 0
+  
+loop:
+  IF (!trapped)
+    ;****************************************************
+    ; Compute the ratio and see if it is within limits.
+    ;****************************************************
+    ratio = |prev_z| / |#z|
+    prev_z = #z
+    IF (ratio < @max_ratio && iter > 0)
+      trapped = true
+      color_index = index_factor * ratio + range_num * colors_in_range
+    ENDIF
+    
+    iter = iter + 1
+    range_num = iter % num_ranges
+    
+  ENDIF
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Spheroid Trap"
+
+  param max_ratio
+    caption = "Max Ratio"
+    default = 0.188
+    hint = "The max ratio of Z to prev Z.  Try values from 0.01 \
+            to 0.3."
+  endparam
+  
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (8,30)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+CarlsonTraps { ; v2.02, June 1999
+;
+; This formula is a collection of orbit traps devised by
+; Paul W. Carlson and posted by him to the Ultra Fractal
+; mailing list. They were converted to colouring methods
+; by Luke Plant and Mark Townsend.
+;
+; FlexBalls 2 method added by Ken Childress.
+;
+init:
+
+; Iteration counter
+  int iter = 0
+        
+; Real and imaginary components of z and their absolute values
+  float x = 0
+  float y = 0
+  float Xabs = 0
+  float Yabs = 0
+
+; Temporary variable - any mode can use it as it chooses
+  float temp = 0   
+
+; Temporary variable for keeping track of something.
+  float keep = 1e20 
+  
+; Flag that the orbit has been trapped
+  bool trapped = false
+
+; Final color range of trapped orbit
+  float range_num = 0 
+
+; The color index before conversion to UF range
+  float color_index = @back_color
+
+; Do some stuff for specific modes
+  if @trap_type == 2 || @trap_type == 3 || @trap_type == 4
+    ; Methods coloring by trap
+    float index_factor = @colors_in_range - 1 
+  else
+    ; Methods coloring by iteration
+    float index_factor = (@colors_in_range - 1) / @r
+  endif  
+  
+; Tangent Balls & Flexballs  
+  float ratio = 0
+  float Dsqd0 = 0
+  float Dsqd1 = 0
+  float Dsqd2 = 0
+  float ZtoPsqd = 0       
+  float Rc = @r            
+  float Phi = #pi / 8
+  float Rm = Rc / sin(Phi)
+  float RcSqd = Rc^2
+  float Py = Rm * sin(2 * Phi) 
+  float Px = Rm * cos(2 * Phi) 
+  
+; Fix up for FlexBalls
+  float adjust = 0
+  if @trap_type == 2
+    Rm = @ring_radius
+    float Ro = Rm + @r 
+    Py = 0.382683432365 * @r
+    Px = 0.923879532511 * @r
+    Dsqd0 = Ro * Ro + @r * @r - (Ro + Ro) * Px
+  endif
+
+; Fix up for FlexBalls 2
+  float adjust = 0
+  if @trap_type == 3
+    Rm = @ring_radius
+    float Ro = Rm + @r
+    Py = 0.382683432365 * Rm
+    Px = 0.923879532511 * Rm
+    Dsqd0 = Ro * Ro + Rm * Rm - (Ro + Ro) * Px
+  endif
+  
+; For Harlequin      
+  multiplier = @ring_radius
+
+; For Squares
+  if @trap_type == 8
+  ; Just pick a couple of spare variables
+    Px = 0.5 + @r
+    Py = 0.5 - @r
+  endif
+                    
+loop:
+        
+; Many modes use these...   
+  x = real(#z)
+  y = imag(#z)
+  Xabs = abs(x)
+  Yabs = abs(y)
+
+  if @trap_type == 0
+ 
+    ; *** 3D Bubbles ***
+    
+    temp = sqrt(|#z|)
+    if (temp < keep)
+       keep = temp
+       ; We don't skip any iterations for bubbles
+       IF (keep < @r) 
+         trapped = true ; So that it's not mapped solid
+         ; Modulate iter to find out range_num
+         range_num = iter % @num_ranges
+         color_index = index_factor * temp + range_num * @colors_in_range
+       endif
+    endif
+          
+  elseif @trap_type == 1
+    
+    ; *** 3D Stalks ***
+
+    if Xabs <= Yabs
+      temp = Xabs
+    else
+      temp = Yabs
+    endif
+    if !trapped && iter >= @skip && temp < @r 
+      trapped = true
+      range_num = iter % @num_ranges
+      color_index = index_factor * temp + range_num * @colors_in_range
+    endif
+
+  elseif @trap_type == 2
+    
+    ; *** Flexballs ***
+      
+    if !trapped && iter >= @skip && abs((cabs(#z) - Rm)) < @r 
+      trapped = true
+      if Xabs >= Yabs
+        ZtoPsqd = (Xabs - Px)^2 + (Yabs - Py)^2
+        adjust = 1
+      else
+        ZtoPsqd = (Xabs - Py)^2 + (Yabs - Px)^2
+        adjust = 0
+      endif  
+      if (x >= 0 && y >= 0)
+        range_num = 1 - adjust
+      elseif (x < 0 && y >= 0)
+        range_num = 2 + adjust
+      elseif (x < 0 && y < 0)
+        range_num = 5 - adjust
+      else
+        range_num = 6 + adjust
+      endif
+      ratio = sqrt(ZtoPsqd / Dsqd0)
+      ; Modulate range_num for less than eight ranges.
+      range_num = range_num % @num_ranges
+      ; As it was fized: color_index = 29 * ratio + range_num * 30 
+      color_index = index_factor * ratio + range_num * @colors_in_range
+    endif  
+    
+  elseif @trap_type == 3
+
+    ; *** Flexballs 2 ***
+
+    if !trapped && iter >= @skip && abs((cabs(#z) - Rm)) < @r
+      trapped = true
+      if Xabs >= Yabs
+        ZtoPsqd = (Xabs - Px)^2 + (Yabs - Py)^2
+        adjust = 1
+      else
+        ZtoPsqd = (Xabs - Py)^2 + (Yabs - Px)^2
+        adjust = 0
+      endif
+      if (x >= 0 && y >= 0)
+        range_num = 1 - adjust
+      elseif (x < 0 && y >= 0)
+        range_num = 2 + adjust
+      elseif (x < 0 && y < 0)
+        range_num = 5 - adjust
+      else
+        range_num = 6 + adjust
+      endif
+      ratio = sqrt(ZtoPsqd / Dsqd0)
+      ; Modulate range_num for less than eight ranges.
+      range_num = range_num % @num_ranges
+      ; As it was fized color_index = 29 * ratio + range_num * 30
+      color_index = index_factor * ratio + range_num * @colors_in_range
+    endif
+
+  elseif @trap_type == 4
+    
+    ; *** Tangent Balls *** 
+    
+    if !trapped && iter >= @skip && abs((cabs(#z) - Rm)) < Rc 
+      Dsqd0 = Xabs^2 + (Yabs - Rm)^2
+      Dsqd1 = (Xabs - Px)^2 + (Yabs - Py)^2
+      Dsqd2 = (Xabs - Rm)^2 + Yabs^2
+      if Dsqd0 < RcSqd
+        trapped = true
+        ZtoPsqd= Dsqd0
+        if y > 0
+          range_num = 0
+        else
+          range_num = 4
+        endif    
+      elseif Dsqd1 < RcSqd
+        trapped = true
+        ZtoPsqd= Dsqd1
+        if y >  0&& x > 0
+          range_num = 1
+        elseif y < 0 && x > 0
+          range_num = 3
+        elseif y < 0 && x < 0
+          range_num = 5
+        else
+          range_num = 7
+        endif
+      elseif Dsqd2 < RcSqd        
+        trapped = true
+        ZtoPsqd = Dsqd2
+        if x > 0
+          range_num = 2
+        else
+          range_num = 6
+        endif
+      endif
+      if trapped
+        ratio = sqrt(ZtoPsqd/Rcsqd)
+        range_num = range_num % @num_ranges
+        color_index = index_factor * ratio + range_num * @colors_in_range
+      endif
+    endif         
+  
+  elseif @trap_type == 5
+  
+  ; *** 3-Way ***
+  
+    if !trapped && ((keep < @r) && (|#z| > @r)) && iter >= @skip
+      trapped = true
+      range_num = iter % @num_ranges
+      index_factor = (@colors_in_range - 1) * (@r - keep) / @r
+      float color_index = index_factor + range_num * @colors_in_range
+    endif
+    keep = |#z|
+    
+  elseif @trap_type  == 6
+  
+  ; *** Rings ***
+
+    temp = abs(|#z|-.25)
+    if !trapped && temp < @r && iter >= @skip
+        trapped = true
+        range_num = iter % @num_ranges
+        color_index = index_factor * temp + range_num * @colors_in_range
+    endif
+  
+  elseif @trap_type  == 7
+  
+  ; *** Harlequin ***
+
+    complex a = multiplier * atan(y / x)
+    a = a * a + @c
+    a = fn1(1 - a) / a
+    temp = abs(|#z| - |a|)
+    if !trapped && (temp < @r && iter >= @skip)
+      trapped = true
+      range_num = iter % @num_ranges
+      color_index = index_factor * temp + range_num * @colors_in_range
+    endif
+
+  elseif @trap_type == 8
+    
+  ; *** Squares ***
+    
+    if ((Xabs < Px) && (Xabs > Py) && (Yabs < Px) && (Yabs > Py))
+      float awr5 = abs(Xabs - 0.5)
+      float awi5 = abs(Yabs - 0.5)
+      if (awr5 <= awi5)
+        temp = awr5
+      else
+        temp = awi5
+      endif
+      if !trapped && (temp < @r && iter >= @skip)
+        trapped = true
+        range_num = iter % @num_ranges
+        color_index = index_factor * temp + range_num * @colors_in_range
+      endif
+    endif
+  
+  endif 
+  
+  iter = iter + 1
+
+final:
+
+  if trapped
+  ; Adjust color index to gradient range.
+    #index = (color_index + 1) % 256 / 256 + @randomness * real(#random)
+  else
+    if @solid
+      #solid = true
+    else  
+    ; For the purists we don't have to be solid.       
+      #index = @back_color / 256
+    endif  
+  endif
+  
+default:
+  title = "Paul Carlson's Orbit Traps"
+
+ param trap_type
+    caption = "Trap type"
+    hint = "Choose one of Paul Carlson's wonderful orbit traps."
+    enum = "3D Bubbles" "3D Stalks" "FlexBalls" "FlexBalls 2" \
+           "Tangent Balls" "3-Way" "Rings" "Harlequin" "Squares"
+    default = 1
+  endparam  
+ 
+  param r
+    caption = "Element size"
+    hint = "This has a different use for each mode and usually \
+           effects the size of the elements."
+    default = 0.1
+  endparam  
+  
+  param ring_radius
+    caption = "Other parameter"
+    hint = "This is the radius of the ring for FlexBalls and the angle \
+           multiplier for Harlequin."
+    default = 0.12
+    min = 0
+  endparam  
+
+  param c
+    caption = "Julia coordinates"
+    hint = "Julia coordinates for the Harlequin trap mode."
+    default = (0.15, 1.26875)
+  endparam  
+      
+  param num_ranges
+    Caption = "Color ranges"
+    hint = "This is the number of separate color ranges."
+    default = 8
+    min = 1
+    max = 8 ; for now
+  endparam  
+
+  param colors_in_range
+    Caption = "Colors in range"
+    hint = "This is the number of colors in each color range."
+    default = 30
+  endparam
+    
+  param skip
+    caption = "Iterations to skip"
+    hint = "This is the number of iterations to skip before watching \
+           the orbit. It's not used for Bubbles."
+    default = 1
+    min = 0
+  endparam  
+  
+  param back_color
+    caption = "Background color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254 
+    min = 0
+    max = 255 
+  endparam
+  
+  param solid
+    caption = "Solid background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  func fn1
+    caption = "Function"
+    hint = "This is the function for the Harlequin trap mode."
+    default = exp()
+  endfunc 
+   
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+AtanMethods {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "CshSnM2".
+  ; Variant #2 extracted from "Log_Series_Mset".
+  ; Variant #3 extracted from "Newt3_Atan".
+  ; Variant #4 extracted from "Newt4_Atan".
+  ; By Ken Childress June 1999.
+init:
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float range = 0
+  float range_num = 0
+  int iter = 0
+  complex prev_z = #pixel
+  float color_index = 251
+  bool trapped = FALSE
+  complex root1 = 0
+  complex root2 = 0
+  complex root3 = 0
+  complex root4 = 0
+  IF @JuliaSet
+    complex c = @JuliaCoords
+  ELSE
+    complex c = #pixel
+  ENDIF
+  
+  IF @Variant == 2
+    root1 = (1.0, 0.0)
+    root2 = (-0.5, 0.866025403)
+    root3 = (-0.5, -0.866025403)
+  ELSEIF @Variant == 3
+    root1 = 1.0
+    root2 = -1.0
+    root3 = sqrt(-c)
+    root4 = -root3
+    prev_z = #z
+  ELSEIF @Variant == 4
+    root1 = (1.0, 0.0)
+    root2 = -0.5 + (0.5 * sqrt(1 - 4 * c))
+    root3 = -0.5 - (0.5 * sqrt(1 - 4 * c))
+  ENDIF
+  
+  IF @Variant == 2
+    float index_factor = 2 * (colors_in_range - 1.0) / #pi
+    color_index = 0
+  ELSEIF @Variant == 4
+    float index_factor = (colors_in_range - 1) / #pi
+  ELSE
+    float index_factor = 2 * colors_in_range / #pi
+  ENDIF
+
+loop:
+  IF @Variant == 0
+  
+    ; Variant #1
+
+    ; Normal variant
+    IF !trapped && (abs(real(#z)) > @MaxReal && iter >= @skip)
+      trapped = TRUE
+      range_num = iter % num_ranges
+      float angle = abs(atan((imag(#z)-imag(prev_z))/(real(#z)-real(prev_z))))
+      color_index = index_factor * angle + range_num * colors_in_range
+    ENDIF
+    
+  ELSEIF @Variant == 1
+  
+    ; Variant #2
+  
+    range_num = (iter + 1) % num_ranges
+    
+  ELSEIF @Variant == 2
+  
+    ; Variant #3
+  
+    IF (!trapped && iter >= @skip)
+      IF (|#z - root1| < @epsilon)
+        float range = 0
+        trapped = TRUE
+      ELSEIF (|#z - root2| < @epsilon)
+        range = 1
+        trapped = TRUE
+      ELSEIF (|#z - root3| < @epsilon)
+        range = 2
+        trapped = TRUE
+      ENDIF
+      
+      IF trapped
+        float angle = abs(atan((imag(#z)-imag(prev_z))/(real(#z)-real(prev_z))))
+        color_index = angle * index_factor + range * colors_in_range
+      ENDIF
+    ENDIF
+    
+  ELSEIF @Variant == 3
+  
+    ; Variant #4
+
+    IF !trapped
+        
+      IF (|#z - root1| < @epsilon)
+        trapped = TRUE
+        range = 0
+      ELSEIF (|#z - root2| < @epsilon)
+        trapped = TRUE
+        range = 1
+      ELSEIF (|#z - root3| < @epsilon)
+        trapped = TRUE
+        range = 2
+      ELSEIF (|#z - root4| < @epsilon)
+        trapped = TRUE
+        range = 3
+      ENDIF
+
+      IF trapped
+        angle = abs(atan((imag(#z)-imag(prev_z))/(real(#z)-real(prev_z)))) / #pi
+        color_index = abs(2*(colors_in_range - 1) * angle) + colors_in_range * range
+      ENDIF
+    ENDIF
+
+  ELSEIF @Variant == 4
+  
+    ; Variant #5
+
+    delta_z = #z - prev_z
+    IF !trapped && (|delta_z| < @epsilon)
+    
+      angle = atan(imag(delta_z) / real(delta_z))
+        
+      IF (delta_z >= 0.0)
+        IF (imag(delta_z) < 0)
+          angle = #pi + angle
+        ELSE
+          angle = #pi - angle
+        ENDIF
+      ELSEIF (imag(delta_z) > 0.0)
+        angle = -angle
+      ENDIF
+      
+      IF (|#z - root1| < @epsilon)
+        trapped = TRUE
+        range = 0
+      ELSEIF (|#z - root2| < @epsilon)
+        trapped = TRUE
+        range = 1
+      ELSEIF (|#z - root3| < @epsilon)
+        trapped = TRUE
+        range = 2
+      ENDIF
+
+      IF trapped
+        color_index = (colors_in_range - 1) * angle / #pi + colors_in_range * range
+      ENDIF
+    ENDIF
+    
+  ENDIF
+  
+  iter = iter + 1
+  
+  prev_z = #z
+
+final:
+  IF @Variant == 1
+  
+    float angle = abs(atan((imag(#z)-imag(prev_z))/(real(#z)-real(prev_z))))
+    IF ((real(#z) - real(prev_z)) < 0.0)
+      angle = #pi - angle
+    ENDIF
+    color_index = ((colors_in_range - 1) / #pi ) * angle + range_num * colors_in_range
+    #index = (real(color_index) + 1) % 256 / 256 + @randomness * real(#random)
+
+  ELSE
+  
+    IF trapped
+      #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+    ELSE
+      IF @solid
+        #solid = TRUE
+      ELSE
+        #index = @back_color / 256
+      ENDIF
+    ENDIF
+
+  ENDIF
+
+default:
+  title="Atan Methods"
+  
+  param Variant
+    caption = "Atan Variant"
+    enum = "Variant #1" "Variant #2" "Variant #3" "Variant #4" "Variant #5"
+    default = 0
+    hint = "The Atan variant to use.  Variant #3, Variant #4 \
+            and Variant #5 work well with Newton formulas."
+  endparam
+
+  param MaxReal
+    caption = "Max Value of |z|"
+    default = 4.0
+    hint = "Max value of abs(z).  This is used by Variant #1."
+  endparam
+  
+  param epsilon
+    caption = "Epsilon"
+    default = 0.1
+    hint = "The distance to the root squared.  This is used by Variant #3, \
+            Variant #4, and Variant #5."
+  endparam
+  
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip.  This is not used by Variant #2."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (8,30)
+    hint = "Number of Color Ranges and Number of Colors in each Range. \
+            Note: Variant #3 only uses three Color Ranges.  Variant #4 \
+            only uses four Color Ranges."
+  endparam
+
+  param JuliaSet
+    caption = "Julia Set"
+    hint = "If this is enabled, then the initialization uses the Julia \
+            Set coordinates.  This is only used by Variant #4."
+    default = false
+  endparam
+
+  param JuliaCoords
+    caption = "Julia Coordinates"
+    default = (0.0,0.0)
+    hint = "The Julia set coordinates.  This value should match the value \
+            set in the Formula Tab, and the Julia Set paramter should be checked. \
+            This is only used by Variant #4."
+  endparam
+    
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+PetalTraps {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "Petals_Series_Mset".
+  ; Variant #2 extracted from "Pky_Petals_Julia".
+  ; Triplets extracted from "Petals_Triplets_Mandel".
+  ; By Ken Childress June 1999.
+init:
+  ; Initialization for all methods.
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float range_num = 0
+  float range = 0
+  int iter = 0
+  float d = 0
+  float color_index = 254
+  bool trapped = FALSE
+  IF @JuliaSet
+    complex c = @JuliaCoords
+  ELSE
+    complex c = #pixel
+  ENDIF
+
+  ; Initialization for Normal
+  float r = @Size
+  float ro = r + r * @Offset
+  float r2 = r * r
+  float f = 1 - 2 * @Offset - @Offset * @Offset
+  float k = @Offset * r + r * sqrt (f)
+  float plsqd = 2 * r2 * f
+  complex ir = flip(r)
+  
+  IF @Variant == 0
+    float index_factor = (colors_in_range - @adjust) / plsqd
+  ELSEIF @Variant == 2
+    float index_factor = (colors_in_range - 1 - @adjust) / (0.5 * r)
+  ELSE
+    float index_factor = (colors_in_range - @adjust) / (r2 + r2)
+  ENDIF
+  
+  ; Initialization for Triplets Variant
+  float rs30 = 0
+  float rc30 = 0
+  float hrs30 = 0
+  float hrc30 = 0
+  float frs30 = 0
+  float fhrs30 = 0
+  complex cen123 = 0
+  complex cen456 = 0
+  complex cen789 = 0
+  complex cenabc = 0
+  complex cc1 = 0
+  complex cc2 = 0
+  complex cc3 = 0
+  complex cc4 = 0
+  complex cc5 = 0
+  complex cc6 = 0
+  complex cc7 = 0
+  complex cc8 = 0
+  complex cc9 = 0
+  complex cca = 0
+  complex ccb = 0
+  complex ccc = 0
+  complex cp1 = 0
+  complex cp2 = 0
+  complex cp3 = 0
+  complex cp4 = 0
+  complex cp5 = 0
+  complex cp6 = 0
+  complex cp7 = 0
+  complex cp8 = 0
+  complex cp9 = 0
+  complex cpa = 0
+  complex cpb = 0
+  complex cpc = 0
+  
+  complex root1 = 0
+  complex root2 = 0
+  complex root3 = 0
+  complex root4 = 0
+  
+  IF @Variant == 2
+  
+    ;Should the radial petals point in or out?
+    IF @Reverse == FALSE
+        float f = 1.0    ;In
+    ELSE
+        f = -1.0         ;Out
+    ENDIF
+    float rs30 = 0.5 * r               ; r * sin(30 degrees)
+    float rc30 = 0.886025403784438 * r ; r * cos(30 degrees)
+    float hrs30 = 0.5 * rs30           
+    float hrc30 = 0.5 * rc30
+    float frs30 = f * rs30
+    float fhrs30 = f * hrs30
+
+    ;The centers of the four triplets
+    complex cen123 = r + @Offset
+    complex cen456 = -flip(cen123)
+    complex cen789 = -cen123
+    complex cenabc = flip(cen123)
+
+    ;The circle centers of triplet 1
+    complex cc1 = cen123 - frs30 - flip(rc30)
+    complex cc2 = cen123 - frs30 + flip(rc30)
+    complex cc3 = cen123 + f * r
+
+    ;The circle centers of triplet 2
+    complex cc4 = cen456 - rc30 + flip(frs30)
+    complex cc5 = cen456 + rc30 + flip(frs30)
+    complex cc6 = cen456 - f * flip(r)
+
+    ;The circle centers of triplet 3
+    complex cc7 = cen789 + frs30 + flip(rc30)
+    complex cc8 = cen789 + frs30 - flip(rc30)
+    complex cc9 = cen789 - f * r
+
+    ;The circle centers of triplet 4
+    complex cca = cenabc + rc30 - flip(frs30)
+    complex ccb = cenabc - rc30 - flip(frs30)
+    complex ccc = cenabc + f * flip(r)
+
+    ;The petal centers of triple 1
+    complex cp1 = cen123 - frs30
+    complex cp2 = cen123 + fhrs30 + flip(hrc30)
+    complex cp3 = cen123 + fhrs30 - flip(hrc30)
+
+    ;The petal centers of triplet 2
+    complex cp4 = cen456 + flip(frs30)
+    complex cp5 = cen456 + hrc30 - flip(fhrs30)
+    complex cp6 = cen456 - hrc30 - flip(fhrs30)
+
+    ;The petal centers of triplet 3
+    complex cp7 = cen789 + frs30
+    complex cp8 = cen789 - fhrs30 - flip(hrc30)
+    complex cp9 = cen789 - fhrs30 + flip(hrc30)
+
+    ;The petal centers of triplet 4
+    complex cpa = cenabc - flip(frs30)
+    complex cpb = cenabc - hrc30 + flip(fhrs30)
+    complex cpc = cenabc + hrc30 + flip(fhrs30)
+   
+  ; Initialization for Newton 3 Variant 
+  ELSEIF @Variant == 3
+  
+    complex root1 = (1,0)
+    complex root2 = (-0.5,0.866025403)
+    complex root3 = (-0.5,-0.866025403)
+    
+  ; Initialization for Newton 4 Variant
+  ELSEIF @Variant == 4
+  
+    complex root1 = 1.0
+    complex root2 = -1.0
+    complex root3 = sqrt(-c)
+    complex root4 = -root3
+    
+  ENDIF
+  
+loop:
+  IF @Variant == 0
+  
+    ; Variant #1
+  
+    IF !trapped && (iter >= @skip)
+      float zr = real(#z)
+      float zi = imag(#z)
+      bool c1 = (((zr - ro) * (zr - ro) + zi * zi) < r2)
+      bool c2 = ((zr * zr + (zi + ro) * (zi + ro)) < r2)
+      bool c3 = (((zr + ro) * (zr + ro) + zi * zi) < r2)
+      bool c4 = ((zr * zr + (zi - ro) * (zi - ro)) < r2)
+      IF (c1 && c4)
+        trapped = TRUE
+        d = (zr - k) * (zr - k) + (zi - k) * (zi - k)
+      ELSEIF (c1 && c2)
+        trapped = TRUE
+        d = (zr - k) * (zr - k) + (zi + k) * (zi + k)
+      ELSEIF (c2 && c3)
+        trapped = TRUE
+        d = (zr + k) * (zr + k) + (zi + k) * (zi + k)
+      ELSEIF (c3 && c4)
+        trapped = TRUE
+        d = (zr + k) * (zr + k) + (zi - k) * (zi - k)
+      ENDIF
+      IF (trapped == TRUE)
+        range_num = iter % num_ranges
+        color_index = index_factor * d + range_num * colors_in_range
+      ENDIF
+    ENDIF
+    
+  ELSEIF @Variant == 1
+  
+    ; Variant #2
+  
+    IF !trapped
+      bool c1 = (|#z -  r| < r2)
+      bool c2 = (|#z + ir| < r2)
+      bool c3 = (|#z +  r| < r2)
+      bool c4 = (|#z - ir| < r2)
+      IF (c1 && c4)
+        d = |#z - r - ir|
+      ELSEIF (c1 && c2)
+        d = |#z - r + ir|
+      ELSEIF (c2 && c3)
+        d = |#z + r + ir|
+      ELSEIF (c3 && c4)
+        d = |#z + r - ir|
+      ELSE
+        d = -1
+      ENDIF
+
+      IF (d > 0 && iter >= @skip)
+        trapped = TRUE
+        range_num = iter % num_ranges
+        color_index = index_factor * d + range_num * colors_in_range
+      ENDIF
+      
+    ENDIF
+  
+  ELSEIF @Variant == 2
+  
+    ; Petals Triplets Method
+  
+    IF !trapped && iter >= @skip
+      ;Each petal trap is the overlap of two circles
+      IF (|#z - cc1| <= r2 && |#z - cc2| <= r2) ;Petal 1
+        trapped = TRUE
+        float d = |#z - cp1|
+      ELSEIF (|#z - cc2| <= r2 && |#z - cc3| <= r2) ;Petal 2
+        trapped = TRUE
+        d = |#z - cp2|
+      ELSEIF (|#z - cc1| <= r2 && |#z - cc3| <= r2) ;Petal 3
+        trapped = TRUE
+        d = |#z - cp3|
+      ELSEIF (|#z - cc4| <= r2 && |#z - cc5| <= r2) ;Petal 4
+        trapped = TRUE
+        d = |#z - cp4|
+      ELSEIF (|#z - cc5| <= r2 && |#z - cc6| <= r2) ;Petal 5
+        trapped = TRUE
+        d = |#z - cp5|
+      ELSEIF (|#z - cc4| <= r2 && |#z - cc6| <= r2) ;Petal 6
+        trapped = TRUE
+        d = |#z - cp6|
+      ELSEIF (|#z - cc7| <= r2 && |#z - cc8| <= r2) ;Petal 7
+        trapped = TRUE
+        d = |#z - cp7|
+      ELSEIF (|#z - cc8| <= r2 && |#z - cc9| <= r2) ;Petal 8
+        trapped = TRUE
+        d = |#z - cp8|
+      ELSEIF (|#z - cc7| <= r2 && |#z - cc9| <= r2) ;Petal 9
+        trapped = TRUE
+        d = |#z - cp9|
+      ELSEIF (|#z - cca| <= r2 && |#z - ccb| <= r2) ;Petal a
+        trapped = TRUE
+        d = |#z - cpa|
+      ELSEIF (|#z - ccb| <= r2 && |#z - ccc| <= r2) ;Petal b
+        trapped = TRUE
+        d = |#z - cpb|
+      ELSEIF (|#z - cca| <= r2 && |#z - ccc| <= r2) ;Petal c
+        trapped = TRUE
+        d = |#z - cpc|
+      ENDIF
+      
+      IF trapped
+        range_num = iter % num_ranges
+        color_index = index_factor * sqrt(d) + range_num * colors_in_range
+      ENDIF
+    ENDIF
+    
+  ELSEIF @Variant == 3
+  
+    ; Newton 3
+    
+    IF !trapped
+      complex err = #z - root1
+      range = 0
+      
+      bool c1 = (|err -  r| < r2)
+      bool c2 = (|err + ir| < r2)
+      bool c3 = (|err +  r| < r2)
+      bool c4 = (|err - ir| < r2)
+      
+      IF (c1 && c4)
+        d = |err - r - ir|
+        trapped = TRUE
+      ELSEIF (c1 && c2)
+        d = |err - r + ir|
+        trapped = TRUE
+      ELSEIF (c2 && c3)
+        d = |err + r + ir|
+        trapped = TRUE
+      ELSEIF (c3 && c4)
+        d = |err + r - ir|
+        trapped = TRUE
+      ENDIF
+      
+      IF !trapped
+        err = #z - root2
+        range = 1
+      
+        bool c1 = (|err -  r| < r2)
+        bool c2 = (|err + ir| < r2)
+        bool c3 = (|err +  r| < r2)
+        bool c4 = (|err - ir| < r2)
+      
+        IF (c1 && c4)
+          d = |err - r - ir|
+          trapped = TRUE
+        ELSEIF (c1 && c2)
+          d = |err - r + ir|
+          trapped = TRUE
+        ELSEIF (c2 && c3)
+          d = |err + r + ir|
+          trapped = TRUE
+        ELSEIF (c3 && c4)
+          d = |err + r - ir|
+          trapped = TRUE
+        ENDIF
+      ENDIF
+
+      IF !trapped
+        err = #z - root3
+        range = 2
+      
+        bool c1 = (|err -  r| < r2)
+        bool c2 = (|err + ir| < r2)
+        bool c3 = (|err +  r| < r2)
+        bool c4 = (|err - ir| < r2)
+      
+        IF (c1 && c4)
+          d = |err - r - ir|
+          trapped = TRUE
+        ELSEIF (c1 && c2)
+          d = |err - r + ir|
+          trapped = TRUE
+        ELSEIF (c2 && c3)
+          d = |err + r + ir|
+          trapped = TRUE
+        ELSEIF (c3 && c4)
+          d = |err + r - ir|
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      
+      IF trapped
+        color_index = index_factor * d + range * colors_in_range
+      ENDIF
+      
+    ENDIF
+    
+  ELSEIF @Variant == 4
+  
+    ; Newton 4
+
+    IF !trapped
+      complex err = #z - root1
+      range = 0
+      
+      bool c1 = (|err -  r| < r2)
+      bool c2 = (|err + ir| < r2)
+      bool c3 = (|err +  r| < r2)
+      bool c4 = (|err - ir| < r2)
+      
+      IF (c1 && c4)
+        d = |err - r - ir|
+        trapped = TRUE
+      ELSEIF (c1 && c2)
+        d = |err - r + ir|
+        trapped = TRUE
+      ELSEIF (c2 && c3)
+        d = |err + r + ir|
+        trapped = TRUE
+      ELSEIF (c3 && c4)
+        d = |err + r - ir|
+        trapped = TRUE
+      ENDIF
+      
+      IF !trapped
+        err = #z - root2
+        range = 1
+      
+        bool c1 = (|err -  r| < r2)
+        bool c2 = (|err + ir| < r2)
+        bool c3 = (|err +  r| < r2)
+        bool c4 = (|err - ir| < r2)
+      
+        IF (c1 && c4)
+          d = |err - r - ir|
+          trapped = TRUE
+        ELSEIF (c1 && c2)
+          d = |err - r + ir|
+          trapped = TRUE
+        ELSEIF (c2 && c3)
+          d = |err + r + ir|
+          trapped = TRUE
+        ELSEIF (c3 && c4)
+          d = |err + r - ir|
+          trapped = TRUE
+        ENDIF
+      ENDIF
+
+      IF !trapped
+        err = #z - root3
+        range = 2
+      
+        bool c1 = (|err -  r| < r2)
+        bool c2 = (|err + ir| < r2)
+        bool c3 = (|err +  r| < r2)
+        bool c4 = (|err - ir| < r2)
+      
+        IF (c1 && c4)
+          d = |err - r - ir|
+          trapped = TRUE
+        ELSEIF (c1 && c2)
+          d = |err - r + ir|
+          trapped = TRUE
+        ELSEIF (c2 && c3)
+          d = |err + r + ir|
+          trapped = TRUE
+        ELSEIF (c3 && c4)
+          d = |err + r - ir|
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      
+      IF !trapped
+        err = #z - root4
+        range = 3
+      
+        bool c1 = (|err -  r| < r2)
+        bool c2 = (|err + ir| < r2)
+        bool c3 = (|err +  r| < r2)
+        bool c4 = (|err - ir| < r2)
+      
+        IF (c1 && c4)
+          d = |err - r - ir|
+          trapped = TRUE
+        ELSEIF (c1 && c2)
+          d = |err - r + ir|
+          trapped = TRUE
+        ELSEIF (c2 && c3)
+          d = |err + r + ir|
+          trapped = TRUE
+        ELSEIF (c3 && c4)
+          d = |err + r - ir|
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      
+      IF trapped
+        color_index = index_factor * d + range * colors_in_range
+      ENDIF
+      
+    ENDIF
+    
+  ENDIF
+
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Petal Traps"
+  
+  param Variant
+    caption = "Petal Variant"
+    enum = "Variant #1" "Variant #2" "Triplets" "Newton 3" "Newton 4"
+    default = 0
+    hint = "The Petal Trap variant."
+  endparam
+  
+  param Size
+    caption = "Petals Size"
+    default = 0.18
+    hint = "Controls petal size."
+  endparam
+
+  param Offset
+    caption = "Petals Offset"
+    default = 0.05
+    hint = "Controls petals offset.  This is not used for Variant #2 \
+            or the Newton 3 or Newton 4 variants."
+  endparam
+  
+  param Reverse
+    caption = "Reverse triplets flag"
+    default = FALSE
+    hint = "Enabled checked makes radial petal point in.  It \
+            points out otherwise.  This is only used by the \
+            Triplets variant."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip.  This is not used by the Newton 3 \
+            or Newton 4 variants."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (8,30)
+    hint = "Number of Color Ranges and Number of Colors in each Range. \
+            Note: The Newton 3 variant uses 3 Color Ranges and the \
+            Newton 4 variant uses 4 Color Ranges."
+  endparam
+  
+  param adjust
+    caption = "Range Adjustment"
+    default = 0
+    hint = "Adjustment for the calculation of the color index.  Normally, \
+            this will be zero, but some formulas require an adjustment to \
+            correct for overshooting the color ranges."
+  endparam
+  
+  param JuliaSet
+    caption = "Julia Set"
+    hint = "If this is enabled, then the initialization uses the Julia \
+            Set coordinates."
+    default = false
+  endparam
+
+  param JuliaCoords
+    caption = "Julia Coordinates"
+    default = (0.0,0.0)
+    hint = "The Julia set coordinates.  This value should match the value \
+            set in the Formula Tab, and the Julia Set paramter should be checked."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+Rings_Coloring {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "RsNewtMset1".
+  ; Variant #2 extracted from "R4Julia".
+  ; By Ken Childress June 1999.
+init:
+  bool first = TRUE
+  bool trapped = FALSE
+  int iter = 0
+  float HalfT = 0.5 * @T
+  float Phi = #pi * 0.125
+  float Ro = @Rm + HalfT
+  float Py = @Rm * sin(Phi)
+  float Px = @Rm * cos(Phi)
+  float Dsqd = @Rm * @Rm + Ro * Ro - 2 * Ro * Px
+  float color_index = 252
+  float index_factor = @colors_in_range - 1
+    
+  ; Initialization for Variant #1
+  complex k = (0.5, 0.5)
+  float index_factor1 = (@colors_in_range - 1) / @Rm
+
+loop:
+  IF @Variant == 0
+  
+    IF (!trapped && (abs(cabs(#z) - @Rm) < HalfT) && \
+      first == FALSE && iter >= @skip)
+      
+      trapped = TRUE
+      float X = real(#z)
+      float Y = imag(#z)
+      float Xabs = abs(X)
+      float Yabs = abs(Y)
+      IF (Xabs >= Yabs)
+        float WtoPsqd = (Xabs-Px)*(Xabs-Px) + (Yabs-Py)*(Yabs-Py)
+      ELSE
+        WtoPsqd = (Xabs-Py)*(Xabs-Py) + (Yabs-Px)*(Yabs-Px)
+      ENDIF
+      IF (X >= 0 && Y >= 0)
+        IF (Xabs >= Yabs)
+          float Segment = 0
+        ELSE
+          Segment = 1
+        ENDIF
+      ELSEIF (X < 0 && Y >= 0)
+        IF (Xabs < Yabs)
+          Segment = 2
+        ELSE
+          Segment = 3
+        ENDIF
+      ELSEIF (X < 0 && Y < 0)
+        IF (Xabs >= Yabs)
+          Segment = 4
+        ELSE
+          Segment = 5
+        ENDIF
+      ELSE
+        IF (Xabs < Yabs)
+          Segment = 6
+        ELSE
+          Segment = 7
+        ENDIF
+      ENDIF
+      float Ratio = sqrt(WtoPsqd/Dsqd)
+      ; Modulate Segment for less than eight ranges.
+      float range_num = Segment % @num_ranges
+      color_index = index_factor * Ratio + range_num * @colors_in_range
+    ENDIF
+    first = FALSE
+    
+  ELSEIF @Variant == 1
+  
+    IF !trapped && iter >= @skip
+      float dist = abs(|#z - k| - 0.1)
+      IF dist < @Rm
+        trapped = TRUE
+        float range_num = iter % @num_ranges
+        color_index = index_factor1 * dist + range_num * @colors_in_range
+      ENDIF
+    ENDIF
+
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  if trapped
+    ; Adjust color index to gradient range.
+    #index = (color_index + 1) % 256 / 256 + @randomness * real(#random)
+  else
+    if @solid
+      #solid = true
+    else
+    ; For the purists we don't have to be solid.
+      #index = @back_color / 256
+    endif
+  endif
+
+default:
+  title = "Ring Coloring"
+  
+  param Variant
+    caption = "Ring Variant"
+    enum = "Variant #1" "Variant #2"
+    default = 0
+    hint = "The Ring variant to use."
+  endparam
+
+  param Rm
+    caption = "Ring radius"
+    default = 1.0
+    hint = "The radius to the midline of the ring."
+  endparam
+
+  param T
+    caption = "Ring thickness"
+    default = 0.2
+    hint = "The thickness of the ring. This is not used for Variant #2."
+  endparam
+  
+  param skip
+    caption = "Iterations to Skip"
+    default = 0
+    hint = "The number of iterations to skip.  This is not used for Normal."
+  endparam
+
+  param num_ranges
+    Caption = "Color ranges"
+    hint = "This is the number of separate color ranges."
+    default = 8
+  endparam
+
+  param colors_in_range
+    Caption = "Colors in range"
+    hint = "This is the number of colors in each color range."
+    default = 30
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+BallTraps {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "BZtoz2J8".
+  ; Variant #2 extracted from "RbFnLambM2".
+  ; Variant #3 extracted from "Qd_Julia".
+  ; By Ken Childress June 1999.
+init:
+  ; Initialization for all variants
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @size
+  float range_num = 0
+  int iter = 0
+  float color_index = 253
+  float dist = 0
+  bool trapped = FALSE
+  
+  ; Initialization for Variant #2
+  float psqd = 2 * @size
+  
+loop:
+  IF @Variant == 0
+  
+    IF !trapped
+      float zr = real(#z)
+      float zi = imag(#z)
+      float b1 = zr^2 + (zi - 0.5)^2
+      float b2 = zr^2 + (zi + 0.5)^2
+      float b3 = (zr - 0.5)^2 + zi^2
+      float b4 = (zr + 0.5)^2 + zi^2
+      IF (iter > @skip)
+        IF (b1 < @size)
+          dist = b1
+          trapped = TRUE
+        ELSEIF (b2 < @size)
+          dist = b2
+          trapped = TRUE
+        ELSEIF (b3 < @size)
+          dist = b3
+          trapped = TRUE
+        ELSEIF (b4 < @size)
+          dist = b4
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      IF trapped
+        range_num = iter % num_ranges
+        color_index = index_factor * dist + range_num * colors_in_range
+      ENDIF
+    ENDIF
+    
+  ELSEIF @Variant == 1
+  
+    float rsqd = |#z|
+    IF !trapped && psqd < @size && rsqd > @size && iter >= @skip
+      trapped = TRUE
+      range_num = iter % num_ranges
+      color_index = index_factor * (@size - psqd) + range_num * colors_in_range
+    ENDIF
+    psqd = rsqd
+
+  ELSEIF @Variant == 2
+  
+    IF !trapped
+      float zr = real(#z)
+      float zi = imag(#z)
+      float d = zr^2 + (zi - 0.5)^2
+    
+      IF d < @size
+        trapped = TRUE
+      ENDIF
+      IF !trapped
+        d = zr^2 + (zi + 0.5)^2
+        IF d < @size
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      IF !trapped 
+        d = zi^2 + (zr - 0.5)^2
+        IF d < @size
+          trapped = TRUE
+        ENDIF
+      ENDIF
+      IF !trapped
+        d = zi^2 + (zr + 0.5)^2
+        IF d < @size
+          trapped = TRUE
+        ENDIF
+      ENDIF
+  
+      IF trapped && iter >= @skip
+        range_num = iter % num_ranges
+        color_index = index_factor * (@size - d) + range_num * colors_in_range
+      ENDIF
+    ENDIF
+
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Ball Traps"
+  
+  param Variant
+    caption = "Variant"
+    enum = "Variant #1" "Variant #2" "Variant #3"
+    hint = "The Ball Trap variant to use."
+  endparam
+
+  param size
+    caption = "Size of Balls"
+    default = 0.3
+    hint = "Controls ball size."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip"
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2,125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+StalkTraps {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "R4MndStksM2".
+  ; Variant #2 extracted from "Spir2_Trunc".
+  ; Variant #3 extracted from "Dbl_Expos_Newt1".
+  ; By Ken Childress June 1999.
+init:
+  bool trapped = FALSE
+  int iter = 0
+  float range_num = 0
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @size
+  float color_index = 254
+  
+  ; Initialization for Variant #2
+  bool first = TRUE
+  
+  ; Initialization for Variant #3
+  float dist = 0
+  complex c = #pixel
+  complex sc = sqrt(-(1 / c^2)) 
+
+loop:
+  IF @Variant == 0
+  
+    float zr = real(#z)
+    float zi = imag(#z)
+    float dist = abs((zr - 0.5)^2 + (zi - 0.5)^2 - 0.1)
+    
+    IF !trapped && (dist < @size) && (iter > @skip)
+      trapped = TRUE
+      range_num = iter % num_ranges
+      color_index = index_factor * dist + range_num * colors_in_range
+    ENDIF
+    
+  ELSEIF @Variant == 1
+
+    float zr = abs(real(#z))
+    float zi = abs(imag(#z))
+    IF (zr <= zi)
+      float dist = zr
+    ELSE
+      dist = zi
+    ENDIF
+      
+    IF !trapped && (dist < @size) && |#z| < @MaxZ && !first
+      trapped = TRUE
+      range_num = iter % num_ranges
+      color_index = index_factor * dist + range_num * colors_in_range
+    ENDIF
+  
+    first = FALSE
+  
+  ELSEIF @Variant == 2
+  
+    IF !trapped && iter >= @skip
+
+      ; Get minimum distance to an axis
+      IF (abs(real(#z)) <= abs(imag(#z)))
+        float min_dist = abs(real(#z))
+      ELSE
+        min_dist = abs(imag(#z))
+      ENDIF
+    
+      ;Check for stalk
+      IF (dist == 0 && min_dist < @size)
+        dist = min_dist
+      ENDIF
+
+      ;Bailout depends on convergence to a root
+      IF (|#z + c| < @convergence)
+        trapped = TRUE
+      ELSEIF (|#z - c| < @convergence)
+        trapped = TRUE
+      ELSEIF (|#z + sc| < @convergence)
+        trapped = TRUE
+      ELSEIF (|#z - sc| < @convergence)
+        trapped = TRUE
+      ENDIF
+    
+      IF trapped
+        range_num = iter % num_ranges
+        color_index = index_factor * dist + range_num * colors_in_range
+      ENDIF
+    ENDIF
+ 
+  ENDIF
+  
+  iter = iter + 1
+    
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Stalk Traps"
+  
+  param Variant
+    caption = "Stalk Variant"
+    enum = "Variant #1" "Variant #2" "Variant #3"
+    default = 0
+    hint = "The Stalk Trap variant to use."
+  endparam
+
+  param size
+    caption = "Stalk Width Factor"
+    default = 2.0
+    hint = "Controls stalk width."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip. \
+            This is not used by Variant #2."
+  endparam
+
+  param MaxZ
+    caption = "Maximum Z"
+    default = 4.0
+    hint = "Maximum value of abs(z).  \
+            This is used by only Variant #2."
+  endparam
+
+  param convergence
+    caption = "Convergence Value"
+    default = 1.0e-7
+    hint = "The value to check for convergence. \
+            This is not used by Variant #1 or Variant #2."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2,125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+FunctionAngle {
+  ; Paul W. Carlson
+  ; Variant #1 extracted from "MyEqn_Func_Julia".
+  ; Variant #2 extracted from "MyEqn_Fnc_Jul".
+  ; Variant #3 extracted from "Newt_Fang_Mset".
+  ; By Ken Childress June 1999.
+init:
+  complex c = @JuliaCoords
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float range_num = 0
+  float dist = 1.0e20
+  int iter = 0
+  float color_index = 253
+  bool trapped = FALSE
+  
+  IF @Variant == 2
+    float index_factor = 20.0 / @size
+  ELSE
+    float index_factor = (colors_in_range - 1) / @size
+  ENDIF
+
+loop:
+  IF @Variant == 0
+  
+    IF !trapped
+      complex a = @multiplier * atan(imag(#z) / real(#z))
+      a = a * a + c
+      a = fn1(1 - a) / a
+      dist = abs(|#z| - |a|)
+      IF (dist < @size && iter >= @skip)
+        trapped = TRUE
+        range_num = iter % num_ranges
+        color_index = index_factor * dist + range_num * colors_in_range
+      ENDIF 
+    ENDIF
+    
+  ELSEIF @Variant == 1
+
+    IF !trapped
+      complex a = @multiplier * atan(imag(#z) / real(#z))
+      a = a * a + c
+      a = fn1(1 - a^2)
+      dist = abs(|#z| - |a|)
+      IF (dist < @size && iter >= @skip)
+        trapped = TRUE
+        range_num = iter % num_ranges
+        color_index = index_factor * dist + range_num * colors_in_range
+      ENDIF 
+    ENDIF
+    
+  ELSEIF @Variant == 2
+
+    angle = atan(imag(#z) / real(#z))
+    v = @multiplier * (fn1(angle)^2 + fn2(angle)^2)
+    float dist = abs(|#z| - |v|)
+    IF (!trapped && dist < @size && iter >= @skip)
+      trapped = TRUE
+      range_num = iter % num_ranges
+      color_index = index_factor * dist + range_num * colors_in_range
+    ENDIF
+  
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Function Angle"
+  
+  param Variant
+    caption = "Variant"
+    enum = "Variant #1" "Variant #2" "Variant #3"
+    default = 0
+    hint = "The method variant to use."
+  endparam
+
+  param JuliaCoords
+    caption = "Julia Coordinates"
+    default = (0.15,1.26875)
+    hint = "The Julia set coordinates.  If used with a \
+            formula with Julia set coordinates, this value \
+            should match the value in the formula tab.  This \
+            is not used for Variant #3."
+  endparam
+
+  param size
+    caption = "Element size"
+    default = 0.3
+    hint = "Element size."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param multiplier
+    caption = "Angle multiplier"
+    default = 1.0
+    hint = "Angle multiplier."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2,125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+  
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+TwistedStalks {
+  ; Paul W. Carlson
+  ; Coloring method extracted from "Newt2_Stalks_Mset"
+  ; By Ken Childress June 1999.
+init:
+  c = #pixel
+  csqd = c * c
+  icsqd = 1.0 / csqd
+  sc = sqrt(-icsqd)
+  cr1 = real(c)
+  ci1 = imag(c)
+  cr2 = real(sc)
+  ci2 = imag(sc)
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @stalk_width
+  float range_num = 0
+  int iter = 0
+  float min_dist = 0.0
+  float zr = 0.0
+  float zi = 0.0
+  float color_index = 251
+  bool trapped = FALSE
+
+loop:
+  zr = real(#z)
+  zi = imag(#z)
+  IF (abs(zr) <= abs(zi))
+    min_dist = abs(zr)
+  ELSE
+    min_dist = abs(zi)
+  ENDIF
+  
+  IF !trapped && (min_dist < @stalk_width) && (iter >= @skip)
+    trapped = TRUE
+    range_num = iter % num_ranges
+    color_index = index_factor * min_dist + range_num * colors_in_range
+  ENDIF
+  
+  ;If we're no longer looking for stalks, check if
+  ;we've converged on a root.
+  IF !trapped && (iter > @stalk_iters)
+    IF     (((zr-cr1) * (zr-cr1) + (zi-ci1) * (zi-ci1)) < 0.00001)
+      trapped = TRUE
+      color_index = 254
+    ELSEIF (((zr+cr1) * (zr+cr1) + (zi+ci1) * (zi+ci1)) < 0.00001)
+      trapped = TRUE
+      color_index = 254
+    ELSEIF (((zr+cr2) * (zr+cr2) + (zi+ci2) * (zi+ci2)) < 0.00001)
+      trapped = TRUE
+      color_index = 254
+    ELSEIF (((zr-cr2) * (zr-cr2) + (zi-ci2) * (zi-ci2)) < 0.00001)
+      trapped = TRUE
+      color_index = 254
+    ENDIF
+  ENDIF
+
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Twisted Stalks"
+
+  param stalk_width
+    caption = "Stalk Width Factor"
+    default = 0.1
+    hint = "Controls stalk width."
+  endparam
+
+  param stalk_iters
+    caption = "Stalk Iterations"
+    default = 100
+    hint = "Max. iterations to look for stalks."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2,125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+SquigglesColoring {
+  ; Paul W. Carlson
+  ; Coloring method extracted from "Squiggles_Julia".
+  ; By Ken Childress July 1999.
+init:
+  complex i = (0, 1)
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @width
+  float range_num = 0
+  int iter = 0
+  float color_index = 254
+  bool trapped = FALSE
+
+loop:
+  float a = abs(atan(imag(#z) / real(#z)))
+  float r = @Radius + @Amplitude * @Radius * sin(@Multiplier * a)
+  float rz = r * cos(a)
+  float iz = r * sin(a)
+  complex v = rz + i * iz
+  float dist = abs(|#z| - |v|)
+    
+  IF !trapped && (dist < @width) && (iter >= @skip)
+    trapped = TRUE
+    range_num = iter % num_ranges
+    color_index = index_factor * dist + range_num * colors_in_range
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+
+default:
+  title="Squiggles Coloring"
+
+  param width
+    caption = "Width Factor"
+    default = 0.03
+    hint = "Controls element width."
+  endparam
+
+  param Radius
+    caption = "Circle Radius"
+    default = 0.1
+    hint = "Controls circle radius."
+  endparam
+  
+  param Amplitude
+    caption = "Sin Wave Amplitude"
+    default = 0.1
+    hint = "Value must be less than 1.0."
+    min = 0.0
+    max = 1.0
+  endparam
+  
+  param Multiplier
+    caption = "Angle Multiplier"
+    default = 16
+    hint = "The value must be an integer."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2,125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+BlobsColoring {
+  ; Paul Carlson
+  ; Coloring Method extraced from "Blobs_Mandel".
+  ; By Ken Childress July 1999.  
+init:
+  bool trapped = FALSE
+  float range_num = 0
+  float r = @Radius * 0.4782926234762
+  float r2 = r * r
+  float icd = 1.12484444888696 * r
+  float ocd = 1.83195123007351 * r
+  float ic0 = 1.59077027517603 * r
+  float oc0 = 2.59077027517603 * r
+  float cen0 = 2.09077027517603 * r
+  float cend = 1.47839783948023 * r
+  complex i = (0.0,1.0)
+  complex c0i = i * ic0
+  complex c0o = i * oc0
+  complex c1i = icd + i * icd
+  complex c1o = ocd + i * ocd
+  complex c2i = ic0
+  complex c2o = oc0
+  complex c3i = icd - i * icd
+  complex c3o = ocd - i * ocd
+  complex c4i = -c0i
+  complex c4o = -c0o
+  complex c5i = -c1i
+  complex c5o = -c1o
+  complex c6i = -c2i
+  complex c6o = -c2o
+  complex c7i = -c3i
+  complex c7o = -c3o
+  complex c0cen = i * cen0
+  complex c1cen = cend + i * cend
+  complex c2cen = cen0
+  complex c3cen = cend - i * cend
+  complex c4cen = -c0cen
+  complex c5cen = -c1cen
+  complex c6cen = -c2cen
+  complex c7cen = -c3cen
+  float d = 0
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float color_index = 0
+  float index_factor = 0
+  float denom = @multiplier * r
+  int iter = 0
+
+loop:
+  IF !trapped && (iter >= @skip)
+    bool c1 = ((|#z - c0i| < r2) && (|#z - c0o| < r2))
+    bool c2 = ((|#z - c1i| < r2) && (|#z - c1o| < r2))
+    bool c3 = ((|#z - c2i| < r2) && (|#z - c2o| < r2))
+    bool c4 = ((|#z - c3i| < r2) && (|#z - c3o| < r2))
+    bool c5 = ((|#z - c4i| < r2) && (|#z - c4o| < r2))
+    bool c6 = ((|#z - c5i| < r2) && (|#z - c5o| < r2))
+    bool c7 = ((|#z - c6i| < r2) && (|#z - c6o| < r2))
+    bool c8 = ((|#z - c7i| < r2) && (|#z - c7o| < r2))
+    IF (c1)
+      trapped = TRUE
+      d = cabs(|#z| - |c0cen|)
+    ELSEIF (c2)
+      trapped = TRUE
+      d = cabs(|#z| - |c1cen|)
+    ELSEIF (c3)
+      trapped = TRUE
+      d = cabs(|#z| - |c2cen|)
+    ELSEIF (c4)
+      trapped = TRUE
+      d = cabs(|#z| - |c3cen|)
+    ELSEIF (c5)
+      trapped = TRUE
+      d = cabs(|#z| - |c4cen|)
+    ELSEIF (c6)
+      trapped = TRUE
+      d = cabs(|#z| - |c5cen|)
+    ELSEIF (c7)
+      trapped = TRUE
+      d = cabs(|#z| - |c6cen|)
+    ELSEIF (c8)
+      trapped = TRUE
+      d = cabs(|#z| - |c7cen|)
+    ENDIF
+    
+    IF trapped
+      range_num = iter % num_ranges
+      index_factor = (colors_in_range - 1) * (d /denom)^@power
+      color_index = index_factor + range_num * colors_in_range
+    ENDIF
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+    
+default:
+  title = "Blobs Coloring"
+
+  param Radius
+    caption = "Circle radius"
+    default = 0.18
+    hint = "Controls blob width."
+  endparam
+
+  param power
+    caption = "Color factor exponent"
+    default = 0.5
+    hint = "Color factor exponent."
+  endparam
+
+  param multiplier
+    caption = "Color factor multiplier"
+    default = 0.5
+    hint = "Color factor multiplier."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2, 125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+StarofDavidTrap {
+  ; Paul Carlson
+  ; Coloring Method extraced from "StarOfDavidMandel".
+  ; By Ken Childress July 1999.  
+init:
+  bool trapped = FALSE
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float halfside = 1.73205080756888 * @Radius
+  float range_num = 0
+  float dist = 0
+  float range = 0
+  float color_index = 0
+  float index_factor = colors_in_range - 1
+  int iter = 0
+
+loop:
+  IF !trapped && (iter >= @skip)
+    ;Compute all the distances    
+    float rz = real(#z)
+    float iz = imag(#z)
+    float d2 = abs(iz + @Radius)
+    float d4 = abs(iz - @Radius)
+    float d1 = abs( 0.866025403784439 * rz + 0.5 * iz - @Radius)
+    float d3 = abs(-0.866025403784439 * rz + 0.5 * iz - @Radius)
+    float d5 = abs( 0.866025403784439 * rz - 0.5 * iz - @Radius)
+    float d6 = abs(-0.866025403784439 * rz - 0.5 * iz - @Radius)
+
+    ;Check line 1
+    IF (d1 < @Width)
+      range = 0
+      IF (d2 < @Width)
+        trapped = TRUE
+        IF (d1 <= d2)
+          float dist = d1
+          IF (iz <= -@Radius)
+            dist = d2
+          ENDIF
+        ELSE
+          dist = d2
+          IF (rz >= halfside)
+            dist = d1
+          ENDIF
+        ENDIF
+      ELSEIF (d3 < @Width)
+        trapped = TRUE
+        IF (d1 <= d3)
+          dist = d1
+          IF (rz <= 0.0)
+            dist = d3
+          ENDIF
+        ELSE
+          dist = d3
+          IF (rz > 0.0)
+            dist = d1
+          ENDIF
+        ENDIF
+      ELSEIF (d4 < @Width)
+        trapped = TRUE
+        IF (d1 <= d4)
+          dist = d1
+        ELSE
+          dist = d4
+          range = 1
+        ENDIF
+      ELSEIF (d5 < @Width)
+        trapped = TRUE
+        IF (d1 <= d5)
+          dist = d1
+        ELSE
+          dist = d5
+          range = 1
+        ENDIF
+      ELSEIF (rz >= 0.0 && iz >= -@Radius)
+        trapped = TRUE
+        dist = d1
+      ENDIF
+    ENDIF
+
+    ;Check line 2
+    IF (d2 < @Width && !trapped)
+      range = 0
+      IF (d3 < @Width)
+        trapped = TRUE
+        IF (d2 <= d3)
+          dist = d2
+          IF (rz <= -halfside)
+            dist = d3
+          ENDIF
+        ELSE
+          dist = d3
+          IF (iz <= -@Radius)
+            dist = d2
+          ENDIF
+        ENDIF
+      ELSEIF (d5 < @Width)
+        trapped = TRUE
+        IF (d2 <= d5)
+          dist = d2
+        ELSE
+          dist = d5
+          range = 1
+        ENDIF
+      ELSEIF (d6 < @Width)
+        trapped = TRUE
+        IF (d2 <= d6)
+          dist = d2
+        ELSE
+          dist = d6
+          range = 1
+        ENDIF
+      ELSEIF (abs(rz) <= halfside)
+        trapped = TRUE
+        dist = d2
+      ENDIF
+    ENDIF
+ 
+    ;Check line 3
+    IF (d3 < @Width && !trapped)
+      range = 0
+      IF (d4 < @Width)
+        trapped = TRUE
+        IF (d3 <= d4)
+          dist = d3
+        ELSE
+          dist = d4
+          range = 1
+        ENDIF
+      ELSEIF (d6 < @Width)
+        trapped = TRUE
+        IF (d3 <= d6)
+          dist = d3
+        ELSE
+          dist = d6
+          range = 1
+        ENDIF
+      ELSEIF (rz <= 0.0 && iz >= -@Radius)
+        trapped = TRUE
+        dist = d3
+      ENDIF
+    ENDIF
+ 
+    ;Check line 4
+    IF (d4 < @Width && !trapped)
+      range = 1
+      IF (d5 < @Width)
+        trapped = TRUE
+        IF (d4 <= d5)
+          dist = d4
+          IF (rz >= halfside)
+            dist = d5
+          ENDIF
+        ELSE
+          dist = d5
+          IF (iz >= @Radius)
+            dist = d4
+          ENDIF
+        ENDIF
+      ELSEIF (d6 < @Width)
+        trapped = TRUE
+        IF (d4 <= d6)
+          dist = d4
+          IF (rz <= -halfside)
+            dist = d6
+          ENDIF
+        ELSE
+          dist = d6
+          IF (iz >= @Radius)
+            dist = d4
+          ENDIF
+        ENDIF
+      ELSEIF (abs(rz) <= halfside)
+        trapped = TRUE
+        dist = d4
+      ENDIF
+    ENDIF
+ 
+    ;Check line 5
+    IF (d5 < @Width && !trapped)
+      range = 1
+      IF (d6 < @Width)
+        trapped = TRUE
+        IF (d5 <= d6)
+          dist = d5
+          IF (rz <= 0.0)
+            dist = d6
+          ENDIF
+        ELSE
+          dist = d6
+          IF (rz > 0.0)
+            dist = d5
+          ENDIF
+        ENDIF
+      ELSEIF (rz >= 0.0 && iz <= @Radius)
+        trapped = TRUE
+        dist = d5
+      ENDIF
+    ENDIF
+
+    ;Check line 6
+    IF (d6 < @Width && !trapped)
+      range = 1
+      IF (rz <= 0.0 && iz <= @Radius)
+        trapped = TRUE
+        dist = d6
+      ENDIF
+    ENDIF
+
+    IF (trapped)
+      IF num_ranges == 2
+        ; If the number of ranges is two, then set range_num per
+        ; the original formula.
+        range_num = range
+      ELSE
+        ; If not, then set range_num to account for more color ranges.
+        range_num = (iter + range) % num_ranges
+      ENDIF
+      color_index = index_factor * dist / @width + range_num * colors_in_range    
+    ENDIF
+  ENDIF
+  
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+    
+default:
+  title = "Star of David Trap"
+
+  param Radius
+    caption = "Radius of Inscribed Circle"
+    default = 0.1
+    hint = "Controls the size of the star."
+  endparam
+
+  param Width
+    caption = "Element Width"
+    default = 0.02
+    hint = "Controls the element width."
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2, 125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+CurlsTrap {
+  ; Paul Carlson
+  ; Coloring Method extraced from "MyEqn_Julia_Curls".
+  ; By Ken Childress July 1999.  
+init:
+  bool trapped = FALSE
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float cx = 8.0 * #pi * @alpha
+  float twopi = #pi + #pi
+  float fourpi = twopi + twopi
+  float sixpi = fourpi + twopi
+  float range_num = 0
+  float color_index = 0
+  float index_factor = colors_in_range - 1
+  int iter = 0
+
+loop:
+  IF !trapped && (iter >= @skip)
+    float rz = real(#z)
+    float iz = imag(#z)
+    float deltax = rz - cx
+    complex v = deltax + flip(iz)
+    float theta = atan2(v)
+    
+    IF (@beads > 0)
+      float ssize = @width * abs(sin(theta * @beads))
+    ELSE
+      ssize = @width
+    ENDIF
+    
+    float sr = @alpha * theta
+    complex m =  cx + sr * exp(flip(theta))
+    float dist = sqrt(|#z - m|)
+    
+    IF (dist < ssize)
+      trapped = TRUE
+    ENDIF
+    
+    IF (!trapped)
+      sr = @alpha * (theta + twopi)
+      m =  cx + sr * exp(flip (theta + twopi))
+      dist = sqrt(|#z - m|)
+      
+      IF (dist < ssize)
+        trapped = TRUE
+      ENDIF
+    ENDIF
+    
+    IF (!trapped)
+      sr = @alpha * (theta + fourpi)
+      m = cx + sr * exp(flip (theta + fourpi))
+      dist = sqrt(|#z - m|)
+      
+      IF (dist < ssize)
+        trapped = TRUE
+      ENDIF
+    ENDIF
+    
+    IF (!trapped)
+      sr = @alpha * (theta + sixpi)
+      m = cx + sr * exp(flip (theta + sixpi))
+      dist = sqrt(|#z - m|)
+      
+      IF (dist < ssize)
+        trapped = TRUE
+      ENDIF
+    ENDIF
+    
+    IF (trapped)
+      index_factor = (colors_in_range - 1) / ssize
+      range_num = iter % num_ranges
+      color_index = index_factor * dist + range_num * colors_in_range
+    ENDIF
+  ENDIF
+
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+    
+default:
+  title = "Curls Trap"
+
+  param alpha
+    caption = "Angle Multiplier"
+    default = 0.3
+    hint = "Controls spiral size."
+  endparam
+
+  param width
+    caption = "Width Factor"
+    default = 0.3
+    hint = "Controls spiral thickness."
+  endparam
+
+  param Beads
+    caption = "Bead factor"
+    default = -1
+    hint = "An integer, usually 5 to 30"
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2, 125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+HypocycloidTrap {
+  ; Paul Carlson
+  ; Coloring Method extraced from "HNspirJ2".
+  ; By Ken Childress July 1999.  
+init:
+  bool trapped = FALSE
+  float range_num = 0
+  float num_ranges = real(@RangesColors)
+  float colors_in_range = imag(@RangesColors)
+  float index_factor = (colors_in_range - 1) / @width
+  float color_index = 0
+  int iter = 0
+  complex i = (0,1)
+  complex k = 0
+  complex angle = 0
+  complex ka = 0
+  complex rz = 0
+  complex iz = 0
+  complex v = 0
+  float dist = 0
+
+loop:
+  IF !trapped && (iter >= @skip)
+    angle = atan(imag(#z) / real(#z))
+    k = 1.2 - @hfactor
+    ka = k * angle / @hfactor
+    rz = k * cos(angle) + @hfactor * cos(ka)
+    iz = k * sin(angle) + @hfactor * sin(ka)
+    v = rz + i * iz
+    dist = abs(|#z| - |v|)
+    
+    IF (dist < @width && iter >= @skip)
+      trapped = TRUE
+      range_num = iter % num_ranges
+      color_index = index_factor * dist +  range_num * colors_in_range
+    ENDIF
+    
+  ENDIF
+
+  iter = iter + 1
+
+final:
+  IF trapped
+    #index = ((real(color_index)+1) % 256) / 256 + @randomness * real(#random)
+  ELSE
+    IF @solid
+      #solid = TRUE
+    ELSE
+      #index = @back_color / 256
+    ENDIF
+  ENDIF
+    
+default:
+  title = "Hypocycloid Trap"
+
+  param width
+    caption = "Stalk Width Factor"
+    default = 0.03
+    hint = "Controls stalk width."
+  endparam
+
+  param hfactor
+    caption = "Hypocycloid Factor"
+    default = 0.4
+    hint = "Hypocycloid Factor."
+  endparam
+    
+  param skip
+    caption = "Iterations to skip"
+    default = 0
+    hint = "Iterations to skip."
+  endparam
+
+  param RangesColors
+    caption = "Ranges and Colors"
+    default = (2, 125)
+    hint = "Number of Color Ranges and Number of Colors in each Range."
+  endparam
+
+  param back_color
+    caption = "Background Color"
+    hint = "This is the color used for orbits that aren't trapped. It has \
+           no effect if the background is solid."
+    default = 254
+    min = 0
+    max = 255
+  endparam
+
+  param solid
+    caption = "Solid Background"
+    hint = "If this is enabled orbits that aren't trapped become solid."
+    default = false
+  endparam
+  
+  param randomness
+    caption = "Random Texture"
+    default = 0.0
+    hint = "This adds a random texture to the coloring."
+  endparam
+}
+
+

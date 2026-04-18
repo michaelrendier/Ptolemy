@@ -1,0 +1,359 @@
+mhb-ExpSmoothConvergeAdjust {
+;
+; Experiment in adding factors
+; to exponential smoothing so
+; the gradient remains constant
+; when maxiter changes
+;
+init:
+ float sum2 = 0.0
+ complex zold = (0,0)
+ float adjust = 1/#maxiter
+
+loop:
+ sum2 = sum2 + adjust * (exp(-1/cabs(zold-#z)))
+ zold = #z
+
+final:
+ #index = sum2
+
+default:
+ title = "Iteration-Normalized Exponential Smoothing (Convergent)"
+}
+
+ExponentialSmoothingNormalized {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Written by Damien M. Jones, Modified by Dan Wills based on an idea by Morgen Bell
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+  float adjust = 1/#maxiter * @adjustFactor
+  
+loop:
+  IF (@diverge)
+    sum = sum + adjust * exp(-cabs(#z))
+  ENDIF
+  IF (@converge)
+    sum2 = sum2 + adjust * exp(-1/cabs(zold-#z))
+  ENDIF
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = sum2
+    ELSE
+      #index = 0
+    ENDIF
+    
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = sum
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+  
+default:
+  title = "Exponential Smoothing Normalized"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+
+  param diverge
+    caption = "Color Divergent"
+    default = FALSE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  param adjustFactor
+    caption = "Iteration Adjustment Factor"
+    default = 1.0
+    hint = "This is an additional scale for the normalization to allow some further fine tuning."
+  endparam
+}
+
+ExponentialSmoothingNormalizedSkip {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Written by Damien M. Jones, Modified by Dan Wills based on an idea by Morgen Bell, 
+; Added iteration-skipping code from an idea by Sam Monnier.
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+  float adjust = 1/#maxiter * @adjustFactor
+  int iter = 0
+loop:
+  IF (( iter + @offset ) % (@skip+1) == 0)
+    IF (@diverge)
+      sum = sum + adjust * exp(-cabs(#z))
+    ENDIF
+    IF (@converge)
+      sum2 = sum2 + adjust * exp(-1/cabs(zold-#z))
+    ENDIF
+  ENDIF
+  iter = iter + 1
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+	  IF (@skip > 1)
+	  	sum2 = sum2 * @skip
+	  ENDIF
+      #index = sum2
+    ELSE
+      #index = 0
+    ENDIF
+    
+  ELSE				; divergent bailout.
+    IF (@diverge)
+	  IF (@skip > 1)
+	  	sum = sum * @skip
+	  ENDIF
+      #index = sum
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+  
+default:
+  title = "Exp. Smooth Normalized Skipping"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+
+  param diverge
+    caption = "Color Divergent"
+    default = TRUE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+  
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  
+  param adjustFactor
+    caption = "Iteration Adjustment Factor"
+    default = 1.0
+    hint = "This is an additional scale for the normalization to allow some further fine tuning."
+  endparam
+  
+  int param skip
+    caption="skip iterations"
+    default=0
+  endparam
+  
+  int param offset
+    caption="skip offset"
+    default=0
+  endparam
+}
+
+ExponentialSmoothingNormalizedWeights {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Written by Damien M. Jones, Modified by Dan Wills based on an idea by Morgen Bell, 
+; Added iteration-skipping code from an idea by Sam Monnier.
+; Added iteration weighting idea.
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+  float adjust = 1/#maxiter * @adjustFactor
+  int iter = 0
+loop:
+  float itre = iter
+  float cosValue = ( cos( (itre / #maxiter) * #pi * 2.0 * @cosFreq + @cosPhase) + @cosAdd ) * @cosAmp
+  IF (( iter + @offset ) % (@skip+1) == 0)
+    IF (@diverge)
+      sum = sum + adjust * exp(-cabs(#z)) * cosValue
+    ENDIF
+    IF (@converge)
+      sum2 = sum2 + adjust * exp(-1/cabs(zold-#z)) * cosValue
+    ENDIF
+  ENDIF
+  iter = iter + 1
+  zold = #z
+
+final:
+  
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = sum2
+    ELSE
+      #index = 0
+    ENDIF
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = sum
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+  
+default:
+  title = "Exp. Smooth Normalized Weights"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+
+  param diverge
+    caption = "Color Divergent"
+    default = TRUE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+  
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  
+  param adjustFactor
+    caption = "Iteration Adjustment Factor"
+    default = 1.0
+    hint = "This is an additional scale for the normalization to allow some further fine tuning."
+  endparam
+  
+  int param skip
+    caption="Skip Iterations"
+    default=0
+  endparam
+  
+  int param offset
+    caption="Skip Offset"
+    default=0
+  endparam
+  
+  float param cosFreq
+    caption="Cosine Frequency"
+    default=0.0
+  endparam
+  
+  float param cosPhase
+    caption="Cosine Phase"
+    default=0.0
+  endparam
+  
+  float param cosAmp
+    caption="Cosine Amp"
+    default=1.0
+  endparam
+  
+  float param cosAdd
+    caption="Cosine Add"
+    default=0.0
+  endparam
+}
+
+TriangleSkippingWeights {
+;
+; Variation on the Triangle Inequality Average coloring method 
+; from Kerry Mitchell. The smoothing used here is based on the
+; Smooth formula, which only works for z^n+c and derivates.
+;
+; Written by Damien M. Jones, Skipping code added by Dan Wills
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  float ac = cabs(#pixel)
+  float il = 1/log(@power)
+  float lp = log(log(@bailout)/2.0)
+  float az2 = 0.0
+  float lowbound = 0.0
+  float f = 0.0
+  BOOL first = true
+  int iter = 0
+loop:
+  sum2 = sum
+  float itre = iter
+  float cosValue = cos( (itre / #maxiter) * #pi * 2.0 * @cosFreq + @cosPhase)
+  IF (!first)
+    IF (( iter + @offset ) % (@skip+1) == 0)
+      az2 = cabs(#z - #pixel)
+      lowbound = abs(az2 - ac)
+      sum = sum + ((cabs(#z) - lowbound) / (az2+ac - lowbound)) * cosValue
+    ENDIF
+  ELSE
+    first = false
+  ENDIF
+  iter = iter + 1
+final:
+  sum = sum / (#numiter)
+  sum2 = sum2 / (#numiter-1)
+  f = il*lp - il*log(log(cabs(#z)))
+  #index = sum2 + (sum-sum2) * (f+1)  
+default:
+  title = "TIA Skipping Weights"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/triangleinequalityaverage.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. Use a very high value for good results."
+  endparam
+  int param skip
+    caption="Skip Iterations"
+    default=0
+  endparam
+  
+  int param offset
+    caption="Skip Offset"
+    default=0
+  endparam
+  
+  float param cosFreq
+    caption="Cosine Frequency"
+    default=0.0
+  endparam
+  
+  float param cosPhase
+    caption="Cosine Phase"
+    default=0.0
+  endparam
+}

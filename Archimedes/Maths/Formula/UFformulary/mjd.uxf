@@ -1,0 +1,810 @@
+mjd_pipe { ;20000401
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Update: 20000420
+; - Added rotation param -- kept old for compatibility (renamed to pipe rotation)
+; Update: 20000422
+; - Added reflection modes Mirror and Repeatedly
+;
+transform:
+  complex c=#pixel
+  float wasang=0
+  float wasr=0
+
+  if @reflection=="Sinusoidal"
+    wasang=sin((atan2(c) + @rot*#pi/180)*@num)
+    wasr=sin(#pi/cabs(c))
+  elseif @reflection=="Mirror"
+    wasang=abs((atan2(c) + @rot*#pi/180)/#pi*@num+1)%2-.5
+    if wasang>.5
+      wasang=1-wasang
+    endif
+    wasang=wasang
+    wasr=(1/cabs(c))%2-.5
+    if wasr>.5
+      wasr=1-wasr
+    endif
+  elseif @reflection=="Repeatedly"
+    wasang=((atan2(c) + @rot*#pi/180)/#pi*@num)%1-.5
+    if wasang<-.5
+      wasang=wasang+1
+    endif
+    wasr=(1/cabs(c))%1-.5
+  endif
+
+  complex newpix=wasr + flip(wasang)
+  #pixel=newpix/@mag*(0,1)^(@rot2/90)+@center
+default:
+  title="mjd Pipe"
+  param reflection
+    caption="Reflection mode"
+    enum="Sinusoidal""Mirror""Repeatedly"
+    default=0
+  endparam
+  param num
+    caption="Number of tracks"
+    default=2
+    min=1
+  endparam
+  param center
+    caption="Fractal center"
+    default=(0,0)
+  endparam
+  param mag
+    caption="Fracatal magnitude"
+    default=(1,0)
+  endparam
+  param rot2
+    caption="Fractal rotation"
+    default=0.0
+  endparam
+  param rot
+    caption="Pipe Rotation"
+    default=0.0
+    hint="Rotation of the pipe"
+  endparam
+}
+
+;##############################################################################
+
+mjdSkew { ;20000417
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+transform:
+  complex r=(0,1)^(@rotation/90)
+  float y=imag((#pixel/#magn-#center)*r)*@frequency/2
+  float xshift=@amp
+  if @mode==0
+    xshift=xshift*sin(y)
+  elseif @mode==1
+    xshift=xshift*abs(y)^2
+  elseif @mode==2
+    y=abs(y/6)
+    xshift=xshift*(asin(y-1)+sin(y*3)/(1+y^16))/2
+  endif
+  #pixel=#pixel+xshift/r
+default:
+  title="mjd Skew"
+  param mode
+    caption="Mode"
+    enum="sinusoidal""quadratic""Heart"
+    default=0
+  endparam
+
+  param frequency
+    caption="Frequency"
+    default=3
+  endparam
+  param amp
+    caption="Amplitude"
+    default=.5
+  endparam
+  param rotation
+    caption="Rotation"
+    default=.0
+  endparam
+  param use
+    caption="Use screen center&mag ?"
+    default=false
+  endparam
+}
+
+;##############################################################################
+
+mjdQuadlinear { ;20000419
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; This transform stretches the picture, so that
+; the corner parameters are fixed to the
+; corners of the square (-1,-1)(1,1) on the
+; standard complex plane. When initializing,
+; turn on bounds, point every corner to a spot
+; in the picture using the eyedropper, then
+; turn off the bounds and the specified points
+; on the picture *will* fit in the square. No
+; matter how weird your points are chosen.
+; Zoom out to see all the points outside the
+; square. Sometimes it's very strange out there.
+transform:
+  complex p=#pixel+#center
+  if @see=="no"  ;###calculate transform
+    float l=real(#center)-1
+    float b=imag(#center)-1
+
+    float x=(real(p)-l)/2
+    float y=(imag(p)-b)/2
+
+    float u1=real(@tl)-(real(@tl)-real(@tr))*x
+    float v1=imag(@tl)-(imag(@tl)-imag(@tr))*x
+    float u2=real(@bl)-(real(@bl)-real(@br))*x
+    float v2=imag(@bl)-(imag(@bl)-imag(@br))*x
+    #pixel=u2-(u2-u1)*y+flip(v2-(v2-v1)*y)
+  else    ;###calculate bounds
+    float a=0
+    float b=0
+    float c=0
+    float r=.05/#magn
+    float rr=r*2
+    float r1=0
+    float r2=0
+    float r3=0
+    float r4=0
+
+    a=|@tr-@tl|
+    b=|@tl-#pixel|
+    c=sqrt(b)
+    r1=(a+b-|@tr-#pixel|)/sqrt(a)/c
+    r1=sqrt(4-r1^2)*c
+
+    a=|@br-@tr|
+    b=|@tr-#pixel|
+    c=sqrt(b)
+    r2=(a+b-|@br-#pixel|)/sqrt(a)/c
+    r2=sqrt(4-r2^2)*c
+
+    a=|@bl-@br|
+    b=|@br-#pixel|
+    c=sqrt(b)
+    r3=(a+b-|@bl-#pixel|)/sqrt(a)/c
+    r3=sqrt(4-r3^2)*c
+
+    a=|@tl-@bl|
+    b=|@bl-#pixel|
+    c=sqrt(b)
+    r4=(a+b-|@tl-#pixel|)/sqrt(a)/c
+    r4=sqrt(4-r4^2)*c
+
+    float r5=cabs(#pixel-@tl)
+    float r6=cabs(#pixel-@tr)
+    float r7=cabs(#pixel-@br)
+    float r8=cabs(#pixel-@bl)
+
+    if (r1<r)||(r2<r)||(r3<r)||(r4<r)||(r5<rr)||(r6<rr)||(r7<rr)||(r8<rr)
+      #solid=true
+    endif
+  endif
+default:
+  title="mjd Quadlinear"
+  param see
+    Caption="See bounds?"
+    enum="no""yes"
+    default=0
+  endparam
+  param tl
+    caption="Top left corner"
+    default=(-1.5,1)
+  endparam
+  param tr
+    caption="Top right corner"
+    default=(.5,.5)
+  endparam
+  param br
+    caption="Bottom right corner"
+    default=(0,-1)
+  endparam
+  param bl
+    caption="Bottom left corner"
+    default=(-.5,.25)
+  endparam
+}
+
+;##############################################################################
+
+mjdQuadrant { ;20000424
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+transform:
+  if @use ;use screen center
+    complex c=#center
+  else  ;use center from parameter
+    complex c=@center
+  endif
+
+  ;angle correction
+  if @correct
+    complex ang=exp(flip(#angle))
+    c=c/ang
+    complex p=#pixel/ang
+  else
+    complex p=#pixel
+  endif
+
+  bool ifright=real(p)>=real(c)
+  bool iftop=imag(p)>=imag(c)
+
+  if @mode=="Upper-left"
+    #solid=!iftop||ifright
+  elseif @mode=="Upper-right"
+    #solid=!iftop||!ifright
+  elseif @mode=="Lower-left"
+    #solid=iftop||ifright
+  elseif @mode=="Lower-right"
+    #solid=iftop||!ifright
+  elseif @mode=="Not upper-left"
+    #solid=iftop&&!ifright
+  elseif @mode=="Not upper-right"
+    #solid=iftop&&ifright
+  elseif @mode=="Not lower-left"
+    #solid=!iftop&&!ifright
+  elseif @mode=="Not lower-right"
+    #solid=!iftop&&ifright
+  elseif @mode=="Left"
+    #solid=ifright
+  elseif @mode=="Right"
+    #solid=!ifright
+  elseif @mode=="Top"
+    #solid=!iftop
+  elseif @mode=="Bottom"
+    #solid=iftop
+  elseif @mode=="Slash"
+    #solid=iftop!=ifright
+  elseif @mode=="Backshash"
+    #solid=iftop==ifright
+  endif
+default:
+  title="mjd Quadrant"
+  param mode
+    caption="Quadrant(s)"
+    enum="Upper-left""Upper-right""Lower-left""Lower-right"\
+    "Not upper-left""Not upper-right""Not lower-left"\
+    "Not lower-right""Left""Right""Top""Bottom""Slash""Backshash"
+    default=0
+  endparam
+  param use
+    caption="Use screen center"
+    default=true
+    hint="If checked, the center will be the \
+      screen's center. Not the center param."
+  endparam
+  param center
+    caption="Center"
+    default=(0,0)
+    hint="Defines the center of the quadrant origin"
+  endparam
+  param correct
+    caption="Correct angle?"
+    default=false
+    hint="If checked, the quadrants will always be straight, instead of rotating with the fractal"
+  endparam
+}
+
+;##############################################################################
+
+mjdAdvancedGrid { ;20000424
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+transform:
+  complex c=(@fn3(@fn2(@fn1(#pixel-@center)))*@magn-@offset)/(0,1)^(@rot/90)
+
+  if @randomedge>0
+    complex r=(#rand-(.5,.5))*@width*@randomedge
+    float x=abs(real(c)/@space+real(r))%1
+    float y=abs(imag(c)/@space+imag(r))%1
+  else
+    float x=abs(real(c)/@space)%1
+    float y=abs(imag(c)/@space)%1
+  endif
+
+  float w=@width
+  float w1=1-w
+
+  if x<w || y<w || x>w1 || y>w1
+    if @randomcol>0
+      c=#rand
+      if @emboss==0 ;none
+        bool criteria=false
+      elseif @emboss==1 ;x
+        bool criteria=real(c)<@dither
+        c=real(c)
+      elseif @emboss==2 ;y
+        bool criteria=imag(c)<@dither
+        c=imag(c)
+      else ;x and y
+        bool criteria=real(c)<@dither || imag(c)<@dither
+      endif
+      if criteria
+        #solid=true
+      else
+        if @bugfix
+          #pixel=#pixel+c*@randomcol
+        else
+          #pixel=#pixel+c*@randomcol/#magn
+        endif
+      endif
+
+    else
+      #solid=true
+    endif
+  endif
+default:
+  title="mjd Advanced grid"
+  param space
+    caption="Grid spacing"
+    default=1.0
+  endparam
+  param magn
+    caption="Grid scale"
+    default=1.0
+  endparam
+  param rot
+    caption="Grid rotation"
+    default=.0
+  endparam
+  param center
+    caption="Grid center"
+    default=(0,0)
+    hint="move before making grid"
+  endparam
+  param offset
+    caption="Grid offset"
+    default=(0,0)
+    hint="move after making grid"
+  endparam
+  param width
+    caption="Line width"
+    default=.05
+  endparam
+  param randomedge
+    caption="Rand. edge factor"
+    default=0.0
+    min=0
+  endparam
+  param randomcol
+    caption="Embossing radius"
+    default=0.0
+    min=0
+  endparam
+  param dither
+    caption="Emboss shadow"
+    default=.5
+    min=0
+    max=1
+  endparam
+  param emboss
+    caption="Embossing Mode"
+    enum="Off""Real""Imaginary""Real and imaginary"
+    default=1
+    min=0
+  endparam
+  param bugfix
+    caption="Fix emboss bug"
+    default=false
+    hint="Bug: accidentally magnifying the embossing \
+      radius by fractal magnitude"
+  endparam
+
+
+  func fn1
+    caption="Function 1"
+    default=ident()
+  endfunc
+  func fn2
+    caption="Function 2"
+    default=ident()
+  endfunc
+  func fn3
+    caption="Function 3"
+    default=ident()
+  endfunc
+}
+
+;##############################################################################
+
+mjdMap { ;20040102
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+;
+; Creates a small map in a corner showing the fractal centered and unzoomed
+transform:
+  int x=#x
+  int y=#y
+  int x2=round(#width*@size)
+  int y2=round(#height*@size)
+
+  float xc
+  if @quadrant==1 || @quadrant==3
+    x=x-(#width-x2)
+    xc=#width-x2/2
+  else
+    xc=x2/2
+  endif
+
+  float yc
+  if @quadrant==2 || @quadrant==3
+    y=y-(#height-y2)
+    yc=#height-y2/2
+  else
+    yc=y2/2
+  endif
+
+  float magn
+  if @domagn
+    magn=@magn*#magn
+  else
+    magn=@magn
+  endif
+
+  if x>=0 && y>=0 && x<=x2 && y<=y2
+    if x>0 && y>0 && x<x2 && y<y2
+      if @crosshair
+        int x3=floor(x2/2)
+        int y3=floor(y2/2)
+        if (x==x3 || y==y3) && abs(x+y-x3-y3)>10
+          #solid=true
+        else
+           if @docenter
+            #pixel=conj(#screenpixel-xc-flip(yc))*exp(flip(#angle)) \
+              /#width/@size*4/magn+#center
+          else
+            #pixel=(#screenpixel-xc-flip(yc))*exp(flip(-#angle))/#width \
+              /@size*4/magn+@center
+          endif
+        endif
+      else
+         if @docenter
+          #pixel=conj(#screenpixel-xc-flip(yc))*exp(flip(#angle)) \
+            /#width/@size*4*magn+#center
+        else
+          #pixel=(#screenpixel-xc-flip(yc))*exp(flip(-#angle)) \
+            /#width/@size*4*magn+@center
+        endif
+      endif
+    else
+      #solid=true
+    endif
+  endif
+default:
+  title="mjd Map"
+  param size
+    caption="Size to screen"
+    default=0.25
+    min=0.001
+  endparam
+  param domagn
+    caption="Use relative magnitude"
+    default=false
+  endparam
+  param magn
+    caption = "Magnitude"
+    default=1.0
+    min=0.0
+  endparam
+  param docenter
+    caption="Use location tab center"
+    default=true
+  endparam
+  param center
+    caption = "Center"
+    default=(0,0)
+  endparam
+  param quadrant
+    caption = "Quadrant"
+    enum = "Upper left" "Upper right" "Lower left" "Lower right"
+    default=0
+  endparam
+  param crosshair
+    caption = "Crosshair"
+    default=false
+  endparam
+}
+
+;##############################################################################
+
+mjdScreens { ;20040104
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+;
+; Draws a mosaic of a fractal with increasing or decreasing zoom factors
+global:
+  float sizex=#width/@numx
+  float sizey=#height/@numy
+  bool aspect = sizex<sizey/0.75
+
+  int linesx[@numx]
+  int linesy[@numy]
+
+  linesx[0]=-1
+  linesy[0]=-1
+
+  int i=1
+  int j=1
+  while i<@numx
+    linesx[i] = round(sizex*i)
+    i=i+1
+  endwhile
+  while j<@numy
+    linesy[j] = round(sizey*j)
+    j=j+1
+  endwhile
+
+  complex centers[@numx, @numy]
+  j=0
+  repeat
+    i=0
+    repeat
+      centers[i,j] = round(sizex*(i+0.5)) + flip(round(sizey*(j+0.5)))
+      i=i+1
+    until i==@numx
+    j=j+1
+  until j==@numy
+
+  float zoom
+  int indexnot
+  if @zoom<1
+    zoom=@zoom*0.5
+     indexnot=0
+  else
+    zoom=0.5/@zoom
+    indexnot=@numx*@numy-1
+  endif
+  
+  int zoomboxx1[@numx*@numy]
+  int zoomboxy1[@numx*@numy]
+  int zoomboxx2[@numx*@numy]
+  int zoomboxy2[@numx*@numy]
+  
+  j=0
+  repeat
+    i=0
+    repeat
+      zoomboxx1[i+j*@numx]=round(real(centers[i,j])-sizex*zoom)
+      zoomboxy1[i+j*@numx]=round(imag(centers[i,j])-sizey*zoom)
+      zoomboxx2[i+j*@numx]=round(real(centers[i,j])+sizex*zoom)
+      zoomboxy2[i+j*@numx]=round(imag(centers[i,j])+sizey*zoom)
+      i=i+1
+    until i==@numx
+    j=j+1
+  until j==@numy
+  
+  zoomboxx1[indexnot]=-1
+  zoomboxy1[indexnot]=-1
+  zoomboxx2[indexnot]=-1
+  zoomboxy2[indexnot]=-1
+ 
+transform:
+  int indexx=floor(#x/sizex)
+  int indexy=floor(#y/sizey)
+  int indexnum=indexx+indexy*@numx
+  
+  complex c = conj(#screenpixel-centers[indexx,indexy])
+  if aspect
+    c=c/sizex/@zoom^indexnum*4
+  else
+    c=c/sizey/@zoom^indexnum*3
+  endif
+  
+  #pixel=(c/#magn+#center)*exp(flip(#angle))
+  
+  if (#x==linesx[indexx] || #y==linesy[indexy]) && @grid
+    #solid=true
+  endif
+
+  if (#x>=zoomboxx1[indexnum] && #x<=zoomboxx2[indexnum] \
+  && #y>=zoomboxy1[indexnum] && #y<=zoomboxy2[indexnum]) \
+  && (#x<=zoomboxx1[indexnum] || #x>=zoomboxx2[indexnum] \
+  || #y<=zoomboxy1[indexnum] || #y>=zoomboxy2[indexnum]) && @zoombox
+    #solid=true
+  endif
+default:
+  title="mjd Screens"
+  param numx
+    caption="Screens horizontal"
+    default=4
+    min=1
+  endparam
+  param numy
+    caption="Screens vertical"
+    default=4
+    min=1
+  endparam
+  param zoom
+    caption="Zoom per screen"
+    default=0.6
+    min=0.001
+  endparam
+  param grid
+    caption="Show grid"
+    default=true
+  endparam
+  param zoombox
+    caption="Show zoombox"
+    default=true
+  endparam
+}
+
+;##############################################################################
+
+mjdFunction { ;20040105
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+transform:
+  #pixel=(@fn1(#pixel)+@center)*@wet + #pixel*(1-@wet)
+default:
+  title="mjd Function"
+  func fn1
+    caption = "Function"
+    default=exp()
+  endfunc
+  param center
+    caption="Center"
+    default=(.3,.1)
+  endparam
+  param wet
+    caption="dry/wet"
+    default=1.0
+  endparam
+}
+
+mjdDecompositionTiling {
+ ;20040307
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+global:
+  complex il = 1/log(@power)    ; Inverse log (power).
+  float lp = log(log(@bailout))    ; log(log bailout).
+transform:
+  complex z
+  complex c
+  if @type=="Mandel"
+    z = (0, 0)
+    c = #pixel
+  else
+    z = #pixel
+    c = @seed
+  endif  
+
+  int i=0
+  while i < @maxiter && |z| < @bailout
+    z=z^2+c
+    i = i + 1
+  endwhile
+  
+  if i == @maxiter
+    #solid=true
+  else
+    float r = (real(il * lp - il * log(log(cabs(z))))^real(@factor) - 0.5) \
+     * @tiley
+    float a = atan2(z) / #pi * -0.5 * @tilex
+    #pixel = a+flip(r) + @tilecenter
+  endif
+default:
+  title = "mjd Decomposition tiling"
+
+  param type
+    caption = "Formula type"
+    enum = "Mandel" "Julia"
+  endparam
+  param maxiter
+    caption = "Maximum iterations"
+    default = 150
+  endparam
+  heading
+    caption = "Fractal properties"
+  endheading
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    visible = @type == "Mandel"
+  endparam
+  param seed
+    caption = "Julia seed"
+    default = (-1.25, 0)
+    visible = @type == "Julia"
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 0
+  endparam
+  heading
+    caption = "Tile properties"
+  endheading
+  param tilex
+    caption = "Tile width"
+    default = 4.0
+    min = 0.0
+  endparam
+  param tiley
+    caption = "Tile height"
+    default = 3.0
+    min = 0.0
+  endparam
+  param tilecenter
+    caption = "Tile center"
+    default = (0, 0)
+  endparam
+  param factor
+    caption = "Tile curve correction"
+    default = 0.75
+    min = 0.0
+  endparam
+}
+
+mjdCross {
+ ;20000424
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+transform:
+  complex r=1
+  r=(0,1)^(@rot/90)
+
+  if @use
+    complex c=#center*r
+  else
+    complex c=@center*r
+  endif
+  c=c-#pixel*r
+  float d
+  if @zoom
+    d = cabs(c)*#magn
+  else
+    d = (cabs(c) - @width2/#magn)*#magn - @width2
+  endif
+  c=abs(c)*#magn
+
+  if real(c)<@width || imag(c)<@width
+    #solid=true
+  endif
+
+  if d<@width2
+    #solid=true
+  endif
+  if d<(@width2-@width*1.5)
+    #solid=false
+  endif
+default:
+  title="mjd Crosshair"
+  param use
+    caption="Use screen center"
+    default=true
+  endparam
+  param center
+    caption="Cross center"
+    default=(0,0)
+  endparam
+  param rot
+    caption="Cross rotation"
+    default=.0
+  endparam
+  param width
+    caption="line width"
+    default=.005
+  endparam
+  param width2
+    caption="circle width"
+    default=.05
+  endparam
+  param zoom
+    caption = "Zoom circle"
+    default = true
+  endparam
+}

@@ -1,0 +1,579 @@
+Sine-mod { 
+; Modified sine mask by Mark Townsend
+;
+;Additional functionality added by Dan Kuzmenka 24 Jan 2001
+
+;
+init:
+  trap_z = 0
+  trap_p = 0
+  float x = 0
+  float y = 0
+  int iter = 0
+  float dist = 0
+  int trap_iter = 0
+  bool trapped = false
+  float min_dist = 1e20
+  w=(0.0,0.0)
+  if @trap_mode == 0 || @trap_mode == 3
+    trapped = true
+  endif
+ 
+                 
+loop:
+  complex z1 = #z
+  IF (@invert)
+  z1=1/z1
+  ENDIF
+    if @coord == 0
+    if @math1 == 0
+    x = 1/x^2
+    x = (@ha + real(@fn3(@ht * imag(@fn1(z1)))))^@power1 
+     elseif @math1 == 1
+    x = (@ha - real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    elseif @math1 == 2
+    x = (@ha * real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    elseif @math1 == 3
+    x = (@ha / real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    endif
+    
+    if @math2 == 0        
+    y = (@va + real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 1
+    y = (@va - real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 2
+    y = (@va * real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 3
+    y = (@va / real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    endif
+    
+    if @math3 == 0
+    w = (x + @zfunc(y))^@power3
+    elseif @math3 == 1
+    w = (x - @zfunc(y))^@power3
+    elseif @math3 == 2
+    w = (x * @zfunc(y))^@power3
+    elseif @math3 == 3
+    w = (x / @zfunc(y))^@power3
+    endif
+
+    elseif @coord == 1
+    
+    float r = cabs(@fn1(z1))
+    float theta = atan2(@fn2(z1))
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    
+    float or = r
+      if @math1 == 0
+      r = (r + @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 1
+      r = (r - @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 2
+      r = (r * @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 3
+      r = (r / @ha * sin(@ht * theta))^@power1
+      endif
+    
+   if @math2 == 0
+   theta = (theta + @va * cos(@vt * or))^@power2
+   elseif @math2 == 1
+   theta = (theta - @va * cos(@vt * or))^@power2
+   elseif @math2 == 2
+   theta = (theta * @va * cos(@vt * or))^@power2
+   elseif @math2 == 3
+   theta = (theta / @va * cos(@vt * or))^@power2
+   endif
+       
+    x = r * cos(theta)
+    y = r * sin(theta)
+    
+    if @math3 == 0
+    w = (x + @zfunc(y))^@power3
+    elseif @math3 == 1
+    w = (x - @zfunc(y))^@power3
+    elseif @math3 == 2
+    w = (x * @zfunc(y))^@power3
+    elseif @math3 == 3
+    w = (x / @zfunc(y))^@power3
+    endif
+         
+    endif
+    
+  dist = cabs(z1 - w)
+  if iter >= @skip
+    if (@trap_mode == 0) || (@trap_mode == 3)
+      if dist < min_dist
+        min_dist = dist
+        trap_p = w
+        trap_z = z1
+        trap_iter = iter
+      endif
+    elseif @trap_mode == 1
+      if !trapped && dist <= @size
+        trapped = true
+        min_dist = dist
+        trap_z = z1
+        trap_p = w
+        trap_iter = iter
+      endif  
+    else
+      if dist <= @size
+        trapped = true
+        min_dist = dist
+        trap_z = z1
+        trap_p = w
+        trap_iter = iter
+      endif  
+    endif  
+  endif
+  iter = iter + 1
+final:
+    
+  if !trapped || (@trap_mode == 3 && min_dist > @size)
+    #solid = true 
+  else  
+    if @color == 0
+      #index = min_dist
+    elseif @color == 1
+      #index = cabs(trap_z)
+    elseif @color == 2
+      #index = 0.01 * trap_iter
+    elseif @color == 3      
+      #index = abs(real(trap_z))
+    elseif @color == 4      
+      #index = abs(imag(trap_z))
+    elseif @color == 5
+      theta = atan2(trap_z)
+      if theta < 0
+        theta = theta + 2 * #pi
+      endif
+      theta = 1 / (2 * #pi) * theta
+      #index = theta
+    elseif @color == 6
+    ; Modulated iteration
+      #index =  ((trap_iter) % 8) / 8
+    elseif @color == 7
+    ; Angle to Trap  
+      float arg = atan2(trap_z - trap_p)
+      if arg < 0
+        arg = arg + 2 * #pi
+      endif
+      #index = 1 / (2 * #pi) * arg
+    endif  
+  endif
+default:
+  title = "Sine-mod"
+  param coord
+    caption = "Coodinate Mode"
+    enum = "Cartesian" "Polar" 
+    endparam
+   
+  param invert
+    caption = "Invert z"
+    default = FALSE
+  endparam
+           
+  param math1
+    caption = "First arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math2
+    caption = "Second arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math3
+    caption = "Third arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+   param power1
+  caption = "1st function exponent"
+  default = 1.0
+  endparam
+  
+  param power2
+  caption = "2nd function exponent"
+  default = 1.0
+  endparam
+
+  param power3
+  caption = "3rd function exponent"
+  default = 1.0
+  endparam
+                  
+  param trap_mode
+    caption = "Trap Mode"
+    enum = "Closest" "First" "Last" "Masked"
+  endparam  
+  param @color
+    caption = "Coloring Mode"
+    enum = "Distance" "Magnitude" "Iteration" "Real" "Imag" "Angle" \
+           "Modulated Iter" "Angle to Trap"
+  endparam
+  param skip
+    caption = "Iterations to Skip"
+    default = 0
+  endparam
+  param size
+    caption = "Element Size"
+    default = 0.1
+  endparam  
+  param ht
+    caption = "Frequency #1"
+    default = 10.0
+  endparam  
+  param ha
+    caption = "Amplitude #1" 
+    default = 0.5
+  endparam  
+  param vt
+    caption = "Frequency #2"
+    default = 10.0
+  endparam  
+  param va
+    caption = "Amplitude #2"
+    default = 0.5
+  endparam
+                               
+  func fn1
+    caption = "First Function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption = "Second Function"
+    default = ident()
+  endfunc
+  
+  func zfunc
+  caption = "Third function"
+  default = flip()
+  endfunc
+           
+  func fn3
+    caption = "Extra Function"
+    default = sin()
+    hint = "This function is used only for the Cartesian mode."
+  endfunc
+    
+ }
+
+Default [lovers@newsguy.com]
+default:
+  title = ""
+
+Sine-mod_II { 
+; Modified sine mask by Mark Townsend
+;
+;Additional functionality added by Dan Kuzmenka 24 Jan 2001
+
+;
+init:
+  trap_z = 0
+  trap_p = 0
+  float x = 0
+  float y = 0
+  int iter = 0
+  float dist = 0
+  int trap_iter = 0
+  bool trapped = false
+  float min_dist = 1e20
+  w=(0.0,0.0)
+  if @trap_mode == 0 || @trap_mode == 3
+    trapped = true
+  endif
+ 
+                 
+loop:
+  complex z1 = #z
+  IF (@invert)
+  z1=1/z1
+  ENDIF
+    if @coord == 0
+    if @math1 == 0
+    x = 1/x^2
+    x = (@ha + real(@fn3(@ht * imag(@fn1(z1)))))^@power1 
+     elseif @math1 == 1
+    x = (@ha - real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    elseif @math1 == 2
+    x = (@ha * real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    elseif @math1 == 3
+    x = (@ha / real(@fn3(@ht * imag(@fn1(z1)))))^@power1
+    endif
+    
+    if @math2 == 0        
+    y = (@va + real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 1
+    y = (@va - real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 2
+    y = (@va * real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    elseif @math2 == 3
+    y = (@va / real(@fn3(@vt * real(@fn2(z1)))))^@power2
+    endif
+    
+    if @math3 == 0
+    w = (x + @zfunc(y))^@power3
+    elseif @math3 == 1
+    w = (x - @zfunc(y))^@power3
+    elseif @math3 == 2
+    w = (x * @zfunc(y))^@power3
+    elseif @math3 == 3
+    w = (x / @zfunc(y))^@power3
+    endif
+
+    elseif @coord == 1
+    
+    float r = cabs(@fn1(z1))
+    float theta = atan2(@fn2(z1))
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    
+    float or = r
+      if @math1 == 0
+      r = (r + @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 1
+      r = (r - @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 2
+      r = (r * @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 3
+      r = (r / @ha * sin(@ht * theta))^@power1
+      endif
+    
+   if @math2 == 0
+   theta = (theta + @va * cos(@vt * or))^@power2
+   elseif @math2 == 1
+   theta = (theta - @va * cos(@vt * or))^@power2
+   elseif @math2 == 2
+   theta = (theta * @va * cos(@vt * or))^@power2
+   elseif @math2 == 3
+   theta = (theta / @va * cos(@vt * or))^@power2
+   endif
+       
+    x = r * cos(theta)
+    y = r * sin(theta)
+    
+            
+    if @math3 == 0
+    w = (x + @zfunc(y))^@power3
+    elseif @math3 == 1
+    w = (x - @zfunc(y))^@power3
+    elseif @math3 == 2
+    w = (x * @zfunc(y))^@power3
+    elseif @math3 == 3
+    w = (x / @zfunc(y))^@power3
+    endif
+    
+    elseif @coord == 2
+    
+    float r = cabs(@fn1(z1))
+    float theta = atan2(@fn2(z1))
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    
+    float or = r
+      if @math1 == 0
+      r = (r + @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 1
+      r = (r - @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 2
+      r = (r * @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 3
+      r = (r / @ha * sin(@ht * theta))^@power1
+      endif
+    
+   if @math2 == 0
+   theta = (theta + @va * cos(@vt * or))^@power2
+   elseif @math2 == 1
+   theta = (theta - @va * cos(@vt * or))^@power2
+   elseif @math2 == 2
+   theta = (theta * @va * cos(@vt * or))^@power2
+   elseif @math2 == 3
+   theta = (theta / @va * cos(@vt * or))^@power2
+   endif
+       
+    x = r * cosh(theta)
+    y = r * sinh(theta)
+    
+            
+    if @math3 == 0
+    w = (x + @zfunc(y))^@power3
+    elseif @math3 == 1
+    w = (x - @zfunc(y))^@power3
+    elseif @math3 == 2
+    w = (x * @zfunc(y))^@power3
+    elseif @math3 == 3
+    w = (x / @zfunc(y))^@power3
+    endif
+
+          
+                
+                            
+    endif
+    
+  dist = cabs(z1 - w)
+  if iter >= @skip
+    if (@trap_mode == 0) || (@trap_mode == 3)
+      if dist < min_dist
+        min_dist = dist
+        trap_p = w
+        trap_z = z1
+        trap_iter = iter
+      endif
+    elseif @trap_mode == 1
+      if !trapped && dist <= @size
+        trapped = true
+        min_dist = dist
+        trap_z = z1
+        trap_p = w
+        trap_iter = iter
+      endif  
+    else
+      if dist <= @size
+        trapped = true
+        min_dist = dist
+        trap_z = z1
+        trap_p = w
+        trap_iter = iter
+      endif  
+    endif  
+  endif
+  iter = iter + 1
+final:
+    
+  if !trapped || (@trap_mode == 3 && min_dist > @size)
+    #solid = true 
+  else  
+    if @color == 0
+      #index = min_dist
+    elseif @color == 1
+      #index = cabs(trap_z)
+    elseif @color == 2
+      #index = 0.01 * trap_iter
+    elseif @color == 3      
+      #index = abs(real(trap_z))
+    elseif @color == 4      
+      #index = abs(imag(trap_z))
+    elseif @color == 5
+      theta = atan2(trap_z)
+      if theta < 0
+        theta = theta + 2 * #pi
+      endif
+      theta = 1 / (2 * #pi) * theta
+      #index = theta
+    elseif @color == 6
+    ; Modulated iteration
+      #index =  ((trap_iter) % 8) / 8
+      elseif @color == 7
+    ; Angle to Trap  
+      float arg = atan2(trap_z - trap_p)
+      if arg < 0
+        arg = arg + 2 * #pi
+      endif
+      #index = 1 / (2 * #pi) * arg
+    elseif @color == 8
+        
+      
+    endif  
+  endif
+default:
+  title = "Sine-mod_II"
+  param coord
+    caption = "Coodinate Mode"
+    enum = "Cartesian" "Polar" "Hyper"
+    endparam
+   
+  param invert
+    caption = "Invert z"
+    default = FALSE
+  endparam
+           
+  param math1
+    caption = "First arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math2
+    caption = "Second arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math3
+    caption = "Third arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+   param power1
+  caption = "1st function exponent"
+  default = 1.0
+  endparam
+  
+  param power2
+  caption = "2nd function exponent"
+  default = 1.0
+  endparam
+
+  param power3
+  caption = "3rd function exponent"
+  default = 1.0
+  endparam
+                  
+  param trap_mode
+    caption = "Trap Mode"
+    enum = "Closest" "First" "Last" "Masked"
+  endparam  
+  param @color
+    caption = "Coloring Mode"
+    enum = "Distance" "Magnitude" "Iteration" "Real" "Imag" "Angle" \
+           "Modulated Iter" "Angle to Trap" 
+  endparam
+  param skip
+    caption = "Iterations to Skip"
+    default = 0
+  endparam
+  param size
+    caption = "Element Size"
+    default = 0.1
+  endparam  
+  param ht
+    caption = "Frequency #1"
+    default = 10.0
+  endparam  
+  param ha
+    caption = "Amplitude #1" 
+    default = 0.5
+  endparam  
+  param vt
+    caption = "Frequency #2"
+    default = 10.0
+  endparam  
+  param va
+    caption = "Amplitude #2"
+    default = 0.5
+  endparam
+                               
+  func fn1
+    caption = "First Function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption = "Second Function"
+    default = ident()
+  endfunc
+  
+  func zfunc
+  caption = "Third function"
+  default = flip()
+  endfunc
+           
+  func fn3
+    caption = "Extra Function"
+    default = sin()
+    hint = "This function is used only for the Cartesian mode."
+  endfunc
+    
+ }

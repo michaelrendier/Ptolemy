@@ -1,0 +1,114 @@
+VaryingBailout {
+;This extrapolates to higher bailout values and gives an index based on the log
+;of the log of the magnitude (in correlation with iteration). This supports Mandelbrot,
+;Julia, a fairly general Newton, and Perpendicular Mandelbrot formulas. This can
+;be used with the "Pixel" formula, as it produces very nice images for interiors
+;as well, or it can be used with the corresponding formula to use a different
+;inside coloring (a Perpendicular MSet formula can be found in ahm.ufm).
+;
+;Copyright Alex Meiburg 2010
+final:
+x=0
+c=0
+xold=0
+If @Type == 0 || @Type == 3
+ complex x = @Perturbation
+ complex c = #pixel
+Elseif @Type == 1
+ complex c = @C
+ complex x = #pixel
+Elseif @Type == 2
+ complex x = #pixel
+ If Imag(#pixel)==0
+  x=#pixel + 1e-30i
+ Endif
+Endif
+ int iter = 0
+ repeat
+  If @Type==2
+   xold=x
+   x=x - (x^@Part_1 + @Part_2*(x^@Part_3) + @Part_4)/(@Part_1*(x^(@Part_1-1)) + @Part_3*@Part_2*(x^(@Part_3-1)))
+  Elseif (@Type == 0) || (@Type == 1)
+   x=x^@Power + c
+  Elseif @Type == 3
+   xx=Real(x)
+   xy=Imag(x)
+   x=xx^2 - xy^2 - 2i*xy*Abs(xx) + c
+  Endif
+  iter=iter+1
+ until (iter==#maxiter) || (|x|>=@LargeBailout && (@Type==0 || @Type==1 || @Type == 3)) || (|x-xold|<=@SmallBailout && @Type==2)
+ If (@Type == 0) || (@Type == 1)
+  float bailTest=|x|-4
+  Power=@Power
+ Elseif @Type == 2
+  bailTest=|x-xold|
+  Power=2            ;2, Because Newton iteration has quadratic convergence.
+ Elseif @Type == 3
+  bailTest=|x|-4
+  Power=2
+ Endif
+ If iter!=#maxiter
+   #index=cabs(sqrt(log(Power)*(#maxiter-iter) + log(log(bailTest))))
+ Else
+   #index=sqrt(log(log(bailTest)))
+ Endif
+default:
+ title="Extrapolated Bailout"
+ param Type
+  enum="Mandelbrot" "Julia" "Newton" "Perpendicular Mandelbrot"
+  default=0
+ endparam
+ float param LargeBailout
+  caption="Large Bailout"
+  hint="This does NOT need to be very large; Only large enough for the value of \
+  c to be negligible. This means a value of 100 should be more than sufficient."
+  visible=(@Type == 0) || (@Type == 1) || (@Type == 3)
+  default=100
+ endparam
+ float param SmallBailout
+  caption="Small Bailout"
+  hint="Should be positive. Smaller values mean more time, but more accurate \
+  pictures (assuming you increase the iterations)."
+  visible=(@Type == 2)
+  default=0.0001
+ endparam
+ complex param Power
+  default=(2,0)
+  visible=(@Type == 0) || (@Type == 1)
+ endparam
+ complex param C
+  visible = (@Type==1)
+  default=(-0.2,-0.79)
+ endparam
+ complex param Perturbation
+  visible = (@Type==0)||(@Type==3)
+ endparam
+ heading
+  caption="Polynomial Parameters"
+  text="To keep the fractal nice and 'smooth', use only real values. These make up \
+  the parts of the polynomial y=x^p1 + p2*x^p3 + p4, which is being solved by Newton iteration."
+  expanded=false
+  visible=@Type==2
+ endheading
+ complex param Part_1
+  hint="Part of the polynomial y=x^p1 + p2*x^p3 + p4 being solved by Newton iteration."
+  default=4
+  visible=@Type==2
+ endparam
+ complex param Part_2
+  hint="Part of the polynomial y=x^p1 + p2*x^p3 + p4 being solved by Newton iteration."
+  default=1.5
+  visible=@Type==2
+ endparam
+ complex param Part_3
+  hint="Part of the polynomial y=x^p1 + p2*x^p3 + p4 being solved by Newton iteration."
+  default=3
+  visible=@Type==2
+ endparam
+ complex param Part_4
+  hint="Part of the polynomial y=x^p1 + p2*x^p3 + p4 being solved by Newton iteration."
+  default=-1
+  visible=@Type==2
+ endparam
+}
+ 

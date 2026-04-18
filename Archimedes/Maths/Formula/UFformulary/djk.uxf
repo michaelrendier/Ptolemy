@@ -1,0 +1,2742 @@
+tent-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Kerry Mitchell's General Tent Julia
+; 27 October 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+  ; initialize Tent formula
+    c=@c  
+    z=#pixel
+    float r=0.0
+    if(@rotunit==1)            ; radians
+      r=@rotamount
+    else                       ; degrees
+      r=@rotamount*#pi/180
+    endif 
+    rot0=cos(r)+flip(sin(r))
+    rot=rot0
+    temp=(0,0)
+    repeat
+    ; rotate the map
+      if(@rottype==1)            ; constant rotation
+        temp=rot0*z
+      elseif(@rottype==2)        ; progressive rotation
+        rot=rot*rot0
+        temp=rot*z
+      elseif(@rottype==3)        ; oscillating rotation
+        rot=rot0/rot
+        temp=rot*z
+      else                       ; no rotation
+        temp = z
+      endif
+      if(@rtype==1)              ; real part
+        r=real(temp)
+      elseif(@rtype==2)          ; imag part
+        r=imag(temp)
+      elseif(@rtype==3)          ; real*imag
+        r=imag(temp)*real(temp)
+      elseif(@rtype==4)          ; imag/real
+        r=imag(temp)/real(temp)
+      else                       ; magnitude
+        r=cabs(temp)
+      endif
+      if(r<=1.0)
+        z=c*temp
+      else
+        z=c*(2-temp)
+      endif
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+  title = "Tent Sine Mask"
+    param c
+    caption = "Julia Seed"
+    default=(1.5,0.5)
+    hint = "This is the seed value for the Julia set."
+  endparam
+  param rtype
+    caption="r type"
+    default=1
+    enum="magnitude" "real part" "imag part" "real*imag" "imag/real"
+    hint="Determines the r value used in the tent map."
+  endparam
+  param rottype
+    caption="rotation type"
+    default=0
+    enum="none" "constant" "progressive" "oscillating"
+    hint="In 'constant' mode, the same angle is used every iteration. \
+      In 'progressive' mode, the angle is increased by the amount every \
+      iteration. In 'oscillating' mode, the map is rotated forward, then \
+      back, then forward, etc."
+  endparam
+  param rotamount
+    caption="rotation amount"
+    default=45.0
+    hint="How much the map is rotated."
+  endparam
+  param rotunit
+    caption="rotation units"
+    default=0
+    enum="degrees" "radians"
+    hint="Units in which the rotation is expressed."
+  endparam
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+
+Compounding-tweaked-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Kerry Mitchell's Compounding Tweaked Julia
+; 27 October 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ; initialize Compounding Tweaked formula
+    
+
+z=#pixel
+  c=@c
+repeat
+  z=z^@nexp+c
+  if(@tweaktype==1)
+    c=c+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==2)
+    c=c+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==3)
+    c=c+@tweakage*@tweakfunction(z/c)
+  elseif(@tweaktype==4)
+    z=z+@tweakage*@tweakfunction(c)
+  elseif(@tweaktype==5)
+    z=z+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==6)
+    z=z+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==7)
+    z=z+@tweakage*@tweakfunction(z/c)
+  else
+    c=c+@tweakage*@tweakfunction(c)
+  endif
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+  title = "Compounding Tweaked Sine Mask"
+    
+
+param c
+    caption="Julia seed"
+    default=(0.0,1.0)
+  endparam
+  param nexp
+    caption="exponent"
+    default=(2,0)
+    hint="Use 2.0 for something resembling the \
+      standard Julia set."
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param tweaktype
+    caption="tweaking type"
+    default=0
+    enum="c; fn(c)" "c; fn(z)" "c; fn(c*z)" "c; fn(z/c)" \
+      "z; fn(c)" "z; fn(z)" "z; fn(c*z)" "z; fn(z/c)"
+    hint="Sets what gets tweaked, and how."
+  endparam
+  param tweakage
+    caption="tweaking amount"
+    default=(0.01,0.0)
+    hint="Make small for something resembling the \
+      standard Julia set."
+  endparam
+  func tweakfunction
+    caption="tweaking function"
+    default=recip()
+    hint="Function of the tweaking variable."
+  endfunc
+  
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+
+Barnsleyish-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Mark Townsend's Barnsleyish Julia
+; 30 October 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ;initialize Barnsleyish Julia formula
+      
+  z = #pixel
+repeat
+  if real(z) >= @threshold
+    z = @fn1a(z + 1) * -@c
+  else  
+    z = @fn1a(z - 1) * @c
+  endif  
+
+  ;end intialize Barnsleyish Julia
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+  title = "Barnsleyish Julia Sine Mask"
+ 
+  param c
+    caption = "Julia Seed"
+    default = (0.8, 1.05)
+  endparam  
+  param threshold
+    caption = "Threshold"
+    default = 0.0
+  endparam
+   
+  func fn1a
+    caption = "Barnsleyish Function"
+    default = cos()
+  endfunc  
+              
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+
+Bailouts-Galore-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Sean Pratz Bailouts Galore Julia
+; 30 October 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+  ;initialize Bailouts Galore Julia formula
+  
+     repeat
+
+    ;z = @fn11(z) * @fn21(z) + @seed
+    z = @fn1(z) * @fn2(z) + @fn31(#pixel)
+
+  
+
+  ;end intialize Bailouts Galore Julia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+  
+  default:
+
+  title = "Bailouts Galore (Jul)"
+  
+  param seed
+    caption = "Julia seed"
+    default = (0.275, 0)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+
+  param btype
+    caption = "Bailout type"
+    default = 0
+    enum = "A - Mod" "B - Spiky (Real)" "C - Spiky (Imag)" "D - Real" "E - Imag" "F - Or" "G - And" "H - Manh" "I - Manr"
+  endparam
+  
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+  endparam
+  
+  func fn11
+    caption = "z function 1"
+    default = ident()
+    hint = "The 1st function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+
+  func fn21
+    caption = "z function 2"
+    default = ident()
+    hint = "The 2nd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+  
+  func fn31
+    caption = "Pixel function"
+    default = ident()
+    hint = "The 3rd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+
+  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+Simurgh-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Damien Jone's Simurgh Julia
+; 1 December 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+  ;initialize Simurgh Julia formula
+    
+  
+  complex w1 = (0,0)
+  complex y1 = (0,0)
+  complex newz = (0,0)
+
+  z = #pixel
+  
+repeat
+
+  newz = z^@power1  +  z^@power2 * @seed  +  @induct * y1 + @induct2 * w1
+  w1 = y1
+  y1 = z
+  z = newz
+  
+  ;end intialize Simurgh Julia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+  
+  default:
+
+  title = "Simurgh Julia sine mask"
+    
+  param seed
+    caption = "Julia seed"
+    default = (0.03125, 0.5625)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+ 
+  param bailout
+    caption = "Bailout"
+    default = 1E20
+    hint = "Divergent bailout value; larger values will cause more \
+            iterations to be done for each point."
+   endparam
+     
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  
+  param power1
+    caption = "Primary Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal."
+  endparam
+  param power2
+    caption = "Secondary Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+  endparam
+  param induct
+    caption = "Simurgh Distortion 1"
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal."
+  endparam
+  param induct2
+    caption = "Simurgh Distortion 2"
+    default = (-0.5,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal."
+  endparam
+ 
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+Mitch's-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Kerry Mitchell's Mitch's Julia
+; 5 December 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ;initialize Mitch's Julia formula
+  
+  z=#pixel
+  c=@julparam
+  
+  repeat
+  z2=sqr(z)
+  z=c*(z2+1/z2)
+
+  ;end intialize Mitch's Julia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+
+  title = "Mitch's Julia Sine Mask"
+    
+  param julparam
+    caption="Julia parameter"
+    default=(1.0,0.0)
+  endparam
+        
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+  endparam
+  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+Double-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Damien Jones' DoubleJulia
+; 14 December 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ;initialize DoubleJulia formula
+    
+  z = #pixel
+  
+  repeat
+  
+  z = @coeff1*z^@power1 + @coeff2*z^@power2 + @seed
+
+  ;end intialize DoubleJulia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+
+  title = "Double Julia Sine Mask"
+    
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  
+  param power1
+    caption = "Primary Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the equation."
+  endparam
+  
+  param power2
+    caption = "Secondary Exponent"
+    default = (-1,0)
+    hint = "Defines the secondary exponent for the equation."
+  endparam
+  
+  param coeff1
+    caption = "Primary Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term."
+  endparam
+  
+  param coeff2
+    caption = "Secondary Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term."
+  endparam
+  
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+  endparam
+  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+           
+    param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+Phoenix-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Damien Jones' Phoenix Julia
+; 15 December 2000
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ;initialize Phoenix Julia formula
+    
+  complex y1 = (0,0)
+  complex newz = (0,0)
+
+  z = #pixel
+  
+repeat
+
+  newz = z^@power1  +  z^@power2 * @seed  +  @induct * y1
+  y1 = z
+  z = newz
+
+  ;end intialize Phoenix Julia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+
+  title = "Phoenix Julia Sine Mask"
+    
+  param seed
+    caption = "Julia Seed"
+    default = (0.56667,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power1
+    caption = "Primary Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 2."
+  endparam
+  param power2
+    caption = "Secondary Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 0."
+  endparam
+  param induct
+    caption = "Phoenix Distortion"
+    default = (0.5,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal."
+  endparam
+    
+  param bailout
+    caption = "Bailout value"
+    default = 1E20
+    min = 1.0
+  endparam
+  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 1000
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+           
+    param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+Fibonacci-Julia-sine-mask { 
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified by Dan Kuzmenka
+;for Kerry Mitchell's Fibonacci Julia
+; 2 January 2001
+;
+transform:
+  complex g = #pixel
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  z = g
+  if @mask_mode < 2
+    #pixel = z
+  endif
+  if @mask_mode > 0
+  ; Orbit trap
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+
+  ;initialize Fibonacci Julia formula
+    
+  z1=#pixel
+  z2=#pixel
+  z3=#pixel
+  z4=#pixel
+  z5=#pixel
+  z=(0,0)
+  c=@julparam
+  
+repeat
+    if(@order==1)
+    z=@weight1*z1+(1-@weight1)*z3
+    z=z*(@weight2*z2+(1-@weight2)*z3)
+    z=z*z3+c
+    z1=z2
+    z2=z3
+    z3=z
+  elseif(@order==2)
+    z=@weight1*z1+(1-@weight1)*z4
+    z=z*(@weight2*z2+(1-@weight2)*z4)
+    z=z*(@weight3*z3+(1-@weight3)*z4)
+    z=z*z4+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z
+  elseif(@order==3)
+    z=@weight1*z1+(1-@weight1)*z5
+    z=z*(@weight2*z2+(1-@weight2)*z5)
+    z=z*(@weight3*z3+(1-@weight3)*z5)
+    z=z*(@weight4*z4+(1-@weight4)*z5)
+    z=z*z5+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z5
+    z5=z
+  else
+    z=@weight1*z1+(1-@weight1)*z2
+    z=z*z2+c
+    z1=z2
+    z2=z
+  endif
+
+  ;end intialize Fibonacci Julia formula
+
+
+      ; Sine orbit trap
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(z))))
+        y = @va * real(@fn3(@vt * real(@fn2(z))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(z))
+        float theta = atan2(@fn2(z))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(z-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|z| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+
+  title = "Fibonacci Julia Sine Mask"
+    
+  param julparam
+    caption="Julia parameter"
+    default=(0,1)
+  endparam
+  
+  param bailout
+    caption = "Bailout value"
+    default = 1E20
+    min = 1.0
+  endparam
+  
+  param order
+    caption="order"
+    hint="Similar to power."
+    default=0
+    enum="2" "3" "4" "5"
+  endparam
+  param weight1
+    caption="weight 1"
+    hint="How much of first iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight2
+    caption="weight 2"
+    hint="How much of second iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight3
+    caption="weight 3"
+    hint="How much of third iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight4
+    caption="weight 4"
+    hint="How much of fourth iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+     
+  param max_iter
+    caption = "Julia Iterations"
+    default = 1000
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+           
+    param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+
+
+
+
+sine-mod-mask { ;
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+; Modified for sine mod coloring by Daniel Kuzmenka
+; 31 January 2001
+;
+transform:
+
+  if @import
+
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center)
+
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+
+    w = w * #magn / @tmag
+
+  ; Rotate around screen center
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@tilt * pi / 180)))
+
+  else
+    w = #pixel
+  endif
+
+; Gnarly
+
+  complex g = w
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  w = g
+  if @mask_mode < 2
+    #pixel = w
+  endif
+
+  if @mask_mode > 0
+   ; Orbit trap
+
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+    repeat
+      complex n = 0
+      w = w^@n + @c
+
+if @coord == 0
+    if @math1 == 0
+     x = (@ha + real(@fn3(@ht * imag(@fn1(w)))))^@power1
+    elseif @math1 == 1
+    x = (@ha - real(@fn3(@ht * imag(@fn1(w)))))^@power1
+    elseif @math1 == 2
+    x = (@ha * real(@fn3(@ht * imag(@fn1(w)))))^@power1
+    elseif @math1 == 3
+    x = (@ha / real(@fn3(@ht * imag(@fn1(w)))))^@power1
+    endif
+    
+    if @math2 == 0        
+    y = (@va + real(@fn3(@vt * real(@fn2(w)))))^@power2
+    elseif @math2 == 1
+    y = (@va - real(@fn3(@vt * real(@fn2(w)))))^@power2
+    elseif @math2 == 2
+    y = (@va * real(@fn3(@vt * real(@fn2(w)))))^@power2
+    elseif @math2 == 3
+    y = (@va / real(@fn3(@vt * real(@fn2(w)))))^@power2
+    endif
+    
+    if @math3 == 0
+    n = (x + flip(y))^@power3
+    elseif @math3 == 1
+    n = (x - flip(y))^@power3
+    elseif @math3 == 2
+    n = (x * flip(y))^@power3
+    elseif @math3 == 3
+    n = (x / flip(y))^@power3
+    endif
+
+    elseif @coord == 1
+    
+    float r = cabs(@fn1(w))
+    float theta = atan2(@fn2(w))
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    
+    float or = r
+      if @math1 == 0
+      r = (r + @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 1
+      r = (r - @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 2
+      r = (r * @ha * sin(@ht * theta))^@power1
+      elseif @math1 == 3
+      r = (r / @ha * sin(@ht * theta))^@power1
+      endif
+    
+   if @math2 == 0
+   theta = (theta + @va * cos(@vt * or))^@power2
+   elseif @math2 == 1
+   theta = (theta - @va * cos(@vt * or))^@power2
+   elseif @math2 == 2
+   theta = (theta * @va * cos(@vt * or))^@power2
+   elseif @math2 == 3
+   theta = (theta / @va * cos(@vt * or))^@power2
+   endif
+       
+    x = r * cos(theta)
+    y = r * sin(theta)
+    
+    if @math3 == 0
+    n = (x + flip(y))^@power3
+    elseif @math3 == 1
+    n = (x - flip(y))^@power3
+    elseif @math3 == 2
+    n = (x * flip(y))^@power3
+    elseif @math3 == 3
+    n = (x / flip(y))^@power3
+    endif
+   
+    endif
+      
+      dist = cabs(w-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|w| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+  title = "Sine-Mod Mask"
+    param c
+    caption = "Julia Seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam
+  param n
+    caption = "Julia Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  
+  param math1
+    caption = "First arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math2
+    caption = "Second arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+  param math3
+    caption = "Third arithmetic function"
+    enum = "+" "-" "*" "/"
+  endparam
+  
+   param power1
+  caption = "1st function exponent"
+  default = 1.0
+  endparam
+  
+  param power2
+  caption = "2nd function exponent"
+  default = 1.0
+  endparam
+
+  param power3
+  caption = "3rd function exponent"
+  default = 1.0
+  endparam
+ 
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param import
+    caption = "Screen Import"
+    default = false
+    hint = "Check this when you want to import the position of \
+           a Julia set. In this mode the mask will stay fixed \
+           regardless of further zooming and panning."
+  endparam
+  param offset
+    caption = "Screen Center"
+    default = (0,0)
+    hint = "When importing a Julia copy the value from \
+           Center on the Location tab of the Julia."
+  endparam
+  param tmag
+    caption = "Screen Magnification"
+    default = 1.0
+    hint = "When importing a Julia copy the value from \
+           Magnification on the Location tab of the Julia."
+  endparam
+  param tilt
+    caption = "Screen Rotation"
+    default = 0.0
+    hint = "When importing a Julia copy the value from \
+           Rotation on the Location tab of the Julia."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+

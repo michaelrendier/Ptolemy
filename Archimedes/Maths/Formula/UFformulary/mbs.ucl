@@ -1,0 +1,284 @@
+complex-value { ;Marshall Stoner
+init:
+  float a = 0.0
+  complex zval = (0,0)
+  
+final:
+  if (@calc == 0)
+    zval = #z
+  elseif (@calc == 1)
+    zval = @basic_fn(#pixel)
+  else 
+    if (@fn == 0)
+      zval = sin(1/#pixel)
+    elseif (@fn == 1)
+      zval = (#pixel)^3-1
+    endif
+  endif
+  
+  if (@type == 0)
+    a = atan2(zval)
+    if (a < 0)
+      a = a + 2*#pi
+    endif
+    a = a / (2*#pi)
+  elseif (@type == 1)
+    a = atan(abs(real(zval)/imag(zval))) * atan(abs(imag(zval)/real(zval)))
+  elseif(@type == 2)
+    a = cabs(zval)
+  elseif(@type == 3)
+    a = abs(log(cabs(zval)))
+  elseif(@type == 4) ;
+    a = abs(real(zval))
+  else
+    a = abs(imag(zval))
+  endif
+  #index = a
+
+default:
+  title = "Complex Function Values"
+  param type
+    caption = "Type"
+    default = 0
+    enum = "arg1" "arg2" "mag1" "mag2" "real" "imag"
+  endparam
+  param calc
+    caption = "Calculate from..."
+    default = 0
+    enum = "fractal" "basic function" "function"
+  endparam
+  param fn
+    caption = "Choose function"
+    default = 0
+    enum = "1/sin(z)" "z^3-1"
+  endparam
+  func basic_fn
+    caption = "basic function"
+    default = log()
+  endfunc
+}
+
+rot-num(INSIDE) { ;Marshall Stoner
+
+;Calculates the rotation number for each periodic orbit inside the Mandelbrot 
+;(or some other) set. The numerator is the total angular distance (revolutions) 
+;travelled by the orbit, around the mean, in one period. The denominator is the 
+;number of iterations for one period. Each rational number between 0 and 1 
+;corresponds to a bulb on the main cardoid, ordered counter-clockwise starting
+;at the cusp. The number of spokes at the end of each bulb corresponds to the
+;denominator of the rotation number for the bulb (you can test it).
+
+;Mainly for mathematical investigation. Doesn't make great designs but you can
+;try. Who knows, maybe you can come up with something.
+
+init:
+  int count = @ave_start
+  int phase = 1
+  complex ave = 0.0
+  complex z_start = 0.0
+  complex dz = 0.0
+  complex dzold = 0.0
+  float theta = 0.0
+  float theta_sum = 0.0
+  int p = 0
+  int q = 0
+  
+loop:
+  IF (phase == 1)
+    count = count-1
+    IF (count == 0)
+      count = (@period_start - @ave_start)
+      phase = 2
+    ENDIF
+  ELSEIF (phase == 2)
+    count = count-1
+    ave = ave + #z
+    IF (count == 0)
+      ave = ave / (@period_start - @ave_start)
+      z_start = #z
+      dz = #z - ave
+      count = 0
+      phase = 3
+    ENDIF
+  ELSEIF (phase == 3)
+    count = count + 1
+    dzold = dz
+    dz = #z - ave
+    theta = atan2(dz * cabs(dzold)/dzold)
+    IF (theta < 0)
+      theta = theta + 2*#pi
+    ENDIF
+    theta_sum = theta_sum + theta
+    IF (cabs(#z - z_start) <= @tolerance)
+      q = count
+      p = round(theta_sum/(2*#pi))
+      phase = 0
+    ENDIF
+  ENDIF
+
+final:
+  IF (@mode == 0)
+    #index = real(p)/real(q)
+  ELSEIF (@mode == 1)
+    IF (p == @p2)
+      #index = @color
+    ENDIF
+  ELSEIF (@mode == 2)
+    IF (q == @q2)
+      #index = @color
+    ENDIF
+  ELSEIF (@mode == 3)
+    IF (p == @p2)
+      IF (q == @q2)
+        #index = @color
+      ENDIF
+    ENDIF
+  ENDIF
+
+default:
+  title = "Mandelbrot Rotation Numbers"
+  param ave_start
+    caption = "start average"
+    hint = "Start averaging after n iterations"
+    default = 10
+    min = 0
+  endparam
+  param period_start
+    caption = "start period"
+    hint = "Start period calcs after n iterations"
+    default = 50
+    min = 10
+  endparam
+  param tolerance
+    caption = "tolerance"
+    hint = "tolerance for periodicity checking"
+    default = .01
+  endparam
+  param mode
+    caption = "Coloring mode"
+    hint = "Bulbs with the specified p and q are colored. For 'fraction' \
+            the color is the rotation number."
+    enum = "fraction" "p" "q" "p and q"
+    default = 0
+  endparam
+  param p2
+    caption = "p"
+    hint = "Orbit step"
+    default = 0
+  endparam
+  param q2
+    caption = "q"
+    hint = "Orbit period"
+    default = 0
+  endparam
+  param color
+    caption = "Color index"
+    default = 0.5
+    min = 0.0
+    max = 1.0
+  endparam
+}
+
+
+light-3D { ;Marshall Stoner
+
+;My lighting scheme is a little different from that of Damien M. Jones.
+;I couldn't get my my UFMs work with his lighting UCL so I just made my own.
+;My version uses the gradient vector(del f) of the 3D surface, from the
+;real and imaginary parts of #z, to calculate the light intensity. Gradient 
+;index values from 100 to 300 are used for shading.  0-100 and 300-399 
+;are left unused to prevent wrap around problems.
+
+init:
+  float h = 0.0
+  float v = 0.0
+  float k = 0.0
+  float df_dx = 0.0
+  float df_dy = 0.0 
+  
+final:
+  h = @lhoriz * #pi/180.0
+  v = @lvert * #pi/180.0
+  
+  df_dx = real(#z)
+  df_dy = imag(#z)
+  
+  k = sin(v) - cos(v)*cos(h)*df_dx - cos(v)*sin(h)*df_dy
+  k = k / sqrt(sqr(df_dx) + sqr(df_dy) + 1)
+  #index = .25*k + .5
+
+default:
+  title = "3D-Lighting"
+  param lhoriz
+    caption = "Horizontal Degrees"
+    hint = "Light source position in degrees. Zero equals east."
+    default = 0.0
+    min = 0.0
+    max = 360.0
+  endparam
+  param lvert
+    caption = "Vertical Degrees"
+    hint = "Light source position in degrees. Zero equals horizon. 90 equals zenith."
+    default = 15.0
+    min = 0.0
+    max = 90.0
+  endparam
+}
+
+
+flames { ;Marshall Stoner
+
+;Average distance between the unitized z and a point moving along
+;the unit circle.  Produces pattern like Triangle Inequality Average
+;but colors and patterns vary more and can be altered with the 
+;"turn" parameter.  Uses the smoothing formula of Damien M. Jones.
+
+init:
+  float theta = atan2(#pixel)
+  complex d = (0,0)
+  float ave = 0.0
+  float prev_ave = 0.0
+  float ilp = 1/log(@power)
+  float f = 0.0
+  
+loop:
+  prev_ave = ave
+  theta = theta + #pi*@turn/180
+  d = #z/cabs(#z) - cos(theta) - flip(sin(theta))
+  ave = ave + cabs(d)
+
+final:
+  ave = ave / #numiter
+  IF (@Smooth == 0)
+    prev_ave = prev_ave / (#numiter-1)
+    f = ilp*log(log(@bailout)/2) - ilp*log(log(cabs(#z)))
+    #index = prev_ave + (ave-prev_ave)*(f+1)
+  ELSE
+    #index = ave
+  ENDIF
+    
+default:
+  title = "Flames"
+  param turn
+    caption = "Turn"
+    hint = "Degrees of rotation (0 to 360)."
+    default = 180.0
+    min = 0.0
+    max = 360.0
+  endparam
+  param smooth
+    caption = "Smooth?"
+    enum = "yes" "no"
+    default = 0
+  endparam
+  param power
+    caption = "Power"
+    hint = "Match exponent set in formula(Mandelbrot/Julia type)."
+    default = 2.0
+    endparam
+  param bailout
+    caption = "Bailout"
+    hint = "Match bailout set in formula."
+    default = 1E20
+  endparam
+}

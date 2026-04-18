@@ -1,0 +1,174 @@
+comment {
+
+MMF transforms V0.3 (5th June 2007)
+
+Updated the Lens transform.
+(June 2007)
+
+Added a low-res transform.
+(September 2002)
+
+Elliptical lens added.
+(February 2002)
+
+Dave Makin (Makin' Magic Fractals)
+
+http://www.crosswinds.net/~makinmagic/
+http://website.lineone.net/~dave_makin/
+http://skyscraper.fortunecity.com/terabyte/966/
+
+Please send any comments/suggestions about
+these formulae to:
+dave_makin@lineone.net
+}
+
+MMFa-Lens {
+;
+; This transform magnifies/distorts the area inside an ellipse.
+;
+transform:
+  float a=@a*#pi/180.0
+  float ca=cos(a)
+  float sa=sin(a)
+  complex c=#pixel-@centre
+  if @usecentre
+    c = #pixel-#center
+  endif
+  float t=real(c)
+  float y=imag(c)
+  float x = t*ca+y*sa
+  y = y*ca-t*sa
+  float v = x*x/(@w*@w)+y*y/(@h*@h)
+  if v <= 1.0
+    if @mode==2
+      t=t/@s
+      y=y/@s
+    else
+      if @method==0
+        v=sqrt(1.0-v)
+      endif
+      if @mode==0
+        v=1.0-v
+      endif
+      if @method==0
+        t=x*v^@s
+        y=y*v^@s
+      else
+        t=x*@s^-v
+        y=y*@s^-v
+      endif
+    endif
+    x=t*ca-y*sa
+    y=t*sa+y*ca
+    if @usecentre
+      #pixel=#center+x+flip(y)
+    else
+      #pixel=@centre+x+flip(y)
+    endif
+  elseif @usemask
+    #solid = true
+  endif
+
+default:
+  title = "Elliptical Lens"
+  param usecentre
+    caption = "Use screen centre"
+    default = false
+  endparam
+  param centre
+    caption = "Centre"
+    default = (0,0)
+    hint = "The centre of the ellipse"
+    visible = !@usecentre
+  endparam
+  param a
+    caption = "Rotation"
+    default = 0.0
+    min = -360.0
+    max = 360.0
+    hint = "Rotates the ellipse"
+  endparam
+  param w
+    caption = "Width"
+    default = 1.0
+    min = 0.0
+    hint = "The width of the ellipse"
+  endparam
+  param h
+    caption = "Height"
+    default = 0.5
+    min = 0.0
+    hint = "The height of the ellipse"
+  endparam
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Normal" "Inverse" "All"
+    hint = "Normal magnifies using a simple lens effect, Inverse produces a \
+            distortion and All magnifies all the affected area by the same amount."
+  endparam
+  param method
+    caption = "Method"
+    enum = "Exponent (original)" "Base"
+    default = 0
+    hint = "Changes the way the 'magnification' works."
+    visible = @mode<2
+  endparam
+  param s
+    caption = "Scale"
+    default = 2.0
+    hint = "Use to increase/decrease the amount of magnification."
+  endparam
+  param usemask
+    caption = "Use mask"
+    default = false
+    hint = "Masks everything outside the ellipse."
+  endparam
+}
+
+MMFb-LowRes {
+;
+; Low Resolution Transformation
+; I wrote this when I found Damien's version didn't
+; work at higher magnifications.
+; This version allows you to specify the on-screen
+; pixel resolution, hence the number of pixels you
+; can see remains fixed under zooming.
+;
+transform:
+  complex r = (0,1)^(@rot/90)
+  complex p = #pixel*r
+  float x = real(p)
+  float y = imag(p)
+  float sx = 4/(@xres*#magn)
+  float sy = 4/(@yres*#magn)
+  if x < 0
+    x = x - sx/2
+  else
+    x = x + sx/2
+  endif
+  if y < 0
+    y = y - sy/2
+  else
+    y = y + sy/2
+  endif
+  #pixel = (x-x%sx + flip(y-y%sy))*conj(r)
+
+default:
+  title = "Low Resolution"
+  param xres
+    caption = "Width scale"
+    default = 160
+    hint = "1.0 is approx. 1 pixel per screenwidth."
+  endparam
+  param yres
+    caption = "Height scale"
+    default = 160
+    hint = "1.0 is approx. 1 pixel per screenwidth."
+  endparam
+  param rot
+    caption = "Rotation"
+    default = 0.0
+    hint = "Rotates the 'pixels' but not the image."
+  endparam
+}

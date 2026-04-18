@@ -1,0 +1,1441 @@
+mb_bs_parallel_coupled {
+;
+; Coupled Mandelbrot and Burning Ship
+;
+; z --> Mandelbrot loop
+; y --> Burning Ship loop
+;
+; Every @n iterations, z is set to a weighted average of current z and y
+;
+; @nbmax limits the amount of BS iterations that is done between each
+; coupling, the maximum is equal to @n
+;
+init:
+  z = #pixel
+  y = #pixel
+  int k = 0
+  nb = 0
+loop:
+  z = z^@exp + #pixel
+  if nb < @nbmax
+    y = abs(y)^@exp + #pixel
+    nb = nb + 1
+  endif
+  k = k + 1
+  if k == @n
+    z = @t*z + (1-@t)*y
+    k = 0
+    nb = 0
+  endif
+bailout:
+  |z| < @bailout
+default:
+  title = "MB+BS, coupling every N iter"
+  magn = 0.5
+  maxiter = 149
+  param bailout
+    caption = "Bailout value"
+    default = 128
+    min = 1
+  endparam
+  int param n
+    caption = "coupling frequency"
+    default = 1
+    hint = "Every n iterations, the Burning Ship and Mandelbrot are averaged\
+            using weight t."
+  endparam
+  complex param t
+    caption = "t (MB Weight)"
+    default = (0.999, 0.)
+    ;min = 0.
+    ;max = 1.
+    hint = "Weight of the Mandelbrot value, the Burning Ship value will be\
+            Set to 1 - t. Higher values distort the fractal more strongly,\
+            smaller values make the fractal look more like a Mandelbrot set\
+            and deeper zooms will be required to reveal distortion."
+  endparam
+  int param nbmax
+    caption = "Max BS iterations between coupling steps"
+    default = 1000000000
+    hint = "Limit the amount of Burning Ship iterations between each coupling,\
+            if this value is larger than n, n wil limit this instead."
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2.,0.)
+    hint = "Exponent of the underlying Mandebrot and Burning Ship fractals. \
+            Higher values seem to produce less interesting results, or the \
+            interesting parts are harder to find."
+  endparam
+switch:
+  type = "mb_bs_parallel_coupled_julia"
+  seed = pixel
+  bailout = bailout
+  exp = exp
+  t = t
+  n = n
+}
+
+mb_bs_parallel_coupled_julia {
+init:
+  z = #pixel
+  k = 0
+loop:
+  z = z^@exp + @seed
+  if nb < @nbmax
+    y = abs(y)^@exp + @seed
+    nb = nb + 1
+  endif
+  k = k + 1
+  if k == @n
+    z = @t*z + (1-@t)*y
+    k = 0
+  endif
+bailout:
+  |z| <= @bailout
+default:
+  title = "MB/BS weighted coupling every N iter julia"
+  maxiter = 149
+  param seed
+    caption = "Julia Seed"
+    default = (0.25, 0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  int param n
+    caption = "coupling frequency"
+    default = 1
+    hint = "Every n iterations, the Burning Ship and Mandelbrot are averaged\
+            using weight t."
+  endparam
+  float param t
+    caption = "t (MB Weight)"
+    default = 0.999
+    min = 0.
+    max = 1.
+    hint = "Weight of the Mandelbrot value, the Burning Ship value will be\
+            Set to 1 - t. Higher values distort the fractal more strongly,\
+            smaller values make the fractal look more like a Mandelbrot set\
+            and deeper zooms will be required to reveal distortion."
+  endparam
+  int param nbmax
+    caption = "Max BS iterations between coupling steps"
+    default = 1000000000
+    hint = "Limit the amount of Burning Ship iterations between each coupling,\
+            if this value is larger than n, n wil limit this instead."
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2.,0.)
+    hint = "Exponent of the underlying Mandebrot and Burning Ship fractals. \
+            Higher values seem to produce less interesting results, or the \
+            interesting parts are harder to find."
+  endparam
+switch:
+  type = "mb_bs_parallel_coupled"
+  bailout = bailout
+  exp = exp
+  t = t
+  n = n
+}
+
+coupling_loops {
+init:
+  z = pixel
+  k = 0
+  kmax = 0.
+  if @test == 16
+    x1 = real(@p)
+    y1 = imag(@p)
+  endif
+  loop:
+  if k < kmax
+     z = z^@exp1 + #pixel
+     k = k + 1
+  else
+     ;if @mode == 1
+     ;  z = abs(z)
+     ;endif
+     z = z^@exp1 + @c*z^@exp2 + #pixel
+     kmax = kmax + @dkmax
+     k = 0
+  endif
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 16 && (real(z) - x1)*imag(@v - y1)-(imag(z) - y1)*real(@v) <= 0)
+default:
+  title = "coupling loops"
+  maxiter = 15000
+  center = (-0.5, 0)
+  float param dkmax
+    caption = "Coupling Shift"
+    default = 50.
+    min = 0
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs" "angletest"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+  ;param mode
+  ;  caption = "Mode"
+  ;  default = 0
+  ;  enum = "Mandelbrot" "Burning Ship"
+  ;endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  ;if test == 16
+    complex param p
+      caption = "Line Point"
+      default = 0.
+    endparam
+    complex param v
+      caption = "Line Vector"
+      default = 0.
+    endparam
+  ;endif
+switch:
+  type = "coupling_loops_julia"
+  seed = #pixel
+  dkmax = dkmax
+  bailout = bailout
+  test = test
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+  d = d
+  a = a
+  w = w
+}
+
+coupling_loops_julia {
+init:
+  z = pixel
+  ii = 0
+  k = 0
+  kmax = 0.
+  loop:
+  if k < kmax
+     z = z^@exp1 + @seed
+     k = k + 1
+  else
+     z = z^@exp1 + @c*z^@exp2 + @seed
+     kmax = kmax + @dkmax
+     k = 0
+  endif
+  ii = ii + 1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 16 && 1./|z| <= @bailout)
+default:
+  title = "coupling loops julia"
+  maxiter = 149
+  center = (-0.5, 0)
+  float param dkmax
+    caption = "Coupling Shift"
+    default = 50.
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs" "1/abs"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (-0.750456803963, 0.0328866621095)
+  endparam
+switch:
+  type = "coupling_loops"
+  seed = #pixel
+  dkmax = dkmax
+  bailout = bailout
+  test = test
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+  d = d
+  a = a
+  w = w
+}
+
+supernova {
+; Formula found here:
+; https://www.deviantart.com/jlfractals/art/JLF3328-Nova-Magma-906819308
+;
+; by jlfractals on DA
+; written for UF by rychveldir (https://www.deviantart.com/rychveldir)
+; for OutsideFate (https://www.deviantart.com/outsidefate)
+init:
+  z = pixel
+loop:
+  z = @a*z^2*(z-#pixel)/(1-z*#pixel)+@B
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                            \
+  (@test == 8 && |(z - z_old)| <= @bailout)
+default:
+  title = "Supernova"
+  maxiter = 250
+  magn = 0.1
+  center = (-10., -10.)
+  periodicity = 0
+  method = multipass
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "real > bailout" "diff"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param a
+    caption = "A"
+    default = (-0.73736891521489,-0.67549025372304)
+  endparam
+  param b
+    caption = "B"
+    default = (0.1, 0.2)
+  endparam
+switch:
+  type = "supernova_julia"
+  seed = #pixel
+  a = a
+  b = b
+  bailout = bailout
+}
+
+supernova_julia {
+; Julia version of the Supernova
+; Formula found here:
+; https://www.deviantart.com/jlfractals/art/JLF3328-Nova-Magma-906819308
+;
+; by jlfractals on DA
+; written for UF by rychveldir (https://www.deviantart.com/rychveldir)
+; for OutsideFate (https://www.deviantart.com/outsidefate)
+init:
+  z = pixel
+loop:
+  z = @a*z^2*(z-@seed)/(1-z*@seed)+@B
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                            \
+  (@test == 8 && |(z - z_old)| <= @bailout)
+default:
+  title = "Supernova Julia"
+  maxiter = 250
+  magn = 3
+  center = (0., 0.)
+  periodicity = 0
+  method = multipass
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "real > bailout" "diff"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param a
+    caption = "A"
+    default = (-0.73736891521489,-0.67549025372304)
+  endparam
+  param b
+    caption = "B"
+    default = (0.1, 0.2)
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (-0.750456803963, 0.0328866621095)
+  endparam
+switch:
+  type = "supernova"
+  seed = #pixel
+  a = a
+  b = b
+  bailout = bailout
+}
+
+mandel_coupling {
+init:
+  z = #pixel
+  y = #pixel
+loop:
+  z = z^@exp1 + #pixel
+  if k == @kmax
+    y = y^@exp2 + #pixel
+    k = 0
+    z = @t*z + (1-@t)*y
+  endif
+  k = k + 1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)
+default:
+  title = "Mandelbrot"
+  maxiter = 149
+  center = (-0.5, 0)
+  param exp1
+    default = 2
+    caption = "Exponent 1"
+  endparam
+  param exp2
+    default = 2
+    caption = "Exponent 2"
+  endparam
+  param t
+    default = (0.9, 0)
+  endparam
+  int param kmax
+    default = 5
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0.
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+switch:
+  type = "julia_coupling"
+  seed = pixel
+  bailout = bailout
+  exp1 = exp1
+  exp2 = exp2
+  t = t
+  kmax = kmax
+  w = w
+  a = a
+  d = d
+  test = test
+}
+
+
+julia_coupling {
+init:
+  z = #pixel
+  y = #pixel
+loop:
+  z = z^@exp1 + @seed
+  if k == @kmax
+    y = y^@exp2 + @seed
+    k = 0
+    z = @t*z + (1-@t)*y
+  endif
+  k = k + 1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)
+default:
+  title = "Simple Coupling Julia"
+  maxiter = 149
+  center = (-0.5, 0)
+  param exp1
+    default = 2
+    caption = "Exponent 1"
+  endparam
+  param exp2
+    default = 2
+    caption = "Exponent 2"
+  endparam
+  param t
+    default = (0.9, 0)
+  endparam
+  int param kmax
+    default = 5
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0.
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+switch:
+  type = "mandel_coupling"
+  seed = pixel
+  bailout = bailout
+  exp1 = exp1
+  exp2 = exp2
+  t = t
+  kmax = kmax
+  w = w
+  a = a
+  d = d
+  test = test
+}
+
+
+incremental_rotation {
+init:
+  int k = 0
+  z = #pixel
+  float kmax = 0
+  complex c0 = cos(@cs) + (0,1)*sin(@cs)
+  complex c = (1, 0)
+loop:
+  if k >= kmax
+    c = c * c0
+    kmax = kmax + @dkmax
+    k = 0
+  endif
+  k = k + 1
+  z = c * z^@exponent + #pixel
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && sin(real(@line_freq*(z + @bail_offset))) <= @bailout) ||                               \
+  (@test == 8 && |sin(@line_freq*(z + @bail_offset))| <= @bailout) ||        \
+  (@test == 9 && sin(cabs(@line_freq*(z + @bail_offset))) <= @bailout) ||      \
+  (@test == 10 && sin(real(@line_freq*(z + @bail_offset))/imag(@line_freq*(z + @bail_offset))) <= @bailout)
+default:
+  title = "Incremental Rotation"
+  maxiter = 100000
+  center = (-0., 0)
+  magn = 4
+  periodicity = 0
+  param test
+    caption = "bailout test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "sin(real(z))" "|sin(z)|" \
+      "sin(abs(z))" "sin(real/imag)"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    ;min = 1
+  endparam
+  float param dkmax
+    caption = "Rotation Interval Change"
+    default = 1
+  endparam
+  complex param exponent
+    caption = "MB Exponent"
+    default = (2., 0)
+  endparam
+  complex param cs
+    default = (1., -0.01)
+    caption = "Complex Rotation"
+  endparam
+  complex param line_freq
+    default = (1., 0)
+    caption = "Line Freq"
+    hint = "Determines the line frequency when using sin or cos bailout checks"
+  endparam
+  complex param bail_offset
+    default = (0., 0.)
+    caption = "Line Offset"
+    hint = "Phase shift when using sin or cos bailout checks"
+  endparam
+
+switch:
+  type = "julia"
+  seed = pixel
+  bailout = bailout
+  exp1 = exp1
+  exp2 = exp2
+  t = t
+}
+
+coupling_loops2 {
+init:
+  z = pixel
+  k = 0
+  kmax = @dkstart
+  if @test == 16
+    x1 = real(@p)
+    y1 = imag(@p)
+  endif
+  loop:
+  if iter >= @kstart && iter < @kend
+    if k < kmax
+       z = z^@exp1 + #pixel
+       k = k + 1
+    else
+       z = z^@exp1 + @c*z^@exp2 + #pixel
+       kmax = kmax + @dkshift
+       k = 0
+    endif
+  else
+     z = z^@exp1 + #pixel
+  endif
+  iter = iter+1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 16 && (real(z) - x1)*imag(@v - y1)-(imag(z) - y1)*real(@v) <= 0)
+default:
+  title = "Coupling Loops 2"
+  maxiter = 15000
+  center = (-0.5, 0)
+  int param kstart
+    caption = "First coupling"
+    default = 50
+    min = 0
+  endparam
+  int param kend
+    caption = "Stop coupling"
+    default = 1000000000
+  endparam
+  float param dkstart
+    caption = "1 / Starting Couple Freq"
+    default = 50.
+  endparam
+  float param dkshift
+    caption = "Couple freq change"
+    default = 50.
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs" "angletest"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+  ;param mode
+  ;  caption = "Mode"
+  ;  default = 0
+  ;  enum = "Mandelbrot" "Burning Ship"
+  ;endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  ;if test == 16
+    complex param p
+      caption = "Line Point"
+      default = 0.
+    endparam
+    complex param v
+      caption = "Line Vector"
+      default = 0.
+    endparam
+  ;endif
+switch:
+  type = "coupling_loops2_julia"
+  seed = #pixel
+  kstart = kstart
+  kend = kend
+  dkstart = dkstart
+  dkshift = dkshift
+  bailout = bailout
+  test = test
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+  d = d
+  a = a
+  w = w
+}
+
+coupling_loops2_julia {
+init:
+  z = pixel
+  k = 0
+  kmax = @dkstart
+  if @test == 16
+    x1 = real(@p)
+    y1 = imag(@p)
+  endif
+  loop:
+  if iter >= @kstart && iter < @kend
+    if k < kmax
+       z = z^@exp1 + @seed
+       k = k + 1
+    else
+       z = z^@exp1 + @c*z^@exp2 + @seed
+       kmax = kmax + @dkshift
+       k = 0
+    endif
+  else
+     z = z^@exp1 + @seed
+  endif
+  iter = iter+1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z+@dd| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 16 && (real(z) - x1)*imag(@v - y1)-(imag(z) - y1)*real(@v) <= 0)
+default:
+  title = "Coupling Loops 2 Julia"
+  maxiter = 15000
+  center = (-0.5, 0)
+  int param kstart
+    caption = "First coupling"
+    default = 50
+    min = 0
+  endparam
+  int param kend
+    caption = "Stop coupling"
+    default = 1000000000
+  endparam
+  float param dkstart
+    caption = "1 / Starting Couple Freq"
+    default = 50.
+  endparam
+  float param dkshift
+    caption = "Couple freq change"
+    default = 50.
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs" "angletest"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+  param dd
+    caption = "Dot Shift"
+    default = (0., 0.)
+  endparam
+  ;param mode
+  ;  caption = "Mode"
+  ;  default = 0
+  ;  enum = "Mandelbrot" "Burning Ship"
+  ;endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  ;if test == 16
+    complex param p
+      caption = "Line Point"
+      default = 0.
+    endparam
+    complex param v
+      caption = "Line Vector"
+      default = 0.
+    endparam
+  ;endif
+switch:
+  type = "coupling_loops2"
+  seed = #pixel
+  kstart = kstart
+  kend = kend
+  dkstart = dkstart
+  dkshift = dkshift
+  bailout = bailout
+  test = test
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+  d = d
+  a = a
+  w = w
+}
+
+burning_mandala {
+init:
+  z = #pixel
+loop:
+  z = abs(z^@exp1)^(1/@exp2) + #pixel
+  bailout:
+  |z| < @bailout ;&& |z - 1| > @lowerbailout
+default:
+  title = "Burning Mandala"
+  center = (0, 0)
+  magn = 1
+  maxiter = 250
+  periodicity = 0
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; smaller values \
+            generally produce more interesting shapes around the set."
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2.5, 0.)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1.5, 0.)
+  endparam
+switch:
+  type = "burning_mandala_julia"
+  seed = #pixel
+  exp1 = exp1
+  exp2 = exp2
+  bailout = bailout
+}
+
+
+burning_mandala_julia {
+init:
+  z = #pixel
+loop:
+  z = abs(z^@exp1)^(1/@exp2) + @seed
+  bailout:
+  |z| < @bailout ;&& |z - 1| > @lowerbailout
+default:
+  title = "Burning Mandala Julia"
+  center = (0, 0)
+  magn = 1
+  maxiter = 250
+  periodicity = 0
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; smaller values \
+            generally produce more interesting shapes around the set."
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2.5, 0.)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (2., 0.)
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (-3.7518, 1.68898)
+  endparam
+switch:
+  type = "burning_mandala"
+  exp1 = exp1
+  exp2 = exp2
+  bailout = bailout
+}
+
+coupling_loops_test {
+init:
+  z = pixel
+  k = 0
+  kmax = @dkstart
+  if @test == 16
+    x1 = real(@p)
+    y1 = imag(@p)
+  endif
+  ; gnarl part
+  niter = 0
+  loop:
+  if iter >= @kstart && iter < @kend
+    if k < kmax
+       z = z^@exp1 + #pixel
+       k = k + 1
+    else
+      xold = real(z)
+      yold = imag(z)
+      x = xold + (0.5 + 0.5 * sin(@freq * niter)) * @p1 * sin(yold) + (0.5 - 0.5 * sin(@freq * niter)) * @p2 * sin(1.5*yold)
+      y = yold + (0.5 + 0.5 * sin(@freq * niter)) * @p1 * cos(xold) + (0.5 - 0.5 * sin(@freq * niter)) * @p2 * cos(1.5*xold)
+      z = x + (0, 1)* y
+      niter = niter + 1
+      kmax = kmax + @dkshift
+      kk = 0
+    endif
+  else
+     z = z^@exp1 + #pixel
+  endif
+  iter = iter+1
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= @bailout) ||                                     \
+  (@test == 8 && |(z - z_old)| <= @bailout)            ||                    \
+  (@test == 9 && @w*real(z)/imag(z) + |z| <= @bailout) ||                    \
+  (@test == 10 && @w*imag(z)/real(z) + |z| <= @bailout) ||                   \
+  (@test == 11 && |z| + @w/|z| <= @bailout) ||                               \
+  (@test == 12 && @w*1/cos(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 13 && @w*1/sin(|z|*@a+@d) + |z| <= @bailout) ||                  \
+  (@test == 14 && |z| + @w/cos(real(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 15 && |z| + @w/sin(imag(z)*@a+@d)  <= @bailout)  ||              \
+  (@test == 16 && (real(z) - x1)*imag(@v - y1)-(imag(z) - y1)*real(@v) <= 0)
+default:
+  title = "Coupling Loops test"
+  maxiter = 15000
+  center = (-0.5, 0)
+  int param kstart
+    caption = "First coupling"
+    default = 50
+    min = 0
+  endparam
+  int param kend
+    caption = "Stop coupling"
+    default = 1000000000
+  endparam
+  float param dkstart
+    caption = "1 / Starting Couple Freq"
+    default = 50.
+  endparam
+  float param dkshift
+    caption = "Couple freq change"
+    default = 50.
+    hint = "Iteration number increase between couplings"
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff" "i/r + abs" "r/i + abs" "1/abs + abs" "1/cos(abs) + abs" "1/sin(abs) + abs" "1/cos(real) + abs" "1/sin(real) + abs" "angletest"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param w
+    caption = "Line Width"
+    default = 1.0
+  endparam
+  param a
+    caption = "Line density"
+    default = 1.0
+  endparam
+  param d
+    caption = "Line shift"
+    default = 0.0
+  endparam
+  ;param mode
+  ;  caption = "Mode"
+  ;  default = 0
+  ;  enum = "Mandelbrot" "Burning Ship"
+  ;endparam
+  param c
+    caption = "c"
+    default = (0.,0.1)
+    hint = "Weight of exponent 2 term"
+  endparam
+  param exp1
+    caption = "Exponent 1"
+    default = (2,0)
+  endparam
+  param exp2
+    caption = "Exponent 2"
+    default = (1,0)
+  endparam
+  ;if test == 16
+    complex param p
+      caption = "Line Point"
+      default = 0.
+    endparam
+    complex param v
+      caption = "Line Vector"
+      default = 0.
+    endparam
+  ;endif
+switch:
+  type = "coupling_loops2_julia"
+  seed = #pixel
+  kstart = kstart
+  kend = kend
+  dkstart = dkstart
+  dkshift = dkshift
+  bailout = bailout
+  test = test
+  exp1 = exp1
+  exp2 = exp2
+  c = c
+  d = d
+  a = a
+  w = w
+}
+
+MandelbrotInsideout {
+init:
+  z = #pixel
+  if |z| > @r
+    z = @circle_offset * @r / (z + @circle_offset)
+  endif
+  z0 = z
+  int invcount = 0
+loop:
+  if @mode == "Burning Ship"
+    z = abs(z)
+  endif
+  z = z^@exp + z0
+  if |z| > @r
+    z = @circle_offset  * @r / (z + @circle_offset)
+  endif
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+default:
+  title = "Mandelbrot Inside Out"
+  maxiter = 100
+  center = (-0.5, 0)
+  param test
+    caption = "bailout test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr"
+  endparam
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Normal" "Burning Ship"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1e20
+    min = 0
+  endparam
+  float param r
+    caption = "Inversion Radius"
+    default = 4.
+  endparam
+  param circle_offset
+    caption = "Circle Offset"
+    default = (0., 0.)
+  endparam
+  complex param exp
+    caption = "Exponent"
+    default = 2
+  endparam
+switch:
+  type = "JuliaInsideout"
+  seed = pixel
+  bailout = bailout
+  r = r
+  mode = mode
+  test = test
+  exp = exp
+}
+
+JuliaInsideout {
+init:
+  z = #pixel
+  if |z| > @r
+    z = @r / (z + @circle_offset)
+  endif
+  z0 = z
+  int invcount = 0
+loop:
+  if @mode == "Burning Ship"
+    z = abs(z)
+  endif
+  z = z^@exp + @seed
+  if |z| > @r
+    z = @r / (z + @circle_offset)
+  endif
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+default:
+  title = "Mandelbrot Inside Out"
+  maxiter = 100
+  center = (-0.5, 0)
+  param test
+    caption = "bailout test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr"
+  endparam
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Normal" "Burning Ship"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1e20
+    min = 0
+  endparam
+  float param r
+    caption = "Inversion Radius"
+    default = 4.
+  endparam
+  param circle_offset
+    caption = "Circle Offset"
+    default = (0., 0.)
+  endparam
+  complex param exp
+    caption = "Exponent"
+    default = 2
+  endparam
+  complex param seed
+    default = (1., 1.)
+    caption = "Julia Seed"
+  endparam
+switch:
+  type = "MandelbrotInsideout"
+  seed = pixel
+  bailout = bailout
+  r = r
+}
+
+val_manowar_like {
+init:
+  z = #pixel
+  zold = 0.
+  zold2 = 0.
+loop:
+  z = z^@exp + @A * zold2 + @B * zold3 + #pixel
+  zold3 = zold2
+  zold2 = zold
+  zold = z
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && real(z) <= 0) ||                                            \
+  (@test == 8 && |(z - z_old)| <= @bailout)
+default:
+  title = "Val's Manowar"
+  maxiter = 2500
+  center = (0., 0.)
+  magn = 10.
+  int param mode
+    default= 0
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs re(z) > 0" "diff"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2., 0.)
+  endparam
+  param A
+    default = (1., 0.)
+  endparam
+  param B
+    default = (0.2, 0.1)
+  endparam
+switch:
+  type = "val_manowar_like_julia"
+  seed = #pixel
+  di = di
+  A = A
+  B = B
+  exp = exp
+  bailout = bailout
+  test = test
+  k = k
+}
+
+val_manowar_like_julia {
+init:
+  z = #pixel
+  zold = 0.
+  zold2 = 0.
+loop:
+  z = z^@exp + @A * zold2 + @B * zold3 + @seed
+  zold3 = zold2
+  zold2 = zold
+  zold = z
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && imag(z)/real(z) + |z| <= @bailout)
+default:
+  title = "Val's Manowar Julia"
+  maxiter = 2500
+  magn = 10
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "imga/real + abs"
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 0
+  endparam
+  param exp
+    caption = "Exponent"
+    default = (2., 0.)
+  endparam
+  param A
+    default = (1., 0.)
+  endparam
+  param B
+    default = (0.2, 0.1)
+  endparam
+  param seed
+    default = (0.00794472287649, 0.00433727853679)
+  endparam
+switch:
+  type = "val_manowar_like"
+  bailout = bailout
+  test = test
+  A = A
+  B = B
+  exp = exp
+}

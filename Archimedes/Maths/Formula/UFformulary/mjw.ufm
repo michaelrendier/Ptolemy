@@ -1,0 +1,453 @@
+comment {
+  Fractal formulae by Mike Williams
+}
+
+Kellett {
+; Becomes a Mandelbrot set when Initial Exponent=2
+; and the two parameters are zero
+;
+; Parameters 1 and 2 cause the distinctive patterns
+; of this fractal to appear. When Threshold is low
+; Prameter 2 predominates and Parameter 1 has little
+; effect, when Threshold is high Parameter 1 predominates.
+;
+; Use low values of parameters (e.g. 0.002) to obtain
+; regular fractal shapes that are similar to Mandelbrots.
+; Use higher values (e.g. 0.1) for more irregular chaotic
+; effects.
+;
+; The "control shape" does not often appear visible in the
+; final image, but affects the results at a deeper level.
+;
+; The "All outside" switch can be used to force all pixels
+; to be outside. You can use it instead of copying the outside
+; colouring to the inside.
+; 
+init:
+  z=0
+  a=@a
+  bool up = false
+  float iter = 0
+loop:
+  iter = iter + 1
+  z=z^a+#pixel
+  if @Shape == "Square"
+    up = (abs(real(z))<=@thresh && abs(imag(z))<=@thresh)
+  elseif @Shape == "Round"
+    up = (|z| < @thresh)
+  elseif @Shape == "Diamond"
+    up = (abs(real(z))+abs(imag(z)) < @thresh)
+  elseif @Shape == "Horizontal"
+    up = (abs(imag(z)) < @thresh)
+  elseif @Shape == "Vertical"
+    up = (abs(real(z)) < @thresh)
+  elseif @Shape == "Hyperbola"
+    up = (abs(imag(z) * real(z)) < @thresh)
+  elseif @Shape == "Wave"
+    up = (abs(imag(z)+sin(real(z))) < @thresh)
+  elseif @Shape == "Wave2"
+    up = (abs(real(z)+sin(imag(z))) < @thresh)
+  elseif @Shape == "Thingy"
+    up = (abs(sin(imag(z)) * sin(real(z))) < @thresh)
+  endif
+  
+  if up  
+    a=a-@dec1
+  else
+    a=a-@dec2  
+  endif
+bailout:
+  (iter < #maxiter && @outside == true) || (|z| < @bailout && @outside == false)
+default:
+  title = "Kellett"
+  center = (0,0)
+  magn = 1
+  angle = 90
+  periodicity = 0
+  method = onepass
+  maxiter = 300
+
+  param bailout
+    caption = "Bailout"
+    default = 200
+  endparam
+  param Shape
+    caption = "Control Shape"
+    enum = "Square" "Round" "Diamond" "Vertical" "Horizontal" \
+           "Hyperbola" "Wave" "Wave2" "Thingy"
+    default = 5
+  endparam
+  float param a
+    caption = "Initial Exponent"
+    default = 2.0
+  endparam
+  float param dec1
+    caption = "Parameter 1"
+    default = 0.1
+  endparam
+  float param dec2
+    caption = "Parameter 2"
+    default = 1.0
+  endparam
+  float param thresh
+    caption = "Threshold"
+    default = 1.0
+    min = 0
+  endparam
+  bool param outside
+    caption = "All outside"
+    default = false
+  endparam
+switch:
+  type = "KellettJulia"
+  power = power
+  bailout = bailout
+  Shape = Shape
+  a = a
+  dec1 = dec1
+  dec2 = dec2
+  thresh = thresh
+  seed = #pixel
+  outside = outside
+}
+
+KellettJulia {
+; Becomes a Julia set when Initial Exponent=2
+; and the two parameters are zero
+;
+; Parameters 1 and 2 cause the distinctive patterns
+; of this fractal to appear. When Threshold is low
+; Prameter 2 predominates and Parameter 1 has little
+; effect, when Threshold is high Parameter 1 predominates.
+;
+; Use low values of parameters (e.g. 0.002) to obtain
+; regular fractal shapes that are similar to Mandelbrots.
+; Use higher values (e.g. 0.1) for more irregular chaotic
+; effects.
+;
+; The "control shape" does not often appear visible in the
+; final image, but affects the results at a deeper level.
+; 
+; The "All outside" switch can be used to force all pixels
+; to be outside. You can use it instead of copying the outside
+; colouring to the inside.
+; 
+init:
+  z=#pixel
+  a=@a
+  bool up = false
+  float iter = 0
+loop:
+  iter = iter + 1
+  z=z^a+@seed
+  if @Shape == "Square"
+    up = (abs(real(z))<=@thresh && abs(imag(z))<=@thresh)
+  elseif @Shape == "Round"
+    up = (|z| < @thresh)
+  elseif @Shape == "Diamond"
+    up = (abs(real(z))+abs(imag(z)) < @thresh)
+  elseif @Shape == "Horizontal"
+    up = (abs(imag(z)) < @thresh)
+  elseif @Shape == "Vertical"
+    up = (abs(real(z)) < @thresh)
+  elseif @Shape == "Hyperbola"
+    up = (abs(imag(z) * real(z)) < @thresh)
+  elseif @Shape == "Wave"
+    up = (abs(imag(z)+sin(real(z))) < @thresh)
+  elseif @Shape == "Wave2"
+    up = (abs(real(z)+sin(imag(z))) < @thresh)
+  elseif @Shape == "Thingy"
+    up = (abs(sin(imag(z)) * sin(real(z))) < @thresh)
+  endif
+  
+  if up  
+    a=a-@dec1
+  else
+    a=a-@dec2  
+  endif
+bailout:
+  (iter < #maxiter && @outside == true) || (|z| < @bailout && @outside == false)
+default:
+  title = "Kellett Julia"
+  center = (0,0)
+  magn = 1
+  periodicity = 0
+  method = onepass
+  maxiter = 300
+  param seed
+    caption = "Julia seed"
+    default = (-1.25, 0)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 200
+  endparam
+  param Shape
+    caption = "Control Shape"
+    enum = "Square" "Round" "Diamond" "Vertical" "Horizontal" \
+           "Hyperbola" "Wave" "Wave2" "Thingy"
+    default = 5
+  endparam
+  float param a
+    caption = "Initial Exponent"
+    default = 2.0
+  endparam
+  float param dec1
+    caption = "Parameter 1"
+    default = 0.1
+  endparam
+  float param dec2
+    caption = "Parameter 2"
+    default = 1.0
+  endparam
+  float param thresh
+    caption = "Threshold"
+    default = 1.0
+    min = 0
+  endparam
+  bool param outside
+    caption = "All outside"
+    default = false
+  endparam
+switch:
+  type = "Kellett"
+  power = power
+  bailout = bailout
+  Shape = Shape
+  a = a
+  dec1 = dec1
+  dec2 = dec2
+  thresh = thresh
+  outside = outside
+}
+
+mjw_Marvin {
+;
+; 
+;
+init:
+  z = (0,0)
+loop:
+  z = (z^2 + #pixel)*@marv + z*(1-@marv)
+bailout:
+  |z| <= @bailout
+default:
+  title = "Marvin"
+  float param marv
+    caption = "Marvinness"
+    default = 0.5
+    min = 0
+    max = 1
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 1e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+switch:
+  type = "mjw_Marvin_Julia"
+  seed = #pixel
+  bailout = bailout
+  marv=marv
+}
+
+
+mjw_Marvin_Julia {
+;
+; 
+;
+init:
+  z = #pixel
+loop:
+  z = (z^2 + @seed)*@marv + z*(1-@marv)
+bailout:
+  |z| <= @bailout
+default:
+  title = "Marvin Julia"
+  param seed
+    caption = "Julia seed"
+    default = (-1.25, 0)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+  float param marv
+    caption = "Marvinness"
+    default = 0.5
+    min = 0
+    max = 1
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia set anymore."
+  endparam
+switch:
+  type = "mjw_Marvin"
+  bailout = bailout
+  marv=marv
+}
+
+mjw_PollyM {
+init:
+  z = (0,0)
+loop:
+  z = @five*z^5 + @four*z^4 + @cube*z^3 + @square*z^2 + @unit*z + #pixel
+bailout:
+  |z| <= @bailout
+default:
+  title = "Polly Mandelbrot"
+  float param bailout
+    caption = "Bailout value"
+    default = 100
+    min = 0
+  endparam
+  float param five
+    caption = "fifth power"
+    default = 0.0
+  endparam
+  float param four
+    caption = "fourth power"
+    default = 0.0
+  endparam
+  float param cube
+    caption = "cube"
+    default = 1.0
+  endparam
+  float param square
+    caption = "square"
+    default = 2.0
+  endparam
+  float param unit
+    caption = "unit"
+    default = 2.2
+  endparam
+switch:
+  type = "mjw_PollyJ"
+  five = five
+  four = four
+  cube = cube
+  square = square
+  unit = unit
+  seed = #pixel
+  bailout = bailout
+}
+
+mjw_PollyJ {
+init:
+  z = #pixel
+loop:
+  z = @five*z^5 + @four*z^4 + @cube*z^3 + @square*z^2 + @unit*z + @seed
+bailout:
+  |z| <= @bailout
+default:
+  title = "Polly Julia"
+  float param bailout
+    caption = "Bailout value"
+    default = 100
+    min = 0
+  endparam
+  param seed
+    caption = "Julia seed"
+    default = (-0.14375,-0.3)
+  endparam
+  float param five
+    caption = "fifth power"
+    default = 0.0
+  endparam
+  float param four
+    caption = "fourth power"
+    default = 0.0
+  endparam
+  float param cube
+    caption = "cube"
+    default = 1
+  endparam
+  float param square
+    caption = "square"
+    default = 2
+  endparam
+  float param unit
+    caption = "unit"
+    default = 2.2
+  endparam
+switch:
+  type = "mjw_PollyM"
+  five = five
+  four = four
+  cube = cube
+  square = square
+  unit = unit
+  bailout = bailout
+}
+
+mjw_KaptainKrunch {
+;
+; I suggest keeping the Maximum Iterations set low
+; and using the same colouring inside and outside
+;
+init:
+  #z=@fn1(@fn2(@A/#pixel*@B/pixel))
+  c=flip(#pixel)-@c
+loop:
+  #z=#z-(@fn3(#pixel/#z))/c-(@fn3(#pixel/c))
+bailout:
+  |real(z)| <= 4
+default:
+  title = "Kaptain Krunch"
+  maxiter = 10
+  float param A
+    caption = "Openness"
+    default = 1.0
+  endparam
+  float param B
+    caption = "Width"
+    default = 5.0
+  endparam
+  float param C
+    caption = "Control"
+    default = 0.0
+  endparam
+  func fn1
+    caption = "Function 1"
+    default = cos()
+  endfunc
+  func fn2
+    caption = "Function 2"
+    default = cos()
+  endfunc
+  func fn3
+    caption = "Function 3"
+    default = sin()
+  endfunc
+}
+
+mjw_Wurlitzer {
+init:
+  #z = (0,0)
+  d = #pixel
+loop:
+  #z = @fn1(#z) - d
+  d = 1 / (z * @B)
+bailout:
+  |z| < @Bailout  
+default:
+  title = "Wurlitzer"
+  float param B
+    caption = "Whirliness"
+    default = 10
+  endparam
+  param Bailout
+    caption = "Disruption"
+    default = 4
+  endparam
+  func fn1
+    caption = "Function"
+    default = tanh()
+    hint = "Try sin, cosh, tanh, sqr, exp"
+  endfunc
+}

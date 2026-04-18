@@ -1,0 +1,845 @@
+Functional Pixel Square {
+; Same as Functional Pixel but with a square outside value
+
+; version 1.2
+; By Etienne Saint, 2016/03/24
+; Added bailout control
+;
+; version 1.1
+; By Etienne Saint-Amant, 2004/02/03
+; Added a second function
+;
+; version 1.0
+; By Etienne Saint-Amant, 2003/02/21
+;
+; This is a standard pixel formula with the availability to
+; choose a function.  This is really handy with all kind of
+; pixel using formula, like "ESA fractal tree".
+; Use Inside Coloring.
+; Go to http://www.chaoscopia.com for examples and tutorial
+
+init:
+  z = 0
+  float translateX = 0
+  float translateY = 0
+  if @followCenter
+     translateX = real(#center)
+     translateY = imag(#center)
+  endif
+
+loop:
+  z = @fn2(@fn1(#pixel))
+bailout:
+  real(z) < (translateX + @outsideValue) && real(z) > (translateX - @outsideValue) && imag(z) < (translateY + @outsideValue) && imag(z) > (translateY - @outsideValue)
+
+default:
+  title = "Functional Pixel Square"
+
+complex func fn1
+    caption = "function 1"
+    hint = "function."
+    default = ident()
+endfunc
+
+complex func fn2
+    caption = "function 2"
+    hint = "function."
+    default = ident()
+endfunc
+
+param outsideValue
+    caption = "outside value"
+    default = 1.0
+    min = 0.0
+endparam
+
+bool param followCenter
+     caption = "follow Center"
+     default = false
+endparam
+}
+
+Functional Pixel{
+; version 1.2
+; By Etienne Saint, 2016/03/24
+; Added bailout control
+;
+; version 1.1
+; By Etienne Saint-Amant, 2004/02/03
+; Added a second function
+;
+; version 1.0
+; By Etienne Saint-Amant, 2003/02/21
+;
+; This is a standard pixel formula with the availability to
+; choose a function.  This is really handy with all kind of 
+; pixel using formula, like "ESA fractal tree".
+; Use Inside Coloring.
+; Go to http://www.chaoscopia.com for examples and tutorial
+
+init:
+  z = 0
+  
+loop:
+  z = @fn2(@fn1(#pixel))
+bailout:
+  |z| < @bailout
+  
+default:
+  title = "Functional Pixel"
+ 
+complex func fn1
+    caption = "function 1"
+    hint = "function."
+    default = ident()
+endfunc
+
+complex func fn2
+    caption = "function 2"
+    hint = "function."
+    default = ident()
+endfunc
+
+param bailout
+    caption = "Bailout value"
+    default = 20
+    min = 0
+endparam
+
+}
+
+DubeauPhi0 {
+; by Etienne Saint-Amant
+; 2009/06
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sumNum
+  complex sumDenum
+  int i
+  sumNum = 0
+  sumDenum = 0
+  i = 1
+  while i <= @p - 1
+    sumNum = sumNum + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum = sumDenum + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  zold = z
+  z = z - ((z^@n - @r) * sumNum) / (@n * z^(@n - 1) * sumDenum)
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Phi 0"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 2
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 2
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+DubeauPhi1 {
+; by Etienne Saint-Amant
+; 2009/06
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sum
+  int i
+  sum = 0
+  i = 0
+  while i <= @p - 1
+    print(1/cabs(@n),":",i,":",binomialdelta(1/cabs(@n),i))
+    sum = sum + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  zold = z
+  z = z * sum
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Phi 1"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 2
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 2
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+DubeauPhiMixture {
+; by Etienne Saint-Amant
+; 2009/06
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sum
+  complex sumNum
+  complex sumDenum
+  int i
+  sum = 0
+  sumNum = 0
+  sumDenum = 0
+  i = 0
+  while i <= @p - 1
+    sum = sum + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p - 1
+    sumNum = sumNum + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum = sumDenum + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  zold = z
+  z = (1 - @lambda) * \
+      (z - ((z^@n - @r) * sumNum) / (@n * z^(@n - 1) * sumDenum)) \
+      + @lambda * z * sum
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Phi Mixture"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 2
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 2
+  endparam
+  param lambda
+    caption = "Lambda (for mixture)"
+    default = (0,0)
+    hint = "Affine combination between Dubeau Phi 0 and Dubeau Phi 1. \
+           Should be between 0 and 1 (0 to show normal Dubeau Phi 0 and \
+           1 to show normal Dubeau Phi 1)."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+DubeauPhiMixtureWithFunctions {
+; by Etienne Saint-Amant
+; 2009/06
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sum
+  complex sumNum
+  complex sumDenum
+  int i
+  sum = 0
+  sumNum = 0
+  sumDenum = 0
+  i = 0
+  while i <= @p - 1
+    sum = sum + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p - 1
+    sumNum = sumNum + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum = sumDenum + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  zold = z
+  z = (1 - @lambda) * \
+      @f1((z - ((z^@n - @r) * sumNum) / (@n * z^(@n - 1) * sumDenum))) \
+      + @lambda * @f2(z * sum)
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Phi Mixture with Functions"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 2
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 2
+  endparam
+  param lambda
+    caption = "Lambda (for mixture)"
+    default = (0,0)
+    hint = "Affine combination between Dubeau Phi 0 and Dubeau Phi 1. \
+           Should be between 0 and 1 (0 to show normal Dubeau Phi 0 and \
+           1 to show normal Dubeau Phi 1)."
+  endparam
+  complex func f1
+    caption = "Phi_0 associated function"
+    default = ident()
+    hint = "This function modify the behavior of the Dubeau Phi_0."
+  endfunc
+  complex func f2
+    caption = "Phi_1 associated function"
+    default = ident()
+    hint = "This function modify the behavior of the Dubeau Phi_1."
+  endfunc
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+DubeauPsi {
+; by Etienne Saint-Amant
+; 2009/07
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+  float lambdaP
+  lambdaP = (@p - 1)/real((@p - 1) + (-1)^(@p - 1))
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sum
+  complex sum2
+  complex sumNum
+  complex sumNum2
+  complex sumDenum
+  complex sumDenum2
+  int i
+  sum = 0
+  sum2 = 0
+  sumNum = 0
+  sumNum2 = 0
+  sumDenum = 0
+  sumDenum2 = 0
+  i = 0
+  while i <= @p - 1
+    sum = sum + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 0
+  while i <= @p
+    sum2 = sum2 + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p - 1
+    sumNum = sumNum + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum = sumDenum + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p
+    sumNum2 = sumNum2 + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum2 = sumDenum2 + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  zold = z
+  z = (1 - @mu0 - @mu1) * (1 - lambdaP) * \
+      (z - ((z^@n - @r) * sumNum) / (@n * z^(@n - 1) * sumDenum)) \
+      + lambdaP * z * sum \
+      + @mu0 * (z - ((z^@n - @r) * sumNum2) / (@n * z^(@n - 1) * sumDenum2)) \
+      + @mu1 * z * sum2
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Psi"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 3
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 3
+  endparam
+  heading
+    text = "Note: Usually, mu0 and mu1 are real and mu0 + mu1 inferior \
+           or equal to 1"
+  endheading
+  param mu0
+    caption = "Mu 0 (for mixture)"
+    default = (0,0)
+  endparam
+  param mu1
+    caption = "Mu 1 (for mixture)"
+    default = (0,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+DubeauPsiWithFunctions {
+; by Etienne Saint-Amant
+; 2009/07
+; Based on the article of Francois Dubeau that appeared on the Journal of
+; Computational and Appied Mathematics 224 in 2009, pp. 66-76.
+; doi:10.1016/j.cam.2008.04.014
+
+global:
+  ;$define DEBUG
+  float lambdaP
+  lambdaP = (@p - 1)/real((@p - 1) + (-1)^(@p - 1))
+init:
+  ; factorial
+  int func factorial(int i)
+    int total
+    total = 1
+    while i >= 1
+      total = total * i
+      i = i - 1
+    endwhile
+    return total
+  endfunc
+  ; num function
+  float func num(float delta, int i)
+     float total
+     float vardelta
+     total = 1
+     vardelta = delta
+     while i >= 1
+       total = total * vardelta
+       vardelta = vardelta - 1
+       i = i - 1
+     endwhile
+     return total
+   endfunc
+  ; binomial delta function
+  float func binomialdelta(float delta, int i)
+    float result
+    if i == 0
+      result = 1
+    else
+      result = num(delta,i)/factorial(i)
+    endif
+    return result
+  endfunc
+  z = pixel
+loop:
+  complex sum
+  complex sum2
+  complex sumNum
+  complex sumNum2
+  complex sumDenum
+  complex sumDenum2
+  int i
+  sum = 0
+  sum2 = 0
+  sumNum = 0
+  sumNum2 = 0
+  sumDenum = 0
+  sumDenum2 = 0
+  i = 0
+  while i <= @p - 1
+    sum = sum + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 0
+  while i <= @p
+    sum2 = sum2 + binomialdelta(1/cabs(@n),i) * (@r/z^@n - 1)^i
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p - 1
+    sumNum = sumNum + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum = sumDenum + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  i = 1
+  while i <= @p
+    sumNum2 = sumNum2 + binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    sumDenum2 = sumDenum2 + i * binomialdelta(1/cabs(@n),i) * (z^@n/@r - 1)^(i-1)
+    i = i + 1
+  endwhile
+  zold = z
+  z = (1 - @mu0 - @mu1) * (1 - lambdaP) * \
+      @f1((z - ((z^@n - @r) * sumNum) / (@n * z^(@n - 1) * sumDenum))) \
+      + lambdaP * @f2(z * sum) \
+      + @mu0 * \
+      @f1((z - ((z^@n - @r) * sumNum2) / (@n * z^(@n - 1) * sumDenum2))) \
+      + @mu1 * @f2(z * sum2)
+bailout:
+  |z - zold| >= @bailout
+default:
+  title = "Dubeau Psi With Functions"
+  periodicity = 0
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  maxiter = 100
+  param n
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Specifies the exponent of the equation that is solved by \
+            Dubeau's method. Use real numbers (set the imaginary part \
+            to zero) to obtain the correct Dubeau's Method"
+  endparam
+  param r
+    caption = "Root"
+    default = (1,0)
+    hint = "Specifies the root of the equation that is solved. Use larger \
+            numbers for slower convergence."
+  endparam
+  int param p
+    caption = "Order of convergence"
+    default = 3
+    hint = "Must be a natural number greater than 2.  2 will generate a \
+           standard Newton's method."
+    min = 3
+  endparam
+  heading
+    text = "Note: Usually, mu_0 and mu_1 are real and mu0 + mu1 inferior \
+           or equal to 1"
+  endheading
+  param mu0
+    caption = "Mu_0 (for mixture)"
+    default = (0,0)
+  endparam
+  param mu1
+    caption = "Mu_1 (for mixture)"
+    default = (0,0)
+  endparam
+  complex func f1
+    caption = "Phi_0 associated function"
+    default = ident()
+    hint = "This function modify the behavior of the Dubeau Phi_0."
+  endfunc
+  complex func f2
+    caption = "Phi_1 associated function"
+    default = ident()
+    hint = "This function modify the behavior of the Dubeau Phi_1."
+  endfunc
+  param bailout
+    caption = "Bailout value"
+    default = 0.00001
+    min = 0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+

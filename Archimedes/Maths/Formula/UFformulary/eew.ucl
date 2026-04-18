@@ -1,0 +1,1349 @@
+WaveTrichrome-eew {
+;Based on Fractal Explorer Orbit Counting
+;by Arthur Sirotinsky and Olga Federenko (and Ed Algra).
+;but are better in deep zooms.
+;& inspired by Paul Derbyshire's renders & Ron Barnett's exp smoothing.
+; www.fractalforums.com
+
+;Here colours behave much as waves.
+;Channels ara calculated as inversed summs
+;by Edgar Malinovsky 17.11.2012.
+; 14.08.2013. + triangle transfer function & more colur switches.
+; 28.08.2013 + Szegedy Butterfly trap.
+; 30.09.2013  + 2 orbits, type 9 now will work from start intended.
+;+ random noise taken from Mark Townsend's scripts.
+
+; You may redistribute this algorithm, modify, derivate or use comercialy as you wish as long as you give proper credits.
+;;
+; 03/09/2015  Erik Wahl
+; mindpoet61.deviantart.com
+;
+; Interface was edited to be more artist-friendly: ie. gave Symmetric Orbit options
+; more descriptive names. Code and notes were edited for
+; better readability.
+;
+$DEFINE DIRECT
+global:
+float antilightR = 1/@lightR
+float antilightG = 1/@lightG
+float antilightB = 1/@lightB
+
+init:
+int cnt = 0
+float sumR = 0
+float sumG = 0
+float sumB = 0
+
+float temp = 0.0
+
+float dataR = @seed
+float dataG = @seed
+float dataB = @seed
+
+float resultR = 0.0
+float resultG = 0.0
+float resultB = 0.0
+
+float cabsz = 0
+float xx = 0
+float yy = 0
+float zx = 0
+float zy = 0
+color gradcolor = rgba(0, 0, 0, 0)
+float resultAlpha = 0.0
+
+loop:
+cnt = cnt + 1
+
+IF @orbits != 0
+zx = real(#z)
+zy = imag(#z)
+xx = sqr(zx)
+yy = sqr(zy)
+ENDIF
+
+IF @orbits == 0
+  cabsz = cabs(#z)
+
+ELSEIF @orbits == 1
+  cabsz = abs(2*xx - yy - sin(yy)) + abs(2*yy - xx - sin(xx))
+
+ELSEIF @orbits == 2
+  cabsz = abs(xx - abs(abs(yy) - cos(abs(xx)))) + abs(yy - abs(abs(xx) - cos(abs(yy))))
+
+ELSEIF @orbits == 3
+  cabsz = abs(xx - yy + abs(sin(yy))) + abs(yy*yy - xx + abs(sin(xx)))
+
+ELSEIF @orbits == 4
+  cabsz = abs(2*sin(xx) + abs(yy) - cos(yy*yy)) + abs(2*sin(yy) + abs(xx) - cos(xx*xx))
+
+ELSEIF @orbits == 5
+  cabsz = abs(2*sin(abs(zx)) - abs(zy) - cos(2*abs(zx)))+abs(2*sin(abs(zy)) - abs(zx) - cos(2*abs(zy)))
+
+ELSEIF @orbits == 6
+  cabsz = abs(xx - yy + sin(yy*yy)) + abs(yy - xx + sin(xx*xx))
+
+ELSEIF @orbits == 7
+  cabsz = abs(abs(zy) - cos(abs(zx))) + abs(abs(zx) - cos(abs(zy)))
+
+ELSEIF @orbits == 8
+  cabsz = abs(xx-sin(yy) + abs(cos(yy)*sin(0.5*yy))) + abs(xx-sin(xx) + abs(cos(xx)*sin(0.5*xx)))
+
+ELSEIF @orbits == 9
+  cabsz = cabs( (xx - abs(sin(zy)-cos(zx))) + flip(yy - abs(sin(zx)-cos(zy))) + (xx - abs(sin(zy)+cos(zx))) + flip(yy - abs(sin(zx)+cos(zy)))  )
+
+ELSEIF @orbits == 10
+  cabsz = cabs( yy - sqrt(abs(zx) ) + flip ( xx - sqrt(abs(zy ))   ) + 1.0E-15)
+
+ELSEIF @orbits == 11
+;arlecchino, modified Mark Townsend harlequin
+  cabsz = cabs(zx+flip(zy)- 1- sqr(1.25*real(atan(zx /(zy+1.0E-15))))+1.0E-15)
+
+ELSEIF (@orbits == 12)
+;Chebyshev4Axolotl
+  cabsz = cabs(((xx-yy+flip(2*zx*zy))*(35 * sqr(xx-yy+flip(2*zx*zy)) - 30)+3)/8 +1.0E-15)
+ENDIF
+
+;with counter
+IF @usecount
+dataR =  (dataR + recip(cnt) )/( @scalarR + cabsz*antilightR)
+dataG =  (dataG + recip(cnt) )/( @scalarG + cabsz*antilightG)
+dataB =  (dataB + recip(cnt) )/( @scalarB + cabsz*antilightB)
+; without
+ELSE
+dataR =  dataR/( @scalarR + cabsz*antilightR)
+dataG =  dataG/( @scalarG + cabsz*antilightG)
+dataB =  dataB/( @scalarB + cabsz*antilightB)
+ENDIF
+
+sumR = sumR + dataR
+sumG = sumG + dataG
+sumB = sumB + dataB
+
+
+final:
+resultR = abs(sumR)
+resultG = abs(sumG)
+resultB = abs(sumB)
+
+IF @userandom
+resultR = abs( tanh(@randomamt *real(#random)) + resultR)
+resultG = abs( tanh(@randomamt *real(#random)) + resultG)
+resultB = abs( tanh(@randomamt *real(#random)) + resultB)
+ENDIF
+
+
+IF    @postfn == 1	
+	resultR = sqr(resultR)
+	resultG = sqr(resultG)
+	resultB = sqr(resultB)
+
+ELSEIF @postfn == 2	
+	resultR = sqrt(resultR)
+	resultG = sqrt(resultG)
+	resultB = sqrt(resultB)
+
+ELSEIF @postfn == 3	
+	resultR = 1 - resultR
+	resultG = 1 - resultG
+	resultB = 1 - resultB
+
+ELSEIF @postfn == 4	
+resultR = cos(#pi*resultR )+ resultR*0.5
+resultG = cos(#pi*resultG) + resultG*0.5
+resultB = cos(#pi*resultB) + resultB*0.5
+
+ELSEIF @postfn == 5
+  sumR = resultR
+  sumG = resultG
+  sumB = resultB
+	resultR = abs(resultR - sqrt(sumG*sumB)*0.5)
+	resultG = abs(resultG - sqrt(sumR*sumB)*0.5)
+	resultB = abs(resultB - sqrt(sumR*sumG)*0.5)
+
+ELSEIF @postfn == 6	
+	resultR = sqr(sin(#pi*resultR))
+	resultG = sqr(sin(#pi*resultG))
+	resultB = sqr(sin(#pi*resultB))
+	
+ELSEIF @postfn == 7 	
+	resultR = sin(resultR)
+	resultG = sin(resultG)
+	resultB = sin(resultB)
+	
+ELSEIF @postfn == 8	
+  resultR = abs(resultR - round(resultR))
+  resultG = abs(resultG - round(resultG))
+  resultB = abs(resultB - round(resultB))
+
+ELSEIF @postfn == 9	
+	resultR = tanh(resultR)
+	resultG = tanh(resultG)
+	resultB = tanh(resultB)
+	
+ELSEIF @postfn == 10
+  sumR = resultR
+  sumG = resultG
+  sumB = resultB	
+	resultR = sin(sumG)*cos(sumB)
+	resultG = sin(sumB)*cos(sumR)
+	resultB = sin(sumR)*cos(sumG)
+
+ELSEIF @postfn == 11	
+	resultR = ((resultR)/(2+abs(resultR)))*3
+	resultG = ((resultG)/(2+abs(resultG)))*3
+	resultB = ((resultB)/(2+abs(resultB)))*3
+	
+ELSEIF @postfn == 12
+  resultR = abs(abs(resultR*0.5-trunc(resultR*0.5))-0.5)*2
+  resultG = abs(abs(resultG*0.5-trunc(resultG*0.5))-0.5)*2
+  resultB = abs(abs(resultB*0.5-trunc(resultB*0.5))-0.5)*2 	 	
+ENDIF
+
+  ; switching red and blue.
+	IF @switchRB
+	temp = resultB
+	resultB = resultR
+	resultR = temp
+  ENDIF
+  ; switching red and green.
+	IF @switchRG
+	temp = resultG
+	resultG = resultR
+	resultR = temp
+  ENDIF
+  ;switching green and blue
+  IF @switchGB
+	temp = resultB
+	resultB = resultG
+	resultG = temp
+  ENDIF
+;colour mode: direct, using palette, or mixed.
+IF @palette == 0
+  #color = rgb(resultR, resultG, resultB)
+ELSEIF @palette == 1
+  #color = gradient(resultG)
+ELSEIF @palette == 2
+ ;gradient is by arithmetic mean of RGB
+  gradcolor = gradient((resultR+resultG+resultB)*0.333333333333333 )
+ ;harmonic of gradient and RGB
+	resultR = 2/(recip(red(gradcolor))+ recip(resultR))
+	resultG = 2/(recip(green(gradcolor))+ recip(resultG))
+	resultB = 2/(recip(blue(gradcolor))+ recip(resultB))		
+	resultAlpha = alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+ELSEIF @palette == 3
+; colour mode like of Fractal Explorer.
+; uses pallete, but each chanell is calculated seperately.
+  resultR = red(gradient(resultR))
+  resultG = green(gradient(resultG))
+  resultB = blue(gradient(resultB))
+  resultAlpha = alpha(gradient(resultG))
+  #color = rgba(resultR, resultG, resultB, resultAlpha)
+ELSEIF @palette == 4
+  #color = gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+;;
+default:
+title = "Wave Trichrome Direct"
+rating = recommended
+
+heading
+caption = "Info"
+text = "This is a more artist-friendly version of Edgar S. Malinovski's Wave Trichrome \
+        OCA. Set formula bailout high for best results."
+endheading
+;
+heading
+  caption = "Orbit Adjustment"
+endheading
+
+param seed
+  caption = "Start Seed"
+  default = 1.0
+  hint = "Starting value for colour calculations."
+endparam
+param orbits
+  caption = "Symmetric Orbits"
+  enum = "None" "Hyperbolic" "Box" "Tendrils" "Popcorn 1" "Crab" "Popcorn 2" "Eyefish" \
+          "Lens" "Pongo" "SZA Butterfly" "Arlecchino" "Chebyshev4Axolotl"
+  hint= "These cause the coloring shapes to be symmetric."
+endparam
+param usecount
+caption = "Use Counter?"
+default = true
+hint= "Turning this off sometimes produces nice overall Julia shapes but results \
+       are not generally zoomable."
+endparam
+;
+heading
+  caption = "Palette Adjustment"
+endheading
+
+param palette
+	caption = "Palette Mode"
+	enum = "Direct Colouring" "Gradient" "Mixed Harmonic" "Fractal Explorer" "Harmonic Gradient"
+	default = 3
+	hint = "Direct Colouring ignores the gradient and calculates colours directly. \
+           Both Gradient and Harmonic Gradient use the gradient exclusively. \
+           Mixed Harmonic blends colours from the gradient and from those directly \
+           calculated. FE Like takes colours from the gradient but allows the \
+           individual channels to be adjusted separately."
+endparam
+
+param postfn
+	caption = "Post Function"
+	enum = "None" "Square" "Square Root" "Inverted" "Half Periodic cos" "Accentuate RGB" "Haversine" "periodic Sine" "Solarisation" "Hyperbolic Tangent" "SineCosineMix" "Sigmoid" "Triangle"
+	default =  0
+	hint="Works similar to Transfer Function but with more options and effects."
+endparam
+
+param userandom
+caption = "Add Random noise"
+default = false
+hint = "Adds random noise texture."
+endparam
+
+param randomamt
+caption = "Noise Amount"
+
+default = 0.1
+visible = @userandom
+hint = "Amount of random noise to add."
+endparam
+
+heading
+  caption = "Wave Channel Adjustment"
+  visible = ( @palette != 1 && @palette != 4)
+endheading
+
+param switchRB
+	caption = "Red <-> Blue"
+	default = false
+	hint= "Switch Red and Blue channels."
+	 visible = ( @palette != 1 && @palette != 4)
+endparam
+param switchRG
+	caption = "Red <-> Green"
+	default = false
+	hint= "Switch Red and Green channels."
+	visible = ( @palette != 1 && @palette != 4)
+endparam
+param switchGB
+	caption = "Green <-> Blue"
+	default = false
+	hint= "Switch Green and Blue channels."
+	 visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param lightR
+caption = "Red light"
+default = 0.7
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param scalarR
+caption = "Red scalar"
+default = 0.7
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param lightG
+caption = "Green light"
+default = 1.2
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param scalarG
+caption = "Green scalar"
+default = 1.2
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param lightB
+caption = "Blue light"
+default = 0.25
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+
+param scalarB
+caption = "Blue scalar"
+default = 0.25
+ visible = ( @palette != 1 && @palette != 4)
+endparam
+}
+
+TwinLampsDirect--eew {
+; Direct colouring of Twin Lamps method.
+; Exponential smoothing colouring divided by fractal dimenison statistics.
+; + an option for just Direct Colouring Exponent Smoothing.
+
+; Colours are calculated by different exponent bases.
+; The smaller is a base the more of that colour is taken. 0 still is 0.
+; This looks cosmic as alike algorithm are used to colour
+; astro photos. (low values goes to red, high to blue)
+; Just keep colours different (Re, Im, Re neagative bases.)
+
+; 3x as slow and unwielding as palette based version;)
+; ZOOM requires manual INCREASE of colour iterations.
+; But low colour iteration values (~25) increase features.
+
+; Used standart Exp smoothing (invented by Ron Barnet) code taken from Damien M. Jones.
+; and fractal dimension statistics from Kerry Mitchell.
+; http://www.fractalforums.com/index.php?topic=10153.0
+
+; by Edgars Malinovskis 18.01.2012
+; + Removed bug creating black spots. 23.02.1012
+; + Changed exponent bases to generate more natural colours. 31.03.2012.
+
+; 20.04.2012.
+; + normalisation for z values converging to small number, aka all white insides.
+; +  post functions for more colour capabilities.
+; Saved fractals of older versions could require maxiter increase or will be darker.
+
+; 03.10.2012. + new colour mode by harmonic between gradient and direct.
+; So to have advantages of using gradients and direct colours.
+; 13.11.2012. + flag to remove unnatural blue tones in direct modes.
+; 14.08.2013. + triangle transfer function and more colour switches.
+
+; You may redistribute this algorithm, modify, derivate or use comercialy
+; as you wish as long as you give proper credits.
+;--------------------------------------------------
+; 02/05/2015  Erik Wahl
+; mindpoet61.deviantart.com
+;
+; I tweaked the code dealing with smoothing options so as to provide better and
+; smoother colorings as original author desired.
+; I fixed some of the Post functions so that they work as original author intended.
+; Interface was edited to be more artist-friendly.  Code and notes were edited for
+; better readability.
+
+$DEFINE DIRECT
+global:
+int iter = @iternum
+IF iter >= #maxiter
+  iter = #maxiter - 1
+ENDIF
+
+init:
+complex sumR = (0, 0)
+complex sumG = (0, 0)
+complex sumB = (0, 0)
+float resultR = 0.0
+float resultG = 0.0
+float resultB = 0.0
+float lnz = 0.0
+float zmin = 1e20
+float zmax = -1
+float cabsz = 0.0
+float temp = 0.0
+int cnt = 0
+float alsresultR = 0.0
+float alsresultG = 0.0
+float alsresultB = 0.0
+color	gradcolor = rgba(0, 0, 0, 0)
+float resultAlpha = 0.0
+
+loop:
+IF cnt <= iter ;calculates first iterations
+
+  cabsz = cabs(#z+@zoff)
+  ; set dimension type for normalizing
+  IF      @dimtype == "Log"
+    lnz = log(cabsz)
+	ELSEIF  @dimtype == "Magnitude"
+    lnz = |cabsz|
+  ELSEIF  @dimtype == "Exponential"
+    lnz = exp(-cabsz)
+  ENDIF
+
+
+	IF lnz < zmin
+	  zmin = lnz
+	ENDIF
+	IF lnz > zmax
+	  zmax = lnz
+	ENDIF
+
+cabsz = cnt/iter *2 + cabsz
+cnt = cnt + 1
+
+;Each channel can be given a different complex base resulting in a variety of
+;coloring effects.
+sumR = @baseR^(-cabsz) + sumR
+sumG = @baseG^(-cabsz) + sumG
+sumB = @baseB^(-cabsz) + sumB
+
+ENDIF
+;
+final:
+resultR = abs(real(sumR))
+resultG = abs(real(sumG))
+resultB = abs(real(sumB))
+
+;varieties of normalized smoothing
+IF @extrasmooth
+  IF @mathsmooth == "Tanh"		
+    resultR = tanh(resultR)/(1+zmax-zmin)
+    resultG = tanh(resultG)/(1+zmax-zmin)
+    resultB = tanh(resultB)/(1+zmax-zmin)
+  ELSEIF @mathsmooth == "Sqrt"
+    resultR = sqrt(resultR)/(1+zmax-zmin)
+    resultG = sqrt(resultG)/(1+zmax-zmin)
+    resultB = sqrt(resultB)/(1+zmax-zmin)
+  ELSEIF @mathsmooth == "Cube Root"
+    resultR = resultR^0.3333333333333/(1+zmax-zmin)
+    resultG = resultG^0.3333333333333/(1+zmax-zmin)
+    resultB = resultB^0.3333333333333/(1+zmax-zmin)
+  ELSEIF @mathsmooth == "Linear"
+    resultR = resultR/(1+zmax-zmin)
+    resultG = resultG/(1+zmax-zmin)
+    resultB = resultB/(1+zmax-zmin)
+  ENDIF
+ENDIF
+;
+
+IF      @postfn == 1	   ; Square
+	resultR = sqr(resultR)
+	resultG = sqr(resultG)
+	resultB = sqr(resultB)
+
+ELSEIF @postfn == 2	     ;  Square root
+	resultR = sqrt(resultR)
+	resultG = sqrt(resultG)
+	resultB = sqrt(resultB)
+
+ELSEIF @postfn == 3	     ;  Inverted
+	resultR = 1- resultR
+	resultG = 1- resultG
+	resultB = 1- resultB
+
+ELSEIF @postfn == 4	     ;   Half Periodic Cosine
+  resultR = cos(#pi*resultR)+resultR*0.5
+  resultG = cos(#pi*resultG)+resultG*0.5
+  resultB = cos(#pi*resultB)+resultB*0.5
+
+ELSEIF @postfn == 5     ;   Accentuate RGB
+  alsresultR = resultR
+  alsresultG = resultG
+  alsresultB = resultB
+	
+	resultR = abs(resultR - sqrt(alsresultG*alsresultB)*0.5)
+	resultG = abs(resultG - sqrt(alsresultR*alsresultB)*0.5)
+	resultB = abs(resultB - sqrt(alsresultR*alsresultG)*0.5)
+
+ELSEIF @postfn == 6	    ;   Haversine
+	resultR = sqr(sin(#pi*resultR))
+	resultG = sqr(sin(#pi*resultG))
+	resultB = sqr(sin(#pi*resultB))
+	
+ELSEIF @postfn == 7	    ; Periodic Sine (corrected)
+	resultR = sin(#pi*resultR) + resultR*0.5
+	resultG = sin(#pi*resultG) + resultG*0.5
+	resultB = sin(#pi*resultB) + resultB*0.5
+	
+ELSEIF @postfn == 8	     ; Solarisation
+  resultR = abs(resultR - round(resultR))
+  resultG = abs(resultG - round(resultG))
+  resultB = abs(resultB - round(resultB))
+
+ELSEIF @postfn == 9	      ; Hyperbolic Tangent (corrected)
+	resultR = tanh(resultR) + resultR*0.5
+	resultG = tanh(resultG) + resultG*0.5
+	resultB = tanh(resultB) + resultB*0.5
+	
+ELSEIF @postfn == 10	    ; SinCos Mix (corrected)
+  alsresultR = resultR
+  alsresultG = resultG
+  alsresultB = resultB
+	resultR = sin((alsresultG))*cos((alsresultB)) + alsresultR*0.5
+	resultG = sin((alsresultB))*cos((alsresultR)) + alsresultG*0.5
+	resultB = sin((alsresultR))*cos((alsresultG)) + alsresultB*0.5
+
+ELSEIF @postfn == 11	     ; Sigmoid
+	resultR = (resultR/(2+abs(resultR)))*3
+	resultG = (resultG/(2+abs(resultG)))*3
+	resultB = (resultB/(2+abs(resultB)))*3
+
+ELSEIF @postfn == 12       ;  Triangle
+  resultR = abs(abs(resultR*0.5-trunc(resultR*0.5))-0.5)*2
+  resultG = abs(abs(resultG*0.5-trunc(resultG*0.5))-0.5)*2
+  resultB = abs(abs(resultB*0.5-trunc(resultB*0.5))-0.5)*2
+  	 	
+ENDIF
+
+IF @userandom
+resultR = abs(tanh(@randomamt*real(#random))+ resultR)
+resultG = abs(tanh(@randomamt*real(#random))+ resultG)
+resultB = abs(tanh(@randomamt*real(#random))+ resultB)
+ENDIF
+;--
+IF @switchRB
+	temp = resultB
+	resultB = resultR
+	resultR = temp
+ENDIF
+
+IF @switchRG
+	temp = resultG
+	resultG = resultR
+	resultR = temp
+ENDIF
+
+IF @switchBG
+	temp = resultB
+	resultB = resultG
+	resultG = temp
+ENDIF
+;
+;colour mode: direct, using palette, or mix.
+IF @palette == 0    ;direct colouring; does not use User Gradient
+  #color = rgb(resultR, resultG, resultB)
+ELSEIF @palette == 1   ;exclusively uses User Gradient
+  #color = gradient(resultG)
+ELSEIF @palette == 2
+ ;gradient mixes Direct RGB and user Gradient--best option IMHO--eew
+  gradcolor = gradient((resultR+resultG+resultB)*0.333333333333333)
+ ;harmonic of gradient and RGB
+	resultR = 2/(recip(red(gradcolor))+ recip(resultR))
+	resultG = 2/(recip(green(gradcolor))+ recip(resultG))
+	resultB = 2/(recip (blue(gradcolor))+ recip(resultB))	
+	resultAlpha = alpha(gradcolor)
+	#color = rgba(resultR, resultG, resultB,resultAlpha)
+ELSEIF @palette == 3
+; Colour mode emulates Fractal Explorer.
+; uses User palette, but each channel is calculated separately.
+  resultR = red(gradient(resultR))
+  resultG = green(gradient(resultG))
+  resultB = blue(gradient(resultB))
+  resultAlpha = alpha(gradient(resultG))
+  #color = rgba(resultR, resultG, resultB, resultAlpha)
+ELSEIF @palette == 4	
+;Exclusively uses User Gradient but harmonically inverts index value.
+  #color = gradient(3/(recip(resultR) + recip(resultG) + recip(resultB) ) )	
+ENDIF
+ 		
+default:
+title = "TwinLamps Direct"
+
+heading
+  caption = "Info"
+  text = "This is my tweak of Edgar Malinovski's 'Twin Lamps Direct Colouring'\
+          I cleaned up the interface for better user accessibility. \
+           I tweaked the code dealing with smoothing options so as to provide better\
+           and smoother colorings as Edgar intended. I also fixed some \
+           of the Post functions so that they work as he intended."
+endheading
+heading
+  caption = "Palette Adjustment"
+endheading
+param palette
+	caption = "Colour Mode"
+	enum= "Direct Colouring" "Gradient Based" "Mixed Harmonic" "Fractal Explorer like" "Gradient by Harmonic"
+	default=2
+	hint= "Gradient Based is gradient calculated from green channel, gradient harmonic is gradient calc from mean of all channels. Mixed is harmonic mean between gradient colour (by mean of RGB) and RGB channels. Fractal Explorer like is RGB values calculated seperately from gradient. All exept direct colouring uses gradient and alpha channel."
+endparam
+
+
+param zoff
+	caption = "Z Offset"
+	default =  (2.0, 0)
+	hint = "Moves orbit around resulting in colour patterns"
+endparam
+
+param iternum
+caption = "Use first N iterations"
+default = 100
+min = 0
+hint = "Specify the number of iterations to apply colouring algorithms"
+endparam
+
+param dimtype
+	caption = "Fractal Dimension";
+	enum = "Log" "Magnitude" "Exponential";
+	default = 2;
+endparam
+
+param extrasmooth
+  caption = "Additional smoothing"
+  default = true
+  hint = "Provides additional smoothing."
+endparam
+param mathsmooth
+  caption = "Smoothing Type"
+  enum = "Sqrt" "Tanh" "Cube Root" "Linear"
+  default =  3
+  visible = @extrasmooth
+endparam
+
+param postfn
+	caption = "Post Function"
+	enum = "None" "Square" "Square Root" "Inverted" \
+  "Half Periodic cos" "Accentuate RGB" "Haversine" "Periodic Sine" "Solarisation" \
+  "Hyperbolic Tangent" "SineCosineMix" "Sigmoid" "Triangle"
+	hint = "These options add interesting effects."
+  default =  4
+endparam
+
+param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+param randomamt
+caption = "Noise Amount"
+hint = "Amount of random noise to add. Use small amounts for texture"
+default = 0.1
+visible = @userandom
+endparam
+;
+heading
+  caption = "Channel Adjustment"
+endheading
+param switchRB
+	caption = "Red <-> Blue"
+	default = false
+	hint= "Switch Red and Blue channels."
+	visible = (@palette != 1)
+endparam
+
+param switchRG
+	caption = "Red <-> Green"
+	default = false
+	hint= "Switch Red and Green channels."
+endparam
+
+param switchBG
+	caption = "Blue <-> Green"
+	default = false
+	hint= "Switch Blue and Green channels."
+endparam
+
+param baseR
+caption = "Red Base"
+default = (3,0)
+hint = "Complex Log base for red channel. Increasing value decreases red amount.\
+         Not available when using Gradient-Based option."
+visible = (@palette != 1)
+endparam
+
+param baseG
+caption = "Green Base"
+default = (-1.85,0)
+hint = "Complex Log base for green channel. Increasing value decreases green amount."
+endparam
+
+param baseB
+caption = "Blue Base"
+default = (0,1.85)
+hint = "Complex Log base for blue channel. Increasing value decreases blue amount.\
+        Not available when using Gradient-Based option."
+visible = (@palette != 1)
+endparam
+
+}
+
+
+Beta {
+; forgot where this came fron but it's pretty interesting
+; eew
+init:
+complex dz = (0,0)
+int i = 0;
+loop:
+dz = @vibe*#z*(@power-0.9)*dz+@power^@level*#z
+i = i + 4000
+final:
+#index = real(abs(#z/dz)^(@vibe/exp(@power))*log(i));
+default:
+title = "DE Variation BETA"
+;
+param power
+  caption = "Exponent"
+  default = 1.934
+  hint = "You can adjust this to your needs, but 1.934 gives you the best results."
+endparam
+
+param vibe
+  caption = "Color Intensity"
+  default = .5
+  max = 2.0
+  hint = "Controls color intensity"
+endparam
+
+param level
+  caption = " Integrity"
+  default = 1.0
+  hint = "Play around with this."
+endparam
+}
+
+Circle_Trap_1st_Hit {
+ ;  A quick and dirty Point Trap..very basic
+ ;  My aeonian gratitude to Damien Jones for providing
+ ;  the basic Orbit Trap structure
+ ;Erik Wahl...mindpoet61.deviantart.com
+ ;July 7 2014
+init:
+complex trapz = (0,0)
+float dist = 0.0
+float ang = 0.0
+int iters = 0
+bool trapped = false
+;
+loop:
+if cabs(#z - @center) <= @radius
+    trapped = true
+    trapz = #z
+    dist = cabs(trapz - #pixel)
+endif
+iters =  iters + 1
+
+final:
+if !trapped
+ if @usesolid
+ #solid = true
+ endif
+else
+ if @trapcolor == 0 ; Distance
+   #index = dist
+ elseif @trapcolor == 1 ; Magnitude
+  #index = cabs(trapz)
+ elseif @trapcolor == 2 ; Real part of trapped point
+  #index = real(trapz)
+ elseif @trapcolor == 3 ; Imaginary part of trapped point
+  #index = imag(trapz)
+ elseif @trapcolor == 4 ; Angle of trapped point
+  ang = atan2(trapz)
+  if ang < 0
+  ang = ang + 2*#PI
+  endif
+  ang = ang/2*#PI
+  #index = ang
+ else
+  #index = 0.01*iters
+ endif
+endif
+
+default:
+title = "Circle Trap(1st hit)"
+;
+param center
+caption = "Center"
+default = (0,0)
+endparam
+param radius
+caption = "Radius"
+default = 1.0
+endparam
+;
+param trapcolor
+caption = "Coloring Method"
+enum = "Distance" "Magnitude"  "Real" "Imaginary" "Angle" "Iteration"
+default = 0
+endparam
+;
+param usesolid
+caption = "Use solid color?"
+default = false
+endparam
+}
+
+Triangle_Trap_1st_Hit {
+ ; My first coloring algorithm
+ ; Trap shape is defined by the vertices of a triangle.
+ ;Erik Wahl...mindpoet61.deviantart.com
+ ;July 7 2014
+ ;
+init:
+trapz = (0,0)
+float dist = 0.0
+float ang = 0.0
+float p1 = 0.0
+float p2 = 0.0
+float p3 = 0.0
+int iters = 0
+;
+float det = imag(@q*conj(@p) + conj(@r)*@p + conj(@q)*@r)
+bool trapped = false
+
+loop:
+if !trapped
+  p1 = imag(@q*conj(#z) + conj(@r)*#z + conj(@q)*@r)/det
+  p2 = imag(@r*conj(#z) + conj(@p)*#z + conj(@r)*@p)/det
+  p3 = imag(@p*conj(#z) + conj(@q)*#z + conj(@p)*@q)/det
+  if (p1 >= 0.0 && p2 >= 0.0 && p3 >= 0.0)
+    trapped = true
+    trapz = #z
+    dist = cabs(trapz - #pixel)
+  endif
+endif
+iters =  iters + 1
+
+final:
+if !trapped
+ if @usesolid == true
+ #solid = true
+ endif
+else
+ if @trapcolor == 0 ; Distance
+   #index = dist
+ elseif @trapcolor == 1 ; Magnitude
+  #index = cabs(trapz)
+ elseif @trapcolor == 2 ; Real part of trapped point
+  #index = real(trapz)
+ elseif @trapcolor == 3 ; Imaginary part of trapped point
+  #index = imag(trapz)
+ elseif @trapcolor == 4 ; Angle of trapped point
+  ang = atan2(trapz)
+  if ang < 0
+  ang = ang + 2*#PI
+  endif
+  ang = ang/2*#PI
+  #index = ang
+ else
+  #index = 0.01*iters
+ endif
+endif
+
+default:
+title = "Triangle Trap(1st hit)"
+;
+param p
+caption = "P"
+default = (0,0)
+endparam
+param q
+caption = "Q"
+default = (0.5,0)
+endparam
+param r
+caption = "R"
+default = (0,0.5)
+endparam
+;
+param trapcolor
+caption = "Coloring Method"
+enum = "Distance" "Magnitude"  "Real" "Imaginary" "Angle" "Iteration"
+default = 0
+endparam
+;
+param usesolid
+caption = "Use solid color?"
+default = false
+endparam
+}
+
+Quadrilateral_Trap_1st_Hit {
+ ; Trap shape is defined by vertices of a general quadrilateral.
+ ;Erik Wahl...mindpoet61.deviantart.com
+ ;July 7 2014
+init:
+trapz = (0,0)
+float dist = 0.0
+float ang = 0.0
+;
+float tpq = 0.0
+float trp = 0.0
+float tqr = 0.0
+float tps = 0.0
+float tqs = 0.0
+float trs = 0.0
+;
+int iters = 0
+;
+float detpqr = imag(@q*conj(@p) + conj(@r)*@p + conj(@q)*@r)
+float detqrs = imag(@r*conj(@q) + conj(@s)*@q + conj(@r)*@s)
+bool trapped = false
+
+loop:
+if !trapped
+  tpq = imag(@p*conj(#z) + conj(@q)*#z + conj(@p)*@q)/detpqr
+  trp = imag(@r*conj(#z) + conj(@p)*#z + conj(@r)*@p)/detpqr
+  tqr = imag(@q*conj(#z) + conj(@r)*#z + conj(@q)*@r)/detpqr
+  tps = imag(@p*conj(#z) + conj(@r)*#z + conj(@p)*@r)/detqrs
+  tqs = imag(@q*conj(#z) + conj(@s)*#z + conj(@q)*@s)/detqrs
+  trs = imag(@r*conj(#z) + conj(@s)*#z + conj(@r)*@s)/detqrs
+
+
+
+  if (tpq >= 0.0 && trp >= 0.0 && tqr >= 0.0) || \
+     (tps >= 0.0 && tqs >= 0.0 && trs >= 0.0)
+    trapped = true
+    trapz = #z
+    dist = cabs(trapz - #pixel)
+  endif
+endif
+iters =  iters + 1
+
+final:
+if !trapped
+ if @usesolid == true
+ #solid = true
+ endif
+else
+ if @trapcolor == 0 ; Distance
+   #index = dist
+ elseif @trapcolor == 1 ; Magnitude
+  #index = cabs(trapz)
+ elseif @trapcolor == 2 ; Real part of trapped point
+  #index = real(trapz)
+ elseif @trapcolor == 3 ; Imaginary part of trapped point
+  #index = imag(trapz)
+ elseif @trapcolor == 4 ; Angle of trapped point
+  ang = atan2(trapz)
+  if ang < 0
+  ang = ang + 2*#PI
+  endif
+  ang = ang/2*#PI
+  #index = ang
+ else
+  #index = 0.01*iters
+ endif
+endif
+
+default:
+title = "Quadrilateral Trap(1st hit)"
+;
+param p
+caption = "P"
+default = (0,0)
+endparam
+param q
+caption = "Q"
+default = (0.5,0)
+endparam
+param r
+caption = "R"
+default = (0,0.5)
+endparam
+param s
+caption = "S"
+default = (0.5,0.5)
+endparam
+;
+param trapcolor
+caption = "Coloring Method"
+enum = "Distance" "Magnitude"  "Real" "Imaginary" "Angle" "Iteration"
+default = 0
+endparam
+;
+param usesolid
+caption = "Use solid color?"
+default = false
+endparam
+
+}
+
+Lyapunov_forduckin--eew{
+; Edgar Malinovsky 29.09.2013.
+; For any of Ducks, Ducky, Kalisets, Lucky, Sefir, Duckytalis
+; or any other formula that works great with Lyapunov.
+; Plain Lyapunov: Great skeleton but lacks "meat".
+; Based on original Lyapunov script by Damien M. Jones.
+;
+; Erik Wahl
+; Interface changes
+; Changed title to 'Enhanced Lyupanov'
+; added blank heading block to separate Info from rest of interface.
+
+
+global:
+float ERR = 1.0E-15
+int iter = @iternum
+IF (iter >= #maxiter)
+  iter = #maxiter - 1
+ENDIF
+float il = 1/log(cabs(@power))
+float lp = log(log(@bailout)/2.0)
+
+init:
+int cnt=0
+complex ztemp=0
+float oldsum = 0
+float sum = @seed
+float cabsz = 0
+float smoothing = 0.0
+float limz = 0.0
+float zmax = -1
+
+float xx = 0
+float yy = 0
+float zx = 0
+float zy = 0
+;;
+loop:
+IF (cnt <= iter && cnt >= @iterstart || @limititer == false) ;calculates first iterations
+
+;pre functions
+; + ERR to avoid strange effects.
+
+;"trap center"
+  ztemp = #z + @zoff
+
+  IF @orbits != 0
+    zx = real(ztemp)
+    zy = imag(ztemp)
+    xx = sqr(zx)
+    yy = sqr(zy)
+  ENDIF
+;
+  IF     @orbits == 1
+    ztemp = (2*xx-yy-sin(yy))+flip(2*yy-xx-sin(xx))
+  ELSEIF @orbits == 2
+    ztemp = (xx-abs(abs(yy)-cos(abs(xx))))+flip(yy-abs(abs(xx)-cos(abs(yy))))
+  ELSEIF @orbits == 3
+    ztemp = (xx-yy+abs(sin(yy)))+flip(yy*yy-xx+abs(sin(xx)))
+  ELSEIF @orbits == 4
+    ztemp = (2*sin(xx)+abs(yy)-cos(yy*yy))+flip(2*sin(yy)+abs(xx)-cos(xx*xx))
+  ELSEIF @orbits == 5
+    ztemp = (2*sin(abs(zx))-abs(zy)-cos(2*abs(zx)))+flip(2*sin(abs(zy))-abs(zx)-cos(2*abs(zy)))
+  ELSEIF @orbits == 6
+    ztemp = (xx-yy+sin(yy*yy))+flip(yy-xx+sin(xx*xx))
+  ELSEIF @orbits == 7
+    ztemp = (abs(zy)-cos(abs(zx)))+flip(abs(zx)-cos(abs(zy)))
+  ELSEIF @orbits == 8
+    ztemp = (xx-sin(yy)+abs(cos(yy)*sin(0.5*yy)))+flip(xx-sin(xx)+abs(cos(xx)*sin(0.5*xx)))
+  ELSEIF @orbits == 9
+    ztemp = (xx-abs(sin(zy)-cos(zx)))+flip(yy-abs(sin(zx)-cos(zy)))+(xx-abs(sin(zy)+cos(zx)))+flip(yy-abs(sin(zx)+cos(zy)))
+  ELSEIF @orbits == 10   ;SZA  Butterfly
+    ztemp = (yy-sqrt(abs(zx))+flip(xx-sqrt(abs(zy)))+ERR)
+  ELSEIF @orbits == 11  ;arlecchino
+    ztemp = (zx+flip(zy)-1-sqr(1.25*real(atan(zx/(zy+ERR))))+ERR)
+  ELSEIF @orbits == 12  ;Chebyshev4Axolotl
+    ztemp = (((xx-yy+flip(2*zx*zy))*(35*sqr(xx-yy+flip(2*zx*zy))-30)+3)/8+ERR)
+  ENDIF
+
+;nexttraps!
+
+  IF @prefn == 0  ; original unmodified
+    cabsz = cabs( ztemp + ERR)
+  ELSEIF @prefn == 1
+    cabsz = cabs(real(ztemp)-imag(ztemp)+ERR)
+  ELSEIF @prefn == 2
+    cabsz = cabs(real(ztemp)*imag(ztemp)+ERR)
+  ELSEIF @prefn == 3
+    cabsz = cabs(real(ztemp)%(imag(ztemp+ERR)+ERR))
+  ELSEIF @prefn == 4
+    cabsz = |ztemp+ERR| ; non linear
+  ELSEIF @prefn == 5
+    cabsz = cabs(abs(real(ztemp)*2+imag(ztemp))+recip(abs(ztemp)+1e-15)+ERR)
+  ELSEIF @prefn == 6
+    cabsz = cabs(((real(ztemp))*2+(imag(ztemp))/((real(ztemp))+(imag(ztemp))+(1.9,0.1)))+ERR)
+  ELSEIF @prefn == 7
+    cabsz = cabs((round(ztemp)+ztemp)*0.5+ERR)
+  ELSEIF @prefn == 8
+    cabsz = cabs(sinh(ztemp)+ERR)
+  ELSEIF @prefn == 9
+    cabsz = cabs(cos(ztemp)+ERR) ; symmetric
+  ELSEIF @prefn == 10
+    cabsz = cabs(sqr(imag(ztemp))-sqrt(abs(real(ztemp)))+flip(sqr(real(ztemp))-sqrt(abs(imag(ztemp))))+ERR)
+  ELSEIF @prefn == 11
+    cabsz = cabs((sqr(sqr(imag(ztemp)))+sqr(sqr(real(ztemp)))+ERR)^0.25)
+  ELSEIF @prefn == 12  ; real
+    cabsz = abs(real(ztemp+ERR))
+  ELSEIF @prefn == 13  ; imag
+    cabsz = abs(imag(ztemp)+ERR)
+  ELSEIF @prefn == 14  ;from orbit trap	"hyperbola"
+    cabsz = abs(imag(ztemp)*real(ztemp)-1+ERR) ; from thin orbit trap of Samuel Monnier
+  ELSEIF @prefn == 15   ;sincos waves
+    cabsz = abs(sin(real(ztemp))+cos(real(ztemp))+imag(ztemp)+ERR)
+  ELSEIF @prefn == 16   ;parabola
+    cabsz = abs(sqr(real(ztemp))-imag(ztemp)+ ERR)
+  ELSEIF @prefn == 17   ;trifolium
+    cabsz = abs(8/(sqr(real(ztemp))+4)-imag(ztemp)+ ERR)
+  ELSEIF @prefn == 18   ;arlecchino, modified Mark Townsend harlequin.
+    cabsz = cabs(ztemp-1-sqr(1.25*real(atan(real(ztemp)/(imag(ztemp)+ ERR))))+ERR)
+  ELSEIF @prefn == 19 ;Chebyshev4Axolotl
+    cabsz = cabs((sqr(ztemp)*(35*sqr(ztemp)-30)+3)/8+ERR)
+  ENDIF
+;
+;finding max z.
+  IF @expdim
+	  limz = exp(-cabsz)
+	  IF limz > zmax
+	    zmax = limz
+	  ENDIF
+  ENDIF
+  oldsum = sum
+  sum = sum*(@factor*cabsz)	; sum the Lyapunov exponent
+ENDIF
+cnt=cnt+1
+;;
+final:
+sum = log(abs(sum))
+sum = abs(sum/#numiter)
+IF @smooth
+  oldsum = log(abs(oldsum))
+  oldsum = abs(oldsum/(#numiter-1))
+  smoothing = il*lp-il*log(log(cabs(#z)))
+  sum = oldsum+(sum-oldsum)*(smoothing+1)
+ENDIF
+;
+IF @expdim
+sum = sum/(1+ zmax)
+ENDIF
+;
+IF @userandom
+sum = abs(tanh(@randomamt*real(#random))+sum)
+ENDIF
+;
+;post functions
+IF @postfn == 1	
+  sum = cos(#pi*sum)+sum*0.5
+ELSEIF @postfn == 2
+  sum = cos(sum)
+ELSEIF @postfn == 3	
+  sum = sqr(sin(#pi*sum))	
+ELSEIF @postfn == 4	
+  sum = sin(sum)
+ELSEIF @postfn == 5	
+  sum = sum*0.5+0.5/sum
+ELSEIF @postfn == 6	
+  sum = tanh(sum)
+ELSEIF @postfn == 7	
+  sum = abs(sum-round(sum) )
+ELSEIF @postfn == 8
+  sum =((sum)/(2+abs(sum)))*3
+ELSEIF @postfn == 9	
+  sum = abs(abs(sum*0.5-trunc(sum*0.5))-0.5)*2
+ENDIF
+#index = sum
+
+default:
+title = "Enhanced Lyapunov"
+rating = recommended
+
+heading
+  caption = "Info"
+  text = "This Coloring is for those who enjoy the original barebones Lyapunov but \
+       like their bones with a little more meat. \
+        Use with ANY formula that works well with standard Lyapunov. \
+        With default setings this is identical to original Lyapunov. \
+        When Smooth Coloring is set make sure Bailout setting is equal \
+        to the formula's Bailout setting for best results."
+endheading
+
+heading
+  caption = "Basic Interface"
+endheading
+;
+param zoff
+  caption = "Z Offset"
+  default =  (0, 0)
+  hint = " Moves the orbit around."
+endparam
+;
+param seed
+  caption = "Seed Value"
+  default = 1.0
+  min = 1E-7
+  hint = "Start calculation with this number."
+endparam
+
+param  factor
+  caption = "Factor"
+  default = 2.0
+endparam
+;
+param smooth
+  caption = "Exponential Smoothing"
+  default = false
+  hint = "If set, performs standard exponential smoothing to minimize banding."
+endparam
+
+param power
+  caption = "Exponent"
+  default = 2.0
+  hint = "This should be set to match the exponent for Mandelbrot formula."
+  visible = @smooth
+endparam
+
+param bailout
+  caption = "Bailout"
+  default = 1000.0
+  min = 1
+  hint = "This should match Bailout on the formula."
+  visible = @smooth
+endparam
+;
+heading
+  caption = "Enhanced Interface"
+  expanded = false
+endheading
+
+param limititer
+  caption = "Limited iterations"
+  default = false
+endparam
+
+param iternum
+  visible = @limititer
+  caption = "Maximum number of iterations to perform coloring cycle on. \
+             This should be set lower than Maximum Iterations on formula tab"
+  default = 50
+  min = 1
+  hint = "Specify the maximum number of iterations to apply coloring. \
+        Use a low number for much smoother results."
+endparam
+
+param iterstart
+  visible = @limititer
+  caption = "Number of first iteration to start coloring cycle on"
+  default=5
+  min=0
+endparam
+
+param orbits
+  caption = "Symmetric Orbits"
+  enum = "None" "Type 1" "Type 2" "Type 3" "Type 4" "Type 5" "Type 6" "Type 7" "Type 8" "Type 9" "SZA Butterfly" "Arlecchino" "Chebyshev4Axolotl"
+  hint= "Changes the shape of the coloring distribution."
+endparam
+
+param prefn
+	caption = "Pre Function"
+	enum = "None" "X-Y" "X*Y" "DivMod" "X*X+Y*Y" "Stalks A" "Stalks B" \
+         "Areas" "Sinh" "Cos" "SZA Butterfly" "Supermodulus 4"   "Real" "Imag" \
+         "Hyperbola" "Sincos Waves" "Parabola" "Trifolium" "Arlecchino" "Chebyshev4Axolotl"
+	default =  0
+	hint= "Function applied before starting colour calculations. \
+         Behaves much like orbit traps. \
+         Some prefunctions may require additional numerical precision. \
+         If artifacts appear, change bailout value to between\
+         50 and 1000."
+endparam
+
+param expdim
+  caption = "E dimension smoothing"
+  default = false
+  hint = "Divides colour value by the maximum inverse exponent. Sometimes this will\
+          generates smoother results. With a kaliset or ducky this can generate\
+          sharper patterns."
+endparam
+
+
+
+param postfn
+  caption = "Post Function"
+  enum = "None" "Half Cosine" "Cosine" "Haversine" "Sine" \
+         "DoubleEdged" "Hyperbolic Tangent" "Solarisation" "Sigmoid"\
+         "Triangle"
+  default =  0
+  hint= "These offer additional color distribution enhancements."
+endparam
+
+
+
+bool param userandom
+caption = "Add Random noise"
+default = false
+endparam
+
+float param randomamt
+caption = "Hypertangent noise"
+hint = "Amount of random noise to add. Use small amounts for texture"
+default = 0.1
+visible = @userandom
+endparam
+
+}

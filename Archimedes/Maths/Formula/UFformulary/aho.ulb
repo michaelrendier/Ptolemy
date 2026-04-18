@@ -1,0 +1,5078 @@
+
+; ###################################################################
+; ### Plug-in formulas                                            ###
+; ###################################################################
+
+; --- Power series --------------------------------------------------
+
+class aho_PowerSeriesSwitchFormula(aho_SwitchFormula) {
+
+	import "common.ulb"
+	
+	func aho_PowerSeriesSwitchFormula(Generic pparent)
+	
+		aho_SwitchFormula.aho_SwitchFormula(pparent)
+		addUpperBailoutTest()
+		
+		m_Series = new @p_seriesClass(0)
+		m_maxPower = trunc( real(@p_power) )	; p_power from default.ulb:Formula
+		m_Series.init(m_maxPower)
+
+		ComplexArray coeffs = m_Series.allCoefficients()
+		if @skipMode=="skip every nth" && @nstep > 0
+			int nx = @nfirst
+			while nx<coeffs.GetArrayLength()
+				coeffs.m_Elements[nx] = 0
+				nx = nx + @nstep
+			endwhile
+		elseif @skipMode=="keep every nth" && @nstep > 0
+			ComplexArray coeffs2 = new ComplexArray(coeffs.getArrayLength())
+			int nx = @nfirst
+			while nx<coeffs.GetArrayLength()
+				coeffs2.m_Elements[nx] = coeffs.m_Elements[nx]
+				nx = nx + @nstep
+			endwhile
+			coeffs2.copy(coeffs)
+		endif
+		
+		m_coefficients = coeffs
+		aho_PowerSeriesCompiler compiler = new aho_PowerSeriesCompiler()
+		print("compiler = ", compiler, ", #calculationPurpose=", #calculationPurpose )
+		compiler.setPowerSeries(coeffs)
+		m_Evaluator = compiler.getEvaluator()
+		
+		m_differential = 0 ;; Lazy init
+	endfunc
+	
+	bool func hasDifferential()
+		return true
+	endfunc
+	
+	complex func differential(complex pz)
+		if m_differential == 0
+			int len = m_coefficients.GetArrayLength()-1
+			ComplexArray dfcoeffs = new ComplexArray(len)
+			int ip = 0
+			while ip<len
+				dfcoeffs.m_Elements[ip] = (ip+1)*m_coefficients.m_Elements[ip+1]
+				ip = ip+1
+			endwhile
+			aho_PowerSeriesCompiler compiler = new aho_PowerSeriesCompiler()
+			compiler.setPowerSeries(dfcoeffs)
+			m_differential = compiler.getEvaluator()
+		endif
+		complex result = m_differential.evaluate(pz)
+		print ("differential(",pz,") = ", result)
+		return result
+	endfunc
+	
+	; @return the upper bailout parameter
+	float func GetUpperBailout()
+		return @p_bailout
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_SwitchFormula.Iterate(pz)
+		complex newZ = m_Evaluator.evaluate(pz) +  m_varying1
+		checkBail(newZ)
+		return newZ
+	endfunc
+	
+protected:
+	PowerSeries m_Series
+	ComplexArray m_coefficients
+	int m_maxPower
+	aho_PowerSeriesEvaluator m_Evaluator
+	aho_PowerSeriesEvaluator m_differential
+		
+	func setupFormulaParam(complex pp)
+		m_varying1 = pp
+	endfunc
+
+	complex func getIteratedPoint()
+		return 0; TODO
+	endfunc
+
+default:
+	title = "Power series (switchable)"
+	
+	complex param p_power
+		caption = "Exponent"
+		default = (8,0)
+		hint = "Only the real part is used."
+		visible = true
+	endparam
+
+	int param v_aho_formula
+		caption = "Version (Formula)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_formula < 100
+	endparam
+	
+	PowerSeries param p_seriesClass
+		caption = "Power series formula"
+		default = RecipPowerSeries
+	endparam
+
+	float param p_bailout
+		caption = "Bailout"
+		default = 1.0e20
+		hint = "Bail out if the point gets bigger than this"
+		visible = true
+	endparam
+
+	param skipMode
+		caption = "power term skip"
+		enum = "none" "skip every nth" "keep every nth"
+		default = 0
+	endparam
+	
+	int param nfirst
+		caption = "first n"
+		default = 1
+		visible = @skipMode > 0
+	endparam
+	
+	int param nstep
+		caption = "n step"
+		default = 2
+		visible = @skipMode > 0
+	endparam
+	
+}
+
+; --- Standard Mandelbrot / Julia -----------------------------------
+
+class aho_Mandelbrot(aho_SwitchFormula) {
+; so I can verify my concepts with this simple example
+
+	import "common.ulb"
+
+	func aho_Mandelbrot(Generic pparent)
+		aho_SwitchFormula.aho_SwitchFormula(pparent)
+		addUpperBailoutTest()
+	endfunc
+	
+	; @return the upper bailout parameter
+	float func GetUpperBailout()
+		return @p_outer_bailout
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_SwitchFormula.Iterate(pz)
+		complex newZ = pz^@p_power + m_varying1
+		checkBail(newZ)
+		return newZ
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return 1
+	endfunc
+	
+	bool func hasDifferential()
+		return true
+	endfunc
+	
+	complex func differential(complex pz)
+		return 2*pz
+	endfunc
+
+protected:
+	
+	func calcCriticalPoints()
+		if m_criticalPoints==0
+			m_criticalPoints = new ComplexList(1)
+		endif
+		m_criticalPoints.SetArrayLength(1)
+		m_criticalPoints.m_Elements[0] = 0
+	endfunc
+	
+	func setupFormulaParam(complex pp)
+		m_varying1 = pp
+	endfunc
+
+default:
+	title = "Default Mandelbrot/Julia (aho)" 
+	; You're better off using the non-plugin version (in standard.ufm), which supports pertubation.
+	rating = notRecommended 
+	
+	heading 
+		caption = "Fractal shape"
+	endheading
+	
+	complex param p_power ; from common.ulb:Formula
+		caption = "Exponent"
+		default = (2,0)
+		hint = "Defines the primary exponent for the fractal."
+		visible = true
+	endparam
+
+	heading 
+		caption = "Bailout"
+	endheading
+
+ 	float param p_outer_bailout
+		caption = "Bailout"
+		default = 1.0e10
+		hint = "Bail out if |pz| gets bigger than this"
+		visible = true
+	endparam
+
+}
+
+; --- HRing ---------------------------------------------------------
+
+class aho_HRingSwitchFormulaBase(aho_SwitchFormula) {
+
+	import "common.ulb"
+
+	func aho_HRingSwitchFormulaBase(Generic pparent)
+		aho_SwitchFormula.aho_SwitchFormula(pparent)
+		addUpperBailoutTest()
+		addOriginBailoutTest()
+		m_Alpha = getA()
+	endfunc
+	
+	; @return the upper bailout parameter
+	float func GetUpperBailout()
+		return @p_outer_bailout
+	endfunc
+	
+	; @return the lower bailout parameter
+	float func GetLowerBailout()
+		if @p_inner_bailout >= 0
+			return @p_inner_bailout
+		else
+			return 1/@p_outer_bailout
+		endif
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_SwitchFormula.Iterate(pz)
+		complex newZ
+		if @p_power == (2,0)
+			newZ = m_Alpha * sqr(pz) * (pz - m_varying1) / (1 - m_varying1Conj*pz)
+		else
+			newZ = m_Alpha * pz^@p_power * (pz - m_varying1) / (1 - m_varying1Conj*pz)
+		endif
+		checkBail(newZ)
+		return newZ
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return 2
+	endfunc
+	
+	bool func hasDifferential()
+		return true
+	endfunc
+	
+	complex func differential(complex pz)
+		return -m_Alpha * pz^(@p_power-1) \
+			* (@p_power*m_varying1Conj*pz^2 + m_diffc*pz + @p_power*m_varying1) \
+			/ sqr(m_varying1Conj*pz - 1)
+	endfunc
+
+	func debugPrint()
+		print("aho_HRingSwitchFormulaBase.debugPrint()")
+		aho_SwitchFormula.debugPrint()
+		print("  @p_power = ", @p_power)
+		print("  m_varying1Conj = ", m_varying1Conj, ", m_Alpha = ", m_Alpha)
+	endfunc
+
+protected:
+	complex m_varying1Conj
+	complex m_diffc
+	complex m_Alpha
+	
+	func calcCriticalPoints()
+		if m_criticalPoints==0
+			m_criticalPoints = new ComplexList(2)
+		endif
+		; calculate some intermediate values
+		complex dc_p_1 = m_varying1Conj*m_varying1 + 1
+		complex dc_m_1 = m_varying1Conj*m_varying1 - 1
+		complex dc2 = sqr(dc_m_1)
+		complex t2 = sqrt( dc2*(@p_power^2+1) -2*(dc_p_1)*(dc_m_1)*@p_power )
+		complex t1 = dc_p_1*@p_power - dc_m_1
+		complex t3 = 2*@p_power*m_varying1Conj
+
+		complex crit1 = ( t1+t2 ) / t3;
+		complex crit2 = ( t1-t2 ) / t3;
+		int flip = 0
+		if imag(t1) < 0
+			flip = 1-flip
+		endif
+		if imag(t2) > 0
+			flip = 1-flip
+		endif
+		if @p_quadrants && imag(m_varying1) < 0
+			flip = 1-flip
+		endif
+		
+		m_criticalPoints.SetArrayLength(2)
+		m_criticalPoints.m_Elements[flip] = crit1
+		m_criticalPoints.m_Elements[1-flip] = crit2
+		; third critical point: 0 - always superattractive
+		; fourth critical point: infinity - always superattractive
+	endfunc
+	
+	func setupFormulaParam(complex pp)
+		m_varying1 = pp
+		invalidateCriticalPoints()
+		m_Alpha = getA()
+
+		if @p_conjugate
+			m_varying1Conj = conj(m_varying1)
+		else
+			m_varying1Conj = m_varying1
+		endif
+		m_diffc = m_varying1*m_varying1Conj*(1-@p_power) - (1+@p_power)
+	endfunc
+	
+private:
+	complex func getA()
+		if @p_which_a == "value"
+			return @p_a
+		elseif @p_which_a == "angle"
+			return exp( #pi * (0,2) * @p_alpha )
+		elseif @p_which_a == "Fraction"
+			return exp( #pi * (0,2) * @p_numerator / @p_denominator )
+		else
+			return exp( flip(#pi) * (Sqrt(5)-1) )
+		endif
+	endfunc
+
+
+default:
+	heading 
+		caption = "Fractal shape"
+	endheading
+	
+	complex param p_power ; from common.ulb:Formula
+		caption = "Exponent"
+		default = (2,0)
+		hint = "Defines the primary exponent for the fractal."
+		visible = true
+	endparam
+
+	param p_which_a
+		caption = "a"
+		enum = "Golden ratio" "Fraction" "angle" "value"
+		default = 0
+	endparam
+	
+	complex param p_alpha
+		caption="alpha"
+		hint="Angle alpha"
+		default = (Sqrt(5)-1)/2
+		visible = @p_which_a == "angle"
+	endparam
+
+ 	complex param p_a
+		caption="a"
+		hint="Factor a"
+		default = 1
+		visible = @p_which_a == "value"
+	endparam
+
+	float param p_numerator
+		caption="Numerator"
+		default = 3
+		visible = @p_which_a == "Fraction"
+	endparam
+	
+	float param p_denominator
+		caption="Numerator"
+		default = 7
+		visible = @p_which_a == "Fraction"
+	endparam
+	
+	bool param p_conjugate
+		caption = "conjugate divisor"
+		default=true
+		hint="Use 1-conj(c)*z as divisor"
+	endparam
+	
+	bool param p_quadrants
+		caption = "Flip critical points"
+		default = false
+		visible = false
+	endparam
+	
+	heading 
+		caption = "Bailout"
+	endheading
+
+ 	float param p_outer_bailout
+		caption = "Outer bailout"
+		default = 1.0e10
+		hint = "Bail out if the point gets bigger than this"
+		visible = true
+	endparam
+	
+	float param p_inner_bailout
+		caption = "Inner bailout"
+		default = -1
+		hint = "Bail out if the point gets smaller than this. If less than 0, use the reciprocal of the outer bailout"
+		visible = true
+	endparam
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_HRingSwitchFormula(aho_HRingSwitchFormulaBase) {
+
+default:
+	title = "Herman ring" ; v1.6
+
+	int param v_aho_formula
+		caption = "Version (aho_HRingSwitchFormula)"
+		default = 160
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_formula < 160
+	endparam
+	
+	heading 
+		caption = "Mandel params"
+		expanded = false
+	endheading
+
+	bool param p_quadrants
+		caption = "Flip critical points"
+		default = false
+		hint = "Only does something when in Mandelbrot mode"
+		visible = true
+	endparam
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_HRingFormula_J(aho_baseFormulaWrapper) {
+
+	import "common.ulb"
+
+	func aho_HRingFormula_J(Generic pparent)
+		aho_baseFormulaWrapper.aho_baseFormulaWrapper(pparent)
+		wrap( new @p_delegateFormula(0) )
+		aho_HRingSwitchFormulaBase hringImpl = aho_HRingSwitchFormulaBase(m_wrappedFormula)
+		debugPrint()
+		hringImpl.SetJuliaMode(@p_c)
+	endfunc
+	
+default:
+	title = "Herman ring J" ; v1.6
+
+	int param v_aho_formula
+		caption = "Version (aho_HRingFormula_J)"
+		default = 160
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_formula < 160
+	endparam
+
+	complex param p_power
+		visible = false; override p_power in common.ulb:Formula
+	endparam
+	
+	heading 
+		caption = "Fractal shape"
+	endheading
+	
+	complex param p_c
+		caption="c"
+		default=(4,0)
+	endparam
+	
+	aho_HRingSwitchFormulaBase param p_delegateFormula
+		selectable = false
+		default = aho_HRingSwitchFormulaBase
+	endparam
+
+}
+
+
+; --- Newton's method for degree-3 polynomial -----------------------
+
+class aho_NewtonPoly3Formula(aho_SwitchFormula) {
+; newton's method applied to P(z) = (z - a1) * (z - a2) * (z - a3)
+; Attractors: the 3 zeros of P(z): a1, a2, a3 (superattractive unless two of them coincide)
+; Iterated critical point: (a1+a2+a3) / 3
+; Other critical points: a1, a2, a3
+
+	import "common.ulb"
+
+	func aho_NewtonPoly3Formula(Generic pparent)
+		aho_SwitchFormula.aho_SwitchFormula(pparent)
+		setBail()
+	endfunc
+	
+	float func GetLowerBailout()
+		return @p_inner_bailout
+	endfunc
+	
+;	@return the primary exponent (2 for Newton's method)
+	complex func GetPrimaryExponent()
+		return 2 ; Newton's method converges quadratically
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_SwitchFormula.Iterate(pz)
+		complex newZ 
+		if @p_Choice=="zero"
+			newZ = ((2 * pz + m_coeff2) * pz^2 + m_coeff2) / (( 3 * pz + m_coeff1 ) * pz - 1)
+		else
+			newZ = (2 * pz^3 + m_coeff2 ) / ( 3 * pz^2 + m_coeff1 )
+		endif
+		
+		if checkBail(newZ)
+			if @p_zmode=="z"
+				return newZ
+			elseif @p_zmode=="difference"
+				print("pz=", pz, ", newZ=", newZ, ", m_bailoutIndex[",  m_bailoutIndex, "].difference() = ", m_bailoutTests[m_bailoutIndex].difference() )
+				return m_bailoutTests[m_bailoutIndex].difference()
+			else ; @p_zmode=="step"
+				return newZ - pz
+			endif
+		else
+			return newZ
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return 1
+	endfunc
+	
+	bool func hasDifferential()
+		return @p_Choice!="zero"
+	endfunc
+	
+	complex func differential(complex pz)
+		if @p_Choice=="zero"
+			; Oink
+			return ((((6*pz + 4*m_coeff1)*pz + m_coeff1*m_coeff2 - 6)*pz - 8*m_coeff2)*pz - m_coeff1*m_coeff2) \
+				/ (( 3 * pz + m_coeff1 ) * pz - 1)^2
+		else
+			return 6*pz*((pz^2 + m_coeff1)*pz - m_coeff2) \
+				/ (3*pz^2 + m_coeff1)^2
+		endif
+	endfunc
+
+	func debugPrint()
+		aho_SwitchFormula.debugPrint()
+		print("  cf1 = ", m_coeff1, ", m_coeff2 = ", m_coeff2)
+	endfunc
+
+protected:
+	complex m_attract[3]
+	complex m_coeff1 ; pre-calculated coefficient
+	complex m_coeff2 ; pre-calculated coefficient
+
+	func calcCriticalPoints()
+		if m_criticalPoints==0
+			m_criticalPoints = new ComplexList(1)
+		endif
+		m_criticalPoints.setArrayLength(1)
+		; critical point = (attract[1]+attract[2]+attract[3])/3
+		if @p_choice=="zero"
+			m_criticalPoints.m_Elements[0] = m_attract[2] / 3
+		else 
+			m_criticalPoints.m_Elements[0] = 0
+		endif
+	endfunc
+	
+private:
+
+	func setBail()
+		setLength(m_bailoutTests,3)
+		int bx=0
+		while bx<3
+			PointBailoutTest bail = new PointBailoutTest(0)
+			bail.setInnerLimit(GetLowerBailout())
+			bail.setPoint(0)
+			bail.setBailoutID(bx)
+			m_bailoutTests[bx] = bail
+			bx = bx + 1
+		endwhile
+	endfunc
+
+	func setupFormulaParam(complex pp)
+		m_varying1 = pp
+		print("setParam(", pp, ")")
+		if @p_choice=="distance"
+			m_attract[0] = -1
+			m_attract[1] = (1-pp)/2
+			m_attract[2] = (1+pp)/2
+			m_coeff1 = -(3+Sqr(pp))/4
+			m_coeff2 = (Sqr(pp) - 1)/4
+		elseif @p_choice=="square"
+			m_attract[0] = -1
+			complex tmp = sqrt(pp)/2
+			m_attract[1] = 0.5 - tmp
+			m_attract[2] = 0.5 + tmp
+			m_coeff1 = -(3+pp)/4
+			m_coeff2 = (pp - 1)/4
+		else ; @p_choice=="zero"
+			m_attract[0] = -1
+			m_attract[1] = 1
+			m_attract[2] = pp
+			m_coeff1 = -2 * pp
+			m_coeff2 = -pp
+		endif
+		
+		int bx = 0
+		while bx<3
+			PointBailoutTest bale =  PointBailoutTest( m_bailoutTests[bx] )
+			bale.setPoint(m_attract[bx])
+			bx = bx+1
+		endwhile
+	endfunc
+
+default:
+	title = "Newton's method, degree-3 polynomial"
+
+	int param v_aho_formula
+		caption = "Version (aho_NewtonPoly3Formula)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_formula < 100
+	endparam
+	
+	param p_power ; Overrides p_power from common.ulb:Formula
+		visible = false
+	endparam
+	
+	heading 
+		caption = "Fractal shape"
+	endheading
+	
+	param p_choice
+		caption="param interpretation"
+		enum="distance" "square" "zero"
+		hint="Choice of a parameter plane. \
+			'distance' means #pixel is the distance between the two zeros. The third zero is -1. \
+			'square' means sqrt(#pixel) is the distance. \
+			'zero' means #pixel is the location of a zero, the other two zeros are -1 and 1."
+		default=0
+	endparam
+
+	float param p_inner_bailout
+		caption = "Inner bailout"
+		default = 1e-20
+		hint = "Bail out if the point gets smaller than this."
+		visible = true
+	endparam
+
+	param p_zmode
+		caption = "final z"
+		enum = "z" "difference" "step"
+		default = 1
+		hint="'difference' replaces the final z value with the difference from the (known) attractor. \
+		'step' replaces the final z value with the difference from the previous z. \
+		Since Newton's method converges quadratically, these choices go towards zero in a quadratic way, \
+		therefore you can use a smooth coloring method (Smooth Mandel / Smooth Stripes / ...) \
+		with power=2."
+	endparam
+
+}
+
+; --- Circle Logo ---------------------------------------------------
+class aho_CircleLogo(aho.ulb:aho_SwitchFormula) {
+; Iteration of f(z) = (z^power)/power + a*z + c
+$define DEBUG
+	import "common.ulb"
+
+	func aho_CircleLogo(Generic pparent)
+		aho_SwitchFormula.aho_SwitchFormula(pparent)
+		addUpperBailoutTest()
+		if @p_monic 
+			m_rPower = 1
+		else
+			m_rPower = recip(@p_power)
+		endif
+	endfunc
+	
+	float func GetUpperBailout()
+		return @p_bailout
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_SwitchFormula.Iterate(pz)
+		complex	newZ 
+		if @p_monic
+			newZ = (pz^@p_power) + @p_a * pz + m_varying1
+		else
+			newZ = m_rPower * (pz^@p_power) + @p_a * pz + m_varying1
+		endif
+		checkBail(newZ)
+		return newZ
+	endfunc
+	
+
+protected:
+	complex m_rPower
+	
+	func setupFormulaParam(complex pp)
+		m_varying1 = pp
+	endfunc
+
+	func calcCriticalPoints()
+		int exponent = floor(real(@p_power))
+		if (imag(@p_power)==0) && (exponent < 0 || exponent>1) ;; && (real(@p_power)==exponent)
+			int dexp = exponent-1
+			if dexp<0 
+				dexp = -dexp
+			endif
+			if m_criticalPoints==0
+				m_criticalPoints = new ComplexList(dexp)
+			endif
+			m_criticalPoints.setArrayLength(dexp)
+			if (dexp > 0)
+				complex startPwr = - @p_a
+				if @p_monic
+					startPwr = startPwr / @p_power
+				endif
+				complex startPoint = 0 ; stop complaining, compiler!
+				bool doTheWrongStuff = @p_mangle && (imag(startPwr) == 0) ; real parameter
+				if doTheWrongStuff
+					float flotStartPwr = real(startPwr)
+					float flotRoot = abs(flotStartPwr) ^ (1/dexp)
+					int which = dexp%4
+					if flotStartPwr>0
+						startPoint = flotRoot
+					elseif (which==1) || (which==3) 
+						startPoint = - flotRoot
+					elseif which==2
+						startPoint = flip(flotRoot)
+					else
+						doTheWrongStuff = false
+					endif
+				endif
+				if !doTheWrongStuff 
+					startPoint = startPwr^(1/dexp)
+				endif
+				$ifdef DEBUG
+					print("startPwr=", startPwr, ", startPoint=",startPoint)
+					if @p_monic
+						print("dfdz(startpoint)=", @p_power * startPoint^(@p_power-1) + @p_a)
+					else
+						print("dfdz(startpoint)=", startPoint^(@p_power-1) + @p_a)
+					endif
+				$endif
+				
+				m_criticalPoints.m_Elements[0] = startPoint
+				int k = 1
+				while k<dexp
+					m_criticalPoints.m_Elements[k] = startPoint * unarg( k / dexp )
+					k = k+1
+				endwhile
+			endif
+		else
+			m_criticalPoints = 0
+			print("No critical points!")
+		endif
+	endfunc
+	
+	complex func GetPrimaryExponent()
+		return @p_power
+	endfunc
+	
+	bool func hasDifferential()
+		return true
+	endfunc
+	
+	complex func differential(complex pz)
+		complex diff
+		if @p_monic
+			diff = @p_power*(pz^(@p_power-1)) + @p_a
+		else
+			diff = pz^(@p_power-1) + @p_a
+		endif
+		print("differential(",pz,") = ", diff)
+		return diff
+	endfunc
+
+private:
+	complex func unarg( float value )
+		return exp( (0,2) * #pi * value )
+	endfunc
+
+default:
+	title = "Circle Logo *"
+	rating = recommended
+	
+	int param v_aho_formula
+		caption = "Version (aho_CircleLogo)"
+		default = 110
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_formula < 110
+	endparam
+
+	complex param p_power
+; overrides parameter with same name in common.ulb
+		caption = "Exponent"
+		default = 3
+;		hint = "Defines the primary exponent for the fractal."
+	endparam
+
+	complex param p_a
+		caption = "a"
+		default = (-1.0, 0)
+	endparam
+
+	float param p_bailout
+		caption = "Bailout"
+		default = 1.0e20
+		hint = "Bail out if the point gets bigger than this"
+		visible = true
+	endparam
+	
+	bool param p_mangle
+		caption = "Adjust critical points"
+		default = true
+	endparam
+	
+	bool param p_monic
+		caption = "Monic Polynomial"
+		default = false
+		hint = "Use '1' instead of '1/Exponent' as highest coefficient. Default is false for compatibility with older versions."
+	endparam
+
+}
+
+; ###################################################################
+; ### Coloring stuff                                              ###
+; ###################################################################
+
+; === Gradient Wrappers =============================================
+
+class aho_ComplexColorWrapper(common.ulb:GradientWrapper) {
+
+	import "common.ulb"
+	
+	func aho_ComplexColorWrapper(Generic pparent)
+		GradientWrapper.GradientWrapper(pparent)
+	endfunc
+	
+	color func getComplexColor(complex value) 
+		return getComplexColorChannel(value, 0)
+	endfunc
+	
+	color func getComplexColorChannel(complex value, int channel) 
+		return gradient(real(value)) ; default to gradient
+	endfunc
+	
+	color func getColorChannel(float pindex, int pchannel)
+		return getComplexColorChannel( pindex, pchannel )
+	endfunc
+
+}
+
+
+class aho_MergedGradientColorWrapper(common.ulb:GradientWrapper) { 
+
+	import "common.ulb"
+
+	func aho_MergedGradientColorWrapper(Generic pparent)
+		GradientWrapper.GradientWrapper(pparent)
+		fColor = @p_mergeColor
+		fColorOpacity = @p_mergeOpacity
+		fMerge = new @p_colorMergeClass(0)
+;		fTransfer = new @p_transfer(0)
+	endfunc
+	
+	color func getColor(float pindex)
+		color current = gradient( pindex )
+		if @p_reverse
+			return fMerge.FullMerge(fColor, current, 1-fColorOpacity)
+		else
+			return fMerge.FullMerge(current, fColor, fColorOpacity)
+		endif
+	endfunc
+	
+private:
+	color fColor
+	float fColorOpacity
+	ColorMerge fMerge
+;	ColorTransfer fTransfer
+
+default:
+	title = "Adjusted Gradient"
+	
+	color param p_mergeColor
+		default = rgb(1.0, 0.75, 0.25)
+	endparam
+	
+	ColorMerge param p_colorMergeClass
+		caption = "Color Merge"
+		default = DefaultColorMerge
+	endparam
+	
+	bool param p_reverse
+		caption = "reverse order"
+		default = false
+	endparam
+
+	float param p_mergeOpacity
+		caption = "Merge Opacity"
+		default = 1
+	endparam
+
+}
+
+class aho_HueColorWrapper(aho_ComplexColorWrapper) {
+
+	func aho_HueColorWrapper(Generic pparent)
+		aho_ComplexColorWrapper.aho_ComplexColorWrapper(pparent)
+		
+		m_hue_shift = @p_hue_shift
+		m_hue_stretch = 3.0 / #pi
+		m_light_stretch = @p_light_stretch
+		m_light_base = 0.5 - m_light_stretch
+		m_light_middle = 1
+		m_saturation = @p_saturation
+		m_light_type = @p_light_type
+	endfunc
+	
+	color func getComplexColorChannel(complex value, int channel) 
+		float hue = 12 + m_hue_shift + (m_hue_stretch * atan2(value))
+		int safety = 4
+		while safety > 0 && hue>6
+					hue = hue-6
+					safety = safety - 1
+		endwhile
+		float light = cabs(value)
+		if m_light_type==1
+			light = recip( 1 + exp(-m_light_stretch*(light-m_light_middle) ) )
+		elseif m_light_type==2
+			float light = recip( 1 + light^-m_light_stretch )
+		else
+			light = m_light_base + m_light_stretch*light
+		endif
+		if (light<0.0)
+			light = 0.0
+		endif
+		if (light>1.0)
+			light = 1.0
+		endif
+		return hsl(hue, m_saturation, light)
+	endfunc
+	
+protected:
+	float m_hue_shift
+	float m_hue_stretch
+	float m_light_stretch
+	float m_light_base
+	float m_light_middle
+	float m_saturation
+	int m_light_type
+	
+default:
+	title = "HSL coloring"
+
+	float param p_light_stretch
+		caption = "Lightness multiplier"
+		default = 1
+		visible = true
+	endparam
+
+	float param p_hue_shift
+	caption = "Hue shift"
+	default = 3.0
+	endparam
+
+	float param p_saturation
+		caption = "saturation"
+		default = 1
+		visible = true
+	endparam
+
+	param p_light_type
+		caption = "Lightness calculation"
+		enum = "simple" "logistics" "power"
+		default = 2
+	endparam
+
+	float param p_light_middle
+		caption = "midpoint"
+		default = 1
+		visible = @p_light_type=="simple"
+	endparam
+
+}
+
+; === Coloring Helpers ==============================================
+
+class aho_DirectColorMap(common.ulb:Generic) {
+
+	import "common.ulb"
+	
+	func aho_DirectColorMap(Generic pparent)
+		Generic.Generic(pparent)
+	endfunc
+	
+	color func mapToColor(complex pz)
+		return rgba(0,0,0,0)
+	endfunc
+}
+
+class aho_GradientColorMap(aho_DirectColorMap) {
+
+	func aho_GradientColorMap(Generic pparent)
+		aho_DirectColorMap.aho_DirectColorMap(pparent)
+	endfunc
+	
+	color func mapToColor(complex pz)
+		return gradient( real(pz) )
+	endfunc
+	
+default:
+	title = "Gradient"
+}
+
+class aho_MergedGradientColorMap(aho_DirectColorMap) {
+	import "common.ulb"
+
+	func aho_MergedGradientColorMap(Generic pparent)
+		aho_DirectColorMap.aho_DirectColorMap(pparent)
+		fColor = @p_mergeColor
+		fColorOpacity = @p_mergeOpacity
+		fMerge = new @p_colorMergeClass(0)
+;		fTransfer = new @p_transfer(0)
+	endfunc
+	
+	color func mapToColor(complex pz)
+		float v = real(pz)
+		color current = gradient( v )
+		return fMerge.FullMerge(current, fColor, fColorOpacity)
+	endfunc
+	
+private:
+	color fColor
+	float fColorOpacity
+	ColorMerge fMerge
+
+default:
+	title = "Adjusted Gradient"
+	
+	color param p_mergeColor
+		default = rgb(1.0, 0.75, 0.25)
+	endparam
+	
+	ColorMerge param p_colorMergeClass
+		caption = "Color Merge"
+		default = DefaultColorMerge
+	endparam
+
+	float param p_mergeOpacity
+		caption = "Merge Opacity"
+		default = 0.2
+	endparam
+
+}
+
+; === Markers (for plotting Orbits) =================================
+
+class OrbitMarker(common.ulb:Generic) {
+
+	import "common.ulb"
+
+	func OrbitMarker(Generic pparent)
+		Generic.Generic(pparent)
+		setSize(@p_ShapeSize)
+	endfunc
+
+	func setSize(float size)
+		if @p_screenRelative
+			m_size = size / #magn
+		else
+			m_size = size
+		endif
+		m_sizeSquared = sqr(m_size)
+	endfunc
+	
+	bool func isWithin( complex pz, complex center ) 
+		return false
+	endfunc
+
+protected:
+	float m_size
+	float m_sizeSquared
+
+default:
+
+	bool param p_screenRelative
+		caption = "Screen relative"
+		default = false
+	endparam
+
+	float param p_ShapeSize
+		caption = "Shape size"
+		default = 0.025
+	endparam
+	
+}
+
+
+class PointMarker(OrbitMarker) {
+
+	func PointMarker(Generic pparent)
+		OrbitMarker.OrbitMarker(pparent)
+	endfunc
+	
+	bool func isWithin(  complex pz, complex center ) 
+		return |pz-center| <= m_sizeSquared
+	endfunc
+
+default:
+	title = "Point"
+}
+
+
+class SquareMarker(OrbitMarker) {
+
+	func SquareMarker(Generic pparent)
+		OrbitMarker.OrbitMarker(pparent)
+	endfunc
+	
+	bool func isWithin(  complex pz, complex center ) 
+		float reDelta = real(pz-center)
+		float imDelta = imag(pz-center)
+		return reDelta >= -m_size && reDelta <= m_size && imDelta >= -m_size && imDelta <= m_size
+	endfunc
+
+default:
+	title = "Square"
+}
+
+; ###################################################################
+; ### Plug-in transformations                                     ###
+; ###################################################################
+
+class aho_ClipShapeTarget(common.ulb:ClipShape) {
+	; Target (Circle and Crosshair) clip shape
+
+public:
+	import "common.ulb"
+
+	func aho_ClipShapeTarget(Generic pparent)
+		ClipShape.ClipShape(pparent)
+		if @p_scaleWidth
+			m_lineWidth = @p_lineWidth / #magn
+		else
+			m_lineWidth = @p_lineWidth
+		endif
+		m_lineSq = sqr(m_lineSq)
+		int nCircles = 1 + round( (@p_outerRadius - @p_innerRadius ) / @p_radiusStep )
+		setLength(m_radii, 2*nCircles)
+		int offset = 0
+		int limit = 2*nCircles 
+		float radius = @p_innerRadius
+		while offset<limit
+			m_radii[offset] = sqr( radius - m_lineWidth )
+			m_radii[offset+1] = sqr( radius + m_lineWidth )
+			radius = radius + @p_radiusStep
+			offset = offset + 2
+		endwhile
+	endfunc
+
+	complex func Iterate(complex pz)
+		complex diff = pz-@p_circleCenter
+		if @p_crosshair && ((abs(real(diff)) < m_lineWidth) || (abs(imag(diff)) < m_lineWidth))
+			m_solid = true
+		else
+			float radsq = |diff|
+			int limit = length(m_radii)
+			int offset = 0
+			while offset < limit && ! m_solid
+				if (m_radii[offset] <= radsq) && (m_radii[offset+1] >= radsq)
+					m_solid = true
+				endif
+				offset = offset + 2
+			endwhile
+		endif
+		return pz
+	endfunc
+
+protected:
+	float m_lineWidth
+	float m_radii[]
+
+default:
+	title = "Crosshairs"
+	rating = notRecommended ; too specialized
+
+	int param v_aho_clipshapectarget
+		caption = "Version (ClipShapeTarget)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_aho_clipshapectarget < 100
+	endparam
+
+	complex param p_circleCenter
+		caption = "Center"
+		default = (0, 0)
+		visible = true
+		hint = "Center of the crosshair and circle"
+	endparam
+
+	float param p_innerRadius
+		caption = "Inner Radius"
+		default = 1
+		visible = true
+		hint = "Radius of the inner circle"
+	endparam
+
+	float param p_outerRadius
+		caption = "Outer Radius"
+		default = 3
+		visible = true
+		hint = "Radius of the outer circle"
+	endparam
+
+	float param p_radiusStep
+		caption = "Radius step"
+		default = 1
+		visible = true
+	endparam
+
+	float param p_lineWidth
+		caption = "Line width"
+		default = 0.01
+		visible = true
+	endparam
+	
+	bool param p_scaleWidth
+		caption = "Scale line width"
+		default = true
+		hint = "Scale line width when zooming in/out"
+	endparam
+
+	bool param p_crosshair
+		caption = "Show crosshairs"
+		default = true
+	endparam
+}
+
+; ###################################################################
+; ### Plug-in colorings                                           ###
+; ###################################################################
+
+class OrbitTracksColoring(common.ulb:GradientColoring) {
+	import "common.ulb"
+
+	func OrbitTracksColoring(Generic pparent)
+		GradientColoring.GradientColoring(pparent)
+		setLength(m_Orbit, 0)
+		m_OrbitMarker = new @pOrbitMarker(0)
+
+		m_Formula = new @pFormula(0)
+		m_SwitchFormula = aho_BaseSwitchFormula(m_Formula)
+		if m_SwitchFormula != 0
+			m_SwitchFormula.SetJuliaMode(@pParam)
+		endif
+		bool hasStartPoint = true
+		m_maxIter = @p_MaxIter
+		m_Start = 0
+		if @pStartType==0
+			m_Start = @pStartPoint
+		elseif m_SwitchFormula != 0
+			ComplexArray crits = m_SwitchFormula.getCriticalPoints()
+			if (crits!=0)
+				int cl = crits.GetArrayLength()
+				if cl>0
+					m_Start = crits.m_elements[ @pStartIndex % cl]
+				endif
+			endif
+		else
+			hasStartPoint = false
+		endif
+
+		print("m_Formula=", m_Formula)
+
+		if hasStartPoint
+			m_Start = m_Formula.init(m_Start)
+
+			SetLength(m_Orbit, m_maxIter+1)
+			m_Orbit[0] = m_start
+			int kx=1
+			complex px = m_start
+			bool bailed = false
+			while (kx<=m_maxIter && !bailed)
+				bailed = m_Formula.IsBailedOut(px)
+			  print("bailed([",px,"] = ", bailed)
+				if (! bailed)
+					px = m_Formula.iterate(px)
+					m_Orbit[kx] = px
+					kx=kx+1
+				endif
+			endwhile
+			SetLength(m_Orbit, kx)
+			print("orbit length=", kx)
+		endif
+		if @p_colorAutomatic
+			 m_colorScale = 1.0 / m_maxIter
+		else
+			 m_colorScale = 1.0 / @p_colorScale
+		endif
+
+		kx = 0
+		int len = length(m_Orbit)
+		while kx<len
+			kx = kx+1
+		endwhile
+
+	endfunc
+	
+	float func ResultIndex(complex pz)
+		int v = 0
+		int ll = length(m_Orbit)
+		m_Solid = false
+		while v<ll
+			if m_OrbitMarker.isWithin( pz, m_Orbit[v] )
+				return v*m_colorScale
+			endif
+			v = v+1
+		endwhile
+		m_Solid = true
+		return -1
+	endfunc
+
+protected:
+	Formula m_Formula
+	aho_BaseSwitchFormula m_SwitchFormula
+	complex m_Start
+	int m_MaxIter
+	complex m_orbit[]
+	OrbitMarker m_OrbitMarker
+	float m_colorScale
+	
+default:
+	title = "Orbit Tracks"
+
+	heading
+		caption="Function"
+	endheading
+	
+	Formula param pFormula
+		caption = "Formula"
+		default = aho_HRingSwitchFormula
+	endparam
+	
+	complex param pParam
+		caption = "Formula Parameter"
+		default = 0
+	endparam
+
+	heading
+		caption="Orbit"
+	endheading
+	
+	int param p_MaxIter
+		caption = "Maximum Iterations"
+		hint = "Maximum iterations tracked"
+		default = 500
+	endparam
+	
+	param pStartType
+		caption = "Start at"
+		enum = "Custom point" "Critical point"
+		default = 0
+	endparam
+	
+	complex param pStartPoint
+		caption = "Custom orbit start"
+		default = (0,1)
+		visible = @pStartType == 0
+	endparam
+	
+	int param pStartIndex
+		caption = "Critical point index"
+		default = 0
+		visible = @pStartType == 1 && @pFormula == aho_BaseSwitchFormula
+	endparam
+
+	OrbitMarker param pOrbitMarker
+		caption = "Orbit point shape"
+		default = PointMarker
+	endparam
+
+ 	heading
+		caption="Color"
+	endheading
+
+	bool param p_colorAutomatic
+		 caption = "Automatic color"
+		 default = true
+	endparam
+
+	float param p_colorScale
+		 caption = "Orbit color length"
+		 default = 100
+		 visible = ! @p_colorAutomatic
+	endparam
+
+}
+
+
+; --- HSL -----------------------------------------------------------
+
+class aho_HueColorMap(aho_DirectColorMap) {
+
+	func aho_HueColorMap(Generic pparent)
+		aho_DirectColorMap.aho_DirectColorMap(pparent)
+		
+		m_hue_shift = @p_hue_shift
+		m_hue_stretch = 3.0 / #pi
+		m_light_stretch = @p_light_stretch
+		m_light_base = 0.5 - m_light_stretch
+		m_light_middle = 1
+	endfunc
+	
+	color func mapToColor(complex pz)
+		float hue = m_hue_shift + (m_hue_stretch * atan2(pz))
+		float light = cabs(pz)
+		if @p_light_type==1
+			light = recip( 1 + exp(-m_light_stretch*(light-m_light_middle) ) )
+		elseif @p_light_type==2
+			float light = recip( 1 + light^-m_light_stretch )
+		else
+			light = m_light_base + m_light_stretch*light
+		endif
+		if (light<0.0)
+			light = 0.0
+		endif
+		if (light>1.0)
+			light = 1.0
+		endif
+		return hsl(hue, @p_saturation, light)
+	endfunc
+	
+protected:
+	float m_hue_shift
+	float m_hue_stretch
+	float m_light_stretch
+	float m_light_base
+	float m_light_middle
+	
+default:
+	title = "HSL coloring"
+
+	float param p_light_stretch
+		caption = "Lightness multiplier"
+		default = 1
+		visible = true
+	endparam
+
+	float param p_hue_shift
+	caption = "Hue shift"
+	default = 3.0
+	endparam
+
+	float param p_saturation
+		caption = "saturation"
+		default = 1
+		visible = true
+	endparam
+
+	param p_light_type
+		caption = "Lightness calculation"
+		enum = "simple" "logistics" "power"
+		default = 2
+	endparam
+
+	float param p_light_middle
+		caption = "midpoint"
+		default = 1
+		visible = @p_light_type=="simple"
+	endparam
+
+}
+
+; --- ... -----------------------------------------------------------
+
+
+class DirectRing(common.ulb:DirectColoring) {
+
+	import "common.ulb"
+
+	func DirectRing(Generic pparent)
+		DirectColoring.DirectColoring(pparent)
+		m_hue_shift = 3.0
+		m_hue_stretch = 3.0 / #pi
+		m_light_stretch = @p_light_stretch
+		m_light_base = 0.5 - m_light_stretch
+    m_light_middle = 1
+	endfunc
+	
+	color func Result(complex pz)
+		float hue = ( 600 + m_hue_shift + (m_hue_stretch * getHue(pz))) % 6
+		float light = getLight(pz)
+		if @p_light_type==1
+			light = recip( 1 + exp(-m_light_stretch*(light-m_light_middle) ) )
+		elseif @p_light_type==2
+			float light = recip( 1 + light^-m_light_stretch )
+		else
+			light = m_light_base + m_light_stretch*light
+		endif
+		if (light<0.0)
+			light = 0.0
+		endif
+		if (light>1.0)
+			light = 1.0
+		endif
+		return hsl(hue, @p_saturation, light)
+	endfunc
+
+protected:
+	float m_hue_shift
+	float m_hue_stretch
+	float m_light_stretch
+	float m_light_base
+	float m_light_middle
+	
+	float func getHue(complex pz)
+		return atan2(pz)
+	endfunc
+	
+	float func getLight(complex pz)
+		return cabs(pz)
+	endfunc
+	
+default:
+	title = "HSL coloring"
+
+	float param p_light_stretch
+		caption = "Lightness multiplier"
+		default = 1
+		visible = true
+	endparam
+
+	float param p_saturation
+		caption = "saturation"
+		default = 1
+		visible = true
+	endparam
+
+	param p_light_type
+		caption = "Lightness calculation"
+		enum = "simple" "logistics" "power"
+		default = 2
+	endparam
+
+	float param p_light_middle
+		caption = "midpoint"
+		default = 1
+		visible = @p_light_type==1
+	endparam
+
+}
+
+class Experimentring3(DirectRing) {
+
+	func Experimentring3(Generic pparent)
+		DirectRing.DirectRing(pparent)
+	endfunc
+	
+	func Init(complex pz, complex ppixel)
+		DirectRing.Init(pz, ppixel)
+		m_countdown = @p_skip
+		m_low = 1.0
+		m_high = 0.0
+	endfunc
+	
+	func Iterate(complex pz)
+		if m_countdown > 0
+			m_countdown = m_countdown - 1
+		else
+			float magn = |pz|
+			if magn>m_high
+				m_high = magn
+			endif
+			if magn<m_low
+				m_low = magn
+			endif
+		endif
+	endfunc
+	
+
+protected:
+	int m_countdown
+	float m_low
+	float m_high
+
+	float func getLight(complex pz)
+		if m_high > 1
+			return sqrt(m_high)
+		elseif @p_flip
+			return 1/sqrt(m_low)
+		else
+			return sqrt(m_low)
+		endif
+	endfunc
+
+
+default:
+	title = "Experimentring 3"
+	
+	int param p_skip
+		caption = "Skip first n"
+		hint = "Skip first n iterations"
+		min = 0
+		default = 20
+	endparam
+
+	bool param p_flip
+		caption="flip"
+		hint="There is no darkness"
+		default=false
+	endparam
+
+}
+
+class SingleHue(common.ulb:DirectColoring) {
+
+	import "common.ulb"
+
+	func SingleHue(Generic pparent)
+		DirectColoring.DirectColoring(pparent)
+		m_lite = log( 1 - recip(2*@p_max_light) ) / @p_light_middle
+	endfunc
+	
+	color func Result(complex pz)
+		float hue = @p_hue + imag(pz) * @p_hue_shift
+		hue = (12 + hue) % 6.0
+		float light = @p_max_light * ( 1 - exp( m_lite*abs(real(pz))) )
+		return hsl(hue, @p_saturation, light)
+	endfunc
+
+protected:
+	float m_lite
+	
+default:
+	title = "Single Hue"
+	
+	float param p_hue
+		caption = "Hue"
+		min = 0.0
+		max = 6.0
+		default = 3.0
+	endparam
+	
+	float param p_hue_shift
+		caption = "Hue shift"
+		min = -6.0
+		max = 6.0
+		default = 1.0
+	endparam
+
+	float param p_max_light
+		caption = "Max. lightness"
+		default = 0.75
+		visible = true
+	endparam
+
+	float param p_saturation
+		caption = "Saturation"
+		default = 1.0
+		visible = true
+	endparam
+
+	float param p_light_middle
+		caption = "midpoint"
+		default = 0.25
+	endparam
+
+}
+
+
+class aho_DirectZ(common.ulb:DirectColoring) {
+
+	import "common.ulb"
+
+	func aho_DirectZ(Generic pparent)
+		DirectColoring.DirectColoring(pparent)
+		m_colorWrapper = new @p_colorWrapper(0)
+		m_complexColorWrapper = aho_ComplexColorWrapper(m_colorWrapper)
+	endfunc
+
+	func Init(complex pz, complex ppixel)
+		m_lastZ = pz
+		DirectColoring.init(pz, ppixel)
+	endfunc
+	
+	func Iterate(complex pz)
+		m_lastZ = pz
+		DirectColoring.Iterate(pz)
+	endfunc
+	
+	complex func getZ(complex pz) 
+		if @p_lastz == "z"
+			return pz
+		elseif @p_lastz == "oldz"
+			return m_lastZ
+		else
+			return m_lastZ - pz
+		endif
+	endfunc
+	
+	color func Result(complex pz)
+		if m_complexColorWrapper != 0
+			return m_complexColorWrapper.getComplexColor( getZ(pz) )
+		else
+			return m_colorWrapper.getColor( real(getZ(pz)) )
+		endif
+	endfunc
+	
+protected:
+	complex m_lastZ
+	GradientWrapper m_colorWrapper
+	aho_ComplexColorWrapper m_complexColorWrapper
+	
+default:
+	title = "Last Z"
+
+	param p_lastz
+		caption = "Use which value"
+		enum = "z" "oldz" "z-oldz"
+		default = 0
+	endparam
+	
+	GradientWrapper param p_colorWrapper
+		caption = "Color mapping"
+		default = DefaultGradient
+	endparam
+
+}
+
+; === Colorings using the potential approximation ===================
+
+; --- Untitled base class -------------------------------------------
+
+class aho_Potential(aho_DirectZ) {
+
+	func aho_Potential(Generic pparent)
+		aho_DirectZ.aho_DirectZ(pparent)
+		InitBailout(@p_bailout)
+		InitPower(@p_power)
+	endfunc
+
+	func InitBailout(float bailout)
+		float logBail = log(bailout) 
+		m_logLogBail = log(logBail)
+	endfunc
+	
+	func InitPower(float exponent)
+		m_RLogExponent = recip( log(exponent) )
+	endfunc
+	
+	float func potentialCalc(complex zv)
+		float absz = |zv|
+		if (absz > 0)
+			float logabsz = log(absz)
+			return ( m_logLogBail - log(logabsz) ) * m_RLogExponent
+		else
+			return 0 ; -inf?
+		endif
+	endfunc
+
+   float func potentialStep(complex pz)
+		float result = potentialCalc( getZ(pz) )
+		if @p_lastz != "oldz"
+			result = result + 1
+		endif
+		return result
+	endfunc
+
+	color func Result(complex pz)
+		float v = m_iterations
+		v = v + potentialStep( pz )
+		v = v*0.01
+		return m_colorWrapper.getColor( v )
+	endfunc
+
+	
+protected:
+	float m_logLogBail ; log(log(bailout))
+	float m_RLogExponent  ; 1 / log(exponent)
+	
+default:
+
+	float param p_power
+		caption = "Exponent"
+		default = 2
+		hint = "This should be set to match the exponent of the \
+			formula you are using (The default of two works for Newton-style, \
+			Mandelbrot, and a bunch of other formulas.)"
+	endparam
+
+	float param p_bailout
+		caption = "Bailout"
+		hint = "The bailout value for the function you're iterating \
+		  (This parameter mostly shifts the colors in a small way.)"
+		default = 1e-20
+	endparam
+
+}
+
+; --- Direct color smoothing ----------------------------------------
+
+class aho_DirectPotential(aho_Potential) {
+
+	func aho_DirectPotential(Generic pparent)
+		aho_Potential.aho_Potential(pparent)
+		if @p_otherColor == "|#z| > bailout"
+			m_otherColorLimit = @p_bailout
+			m_colorWrapper2 = new @p_colorWrapper2(0)
+			m_useOtherMap = false
+		elseif @p_otherColor == "|#z| <= bailout"
+			m_otherColorLimit = @p_bailout
+			m_colorWrapper2 = new @p_colorWrapper2(0)
+			m_useOtherMap = true
+		elseif @p_otherColor == "|#z| > custom value"
+			m_otherColorLimit = @p_customValue
+			m_colorWrapper2 = new @p_colorWrapper2(0)
+			m_useOtherMap = false
+		elseif @p_otherColor == "|#z| <= custom value"
+			m_otherColorLimit = @p_customValue
+			m_colorWrapper2 = new @p_colorWrapper2(0)
+			m_useOtherMap = true
+		elseif @p_otherColor == "always"
+			m_otherColorLimit = 0
+			m_colorWrapper2 = new @p_colorWrapper2(0)
+			m_useOtherMap = true
+		else ; @p_otherColor == "never"
+			m_otherColorLimit = 0
+			m_colorWrapper2 = 0
+			m_useOtherMap = false
+		endif
+	endfunc
+
+	color func Result(complex pz)
+		float v = m_iterations
+		v = v + potentialStep( pz )
+		v = v*0.01
+
+		bool flipMap = m_useOtherMap
+		if @p_otherColor != "never" && @p_otherColor != "always" &&  |pz| > m_otherColorLimit
+			 flipMap = !flipMap
+		endif
+		if flipMap
+			return m_colorWrapper2.getColor( v )
+		else
+			return m_colorWrapper.getColor( v )
+		endif
+	endfunc
+
+	
+protected:
+	float m_otherColorLimit
+	bool  m_useOtherMap
+	GradientWrapper m_colorWrapper2
+	
+default:
+	title = "Potential (smooth)"
+
+	float param p_power
+		caption = "Exponent"
+		default = 2
+		hint = "This should be set to match the exponent of the \
+			formula you are using (The default of two works for Newton-style, \
+			Mandelbrot, and a bunch of other formulas.)"
+	endparam
+
+	float param p_bailout
+		caption = "Bailout"
+		hint = "The bailout value for the function you're iterating \
+		  (This parameter mostly shifts the colors in a small way.)"
+		default = 1e-20
+	endparam
+	
+	param p_lastz
+		caption = "Use which value"
+		enum = "z" "oldz" "z-oldz"
+		default = 0
+	endparam
+	
+	param p_otherColor
+		caption = "Use other map"
+		hint = "Use the other color map"
+		enum = "never" "|#z| > bailout" "|#z| > custom value" "always" "|#z| <= bailout" "|#z| <= custom value"
+	endparam
+	
+	float param p_customValue
+		caption = "Custom value"
+		default = 1
+		visible = @p_othercolor == "|#z| > custom value"
+	endparam
+	
+	GradientWrapper param p_colorWrapper
+		caption = "Color map"
+		default = DefaultGradient
+	endparam
+	
+	GradientWrapper param p_colorWrapper2
+		caption = "Other Color map"
+		default = DefaultGradient
+		visible = @p_othercolor != "never"
+	endparam
+
+}
+
+; --- Testing -------------------------------------------------------
+
+class aho_PotentialRemainder(aho_Potential) {
+; Shows the difference between the smooth potential and the iteration count
+
+	func aho_PotentialRemainder(Generic pparent)
+		aho_Potential.aho_Potential(pparent)
+	endfunc
+
+	color func Result(complex pz)
+		return m_colorWrapper.getColor( potentialStep( pz ) )
+	endfunc
+
+default:
+	title = "Potential remainder "
+	rating = notRecommended ; useful for testing 
+}
+
+; --- Potential differential ----------------------------------------
+
+class aho_PotentialDifferentialColoring(common.ulb:GradientColoring) {
+
+	import "common.ulb"
+	
+	func aho_PotentialDifferentialColoring(Generic pparent)
+		GradientColoring.GradientColoring(pparent)
+		m_tracer = new @p_method(0)
+		m_tracer.setPower(@p_initpower, @p_power)
+		m_solid = false
+	endfunc
+	
+	func Init(complex pz, complex ppixel)
+		GradientColoring.Init(pz, ppixel)
+		m_tracer.init(pz)
+	endfunc
+
+	func Iterate(complex pz)
+		GradientColoring.Iterate(pz)
+		m_tracer.Iterate(pz)
+	endfunc
+	
+	float func ResultIndex(complex pz)
+		m_tracer.Finish(pz)
+		
+		if (@p_delta_z)
+			m_tracer.calcDeltaZ()
+		endif
+		m_tracer.skip(@p_inskipp)
+		m_tracer.skipLast(@p_outskipp)
+		if (@p_adj_inskipp)
+			m_tracer.adjustStartEnd()
+		endif
+		
+		float v = m_tracer.Result()
+		
+		float usedshift
+		if @p_auto_shift
+			usedshift = m_tracer.getAutoShift()
+			print("autoShift=",usedshift)
+		else
+			usedshift = @p_shift
+		endif
+		if usedshift != 0
+			v = v + usedshift*(m_tracer.getCount()-1)
+		endif
+		v = v-floor(v)
+		return v
+	endfunc
+	
+protected:
+	aho_PotentialCalc m_tracer
+
+default:
+
+	title = "Potential Differential"
+	
+	heading
+		caption="Formula parameters"
+	endheading
+	
+	float param p_power
+		caption="Exponent"
+		hint="Should be the exponent of the formula you're iterating \
+			(say, 2 for standard Mandelbrot)"
+		default = 2.0
+	endparam
+	
+	float param p_initpower
+		caption="Initial exponent"
+		hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+		default = 1.0
+	endparam
+	
+	bool param p_delta_z
+		caption="use z-step"
+		default=false
+	endparam
+  
+	heading
+		caption="Under the hood"
+		expanded=false
+	endheading
+	
+	int param p_inskipp
+		caption="Orbit start"
+		hint="Number of initial iterations to skip"
+		min=0
+		default=0
+	endparam
+
+	int param p_outskipp
+		caption="Orbit end"
+		hint="Number of final iterations to skip"
+		min=0
+		default=0
+	endparam
+	
+	bool param p_adj_inskipp
+		caption="Auto-adjust orbit"
+		hint="Skip the first orbit entry if the orbit starts at (0,0)"
+		default=true
+	endparam
+	
+	float param p_shift
+		caption="Manual shift"
+		hint="Can create (and sometimes, obliterate) stripes"
+		default=0
+		min=-1
+		max=1
+		enabled = (! @p_auto_shift)
+	endparam
+
+	bool param p_auto_shift
+		caption="Automatic shift"
+		hint="Guesstimate the shift value"
+		default=false
+	endparam
+  
+	aho_PotentialCalc param p_method
+		caption="Calculation"
+		hint="Method of calculation (multiplicative is faster, \
+			additive is less prone to round-off errors under certain conditions)"
+		default = aho_MultiplicativePotentialCalc
+	endparam
+  
+}
+
+; ###################################################################
+; ### Helper classes for formulas                                 ###
+; ###################################################################
+
+; === Accumulator ===================================================
+
+class aho_FloatAccumulator(common.ulb:Generic) {
+; Calculates the average of the values passed to it
+
+	import "common.ulb"
+
+	func aho_FloatAccumulator(Generic pparent)
+		Generic.Generic(pparent)
+	endfunc
+	
+	func Init()
+		fSum = @p_initialValue
+		fPrevSum = 0.0
+		fCount = @p_initialCount
+	endfunc
+	
+	func accumulate(float value)
+		fPrevSum = fSum
+		fSum = fSum + value
+		fCount = fCount + 1
+	endfunc
+	
+	float func previousSum() 
+		return fPrevSum / (fCount-1)
+	endfunc
+	
+	float func currentSum() 
+		return fSum / fCount
+	endfunc
+	
+	float func blendedSum(float factor) 
+		return factor * currentSum() + (1-factor)*previousSum()
+	endfunc
+
+protected:
+	float fSum
+	float fPrevSum
+	int fCount
+	
+default:
+	title = "Averaging"
+	rating = recommended
+
+	int param p_initialCount
+		caption = "Initial count"
+		default = 0
+	endparam
+
+	float param p_initialValue
+		caption = "Initial value"
+		default = 0.0
+	endparam
+}
+
+class aho_LastAccumulator(aho_FloatAccumulator) {
+; Returns the last value instead of the average 
+
+	func aho_LastAccumulator(Generic pparent)
+		aho_FloatAccumulator.aho_FloatAccumulator(pparent)
+	endfunc
+	
+	func Init()
+		fSum = 0.0
+		fPrevSum = 0.0
+	endfunc
+	
+	func accumulate(float value)
+		fPrevSum = fSum
+		fSum = value
+	endfunc
+
+default:
+	title = "Last point"
+	rating = notRecommended ; useful for testing 
+}
+
+; === Auxiliary classes for "Potential Differential" ================
+
+class aho_Trace_Calc(common.ulb:Generic) {
+; Auxiliary class for "Potential Differential"
+
+	import "common.ulb"
+
+	func aho_Trace_Calc(Generic pparent)
+		Generic.Generic(pparent)
+		m_trace_count = 0
+		m_start_count = 0
+		m_end_count = 0
+	endfunc
+
+	func Init(complex pz)
+		m_trace[0] = pz
+		m_trace_count = 1
+	endfunc
+	
+	func Iterate(complex pz)
+		m_trace[m_trace_count] = pz
+		m_trace_count = m_trace_count + 1
+	endfunc
+	
+	func Finish(complex pz)
+		m_trace[m_trace_count] = pz
+		m_start_count = 0
+		m_end_count = m_trace_count
+	endfunc
+	
+	func Skip(int nSkip) 
+		m_start_count = m_start_count + nSkip
+	endfunc
+	
+	func SkipLast(int nSkip) 
+		m_end_count = m_end_count - nSkip
+	endfunc
+	
+	func calcDeltaZ() 
+		int ix = m_start_count
+		while ix<m_end_count
+			m_trace[ix] = m_trace[ix+1]-m_trace[ix]
+			ix = ix+1
+		endwhile
+		m_end_count = m_end_count-1
+	endfunc
+
+	func adjustStartEnd() 
+		if |m_trace[m_start_count]| < 1e-80      ; way too close to zero, skip it
+			m_start_count = m_start_count+1
+		endif
+		
+		if |m_trace[m_end_count]| < 1e-80      ; way too close to zero, skip it
+			m_end_count = m_end_count-1
+		endif
+	endfunc
+	
+	int func getCount()
+		if m_end_count >= m_start_count
+			return m_end_count + 1 - m_start_count
+		else
+			return 0
+		endif
+	endfunc
+	
+	func debugPrint()
+		print("m_start_count=",m_start_count,", m_end_count=",m_end_count,", m_trace_count=",m_trace_count)
+		int ix = m_end_count; m_start_count
+		while ix<=m_end_count
+			print("m_trace[",ix,"]=",m_trace[ix])
+			ix=ix+1
+		endwhile
+	endfunc
+
+	complex m_trace[#maxiter+1]		; record of iteration
+	int m_trace_count
+	int m_start_count
+	int m_end_count
+
+}
+
+; -------------------------------------------------------------------
+
+class aho_PotentialCalc(aho_Trace_Calc) {
+; Auxiliary class for "Potential Differential"
+
+	func aho_PotentialCalc(Generic pparent)
+		aho_Trace_Calc.aho_Trace_Calc(pparent)
+		m_initialPower = 1.0
+		m_Power = 2.0
+		m_r_twopi = 0.5 * recip(#pi) 
+	endfunc
+	
+	func setPower(float initial, float power)
+		print("setPower(", initial, ", ", power, ")")
+		m_initialPower = initial
+		m_power = power
+	endfunc
+	
+	func setDifferential(aho_BaseFormula mula)
+		if mula.hasDifferential()
+			m_formula = mula
+		endif
+	endfunc	
+
+	float func Result()
+		return 0.0
+	endfunc
+	
+	float func getAutoShift() 
+		if m_end_count > m_start_count
+			return -m_r_twopi * ( atan2(differential(m_end_count)) \
+				- m_power * atan2(differential(m_end_count-1)) )
+		else
+			return 0
+		endif
+	endfunc
+	
+protected:
+	float m_initialPower
+	float m_Power
+	float m_r_twopi
+	aho_BaseFormula m_formula
+	
+	complex func differential(int ix)
+		if m_formula==0
+			return m_trace[ix]
+		else
+			return m_formula.differential(m_trace[ix])
+		endif
+	endfunc
+
+}
+
+; -------------------------------------------------------------------
+
+class aho_AdditivePotentialCalc(aho_PotentialCalc) {
+
+	func aho_AdditivePotentialCalc(Generic pparent)
+		aho_PotentialCalc.aho_PotentialCalc(pparent)
+	endfunc
+	
+	float func Result() 
+		float rotation = 0.0
+		bool initial_iter = true
+		int ix = m_start_count
+		while (ix < m_end_count)
+			float delta_rot = atan2(differential(ix))
+			if initial_iter
+				rotation = delta_rot*m_initialPower
+				initial_iter = false
+			else
+				rotation = rotation + delta_rot
+			endif
+			ix = ix+1
+		endwhile
+		return m_r_twopi * ( atan2( differential(m_end_count)) - (m_power-1)*rotation )
+	endfunc
+
+	
+default:
+	title = "Additive"
+
+}
+
+; -------------------------------------------------------------------
+
+class aho_MultiplicativePotentialCalc(aho_PotentialCalc) {
+
+	func aho_MultiplicativePotentialCalc(Generic pparent)
+		aho_PotentialCalc.aho_PotentialCalc(pparent)
+		m_big_relax = @p_relax
+		m_small_relax = 1.0
+		if @p_relax>1.0
+			m_small_relax = recip(@p_relax)
+		endif
+	endfunc
+	
+	float func Result() 
+		complex dgdz = 1.0
+		bool initial_iter = true
+		int ix = m_start_count
+		while (ix < m_end_count)
+			if initial_iter
+				dgdz = differential(ix)^m_initialPower
+				initial_iter = false
+			else
+				dgdz = dgdz * differential(ix)
+			endif
+			
+			if m_big_relax>1
+				dgdz = relax(dgdz)
+			endif
+			ix = ix+1
+		endwhile
+		if m_power == 2
+			return m_r_twopi * atan2( differential(m_end_count) / dgdz )
+		else
+			return m_r_twopi * atan2( differential(m_end_count) / dgdz^(m_power-1) )
+		endif
+	endfunc
+	
+protected:
+	float m_big_relax
+	float m_small_relax 
+	
+	complex func relax(complex in)
+		if isNaN(real(in)) || isInf(real(in)) \
+			|| isNaN(imag(in)) || isInf(imag(in)) \
+			|| (in == (0,0))
+			return in
+		endif
+		complex out = in
+		int ir = 0
+		while ( (real(out)>m_big_relax || real(out)<-m_big_relax) \
+				&& (imag(out)>m_big_relax || imag(out)<-m_big_relax) \
+				&& ir<10 )
+			out = m_small_relax*out
+			ir = ir+1 
+		endwhile
+		while ( real(out)>-m_small_relax && real(out)<m_small_relax \
+				&& imag(out)>-m_small_relax && imag(out)<m_small_relax \
+				&& ir<10 )
+			out = m_big_relax*out
+			ir = ir+1 
+		endwhile
+		return out
+	endfunc
+	
+default:
+	title = "Multiplicative"
+
+	float param p_relax
+		caption = "Relaxation"
+		min=0
+		default=128
+	endparam
+}
+
+; ###################################################################
+; ### Base classes for formulas                                   ###
+; ###################################################################
+
+class aho_BaseFormula(common.ulb:Formula) {
+; Base class for formulas who can calculate critical points or derivatives
+
+	import "common.ulb"
+
+	; Constructor
+	; @param pparent the parent, generally "this" for the parent, or zero
+	func aho_BaseFormula(Generic pparent)
+		Formula.Formula(pparent)
+	endfunc
+
+	; @return the zero-based index of the last bailout triggered 
+	int func getBailoutIndex()
+		return 0 ; assume single bailout
+	endfunc
+	
+	; @return the last bailout triggered
+	BailoutTest func getTriggeredBailout() 
+		return 0
+	endfunc
+
+	; @return the list of known critical points or 0 if we don't know
+	ComplexArray func getCriticalPoints()
+		return 0
+	endfunc
+	
+	; @return the number of known critical points or -1 if we don't know
+	int func getNumberOfCriticalPoints()
+		return -1
+	endfunc
+	
+	bool func hasDifferential()
+		return false
+	endfunc
+	
+	complex func differential(complex pz)
+		return 0
+	endfunc
+
+	; Prints debugging information
+	func debugPrint()
+		print("this=", this)
+	endfunc
+	
+protected:
+	
+default:
+	int param v_aho_Formula
+		caption = "Version (aho_BaseFormula)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+			been made to the formula that is incompatible with the \
+			previous version. When that happens, this field will reflect \
+			the old version number to alert you to the fact that an \
+			alternate rendering is being used."
+		visible = @v_aho_Formula < 100
+	endparam
+
+}
+
+; --- Wrapper for another base formula ------------------------------
+
+class aho_baseFormulaWrapper(aho.ulb:aho_BaseFormula) {
+; Wraps another base formula, 
+; so you can inherit from this wrapper and not from the wrapped formula
+
+	import "common.ulb"
+
+	func aho_baseFormulaWrapper(Generic pparent)
+		aho_BaseFormula.aho_BaseFormula(pparent)
+		m_wrappedFormula = 0
+	endfunc
+	
+	func wrap(aho_BaseFormula instance)
+		m_wrappedFormula = instance
+	endfunc
+
+	float func GetUpperBailout()
+		return m_wrappedFormula.GetUpperBailout()
+	endfunc
+
+	float func GetLowerBailout()
+		return m_wrappedFormula.GetLowerBailout()
+	endfunc
+
+	ComplexArray func getCriticalPoints()
+		return m_wrappedFormula.getCriticalPoints()
+	endfunc
+
+	complex func Init(complex pz)
+		aho_BaseFormula.Init(pz)
+		return m_wrappedFormula.Init(pz)
+	endfunc	
+	
+	complex func Iterate(complex pz)
+		aho_BaseFormula.Iterate(pz)
+		return m_wrappedFormula.Iterate(pz)
+	endfunc
+	
+	bool func IsBailedOut(complex pz)
+		return m_wrappedFormula.isBailedOut(pz)
+	endfunc
+
+	complex func GetPrimaryExponent()
+		return m_wrappedFormula.GetPrimaryExponent()
+	endfunc
+
+	int func getBailoutIndex()
+		return m_wrappedFormula.getBailoutIndex()
+	endfunc
+	
+	BailoutTest func getTriggeredBailout() 
+		return m_wrappedFormula.getTriggeredBailout()
+	endfunc
+
+	int func getNumberOfCriticalPoints()
+		return m_wrappedFormula.getNumberOfCriticalPoints()
+	endfunc
+
+	func debugPrint()
+		aho_BaseFormula.debugPrint()
+		print("  m_wrappedFormula = ", m_wrappedFormula)
+		if m_wrappedFormula!=0
+			m_wrappedFormula.debugPrint()
+		endif
+	endfunc
+
+protected:
+	aho_BaseFormula m_wrappedFormula
+
+}
+
+; --- Switchable ----------------------------------------------------
+
+class aho_BaseSwitchFormula(aho_BaseFormula) {
+; Base class for switchable formulas
+
+	import "common.ulb"
+
+	; Constructor
+	; @param pparent the parent, generally "this" for the parent, or zero
+	func aho_BaseSwitchFormula(Generic pparent)
+		aho_BaseFormula.aho_BaseFormula(pparent)
+		m_varying1 = 1/0
+		m_isMandel = true
+	endfunc
+	
+	; switches the formula into "Mandelbrot" (parameter-set) mode
+	; <p>
+	; Because the way the library works, it must be possible to cheaply switch a formula into and out of Mandelbrot mode
+	func SetMandelMode()
+		m_isMandel = true
+	endfunc
+	
+	; switches the formula into "Julia" (constant parameter) mode
+	; <p>
+	; Because the way the library works, it must be possible to cheaply switch a formula into and out of Julia mode
+	; @param pp the constant parameter
+	func SetJuliaMode(complex pp) 
+		m_varying1 = pp
+		m_isMandel = false
+	endfunc
+
+	; Prints debugging information
+	func debugPrint()
+		aho_BaseFormula.debugPrint()
+		print("  m_isMandel = ", m_isMandel, ", m_varying1 = ", m_varying1)
+	endfunc
+	
+protected:
+	complex m_varying1		; mandel-type "c"
+	bool m_isMandel
+
+default:
+	int param v_aho_Formula
+		caption = "Version (aho_BaseSwitchFormula)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+			been made to the formula that is incompatible with the \
+			previous version. When that happens, this field will reflect \
+			the old version number to alert you to the fact that an \
+			alternate rendering is being used."
+		visible = @v_aho_Formula < 100
+	endparam
+
+}
+
+; --- Wrapper  ------------------------------------------------------
+
+class aho_SwitchFormulaWrapper(aho_BaseSwitchFormula) {
+; wraps an ordinary formula (common.ulb:Formula) 
+; TODO: is this needed?
+
+	import "common.ulb"
+	
+	func aho_SwitchFormulaWrapper(Generic pparent)
+		aho_BaseSwitchFormula.aho_BaseSwitchFormula(pparent)
+		m_wrappedFormula = 0
+	endfunc
+	
+	func wrap(Formula instance)
+		m_wrappedFormula = instance
+	endfunc
+	
+	complex func Init(complex pz)
+		return m_wrappedFormula.Init(pz)
+	endfunc
+	
+	complex func Iterate(complex pz)
+		return m_wrappedFormula.Iterate(pz)
+	endfunc
+
+	bool func IsBailedOut(complex pz)
+		return m_wrappedFormula.isBailedOut(pz)
+	endfunc
+
+	complex func GetPrimaryExponent()
+		return m_wrappedFormula.GetPrimaryExponent()
+	endfunc
+
+	float func GetUpperBailout()
+		return m_wrappedFormula.GetUpperBailout()
+	endfunc
+	
+	float func GetLowerBailout()
+		return m_wrappedFormula.GetLowerBailout()
+	endfunc
+	
+protected:
+	Formula m_wrappedFormula
+}
+
+; --- Multi-bailout wrapper -----------------------------------------
+
+class aho_AnyBailFormulaWrapper(aho_BaseSwitchFormula) {
+; Wraps a formula with multiple critical points 
+; The formula will be iterated until one of the critical points bails out
+
+	import "common.ulb"
+
+	func aho_AnyBailFormulaWrapper(Generic pparent)
+		aho_BaseFormula.aho_BaseFormula(pparent)
+		m_numPoints = 0
+		setLength(m_wrappedFormulas,1)
+		m_wrappedFormulas[0] = 0
+		m_Z = new ComplexList(0)
+	endfunc
+	
+	func wrap(GenericArray instanceArray)
+		m_firstFormula = aho_BaseFormula(instanceArray.m_elements[0])
+		setupFormula(m_FirstFormula)
+		int len = instanceArray.getArrayLength()
+		setLength(m_wrappedFormulas, len)
+		int ix = 0
+		while ix<len
+			m_wrappedFormulas[ix] = aho_BaseFormula(instanceArray.m_Elements[ix])
+			ix = ix+1
+		endwhile
+	endfunc
+	
+	ComplexArray func getCriticalPoints()
+		return m_firstFormula.getCriticalPoints()
+	endfunc
+	
+	complex func Init(complex pz)
+		aho_BaseFormula.Init(pz)
+		m_firstFormula.Init(pz)
+		m_bailedOut = false
+
+		m_criticalPoints = getCriticalPoints()
+		if m_criticalPoints != 0
+			m_numPoints = m_criticalPoints.GetArrayLength()
+		else ; fake it
+			m_criticalPoints = new ComplexArray(1)
+			m_criticalPoints.m_Elements[0] = pz
+			m_numPoints = 1
+		endif
+		
+		if m_numPoints > length(m_wrappedFormulas)
+			m_numPoints = length(m_wrappedFormulas)
+		endif
+
+		setLength(m_bailey, m_numPoints)
+		m_Z.setArrayLength(m_numPoints)
+		
+		int ix = 0
+		while ix<m_numPoints
+			m_bailey[ix] = false
+			if ix==0
+				m_Z.m_Elements[0] = m_firstFormula.Init(pz)
+			else
+				m_wrappedFormulas[ix].init(pz)
+				m_Z.m_Elements[ix] = m_criticalPoints.m_Elements[ix]
+			endif
+			ix = ix+1
+		endwhile
+		return m_Z.m_Elements[0]
+	endfunc
+	
+	complex func Iterate(complex pz)
+		aho_BaseFormula.iterate(pz)
+
+		int ix = 0
+		m_bailCount = 0
+		m_bailHit = -1
+		while ix<m_numPoints
+			if m_bailey[ix]
+				m_bailCount = m_bailCount + 1
+			else
+				complex oldZ = m_Z.m_Elements[ix]
+				complex newZ = m_wrappedFormulas[ix].iterate( oldZ )
+				bool bail = m_wrappedFormulas[ix].isBailedOut( m_Z.m_Elements[ix] )
+				m_Z.m_Elements[ix] = newZ
+				m_bailey[ix] = bail
+				if bail
+					m_bailCount = m_bailCount + 1
+					m_bailHit = ix
+				endif
+			endif
+			ix = ix+1
+		endwhile
+		
+		if m_bailHit<0
+			return m_Z.m_Elements[0]
+		else
+			return m_Z.m_Elements[m_bailHit]
+		endif
+	endfunc
+	
+	; @return the zero-based index of the last bailout triggered 
+	int func getBailoutIndex()
+		return m_bailHit ; TODO
+	endfunc
+	
+	BailoutTest func getTriggeredBailout() 
+		return 0 ; TODO
+	endfunc
+
+	bool func IsBailedOut(complex pz)
+		return m_bailCount > 0
+	endfunc
+
+	complex func GetPrimaryExponent()
+		return m_firstFormula.GetPrimaryExponent()
+	endfunc
+
+	float func GetUpperBailout()
+		return m_firstFormula.GetUpperBailout()
+	endfunc
+	
+	float func GetLowerBailout()
+		return m_firstFormula.GetLowerBailout()
+	endfunc
+
+	func debugPrint()
+		aho_BaseFormula.debugPrint()
+		int ix = 0
+		while ix<m_numPoints
+			print("m_Z[", ix, "] = ", m_Z.m_Elements[ix] )
+			ix = ix+1
+		endwhile
+	endfunc
+	
+protected:
+	aho_BaseFormula m_firstFormula
+	aho_BaseFormula m_wrappedFormulas[]
+	ComplexArray m_criticalPoints
+	ComplexList m_Z
+	int m_numPoints
+	bool m_bailey[]
+	int m_bailCount
+	int m_bailHit
+
+	func setupFormula(aho_BaseFormula mula) 
+		aho_BaseSwitchFormula switchFormula = aho_BaseSwitchFormula(mula)
+		if switchFormula != 0
+			switchFormula.SetMandelMode()
+		endif
+	endfunc
+
+}
+
+; --- Multi-bailout wrapper -----------------------------------------
+
+class aho_AllBailFormulaWrapper(aho_AnyBailFormulaWrapper) {
+; Wraps a formula with multiple critical points 
+; The formula will be iterated until all of the critical points bail out
+
+	func aho_AllBailFormulaWrapper(Generic pparent)
+		aho_AnyBailFormulaWrapper.aho_AnyBailFormulaWrapper(pparent)
+	endfunc
+	
+	bool func IsBailedOut(complex pz)
+		return m_bailCount >= m_numPoints
+	endfunc
+
+}
+
+; --- Switchable formulas -------------------------------------------
+
+class aho_SwitchFormula(aho_BaseSwitchFormula) {
+; Abstract class for switchable formulas
+
+	; @param pparent the parent, generally "this" for the parent, or zero
+	func aho_SwitchFormula(Generic pparent)
+		aho_BaseSwitchFormula.aho_BaseSwitchFormula(pparent)
+		setLength(m_bailoutTests, 0)
+		m_bailoutIndex = -1
+	endfunc
+	
+	func SetJuliaMode(complex pp) 
+		aho_BaseSwitchFormula.SetJuliaMode(pp)
+		setupFormulaParam(pp)
+	endfunc
+	
+	complex func Init(complex pz) 
+		complex result = aho_BaseSwitchFormula.Init(pz)
+		m_bailedOut = false
+		m_didCheckBail = false
+		if m_isMandel
+			setupFormulaParam(pz)
+			return getIteratedPoint()
+		else
+			return result ; return pz
+		endif
+	endfunc
+
+	int func getBailoutIndex()
+		return m_bailoutIndex
+	endfunc
+	
+	BailoutTest func getTriggeredBailout() 
+		if m_bailoutIndex >= 0 && m_bailoutIndex < length(m_bailoutTests)
+			return m_bailoutTests[m_bailoutIndex]
+		else
+			return 0
+		endif
+	endfunc
+	
+	func addBailout(BailoutTest test) 
+		int nx = length(m_bailoutTests)
+		test.setBailoutID(nx)
+		setLength(m_bailoutTests, nx+1)
+		m_bailoutTests[nx] = test
+	endfunc
+	
+	bool func IsBailedOut(complex pz)
+		if (!m_didCheckBail && !m_BailedOut) 
+			print("Forgot to call checkBail()")
+			checkBail(pz)
+			m_didCheckBail = m_BailedOut; so it doesn't complain forever
+		endif
+		return m_BailedOut
+	endfunc
+	
+	ComplexArray func getCriticalPoints()
+		if m_criticalPoints==0
+			calcCriticalPoints()
+		endif
+		return m_criticalPoints
+	endfunc
+
+	int func getNumberOfCriticalPoints()
+		if m_criticalPoints==0
+			calcCriticalPoints()
+		endif
+		if m_criticalPoints==0
+			return 0
+		else
+			return m_criticalPoints.getArrayLength()
+		endif
+	endfunc
+
+ 	func debugPrint()
+		 aho_BaseSwitchFormula.debugPrint()
+		 int len = length(m_bailoutTests)
+		 int ix = 0
+		 while ix<len
+			print("  m_bailoutTests[", ix, "] = ", m_bailoutTests[ix])
+			ix = ix+1
+		 endwhile
+	endfunc
+
+protected:
+	bool m_didCheckBail
+	BailoutTest m_bailoutTests[]
+	int m_bailoutIndex
+	ComplexList m_criticalPoints
+
+	complex func getIteratedPoint()
+		if m_criticalPoints==0
+			calcCriticalPoints()
+		endif
+		if m_criticalPoints==0 
+			return 0
+		else
+			return m_criticalPoints.getAt(0)
+		endif
+	endfunc
+	
+	func invalidateCriticalPoints()
+		m_criticalPoints = 0
+	endfunc
+	
+	func calcCriticalPoints()
+		; to be overridden by specific formulas
+	endfunc
+	
+	func setupFormulaParam(complex pp)
+		; to be overridden by specific formulas
+		m_varying1 = pp
+	endfunc
+
+	func addUpperBailoutTest()
+		InfinityBailoutTest bale = new InfinityBailoutTest(0)
+		bale.setOuterLimit(GetUpperBailout())
+		addBailout(bale)
+	endfunc
+
+	func addOriginBailoutTest()
+		OriginBailoutTest bale = new OriginBailoutTest(0)
+		bale.setInnerLimit(GetLowerBailout())
+		addBailout(bale)
+	endfunc
+
+	; don't forget to call this
+	bool func checkBail(complex pz)
+		m_didCheckBail = true
+		int mx = length(m_bailoutTests)
+		int ix=0
+		while (ix<mx) 
+			if m_bailoutTests[ix].bailsOutAt(pz)
+				m_bailoutIndex = ix
+				m_BailedOut = true ; from common.ufm:Formula
+				return m_BailedOut
+			endif
+			ix=ix+1
+		endwhile
+		m_BailedOut = false ; from common.ufm:Formula
+		return m_BailedOut
+	endfunc
+	
+
+default:
+	int param v_aho_Formula
+		caption = "Version (aho_SwitchFormula)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+			been made to the formula that is incompatible with the \
+			previous version. When that happens, this field will reflect \
+			the old version number to alert you to the fact that an \
+			alternate rendering is being used."
+		visible = @v_aho_Formula < 100
+	endparam
+}
+
+; === Bailout Tests =================================================
+
+class BailoutTest(common.ulb:Generic) {
+; base class for bailout tests
+
+	import "common.ulb"
+
+	func BailoutTest(Generic pparent)
+		Generic.Generic(pparent)
+		m_distance = -1
+		m_prevDistance = -2
+		m_difference = 0
+		m_prevDifference = 0
+		m_bailoutID = 0
+	endfunc
+	
+	bool func bailsOutAt(Complex pz)
+		m_didBail = true
+		return m_didBail
+	endfunc
+	
+	bool func didBail()
+		return m_didBail
+	endfunc
+	
+	complex func difference()
+		return m_difference
+	endfunc
+	
+	complex func prevDifference()
+		return m_prevDifference
+	endfunc
+
+	float func distance()
+		return m_distance
+	endfunc
+	
+	float func prevDistance()
+		return m_prevDistance
+	endfunc
+
+	int func getBailoutID()
+		return m_bailoutID
+	endfunc
+	
+	func setBailoutID(int id)
+		m_bailoutID = id
+	endfunc
+	
+	float func getBailoutLimit()
+		return m_bailoutLimit
+	endfunc
+	
+protected:
+	bool m_didBail 
+	float m_bailoutLimit
+	float m_distance ; last calculated distance
+	float m_prevDistance
+	complex m_difference ; last calculated difference
+	complex m_prevDifference
+	int m_bailoutID
+	
+	func updatePrev()
+		m_prevDifference = m_difference
+		m_prevDistance = m_distance
+	endfunc
+}
+
+; --- Divergent -----------------------------------------------------
+
+class InfinityBailoutTest(BailoutTest) {
+
+	import "common.ulb"
+
+	func InfinityBailoutTest(Generic pparent)
+		BailoutTest.BailoutTest(pparent)
+		m_bailoutLimit = -1
+	endfunc
+
+	func setOuterLimit(float outer)
+		m_bailoutLimit = outer
+	endfunc
+	
+	bool func bailsOutAt(Complex pz)
+		updatePrev()
+		m_difference = pz
+		m_distance = |m_difference|
+		m_didBail = m_distance > m_bailoutLimit
+		return m_didBail
+	endfunc
+
+}
+
+; --- Convergence to zero -------------------------------------------
+
+class OriginBailoutTest(BailoutTest) {
+
+	import "common.ulb"
+
+	func OriginBailoutTest(Generic pparent)
+		BailoutTest.BailoutTest(pparent)
+		m_bailoutLimit = -1
+	endfunc
+
+	func setInnerLimit(float inner)
+		m_bailoutLimit = inner
+	endfunc
+	
+	bool func bailsOutAt(Complex pz) 
+		updatePrev()
+		m_difference = pz
+		m_distance = |m_difference|
+		m_didBail = m_distance < m_bailoutLimit
+		return m_didBail
+	endfunc
+
+}
+
+; --- Convergence to a specific point -------------------------------
+
+class PointBailoutTest(BailoutTest) {
+
+	import "common.ulb"
+
+	func PointBailoutTest(Generic pparent)
+		BailoutTest.BailoutTest(pparent)
+		m_bailoutLimit = -1
+		m_Point = 0
+	endfunc
+
+	func setInnerLimit(float inner)
+		m_bailoutLimit = inner
+	endfunc
+	
+	func setPoint(complex point)
+		m_Point = point
+	endfunc
+	
+	complex func getPoint()
+		return m_Point
+	endfunc
+	
+	bool func bailsOutAt(Complex pz) 
+		updatePrev()
+		m_difference = pz-m_Point
+		m_distance = |m_difference|
+		m_didBail = m_distance < m_bailoutLimit
+		return m_didBail
+	endfunc
+	
+private:
+	complex m_Point
+}
+
+; ###################################################################
+; ### Utility classes                                             ###
+; ###################################################################
+
+; === Extensions to array classes ===================================
+
+class GenericList(common.ulb:GenericArray) {
+
+	import "common.ulb"
+
+	func GenericList(int plength)
+		GenericArray.GenericArray(plength)
+		int j=0
+		while j<plength
+			m_Elements[j] = 0
+			j = j+1
+		endwhile
+	endfunc
+	
+	func add(Generic element) 
+		int newPos = GetArrayLength()
+		SetArrayLength(newPos+1)
+		m_Elements[newPos] = element
+	endfunc
+	
+	func addAll(GenericArray additionalElements) 
+		int newPos = GetArrayLength()
+		int addLength = additionalElements.GetArrayLength()
+		SetArrayLength(newPos+addLength)
+		int j=0
+		while j<addLength
+			m_Elements[newPos] = additionalElements.m_Elements[j]
+			j = j+1
+			newPos = newPos+1
+		endwhile
+	endfunc
+	
+	func fill(Generic element) 
+		int len = GetArrayLength()
+		int ix = 0
+		while ix<len
+			m_Elements[ix] = element
+		endwhile
+	endfunc
+	
+	func setAt(int index, Generic element)
+		int len = GetArrayLength()
+		if index>=len
+			SetArrayLength(index+1)
+			int j=len
+			while j<index
+				m_Elements[j] = 0
+			endwhile
+		endif
+		m_Elements[index] = element
+	endfunc
+	
+	Generic func getAt(int index) 
+		if index<GetArrayLength() 
+			return m_Elements[index]
+		else
+			return 0
+		endif
+	endfunc
+	
+	Generic func last() 
+		int pos = GetArrayLength()-1
+		if pos<0
+			return 0
+		else
+			return m_Elements[pos]
+		endif
+	endfunc
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class ComplexList(common.ulb:ComplexArray) {
+
+	import "common.ulb"
+
+	func ComplexList(int plength)
+		ComplexArray.ComplexArray(plength)
+		int j=0
+		while j<plength
+			m_Elements[j] = 0
+			j = j+1
+		endwhile
+	endfunc
+	
+	func add(complex element) 
+		int newPos = GetArrayLength()
+		SetArrayLength(newPos+1)
+		m_Elements[newPos] = element
+	endfunc
+	
+	func addAll(ComplexArray additionalElements) 
+		int newPos = GetArrayLength()
+		int addLength = additionalElements.GetArrayLength()
+		SetArrayLength(newPos+addLength)
+		int j=0
+		while j<addLength
+			m_Elements[newPos] = additionalElements.m_Elements[j]
+			j = j+1
+			newPos = newPos+1
+		endwhile
+	endfunc
+	
+	func fill(complex element) 
+		int len = GetArrayLength()
+		int ix = 0
+		while ix<len
+			m_Elements[ix] = element
+		endwhile
+	endfunc
+	
+	func setAt(int index, complex element)
+		int len = GetArrayLength()
+		if index>=len
+			SetArrayLength(index+1)
+			int j=len
+			while j<index
+				m_Elements[j] = 0
+			endwhile
+		endif
+		m_Elements[index] = element
+	endfunc
+	
+	complex func getAt(int index) 
+		if index<GetArrayLength() 
+			return m_Elements[index]
+		else
+			return 0
+		endif
+	endfunc
+	
+	complex func last() 
+		int pos = GetArrayLength()-1
+		if pos<0
+			return 0
+		else
+			return m_Elements[pos]
+		endif
+	endfunc
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class IntegerList(common.ulb:IntegerArray) {
+
+	import "common.ulb"
+
+	func IntegerList(int plength)
+		IntegerArray.IntegerArray(plength)
+		int m_default = 0
+		int j=0
+		while j<plength
+			m_Elements[j] = m_default
+			j = j+1
+		endwhile
+	endfunc
+	
+	func setDefault(int default)
+		m_default = default
+	endfunc
+	
+	int func getDefault()
+		return m_default
+	endfunc
+	
+	func add(int element) 
+		int newPos = GetArrayLength()
+		IntegerArray.SetArrayLength(newPos+1)
+		m_Elements[newPos] = element
+	endfunc
+	
+	func SetArrayLength(int pLength)
+		int len = getArrayLength()
+		IntegerArray.setArrayLength(pLength)
+		while len<pLength
+			m_elements[len] = m_default
+			len = len+1
+		endwhile
+	endfunc
+
+	func addAll(IntegerArray additionalElements) 
+		int newPos = GetArrayLength()
+		int addLength = additionalElements.GetArrayLength()
+		IntegerArray.SetArrayLength(newPos+addLength)
+		int j=0
+		while j<addLength
+			m_Elements[newPos] = additionalElements.m_Elements[j]
+			j = j+1
+			newPos = newPos+1
+		endwhile
+	endfunc
+
+	func setAt(int index, int element)
+		int len = GetArrayLength()
+		if index>=len
+			SetArrayLength(index+1)
+		endif
+		m_Elements[index] = element
+	endfunc
+	
+	int func getAt(int index) 
+		if index<GetArrayLength() 
+			return m_Elements[index]
+		else
+			return m_default
+		endif
+	endfunc
+	
+	int func last() 
+		int pos = GetArrayLength()-1
+		if pos<0
+			return m_default
+		else
+			return m_Elements[pos]
+		endif
+	endfunc
+	
+	func fill(int value) 
+		int len = GetArrayLength()
+		int ix = 0
+		while ix<len
+			m_elements[ix] = value
+		endwhile
+	endfunc
+	
+protected:
+	int m_default
+
+}	
+
+; === Orbiters (coloring helpers) ===================================
+
+class aho_Orbiter(common.ulb:Generic) {
+
+	import "common.ulb"
+	
+	func aho_Orbiter(Generic pparent) 
+		Generic.Generic(pparent)
+		InitOrbiter()
+	endfunc
+	
+	func setFormula(aho_BaseFormula mula)
+		setPower(real(mula.GetPrimaryExponent()))
+	endfunc
+	
+	func setPower(float exponent)
+	endfunc
+
+	func Init(complex pz, complex ppixel)
+	endfunc
+	
+	func Iterate(complex pz)
+	endfunc
+	
+	func Finish(complex pz, BailoutTest bail)
+		; be prepared for 'bail' to be 0
+	endfunc
+	
+	complex func ComplexResult()
+		return 0
+	endfunc
+	
+protected:
+
+	func InitOrbiter()
+	endfunc
+
+}
+
+; --- None ----------------------------------------------------------
+
+class aho_NoneOrbiter(aho_Orbiter) {
+
+	complex func ComplexResult()
+		return m_complexResult
+	endfunc
+	
+	func Finish(complex pz, BailoutTest bail)
+		m_complexResult = pz
+	endfunc
+
+protected:
+	complex m_complexResult
+	
+	func InitOrbiter()
+		print("aho_NoneOrbiter.InitOrbiter()")
+		m_complexResult = 0
+	endfunc
+	
+default:
+	title = "None"
+	; for when you don't want to change anything
+	rating = recommended
+}
+
+; --- Coloring-specific subclass ------------------------------------
+
+class aho_ColoringOrbiter(aho_Orbiter) {
+
+	import "common.ulb"
+	
+	func aho_ColoringOrbiter(Generic pparent) 
+		aho_Orbiter.aho_Orbiter(pparent)
+		; InitOrbiter()
+	endfunc
+
+	bool func isSolid()
+		return false
+	endfunc
+
+}
+
+; --- Last Z --------------------------------------------------------
+
+class aho_LastOrbiter(aho_ColoringOrbiter) {
+
+	func Init(complex pz, complex ppixel)
+		aho_ColoringOrbiter.Init(pz, ppixel)
+		m_lastZ = pz
+	endfunc
+
+	func Iterate(complex pz)
+		aho_ColoringOrbiter.Iterate(pz)
+		m_lastZ = pz
+	endfunc
+
+	complex func ComplexResult()
+		return m_complexResult
+	endfunc
+	
+	func Finish(complex pz, BailoutTest bail)
+		m_complexResult = getZ(pz)
+	endfunc
+
+protected:
+	complex m_lastZ
+	complex m_complexResult
+	
+	func InitOrbiter()
+		print("aho_LastOrbiter.InitOrbiter()")
+		m_complexResult = 0
+	endfunc
+	
+	complex func getZ(complex pz)
+		if @p_lastz == "z"
+			return pz
+		elseif @p_lastz == "oldz"
+			return m_lastZ
+		else
+			return m_lastZ - pz
+		endif
+	endfunc
+
+default:
+	title = "Last Z"
+	rating = average
+
+	param p_lastz
+		caption = "Use which value"
+		enum = "z" "oldz" "z-oldz"
+		default = 0
+	endparam
+}
+
+; --- Potential -----------------------------------------------------
+
+class aho_PotentialOrbiter(aho_LastOrbiter) {
+
+	func setBailout(float bailout)
+		if m_testBail != bailout
+			float logBail = log(bailout)
+			m_logLogBail = log(logBail)
+			print("setBailout(",bailout,") ;; m_logLogBail=", m_logLogBail)
+			m_testBail = bailout
+		endif
+	endfunc
+	
+	func setPower(float exponent)
+		m_RLogExponent = recip( log(exponent) )
+	endfunc
+	
+	func setFormula(aho_BaseFormula mula)
+		aho_LastOrbiter.setFormula(mula)
+		float bail = mula.GetLowerBailout()
+		if (bail<=0)
+			bail = mula.getUpperBailout()
+		endif
+		setBailout(bail)
+	endfunc
+	
+	func Init(complex pz, complex ppixel)
+		aho_LastOrbiter.Init(pz, ppixel)
+		m_iterations = 0
+	endfunc
+	
+	func Iterate(complex pz)
+		aho_LastOrbiter.Iterate(pz)
+		m_iterations = m_iterations + 1
+	endfunc
+	
+	func Finish(complex pz, BailoutTest bail)
+		updateBailoutLimit(bail)
+		float step = potentialStep2(pz, bail)
+		print("step=", step)
+		m_complexResult = 0.01 * (m_iterations + step)
+		if bail != 0
+			int id = bail.getBailoutID()
+			print("id=", id)
+			m_complexResult = m_complexResult + flip( id )
+		endif
+	endfunc
+
+protected:
+	int m_iterations 
+	float m_testBail
+	float m_logLogBail ; log(log(bailout))
+	float m_RLogExponent  ; 1 / log(exponent)
+	
+	func InitOrbiter()
+		aho_LastOrbiter.InitOrbiter()
+		m_iterations = 0
+		m_testBail = -1
+	endfunc
+	
+	float func potentialCalc(float distsq)
+		; TODO: think about negative logarithms
+		$ifdef DEBUG
+			print ("distsq=",distsq,", log(distsq)=",log(distsq),", log(log(distsq))=", log(log(distsq)), ", m_logLogBail=", m_logLogBail, ", m_RLogExponent=", m_RLogExponent)
+		$endif
+		if (distsq > 0)
+			float logdistsq = log(distsq)
+			return ( m_logLogBail - log(logdistsq) ) * m_RLogExponent
+		else
+			return -1E80 ; QQQ: what else
+		endif
+	endfunc
+	
+	float func potentialStep2(complex pz, BailoutTest bail)
+		if @p_lastZ!="z-oldz" && bail != 0
+			float dist
+			if @p_lastZ=="z"
+				dist = bail.distance()
+			else
+				dist = bail.prevDistance()
+			endif
+			if dist > 0
+				float step = potentialCalc(dist)
+				if @p_lastz != "oldz"
+					step = step + 1
+				endif
+				return step
+			else
+				return -1E80
+			endif
+		else
+			return potentialStep(pz)
+		endif
+	endfunc
+
+	float func potentialStep(complex pz)
+		float step = potentialCalc( |getZ(pz)| )
+		if @p_lastz != "oldz" ; inherited from aho_LastOrbiter
+			step = step + 1
+		endif
+		return step
+	endfunc
+	
+	func updateBailoutLimit(BailoutTest bail)
+		if bail != 0
+			float bailV = bail.getBailoutLimit()
+			if bailV > 0
+				setBailout(bailV)
+			endif
+		endif
+	endfunc
+	
+default:
+	title = "Potential"
+}
+
+; --- Base class for averaging orbiters -----------------------------
+
+class aho_AccumulatingOrbiter(aho_PotentialOrbiter) {
+
+	func Init(complex pz, complex ppixel)
+		aho_PotentialOrbiter.Init(pz, ppixel)
+		m_accumulator.Init()
+		m_skip = NumPointsToSkip()
+	endfunc	
+	
+	func Iterate(complex pz)
+		aho_PotentialOrbiter.Iterate(pz)
+		if m_skip > 0
+			m_skip = m_skip -1
+			skipPoint(pz)
+		else
+			m_accumulator.accumulate( evaluatePoint(pz) )
+		endif
+	endfunc
+
+	func Finish(complex pz, BailoutTest bail)
+		updateBailoutLimit(bail)
+		float blend
+		if @p_manualBlend
+			blend = @p_blendFactor
+		else
+			blend = potentialStep2(pz, bail)
+			print("blend=",blend,", pz=", pz)
+		endif
+		m_complexResult= m_accumulator.blendedSum(blend)
+	endfunc
+
+protected:
+	int m_skip
+	aho_FloatAccumulator m_accumulator
+	
+	func InitOrbiter()
+		aho_PotentialOrbiter.InitOrbiter()
+		m_skip = 0
+		m_accumulator = new @p_accumulator(0)
+	endfunc
+
+	int func NumPointsToSkip() 
+		return 0
+	endfunc
+	
+	float func evaluatePoint(complex pz)
+		return 0
+	endfunc
+	
+	func skipPoint(complex pz)
+	endfunc
+	
+default:
+	
+	heading 
+		caption = "Under the hood"
+		expanded = false
+	endheading 
+	
+	aho_FloatAccumulator param p_accumulator
+		caption = "Accumulator"
+		default = aho_FloatAccumulator
+		expanded = false
+	endparam
+	
+	bool param p_manualBlend
+		 caption = "Manual blending"
+		 default = false
+	endparam
+
+	float param p_blendFactor
+		caption = "Blend factor"
+		default = 1.0
+		visible = @p_manualBlend
+	endparam
+}
+
+; --- Curvature -----------------------------------------------------
+
+class aho_Curvature2Orbiter(aho_AccumulatingOrbiter) {
+
+	func Init(complex pz, complex ppixel)
+		aho_AccumulatingOrbiter.Init(pz, ppixel)
+		zold = (0,0)
+		zold2 = (0,0)
+	endfunc
+
+protected:
+	complex zold
+	complex zold2 
+
+	int func NumPointsToSkip() 
+		return 2
+	endfunc
+
+	float func evaluatePoint(complex pz)
+		float result = abs(atan2((pz-zold)/(zold-zold2)))
+		zold2 = zold ; save the orbit values
+		zold = pz
+		return result
+	endfunc
+	
+	func skipPoint(complex pz)
+		zold2 = zold ; save the orbit values
+		zold = pz
+	endfunc
+	
+default:
+	title = "Curvature Average"
+}
+
+; --- Triangle Inequality -------------------------------------------
+
+class aho_TriangleInequality2Orbiter(aho_AccumulatingOrbiter) {
+	
+	func Init(complex pz, complex ppixel)
+		aho_AccumulatingOrbiter.Init(pz, ppixel)
+		fC = ppixel
+		fAbsC = cabs(fC)
+		if @p_initAccumulator
+			m_accumulator.accumulate(0)
+		endif
+	endfunc
+
+protected:
+	complex fC
+	float fAbsC 
+
+	int func NumPointsToSkip() 
+		return 1
+	endfunc
+
+	float func evaluatePoint(complex pz)
+		float az2 = cabs(pz - fC)
+		float lowbound = abs(az2 - fAbsC)
+		float numer = (cabs(pz) - lowbound)
+		float denom = (az2 + fAbsC - lowbound)
+		return numer / denom
+	endfunc
+	
+default:
+	title = "Triangle Inequality Average"
+	
+	bool param p_initAccumulator
+		caption = "Accumulate extra zero"
+		hint = "Set to true for compatiblility with other version, or for better look near bailout."
+		default = true
+	endparam
+
+}
+
+; --- Angle-Step ----------------------------------------------------
+
+class aho_AngleStep2Orbiter(aho_AccumulatingOrbiter) {
+
+	func Init(complex pz, complex ppixel)
+		aho_AccumulatingOrbiter.Init(pz, ppixel)
+		m_zz1 = 0
+		m_zz2 = 0
+	endfunc
+	
+	func Finish(complex pz, BailoutTest bail)
+		aho_AccumulatingOrbiter.Finish(pz, bail)
+		if @p_function == "Square"
+			 m_complexResult = sqrt(m_complexResult) * m_recip2pi
+		else
+			m_complexResult = (m_complexResult + 1) / 2
+		endif
+	endfunc
+
+protected:
+	complex m_zz1 
+	complex m_zz2
+	float m_recip2pi
+	
+	func InitOrbiter()
+		aho_AccumulatingOrbiter.InitOrbiter()
+		m_recip2pi = recip( 0.5*#pi )
+	endfunc
+
+	int func NumPointsToSkip() 
+		return 2
+	endfunc
+	
+	func skipPoint(complex pz)
+		m_zz2 = m_zz1
+		m_zz1 = pz
+	endfunc
+
+	float func evaluatePoint(complex pz)
+		complex v1 = (m_zz2-m_zz1);
+		complex v2 = (m_zz1-pz);
+		
+		m_zz2 = m_zz1
+		m_zz1 = pz
+
+		if @p_function=="Original"
+			return  atan2( sqr(v1) / (v2-v1) ) * m_recip2pi
+		elseif @p_function=="Simple"
+			return atan2( v1 / v2 ) * m_recip2pi
+		else ; "Square"
+			return sqr( atan2( v1 / v2 ) * m_recip2pi )
+		endif
+	endfunc
+	
+default:
+	title = "Angle Step Average"
+	
+	param p_function
+		caption = "Function"
+		hint = "Function to evaluate at each step"
+		enum = "Original" "Simple" "Square"
+		default = 0
+	endparam
+
+}
+
+; === Potential Differential ========================================
+
+class aho_PotentialDifferential2Orbiter(aho_LastOrbiter) {
+$define DEBUG
+	import "common.ulb"
+	import "aho.ulb" 
+	
+	func setPower(float exponent)
+		print(this, " setPower(",exponent,")")
+		m_exponent = exponent
+	endfunc
+	
+	func setFormula(aho_BaseFormula mula)
+		aho_LastOrbiter.setFormula(mula)
+		if @p_differential
+			m_tracer.setDifferential(mula)
+		endif
+	endfunc
+	
+	func Init(complex pz, complex ppixel)
+		aho_LastOrbiter.Init(pz, ppixel)
+		m_tracer.setPower(@p_initpower, m_exponent)
+		m_tracer.Init(pz)
+	endfunc
+	
+	func Iterate(complex pz)
+		aho_LastOrbiter.Iterate(pz)
+		m_tracer.Iterate(pz)
+	endfunc	
+	
+	func Finish(complex pz, BailoutTest bail)
+		aho_LastOrbiter.Finish(pz, bail)
+		m_tracer.Finish(pz)
+		
+		if @p_lastz == "oldz"
+			m_tracer.skipLast(1)
+		elseif @p_lastz == "z-oldz"
+			m_tracer.calcDeltaZ()
+		endif
+		
+		m_tracer.skip(@p_inskipp)
+		if (@p_adj_inskipp)
+			m_tracer.adjustStartEnd()
+		endif
+		
+		float v = m_tracer.Result()
+		print("pz=",pz,", v=",v)
+		m_tracer.debugPrint()
+		
+		float usedshift
+		if @p_auto_shift
+			usedshift = m_tracer.getAutoShift()
+			print("autoShift=",usedshift)
+		else
+			usedshift = @p_shift
+		endif
+		if usedshift != 0
+			v = v + usedshift*(m_tracer.getCount()-1)
+ 		  print("usedshift=",usedshift,", v=",v)
+		endif
+		m_complexResult = v - floor(v) ; TODO: REVIEW
+		print("pz=", pz, ", #pixel=", #pixel, ", v=", v, ", m_complexResult=", m_complexResult)
+	endfunc
+
+protected:
+	aho_PotentialCalc m_tracer
+	float m_exponent
+	
+	func InitOrbiter()
+		aho_LastOrbiter.InitOrbiter()
+		m_tracer = new @p_calculationClass(0)
+		m_exponent = -1
+	endfunc
+
+	
+default:
+	title = "Potential Differential"
+	
+	heading
+		caption="Formula parameters"
+	endheading
+	
+	float param p_initpower
+		caption="Initial exponent"
+		hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+		default = 1.0
+	endparam
+	
+	heading
+		caption="Under the hood"
+		expanded=false
+	endheading
+	
+	int param p_inskipp
+		caption="Orbit start"
+		hint="Number of initial iterations to skip"
+		min=0
+		default=0
+	endparam
+
+	bool param p_adj_inskipp
+		caption="Auto-adjust orbit"
+		hint="Skip the first orbit entry if the orbit starts at (0,0)"
+		default=true
+	endparam
+	
+	float param p_shift
+		caption="Manual shift"
+		hint="Can create (and sometimes, obliterate) stripes"
+		default=0
+		min=-1
+		max=1
+		enabled = (! @p_auto_shift)
+	endparam
+
+	bool param p_auto_shift
+		caption="Automatic shift"
+		hint="Guesstimate the shift value"
+		default=false
+	endparam
+	
+	bool param p_differential
+		caption = "differential from formula"
+		default = false
+		hint = "If the formula supports calculating the differential, use it (Can be expensive!)"
+	endparam
+  
+	aho_PotentialCalc param p_calculationClass
+		caption="Calculation"
+		hint="Method of calculation (multiplicative is faster, \
+			additive is less prone to round-off errors under certain conditions)"
+		default = aho_MultiplicativePotentialCalc
+	endparam
+}
+
+
+; #################################################################
+; ### Math classes                                              ###
+; #################################################################
+
+; === Base class for Evaluators =====================================
+
+class Evaluator(common.ulb:Generic) {
+
+	import "common.ulb"
+
+	func Evaluator(Generic pparent) 
+		Generic.Generic(pparent)
+	endfunc
+
+	complex func evaluate(complex z)
+		; to be overridden
+		return 0
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		return 0
+	endfunc
+	
+	ComplexArray func getAllCriticalPoints()
+		return 0
+	endfunc
+	
+	; @return the number of known critical points ;
+	; or -1 if we don't know 
+	; or -2 if the function has an infinite number of critical points, but getCriticalPoint(index) still works
+	int func getNumberOfCriticalPoints()
+		return -1
+	endfunc
+}
+
+; === Base class for Power Series =================================
+
+class PowerSeries(common.ulb:Generic) {
+; base class for power series
+
+	import "common.ulb"
+
+	func PowerSeries(Generic pparent)
+		Generic.Generic(pparent)
+	endfunc
+
+	func init(int maxPower)
+		fMaxPower = maxPower
+	endfunc
+	
+	complex func fullFunction(complex z)
+		return 0
+	endfunc
+
+	complex func coefficient(int power)
+		return 0
+	endfunc
+
+	bool func allRealCoefficients()
+		return false
+	endfunc
+
+	ComplexArray func allCoefficients()
+		ComplexArray coeffs = new ComplexArray(fMaxPower + 1)
+		int ix = 0
+		while ix<=fMaxPower
+			coeffs.m_Elements[ix] = coefficient(ix)
+			ix = ix+1
+		endwhile
+		return coeffs
+	endfunc
+
+protected:
+	int fMaxPower
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class PrecomputedPowerSeries(PowerSeries) {
+; base class for power series which needs to be computed all at once
+
+	import "common.ulb"
+	import "aho.ulb"
+
+	func PrecomputedPowerSeries(Generic pparent)
+		PowerSeries.PowerSeries(pparent)
+	endfunc
+	
+	func init(int maxPower)
+		PowerSeries.init(maxPower)
+		fCoefficients = new ComplexArray(maxPower+1)
+		int ix = 0
+		while ix<=maxPower 
+			fCoefficients.m_Elements[ix] = 0
+			ix = ix+1
+		endwhile
+	endfunc
+
+	complex func coefficient(int power)
+		if (power<fCoefficients.GetArrayLength())
+			return fCoefficients.m_Elements[power]
+		else
+			return 0
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return false
+	endfunc
+	
+	ComplexArray func allCoefficients()
+		ComplexList coeffs = new ComplexList(0)
+		coeffs.addAll(fCoefficients)
+		return coeffs
+	endfunc
+
+protected:
+	ComplexArray fCoefficients
+}
+
+; === Specific power series =========================================
+
+class RecipPowerSeries(PowerSeries) {
+	; power series for f(z) = -1 + 1/(1-z)
+	; f(z) = z + z^2 + z^3 + z^4 + z^5 + ...
+
+	func RecipPowerSeries(Generic pparent)
+		PowerSeries.PowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new RecipEvaluator(0)
+	endfunc
+
+	complex func coefficient(int power)
+		if (power==0)
+			return 0
+		else
+			return 1
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+	
+default:
+	title = "1/(1-z) - 1"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class RecipEvaluator(Evaluator) {
+	
+	complex func evaluate(complex z)
+		return -1 + recip(1-z)
+	endfunc
+
+	; no critical points
+
+default:
+	title = "1/(1-z) - 1"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class NegLogPowerSeries(PowerSeries) {
+	; power series for f(z) = - log(1-z)
+	; f(z) = z + (z^2)/2 + (z^3)/3 + (z^4)/4 + ...
+
+	func NegLogPowerSeries(Generic pparent)
+		PowerSeries.PowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new NegLogEvaluator(0)
+	endfunc
+	
+	complex func coefficient(int power)
+		if (power==0)
+			return 0
+		else 
+			return recip(power)
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+
+default:
+	title = "-log(1-z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class NegLogEvaluator(Evaluator) {
+	
+	complex func evaluate(complex z)
+		return -log(1-z)
+	endfunc
+	
+	; no finite critical points
+	
+default:
+	title = "-log(1-z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class LogPowerSeries(PowerSeries) {
+	; power series for f(z) = log(z+1)
+	; f(z) = z - (z^2)/2 + (z^3)/3 - (z^4)/4 + ...
+
+	func LogPowerSeries(Generic pparent)
+		PowerSeries.PowerSeries(pparent)
+	endfunc
+
+	Evaluator func functionEvaluator() 
+		return new LogEvaluator(0)
+	endfunc
+	
+	complex func coefficient(int power)
+		if (power==0)
+			return 0
+		elseif (power%2) == 0
+			return - recip( power )
+		else
+			return recip( power )
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+
+default:
+	title = "log(z+1)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class LogEvaluator(Evaluator) {
+	
+	complex func evaluate(complex z)
+		return log(z+1)
+	endfunc
+	
+	; no finite critical points
+
+default:
+	title = "log(z+1)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class ArcTanPowerSeries(PowerSeries) {
+	; power series for f(z) = atan(z)
+	; f(z) = z - (z^3)/3 + (z^5)/5 - (z^7)/7 + ...
+
+	func ArcTanPowerSeries(Generic pparent)
+		PowerSeries.PowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new ArcTanEvaluator(0)
+	endfunc
+
+	complex func coefficient(int power)
+		int pmod4 = power%4
+		if (pmod4==1)
+			return - recip( power )
+		elseif (pmod4==3)
+			return recip( power )
+		else
+			return 0
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+	
+
+default:
+	title = "atan(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class ArcTanEvaluator(Evaluator) {
+	
+	complex func evaluate(complex z)
+		return atan(z)
+	endfunc
+
+default:
+	title = "atan(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class FactorialPowerSeries(PrecomputedPowerSeries) {
+	; power series for f(z) = exp(z)
+	; f(z) = z + z^2/2! + z^3/3! + z^4/4! + ...
+	
+	func FactorialPowerSeries(Generic pparent)
+		PrecomputedPowerSeries.PrecomputedPowerSeries(pparent)
+	endfunc
+	
+	func init(int maxPower)
+		PrecomputedPowerSeries.init(maxPower)
+		float coeff = 1.0
+		setCoefficient(0, coeff)
+		if maxPower>=1
+			setCoefficient(1, coeff)
+		endif
+		int pow = 2
+		while pow<=maxPower 
+			coeff = coeff / pow
+			setCoefficient(pow, coeff)
+			pow = pow+1
+		endwhile
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+	
+protected:
+	func setCoefficient(int power, float coeff)
+	endfunc
+	
+default:
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class ExpPowerSeries(FactorialPowerSeries) {
+	; power series for f(z) = exp(z)
+	; f(z) = 1 + z + z^2/2! + z^3/3! + z^4/4! + ...
+	
+	func ExpPowerSeries(Generic pparent)
+		FactorialPowerSeries.FactorialPowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new ExpEvaluator(0)
+	endfunc
+		
+protected:
+	func setCoefficient(int power, float coeff)
+		fCoefficients.m_Elements[power] = coeff
+	endfunc
+	
+default:
+	title = "exp(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class ExpEvaluator(Evaluator) {
+	
+	complex func evaluate(complex z)
+		return exp(z)
+	endfunc
+
+default:
+	title = "exp(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class SinPowerSeries(FactorialPowerSeries) {
+	; power series for f(z) = sin(z)
+	; f(z) = z - z^3/3! + z^5/5! - ...
+
+	func SinPowerSeries(Generic pparent)
+		FactorialPowerSeries.FactorialPowerSeries(pparent)
+	endfunc
+
+	Evaluator func functionEvaluator() 
+		return new SinEvaluator(0)
+	endfunc
+
+protected:
+	func setCoefficient(int power, float coeff)
+		int m4 = power % 4
+		if m4==1
+			fCoefficients.m_Elements[power] = coeff
+		elseif m4==3
+			fCoefficients.m_Elements[power] = -coeff
+		endif
+	endfunc
+	
+default:
+	title = "sin(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class SinEvaluator(Evaluator) {
+
+	complex func evaluate(complex z)
+		return sin(z)
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		if (index%2)==0
+			return 0.5*#pi*(index+1) 
+		else
+			return -0.5*#pi*index
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return -2
+	endfunc
+
+default:
+	title = "sin(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class CosPowerSeries(FactorialPowerSeries) {
+	; power series for f(z) = cos(z)
+	; f(z) = 1 - z^2/2! + z^4/4! - ...
+	
+	func CosPowerSeries(Generic pparent)
+		FactorialPowerSeries.FactorialPowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new CosEvaluator(0)
+	endfunc
+
+protected:
+	func setCoefficient(int power, float coeff)
+		int m4 = power % 4
+		if m4==0
+			fCoefficients.m_Elements[power] = coeff
+		elseif m4==2
+			fCoefficients.m_Elements[power] = -coeff
+		endif
+	endfunc
+	
+default:
+	title = "cos(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class CosEvaluator(Evaluator) {
+
+	complex func evaluate(complex z)
+		return cos(z)
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		if (index%2)==0
+			return 0.5*#pi*index
+		else
+			return -0.5*#pi*(index+1)
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return -2
+	endfunc
+	
+default:
+	title = "cos(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class SinhPowerSeries(FactorialPowerSeries) {
+	; power series for f(z) = sinh(z)
+	; f(z) = z + z^3/3! + z^5/5! - ...
+	
+	func SinhPowerSeries(Generic pparent)
+		FactorialPowerSeries.FactorialPowerSeries(pparent)
+	endfunc
+
+	Evaluator func functionEvaluator() 
+		return new SinhEvaluator(0)
+	endfunc
+
+protected:
+	func setCoefficient(int power, float coeff)
+		int m2 = power % 2
+		if m2==1
+			fCoefficients.m_Elements[power] = coeff
+		endif
+	endfunc
+	
+default:
+	title = "sinh(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class SinhEvaluator(Evaluator) {
+
+	complex func evaluate(complex z)
+		return sinh(z)
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		if (index%2)==0
+			return flip(0.5*#pi*(index+1))
+		else
+			return flip(-0.5*#pi*index)
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return -2
+	endfunc
+
+default:
+	title = "sinh(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class CoshPowerSeries(FactorialPowerSeries) {
+	; power series for f(z) = cosh(z)
+	; f(z) = 1 + z^2/2! + z^4/4! - ...
+	
+	func CoshPowerSeries(Generic pparent)
+		FactorialPowerSeries.FactorialPowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new CoshEvaluator(0)
+	endfunc
+
+protected:
+	func setCoefficient(int power, float coeff)
+		int m2 = power % 2
+		if m2==0
+			fCoefficients.m_Elements[power] = coeff
+		endif
+	endfunc
+	
+default:
+	title = "cosh(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class CoshEvaluator(Evaluator) {
+
+	complex func evaluate(complex z)
+		return cosh(z)
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		if (index%2)==0
+			return flip(0.5*#pi*index)
+		else
+			return flip(-0.5*#pi*(index+1))
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return -2
+	endfunc
+
+default:
+	title = "cosh(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class TanPowerSeries(PrecomputedPowerSeries) {
+	; power series for f(z) = tan(z)
+	; f(z) = z + z^3/3 + 2*z^5/15 + ...
+	
+	func TanPowerSeries(Generic pparent)
+		PrecomputedPowerSeries.PrecomputedPowerSeries(pparent)
+	endfunc
+	
+	Evaluator func functionEvaluator() 
+		return new TanEvaluator(0)
+	endfunc
+	
+	func init(int maxPower)
+		PrecomputedPowerSeries.init(64)
+		fCoefficients.m_elements[63]=5.615104792414680083259101187776448e-13
+		fCoefficients.m_elements[61]=1.385471574294846899390054465352388e-12
+		fCoefficients.m_elements[59]=3.418514086811155814038680292485683e-12
+		fCoefficients.m_elements[57]=8.434845419094338293849148188558707e-12
+		fCoefficients.m_elements[55]=2.081214686770047419897227195060971e-11
+		fCoefficients.m_elements[53]=5.135191408039367740076049513054295e-11
+		fCoefficients.m_elements[51]=1.267057693030540106009628808122344e-10
+		fCoefficients.m_elements[49]=3.1263395458920870457781200134409e-10
+		fCoefficients.m_elements[47]=7.713933635359062290478933072162729e-10
+		fCoefficients.m_elements[45]=1.903336833931275921319706595462384e-9
+		fCoefficients.m_elements[43]=4.696295398230901628819043472467672e-9
+		fCoefficients.m_elements[41]=1.158764443279885220019793202909179e-8
+		fCoefficients.m_elements[39]=2.859136662305253908331094534141647e-8
+		fCoefficients.m_elements[37]=7.054636946400968325214518544480557e-8
+		fCoefficients.m_elements[35]=1.740661896357164777986229231330273e-7
+		fCoefficients.m_elements[33]=4.294911078273805854820351280397272e-7
+		fCoefficients.m_elements[31]=1.059726832010465435091355394124778e-6
+		fCoefficients.m_elements[29]=2.614771151290754554263594256409741e-6
+		fCoefficients.m_elements[27]=6.451689215655430763190842315302558e-6
+		fCoefficients.m_elements[25]=1.591890506932896474074427981657004e-5
+		fCoefficients.m_elements[23]=3.927832388331683405337080809312334e-5
+		fCoefficients.m_elements[21]=9.691537956929450325595875000388809e-5
+		fCoefficients.m_elements[19]=2.391291142435524814857314588851128e-4
+		fCoefficients.m_elements[17]=5.900274409455859813780759937000211e-4
+		fCoefficients.m_elements[15]=1.455834387051318268249485180702112e-3
+		fCoefficients.m_elements[13]=3.592128036572481016925461369905814e-3
+		fCoefficients.m_elements[11]=8.863235529902196568863235529902196e-3
+		fCoefficients.m_elements[9]=2.18694885361552028218694885361552e-2
+		fCoefficients.m_elements[7]=5.396825396825396825396825396825397e-2
+		fCoefficients.m_elements[5]=1.333333333333333333333333333333333e-1
+		fCoefficients.m_elements[3]=3.333333333333333333333333333333333e-1
+		fCoefficients.m_elements[1]=1
+		if maxPower<64
+			fCoefficients.SetArrayLength(maxPower)
+		endif
+	endfunc
+
+	bool func allRealCoefficients()
+		return true
+	endfunc
+	
+default:
+	title = "tan(z)"
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class TanEvaluator(Evaluator) {
+
+	complex func evaluate(complex z)
+		return tan(z)
+	endfunc
+	
+	complex func getCriticalPoint(int index)
+		if (index%2)==0
+			return 0.5*#pi*(index+1) 
+		else
+			return -0.5*#pi*index
+		endif
+	endfunc
+	
+	int func getNumberOfCriticalPoints()
+		return -2
+	endfunc
+
+default:
+	title = "tan(z)"
+}
+
+; === Power Series Compiler ===========================================
+
+class aho_PowerSeriesCompiler {
+
+	import "common.ulb"
+	import "aho.ulb"
+
+	func aho_PowerSeriesCompiler()
+		clear()
+	endfunc
+	
+	func setPowerSeries(ComplexArray coefficients)
+		int highPower = -1
+		m_maxRegister = 0
+		
+		; debugCoefficients(coefficients)
+		
+		int jp = coefficients.GetArrayLength() - 1
+		while jp >= 0 && highPower == -1
+			if coefficients.m_Elements[jp] != 0 
+				highPower = jp
+			endif
+			jp = jp - 1
+		endwhile
+		
+		if highPower < 0
+			clear()
+		else 
+			initPower(highPower)
+			complex a = coefficients.m_Elements[highPower]
+			bool firstCoeffIsOne = false
+			if a==1
+				firstCoeffIsOne = true
+			else
+				m_tempInstructions.add( newInitialInstruction(a, highPower) )
+			endif
+			int jp = highPower 
+			int jprev = jp
+			while jp > 0
+				jp = jp - 1
+				complex a = coefficients.m_Elements[jp]
+				if a != 0
+					int dist = jprev - jp
+					jprev = jp
+					if firstCoeffIsOne 
+						firstCoeffIsOne = false
+						m_tempInstructions.add( newLoadPowerInstruction(dist) )
+					else
+						m_tempInstructions.add( newMultiplyPowerInstruction(dist) )
+					endif
+					m_tempInstructions.add( newAddInstruction(a, jp) )
+				endif
+			endwhile
+			if jprev > 0
+				if firstCoeffIsOne 
+					firstCoeffIsOne = false
+					m_tempInstructions.add( newLoadPowerInstruction(jprev) )
+				else
+					m_tempInstructions.add( newMultiplyPowerInstruction(jprev) )
+				endif
+			endif
+		endif
+	endfunc
+	
+	aho_PowerSeriesEvaluator func getEvaluator()
+		aho_PowerSeriesEvaluator eval = new aho_PowerSeriesEvaluator(0)
+		GenericList terms = new GenericList(0)
+		int len = m_tempPower2.getArrayLength()
+		if len > 1
+			terms.add( newLoadInstruction(0, 1) ) ; register 0 = pz
+			int ix = 1
+			int pwr = 1
+			while ix<len
+				pwr = 2*pwr
+				terms.add( newSquareInstruction(pwr) ) 
+				terms.add( newStoreInstruction( m_tempPower2.getAt(ix), pwr ) )
+				ix = ix+1
+			endwhile
+		endif
+		terms.addAll(m_tempCalc)
+		terms.addAll(m_tempInstructions)
+		eval.setInstructions(terms)
+		eval.setRegisters(m_maxRegister+1)
+		return eval
+	endfunc
+
+private:
+	int m_maxRegister
+	IntegerList m_tempPower		; list of registers for pz^n
+	IntegerList m_tempPower2	; list of registers for pz ^ (2^k)
+	GenericList m_tempCalc		; list of powers of pz to be precalculated
+	GenericList m_tempInstructions	; list of power series terms 
+	
+	func debugCoefficients(ComplexArray coeffs)
+		int len = coeffs.GetArrayLength()
+		int ix = 0
+		while ix<len
+			print("coeff[",ix,"]=",coeffs.m_Elements[ix])
+			ix = ix+1
+		endwhile
+	endfunc
+	
+	aho_LoadInstruction func newLoadInstruction(int register, int power)
+		aho_LoadInstruction instr4 = new aho_LoadInstruction(0)
+		instr4.setRegister(register)
+		instr4.setPower(power)
+		return instr4
+	endfunc
+	
+	aho_LoadInstruction func newLoadPowerInstruction(int power)
+		return newLoadInstruction(getPowerRegister(power), power)
+	endfunc
+
+	aho_StoreInstruction func newStoreInstruction(int register, int power)
+		aho_StoreInstruction instr5 = new aho_StoreInstruction(0)
+		instr5.setRegister(register)
+		instr5.setPower(power)
+		return instr5
+	endfunc
+
+	aho_MultiplyInstruction func newMultiplyPowerInstruction(int power)
+		aho_MultiplyInstruction instr2 = new aho_MultiplyInstruction(0)
+		instr2.setPower(power)
+		instr2.setRegister(getPowerRegister(power))
+		return instr2
+	endfunc
+	
+	aho_AddInstruction func newAddInstruction(complex coeff, int power)
+		aho_AddInstruction instr3 = new aho_AddInstruction(0)
+		instr3.setPower(power)
+		instr3.setCoeff(coeff)
+		return instr3
+	endfunc
+
+	aho_InitialInstruction func newInitialInstruction(complex coeff, int power)
+		aho_InitialInstruction instr1 = new aho_InitialInstruction(0)
+		instr1.setPower(power)
+		instr1.setCoeff(coeff)
+		return instr1
+	endfunc
+	
+	aho_SquareInstruction func newSquareInstruction(int power)
+		aho_SquareInstruction instr6 = new aho_SquareInstruction(0)
+		instr6.setPower(power)
+		return instr6
+	endfunc
+
+	func clear()
+		m_maxRegister = 0
+		m_tempCalc = 0
+		m_tempInstructions = 0
+		m_tempPower = 0
+	endfunc
+	
+	func initPower(int highPower)
+		m_maxRegister = 0
+		m_tempInstructions = new GenericList(0)
+		m_tempCalc = new GenericList(0)
+		m_tempPower = new IntegerList(0)
+		m_tempPower.setDefault(-1)
+		m_tempPower.SetArrayLength(highPower+1)
+		m_tempPower.setAt(1, 0); register[0] = pz^1 = pz
+		m_tempPower2 = new IntegerList(0)
+		m_tempPower2.setDefault(-1) 
+		m_tempPower2.setAt(0, 0) ; register[0] = pz^(2^0) = pz
+	endfunc
+	
+	int func getPowerRegister(int power)
+		int reg = m_tempPower.getAt(power)
+;		print("getPowerRegister(",power,") ; reg=", reg)
+		if reg<0
+			IntegerList decomp = aho_IntegerMath.binaryDecomposition(power)
+			int len=decomp.GetArrayLength()
+			if len==1
+				reg = getPowerTwoRegister(decomp.getAt(0))
+			else
+				int r2 = getPowerTwoRegister(decomp.getAt(0)) 
+				m_tempCalc.add( newLoadInstruction(r2, -1) )
+				
+				int ix = 1
+				while ix < len
+					r2 = getPowerTwoRegister(decomp.getAt(ix))
+					aho_MultiplyInstruction instr5 = new aho_MultiplyInstruction(0)
+					instr5.setRegister(r2)
+					m_tempCalc.add(instr5)
+					ix = ix+1
+				endwhile
+				
+				reg = nextRegister()
+				m_tempCalc.add( newStoreInstruction(reg, power) )
+				m_tempPower.setAt(power, reg)
+			endif
+		endif
+		return reg
+	endfunc
+	
+	int func getPowerTwoRegister(int factor)
+		int reg = m_tempPower2.getAt(factor)
+;		print("getPowerTwoRegister(",factor,") ; reg=", reg)
+		if reg<0
+			int nextPower = m_tempPower2.getArrayLength() 
+			int power2 = 1;
+			int ix = 0
+			while ix<nextPower
+				power2 = 2*power2
+				ix = ix+1
+			endwhile
+			int ix = nextPower
+			while ix<=factor
+				reg = nextRegister()
+				m_tempPower2.setAt( ix, reg )
+				m_tempPower.setAt( power2, reg )
+				power2 = 2*power2
+				ix = ix+1
+			endwhile
+		endif
+		return reg
+	endfunc
+	
+	int func nextRegister()
+		m_maxRegister = m_maxRegister + 1
+		return m_maxRegister
+	endfunc
+
+}
+
+class aho_IntegerMath {
+
+	import "aho.ulb"
+
+	func aho_IntegerMath() 
+		print("Should not be instantiated")
+	endfunc
+	
+	static IntegerList func binaryDecomposition(int power)
+		print("power=",power)
+		IntegerList decomp = new IntegerList(0)
+		int pp = power
+		int pot = 0
+		while pp>0
+			if (pp%2) > 0
+				decomp.add(pot)
+			endif
+			pp = floor(pp / 2)
+			pot = pot+1
+		endwhile
+		return decomp
+	endfunc
+	
+	static func debugIntegerList(IntegerList aargh)
+		int len = aargh.getArrayLength()
+		int ix = 0
+		while ix<len
+			print("array[",ix,"]=",aargh.m_Elements[ix])
+			ix=ix+1
+		endwhile
+	endfunc
+
+}
+
+; === Power Series Evaluator ==========================================
+
+class aho_PowerSeriesEvaluator(Evaluator) {
+
+	import "common.ulb"
+	import "aho.ulb"
+
+	func aho_PowerSeriesEvaluator(Generic pparent)
+		Evaluator.Evaluator(pparent)
+	endfunc
+	
+	complex func evaluate(complex z)
+		initSum(z)
+		int jp = 0
+		int lp = length(m_Instructions)
+		while jp < lp
+			aho_Instruction instr = m_Instructions[jp]
+			instr.calculate(this)
+			jp = jp+1
+		endwhile
+		return m_value
+	endfunc
+	
+	func setRegisters(int nr) 
+		setLength(m_registers, nr)
+	endfunc
+
+	func setInstructions(GenericList instr)
+		int len = instr.GetArrayLength()
+		setLength(m_Instructions, len)
+		int ix = 0
+		while ix<len
+			m_Instructions[ix] = aho_Instruction( instr.m_Elements[ix] )
+			ix = ix+1
+		endwhile
+		debugInstructions()
+	endfunc
+
+; public variables
+	complex m_value
+	complex m_registers[]
+
+private:
+	aho_Instruction m_Instructions[]
+	
+	func initSum(complex z) 
+		m_registers[0] = z
+		$ifdef DEBUG
+			m_value = 1/0
+		$else
+			m_value = 0
+		$endif
+	endfunc
+
+	func debugInstructions() 
+		int len = length(m_Instructions)
+		int ix = 0
+		while ix<len
+			print("m_Instructions[",ix,"]=",m_Instructions[ix])
+			m_Instructions[ix].debugPrint()
+			ix = ix+1
+		endwhile
+		print("=== The End ===")
+	endfunc
+}
+
+; --- Instructions --------------------------------------------------
+
+class aho_Instruction(common.ulb:Generic) {
+
+	import "common.ulb"
+
+	func aho_Instruction(Generic pparent)
+		Generic.Generic(pparent)
+		m_power = -1
+		m_reg = -1
+	endfunc
+
+	func setPower(int power)
+		m_power = power
+	endfunc 
+
+	int func getPower() 
+		return m_power
+	endfunc
+
+	func setRegister(int index)
+		m_reg = index
+	endfunc 
+
+	int func getRegister() 
+		return m_reg
+	endfunc
+
+	func calculate(aho_PowerSeriesEvaluator eval) 
+		print(this, " not implemented")
+		; to be overridden in subclasses
+	endfunc
+
+	func debugPrint()
+		print(this, ", m_power=", m_power, ", m_reg=[", m_reg, "]")
+	endfunc
+
+protected:
+	int m_power
+	int m_reg
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_InitialInstruction(aho_Instruction) {
+
+	import "common.ulb"
+
+	func aho_InitialInstruction(Generic pparent)
+		aho_Instruction.aho_Instruction(pparent)
+	endfunc
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_value = m_coefficient
+	endfunc
+	
+	func setCoeff(complex coeff)
+		m_coefficient = coeff
+	endfunc
+	
+	complex func getCoeff()
+		return m_coefficient
+	endfunc
+
+	func debugPrint()
+		aho_Instruction.debugPrint()
+		print("    coefficient=", m_coefficient)
+	endfunc
+
+protected:
+	complex m_coefficient
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_AddInstruction(aho_Instruction) {
+
+	import "common.ulb"
+
+	func aho_AddInstruction(Generic pparent)
+		aho_Instruction.aho_Instruction(pparent)
+		m_coefficient = 0
+	endfunc
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_value = eval.m_value + m_coefficient
+	endfunc
+	
+	func setCoeff(complex coeff)
+		m_coefficient = coeff
+	endfunc
+	
+	complex func getCoeff()
+		return m_coefficient
+	endfunc
+
+	func debugPrint()
+		aho_Instruction.debugPrint()
+		print("    coefficient=", m_coefficient)
+	endfunc
+
+protected:
+	complex m_coefficient
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_SquareInstruction(aho_Instruction) {
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_value = sqr(eval.m_value)
+	endfunc
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_MultiplyInstruction(aho_Instruction) {
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_value = eval.m_value * eval.m_registers[m_reg]
+	endfunc
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_LoadInstruction(aho_Instruction) {
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_value = eval.m_registers[m_reg]
+	endfunc
+
+}
+
+; -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+class aho_StoreInstruction(aho_Instruction) {
+
+	func calculate(aho_PowerSeriesEvaluator eval)
+		eval.m_registers[m_reg] = eval.m_value
+	endfunc
+
+}
+
+
+; === The End =======================================================

@@ -1,0 +1,1102 @@
+; Written by Rudy Rucker, rudy@rudyrucker.com, mostly in April, 2010.
+; See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+; for more background information.
+;
+; Note that you can in fact check the correctness of the Rudy Set, Quartic Rudy,
+; and Quintic Rudy algorithms by using the Fracatl Mode Switch feature.  In
+; Ultra Fractal, press F7 and move the cursor around over one of the three
+; Rudy sets, and note that the corresponding Julia sets shown in the Fractal Mode
+; window are connected if and only if the cursor is over a dark, interior region
+; of the Rudy sets.
+
+;=======GeneralCubicJulia============
+
+GeneralCubicJulia {
+; This formula was used in the Autodesk program, "James Glieck's Chaos: The Software."
+; The program was written by Josh Gordon, Rudy Rucker, and John Walker.
+; This cubic Julia set algorithm was developed by Rudy Rucker, based on
+; work on the cubic connectedness map by Douady, Hubbard and Milnor.
+; We iterate a cubic map fKC based on two complex params, K and C.
+; fKC(z) is  z^3 - 3*k*z + c.  The z which don't run off to infinity under iterations of
+; this map are the cubic Julia set JKC.  JKC is connected if and only if these two critical
+; points are in JKC: K and -K.
+; This set is called J_KC.  It has no symmetry.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+  float Kreal = real(@Kparam)
+  float Kimag = imag(@Kparam)
+  ;The following two lines are to speed up the computation by not recomputing
+  ;these numbers over and over.
+  float	Kparam_a = 3.0 * (sqr(Kimag)- sqr(Kreal))
+  float	Kparam_b = -6.0 * Kreal * Kimag
+  float cx = real(@Cparam)
+  float cy = imag(@Cparam)
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+   float tempa
+   float tempb
+   float tempcache
+
+;(pixel) escape variables
+   float ftx = real(#pixel)
+   float fty = imag(#pixel)
+   float fx2 = sqr(ftx)
+   float fy2 = sqr(fty)
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the pixel test point.
+		tempa = fx2 - fy2 + Kparam_a
+		tempb = 2 * ftx * fty + Kparam_b
+		tempcache = tempa * ftx - tempb * fty + cx
+		fty = tempa * fty + tempb * ftx + cy
+		ftx = tempcache
+		fx2 = sqr(ftx)
+		fy2 = sqr(fty)
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+  fx2 + fy2 < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Julia Cubic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized cubic Julia set J_KC which depends on a complex params K and C"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+  
+  complex param Cparam
+    caption = "C param"
+    hint = "We are drawing the generalized cubic Julia set J_KC which depends on a complex params K and C"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+
+switch:
+; This section is optional and can be used to specify a formula
+; in the same file that forms a switch pair with this formula.
+}
+
+
+;=======GeneralCubicMandelbrot============
+
+GeneralCubicMandelbrot {
+; This formula was used in the Autodesk program, "James Glieck's Chaos: The Software."
+; The program was written by Josh Gordon, Rudy Rucker, and John Walker.
+; This cubic mandelbrot algorithm was developed by Rudy Rucker, based on
+; work on the cubic connectedness map by Douady, Hubbard and Milnor.
+; This set is called M_K, and it consists of all points C such that
+; the cubic Julia set J_KC is connected. It turns out we can test for this by
+; seeing if K and -K do not escape under the fKC iteration.
+; M_K is symmetric around the origin.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+  float Kreal = real(@Kparam)
+  float Kimag = imag(@Kparam)
+  float	Kparam_a = 3.0 * (sqr(Kimag)- sqr(Kreal))
+  float	Kparam_b = -6.0 * Kreal * Kimag
+
+init:
+; The code in this section is executed once per pixel.
+;shared variables
+   float cx = real(#pixel)
+   float cy = imag(#pixel)
+   float tempa
+   float tempb
+   float tempcache
+
+;K escape variables
+   float pos_ftx = Kreal
+   float pos_fty = Kimag
+   float pos_fx2 = sqr(pos_ftx)
+   float pos_fy2 = sqr(pos_fty)
+
+;-K escape variables
+    float neg_ftx = -Kreal
+    float neg_fty = -Kimag
+    float neg_fx2 = sqr(neg_ftx)
+    float neg_fy2 = sqr(neg_fty)
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the K test point.
+		tempa = pos_fx2 - pos_fy2 + Kparam_a
+		tempb = 2 * pos_ftx * pos_fty + Kparam_b
+		tempcache = tempa * pos_ftx - tempb * pos_fty + cx
+		pos_fty = tempa * pos_fty + tempb * pos_ftx + cy
+		pos_ftx = tempcache
+		pos_fx2 = sqr(pos_ftx)
+		pos_fy2 = sqr(pos_fty)
+	
+;iterate from the -K test point with the same formulas
+    tempa = neg_fx2 - neg_fy2 + Kparam_a
+		tempb = 2 * neg_ftx * neg_fty + Kparam_b
+		tempcache =tempa * neg_ftx - tempb * neg_fty + cx
+		neg_fty = tempa * neg_fty + tempb * neg_ftx + cy
+		neg_ftx = tempcache
+		neg_fx2 = sqr(neg_ftx)
+		neg_fy2 = sqr(neg_fty)
+	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+ pos_fx2 + pos_fy2 < @bailout && neg_fx2 + neg_fy2 < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Mandelbrot Cubic (K Plane)"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+  
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized cubic Mandelbrot set MK which depends on a complex parameter K"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the General Cubic Mandelbrot down to the General Cubic Julia.
+  type = "GeneralCubicJulia"
+  Kparam = Kparam
+  Cparam = #pixel
+  bailout = bailout
+}
+
+;=======GeneralCubicMandelbrot_CPlane============
+
+GeneralCubicMandelbrot_CPlane {
+; This formula was used in the Autodesk program, "James Glieck's Chaos: The Software."
+; The program was written by Josh Gordon, Rudy Rucker, and John Walker.
+; This cubic mandelbrot algorithm was developed by Rudy Rucker, based on
+; work on the cubic connectedness map by Douady, Hubbard and Milnor.
+; This set is called M_C, and it consists of all points K such that
+; the cubic Julia set J_KC is connected. It turns out we can test for this by
+; seeing if K and -K do not escape under the fKC iteration.
+; M_C is symmetric around the origin.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+  float cx = real(@Cparam)
+  float cy = imag(@Cparam)
+
+init:
+; The code in this section is executed once per pixel.
+;shared variables
+   float Kreal = real(#pixel)
+   float Kimag = imag(#pixel)
+   float	Kparam_a = 3.0 * (sqr(Kimag)- sqr(Kreal))
+   float	Kparam_b = -6.0 * Kreal * Kimag
+
+   float tempa
+   float tempb
+   float tempcache
+
+;K escape variables
+   float pos_ftx = Kreal
+   float pos_fty = Kimag
+   float pos_fx2 = sqr(pos_ftx)
+   float pos_fy2 = sqr(pos_fty)
+
+;-K escape variables
+    float neg_ftx = -Kreal
+    float neg_fty = -Kimag
+    float neg_fx2 = sqr(neg_ftx)
+    float neg_fy2 = sqr(neg_fty)
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the K test point.
+		tempa = pos_fx2 - pos_fy2 + Kparam_a
+		tempb = 2 * pos_ftx * pos_fty + Kparam_b
+		tempcache = tempa * pos_ftx - tempb * pos_fty + cx
+		pos_fty = tempa * pos_fty + tempb * pos_ftx + cy
+		pos_ftx = tempcache
+		pos_fx2 = sqr(pos_ftx)
+		pos_fy2 = sqr(pos_fty)
+	
+;iterate from the -K test point with the same formulas
+    tempa = neg_fx2 - neg_fy2 + Kparam_a
+		tempb = 2 * neg_ftx * neg_fty + Kparam_b
+		tempcache =tempa * neg_ftx - tempb * neg_fty + cx
+		neg_fty = tempa * neg_fty + tempb * neg_ftx + cy
+		neg_ftx = tempcache
+		neg_fx2 = sqr(neg_ftx)
+		neg_fy2 = sqr(neg_fty)
+	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+ pos_fx2 + pos_fy2 < @bailout && neg_fx2 + neg_fy2 < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Cubic Mandelbrot (C Plane)"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Cparam
+    caption = "C param"
+    hint = "We are drawing the generalized cubic Mandelbrot set M_C which depends on a complex param C"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the General Cubic Mandelbrot down to the General Cubic Julia.
+  type = "GeneralCubicJulia"
+  Kparam = #pixel
+  Cparam = Cparam
+  bailout = bailout
+}
+
+;=======RudySet============
+
+RudySet {
+; This formula was used in the Autodesk program, "James Glieck's Chaos: The Software."
+; The program was written by Josh Gordon, Rudy Rucker, and John Walker.
+; The Rudy Set algorithm was developed by Rudy Rucker, based on
+; work on the cubic connectedness map by Douady and Milnor.
+; The Rudy set algoirthm is the same as the Generalized Cubic Mandel
+; algorithm...except that we set the (Kreal, Kimag) variables to match
+; the #pixel position, rather than allowing arbitrary K params to be
+; set by the user.  The points inside the Rudy Set are those points K
+; which have the property that the generalized cubic Mandelbrot M_K contains the point K,
+; which in turn means that the cubic Julia set J_KK is connected. R is symmetric across
+; both axes. See http://www.rudyrucker.com/software/cubicmandel.htm for further info.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+
+global:
+; This section is executed once per image.
+
+init:
+; The code in this section is executed once per pixel.
+;shared variables
+   float cx = real(#pixel)
+   float cy = imag(#pixel)
+   float Kreal = cx
+   float Kimag = cy
+   float	Kparam_a = 3.0 * (sqr(Kimag)- sqr(Kreal))
+   float	Kparam_b = -6.0 * Kreal * Kimag
+
+   float tempa
+   float tempb
+   float tempcache
+
+;K escape variables
+   float pos_ftx = Kreal
+   float pos_fty = Kimag
+   float pos_fx2 = sqr(pos_ftx)
+   float pos_fy2 = sqr(pos_fty)
+
+;-K escape variables
+    float neg_ftx = -Kreal
+    float neg_fty = -Kimag
+    float neg_fx2 = sqr(neg_ftx)
+    float neg_fy2 = sqr(neg_fty)
+
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the K test point.
+		tempa = pos_fx2 - pos_fy2 + Kparam_a
+		tempb = 2 * pos_ftx * pos_fty + Kparam_b
+		tempcache = tempa * pos_ftx - tempb * pos_fty + cx
+		pos_fty = tempa * pos_fty + tempb * pos_ftx + cy
+		pos_ftx = tempcache
+		pos_fx2 = sqr(pos_ftx)
+		pos_fy2 = sqr(pos_fty)
+	
+;iterate from the -K test point with the same formulas
+    tempa = neg_fx2 - neg_fy2 + Kparam_a
+		tempb = 2 * neg_ftx * neg_fty + Kparam_b
+		tempcache =tempa * neg_ftx - tempb * neg_fty + cx
+		neg_fty = tempa * neg_fty + tempb * neg_ftx + cy
+		neg_ftx = tempcache
+		neg_fx2 = sqr(neg_ftx)
+		neg_fy2 = sqr(neg_fty)
+	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+ pos_fx2 + pos_fy2 < @bailout && neg_fx2 + neg_fy2 < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Rudy Set (J_KK Connected Version)"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the Rudy Set down to the Generalized Cubic Mandelbrot .
+;   type = "GeneralCubicMandelbrot"
+;   bailout = bailout
+;   Kparam = #pixel
+   type = "GeneralCubicJulia"
+  Kparam = #pixel
+  Cparam = #pixel
+  bailout = bailout
+
+}
+
+;=======ZeroInMk Set============
+
+ZeroInMk {
+; This is a new (March 31, 2010) variation on the formula
+; for the Rudy Set algorithm  developed by Rudy Rucker, based on
+; work on the cubic connectedness map by Douady, Hubbard and Milnor.
+; The Rudy set algoirthm is the same as the Generalized Cubic Mandel
+; algorithm...except that we set the (Kreal, Kimag) variables to match
+; the #pixel position, rather than allowing arbitrary K params to be
+; set by the user.  The points inside the Rudy Set are those points K
+; which have the property that the generalized cubic Mandelbrot M_K contains
+; the origin (0,0).  Note that these M_K are NOT necessarily connected, as one
+; can have a glob at the center separted from two outer globs.
+; This is a visually less interesting set than the Rudy set, and it has less of
+; an absolute quality, as we could equally well have defined a RudySetMc according
+; to whether the origin lies in the set M_C, with C determeined from the pixel position.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+
+global:
+; This section is executed once per image.
+
+init:
+; The code in this section is executed once per pixel.
+;shared variables
+;I'm checking the escape of the origin (0,0)
+   float cx =  0.0
+   float cy = 0.0
+   float Kreal = real(#pixel)
+   float Kimag = imag(#pixel)
+   float	Kparam_a = 3.0 * (sqr(Kimag)- sqr(Kreal))
+   float	Kparam_b = -6.0 * Kreal * Kimag
+
+   float tempa
+   float tempb
+   float tempcache
+
+;K escape variables
+   float pos_ftx = Kreal
+   float pos_fty = Kimag
+   float pos_fx2 = sqr(pos_ftx)
+   float pos_fy2 = sqr(pos_fty)
+
+;-K escape variables
+    float neg_ftx = -Kreal
+    float neg_fty = -Kimag
+    float neg_fx2 = sqr(neg_ftx)
+    float neg_fy2 = sqr(neg_fty)
+
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the K test point.
+		tempa = pos_fx2 - pos_fy2 + Kparam_a
+		tempb = 2 * pos_ftx * pos_fty + Kparam_b
+		tempcache = tempa * pos_ftx - tempb * pos_fty + cx
+		pos_fty = tempa * pos_fty + tempb * pos_ftx + cy
+		pos_ftx = tempcache
+		pos_fx2 = sqr(pos_ftx)
+		pos_fy2 = sqr(pos_fty)
+	
+;iterate from the -K test point with the same formulas
+    tempa = neg_fx2 - neg_fy2 + Kparam_a
+		tempb = 2 * neg_ftx * neg_fty + Kparam_b
+		tempcache =tempa * neg_ftx - tempb * neg_fty + cx
+		neg_fty = tempa * neg_fty + tempb * neg_ftx + cy
+		neg_ftx = tempcache
+		neg_fx2 = sqr(neg_ftx)
+		neg_fy2 = sqr(neg_fty)
+	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+ pos_fx2 + pos_fy2 < @bailout && neg_fx2 + neg_fy2 < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Zero In Mk Set"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the Rudy Set down to the Generalized Cubic Mandelbrot .
+   type = "GeneralCubicMandelbrot"
+   bailout = bailout
+   Kparam = #pixel
+}
+
+;=======GeneralQuarticJulia============
+
+GeneralQuarticJulia {
+; We iterate a quartic map fMKC based on three complex params, M, K, C
+; fMKC(z) is z^4 + 2(MK -(M+K)^2)*z^2 + 4MK(M+K)*z + C
+; The z which don't run off to infinity under iterations of this map form the quartic
+; Julia set JMKC.  JMKC is connected if and only if the following three critical
+; points are in JMKC
+; crit_1 = M, crit_2 = K and crit_3 = -M-K
+; I was puzzled about how to find the critical points for fourth degree and fifth degree
+; polynomials.  Googling for the answer, I found http://klippan.seths.se/fractals/articles/
+; a series of articles by the Swedish fractalist, Ingvar Kullberg, who is one of the only other
+; investigators interested in making images involving the Cubic Connectedness Map.
+; And Klippan's article, "28) To derive the optimal iteration formulas for polynomials of degree d,"
+; has a reference to pp. 151-152 of the crucial article by the mathematicians Bodil Branner
+; and John Hubbard "The Iteration of Cubic Polynomials, Part I: The Global
+;  Topology of Parameter Space," online at
+;        http://www.math.cornell.edu/~hubbard/IterationCubics1.pdf
+; Basically, for degree d, you pick any d-2 points in the plane as critical points, let the
+; (d-1)st critical point be the negative of the sum of the points 1 through d-2 (so that
+; the critical points will sum to zero, and then construct a degree d polynomial with these
+; critical points according to a recipe given by Branner and Hubbard.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+
+global:
+; This section is executed once per image.
+  complex C = @Cparam
+  complex K = @Kparam
+  complex M = @Mparam
+  ; We don't need the critical points yet for just the Julia
+ ; complex crit_1 = M
+ ; complex crit_2 = K
+ ; complex crit_3 = -M-K
+  complex coeff2 = 2*(M*K -(M+K)^2)
+  complex coeff1 =  4*M*K*(M+K)
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex z = #pixel
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the pixel test point.
+		z = z^4 + coeff2*z^2 + coeff1*z + C
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+  |z|< @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Julia Quartic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Mparam
+    caption = "M param"
+    hint = "We are drawing the generalized quartic Julia set J_MKC which depends on complex params M, K and C"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+  
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized quartic Julia set J_MKC which depends on a complex params M, K and C"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Cparam
+    caption = "C param"
+    hint = "We are drawing the generalized cubic Juquarticlia set J_MKC which depends on a complex params M, K and C"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+
+switch:
+; This section is optional and can be used to specify a formula
+; in the same file that forms a switch pair with this formula.
+}
+
+GeneralQuarticMandelbrot {
+;  See more comments at the start of the GeneralQuarticJulia algorithm.
+; We iterate a quartic map fMKC based on three complex params, M, K, C
+; fMKC(z) is z^4 + 2(MK -(M+K)^2)*z^2 + 4MK(M+K)*z + C
+; The z which don't run off to infinity under iterations of this map form the quartic
+; Julia set JMKC.  JMKC is connected if and only if the following three critical
+; points are in JMKC: crit_1 = M, crit_2 = K and crit_3 = -M-K
+; This set is called M_MK, and it consists of all points C such that
+; the cubic Julia set J_MKC is connected, that is, those C such that the three critical
+; points lie in J_MKC
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+
+global:
+; This section is executed once per image.
+  complex K = @Kparam
+  complex M = @Mparam
+  complex crit_1 = M
+  complex crit_2 = K
+  complex crit_3 = -M-K
+  complex coeff2 = 2*(M*K -(M+K)^2)
+  complex coeff1 =  4*M*K*(M+K)
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex C = #pixel
+  complex z1 = crit_1
+  complex z2 = crit_2
+  complex z3 = crit_3
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate for the three critical points
+		z1 = z1^4 + coeff2*z1^2 + coeff1*z1 + C
+		z2 = z2^4 + coeff2*z2^2 + coeff1*z2 + C
+		z3 = z3^4 + coeff2*z3^2 + coeff1*z3 + C
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+  |z1|< @bailout &&  |z2|< @bailout &&  |z3|< @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Mandelbrot Quartic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Mparam
+    caption = "M param"
+    hint = "We are drawing the generalized quartic Mandelbrot  set M_MK which depends on  complex params M and K"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized quartic Mandelbrot  set M_MK which depends on  complex params M and K"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+
+
+switch:
+; This section is optional and can be used to specify a formula
+; in the same file that forms a switch pair with this formula.
+}
+
+RudyQuartic {
+; The points inside the RudyQartic Set, or R4, are those points K (with K taken from the pixel)
+; which have the property that the generalized the quartic cubic Julia set J_KKK
+; is connected. R4 resembles a trefoil.
+;  See more comments at the start of the GeneralQuarticJulia algorithm.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex K = #pixel
+  complex M = #pixel
+  complex crit_1 = M
+  complex crit_2 = K
+  complex crit_3 = -M-K
+  complex coeff2 = 2*(M*K -(M+K)^2)
+  complex coeff1 =  4*M*K*(M+K)
+  complex C = #pixel
+  complex z1 = crit_1
+  complex z2 = crit_2
+  complex z3 = crit_3
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate for the three critical points
+		z1 = z1^4 + coeff2*z1^2 + coeff1*z1 + C
+		z2 = z2^4 + coeff2*z2^2 + coeff1*z2 + C
+		z3 = z3^4 + coeff2*z3^2 + coeff1*z3 + C
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; A pixel is outside the MK set if either the K or the -K
+; test point escapes.
+
+  |z1|< @bailout &&  |z2|< @bailout &&  |z3|< @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Rudy Quartic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the Rudy Quartic Set down to the Generalized Quartic Julia and
+; see if it's connected like it's supposed to be.
+  type = "GeneralQuarticJulia"
+  Mparam = #pixel
+  Kparam = #pixel
+  Cparam = #pixel
+  bailout = bailout
+}
+
+
+;=======GeneralQuinticJulia============
+
+GeneralQuinticJulia {
+; We iterate a quintic map fNMKC based on four complex params, N, M, K, C
+; fMKC(z) =
+; z^5  - (5.0/3.0)*(N*M + N*K + M*K + N^2 + M^2 + K^2)*z^3
+; +(2.5)*(2*N*M*K +(N^2)*(M+K)+(M^2)*(N+K)+ K^2)*(N+M))*z^2
+;  - 5*N*M*K(N+M+K)*z  + C
+; The z which don't run off to infinity under iterations of this map form the quintic
+; Julia set J_NMKC.  J_NMKC is connected if and only if the following four critical
+; points are in J_NMKC:  crit_1 = N, crit_2 = M, crit_3 = K, crit_4 = -(M+N+K)
+; I learned as follows how to find the critical points for fourth degree and fifth degree
+; polynomials.  Googling for the answer, I found http://klippan.seths.se/fractals/articles/
+; a series of articles by the Swedish fractalist, Ingvar Kullberg, who is one of the only
+; investigators involved in making images relating to the Cubic Connectedness Map.
+; Klippan's article, "28) To derive the optimal iteration formulas for polynomials of
+ ; degree d," has a reference to pp. 151-152 of a crucial article by the mathematicians
+ ; Bodil Branner and John Hubbard "The Iteration of Cubic Polynomials, Part I: The
+;  Global  Topology of Parameter Space," online at
+;      http://www.math.cornell.edu/~hubbard/IterationCubics1.pdf
+; Basically, for degree n, you pick any n-2 points in the plane as critical points, let the
+; (n-1)st critical point be the negative of the sum of the points 1 through n-2 (so that
+; the critical points will sum to zero, and then construct a degree n polynomial with these
+; critical points according to a recipe given by Branner and Hubbard.
+; For the quintic, the argument goes like this.
+; (1) Pick any a, b, c,  you like to be your first three critical points and the fourth will be d=-(a+b+c), so that the critical points are sy mmetric around the origin.
+; (2) Find the first four "elementary symmetric polynomials sj" in a, b, c, d.  These are:
+; (s1)  a+b+c+d, which is 0
+; (s2)  ab + ac + ad + bc + bd + cd, which, replacing d by -(a+b+c), becomes
+; -(ab + ac + bc + a^2 + b^2 + c^2)
+; (s3) abc + abd + acd + bcd, which, replacing d by -(a+b+c), becomes
+; -(a^2(b+c) + b^2(a+c) + c^2(a+b)
+; (s4) abcd, which becomes -abc(a+b+c)
+; Now, say Branner and Hubbard, the quintic polynomial with critical points a, b, c, d and which starts at z0 is
+; z^5 + (5/3)*s2*z^3 - (5/2)*s3*z^2 + 5*s4*z + z0.  And this becomes
+; z^5 - (5/3)*(ab + ac + bc + a^2 + b^2 + c^2)*z^3 +
+;  (5/2)*(a^2(b+c) + b^2(a+c) + c^2(a+b)*z^2 - 5*abc(a+b+c)*z + z0
+; Rewriting to use the NMK parameters instead of abc, and writing C instead of zo,
+; we get
+; z^5  - (5.0/3.0)*(N*M+ N*K + M*K + N^2 + M^2 + K^2)*z^3
+;  + (2.5)*((N^2)*(M+K) + (M^2)*(N+K) + (K^2)*(N+M))*z^2
+;  - 5*N*M*K(N+M+K)*z  + C
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+
+global:
+; This section is executed once per image.
+  complex C = @Cparam
+  complex K = @Kparam
+  complex M = @Mparam
+  complex N = @Nparam
+  complex coeff3 = - (5.0/3.0)*(N*M + N*K + M*K + N^2 + M^2 + K^2)
+  complex coeff2 =   (2.5)*( 2*N*M*K + (N^2)*(M+K) + (M^2)*(N+K) + (K^2)*(N+M))
+  complex coeff1 = - 5*N*M*K*(N+M+K)
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex z = #pixel
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate from the pixel test point.
+	z = z^5 + coeff3*z^3 + coeff2*z^2 + coeff1*z + C
+	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+
+  |z|< @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Julia Quintic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Nparam
+    caption = "N param"
+    hint = "We are drawing the generalized quintic Julia set J_NMKC which depends on complex params N, M, K and C"
+    default = (-0.4055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Mparam
+    caption = "M param"
+    hint = "We are drawing the generalized quintic Julia set J_NMKC which depends on complex params N, M, K and C"
+    default = (0.2055, -0.1135)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized quintic Julia set J_NMKC which depends on complex params N, M, K and C"
+    default = (-0.1, 0.35)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Cparam
+    caption = "C param"
+    hint = "We are drawing the generalized quintic Julia set J_NMKC which depends on complex params N, M, K and C"
+    default = (0.17, -0.1)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+
+switch:
+; This section is optional and can be used to specify a formula
+; in the same file that forms a switch pair with this formula.
+}
+
+GeneralQuinticMandelbrot {
+;  See the comments at the start of the GeneralQuinticJulia algorithm.
+; This set is called M_NMK, and it consists of all points C such that
+; the cubic Julia set J_NMKC is connected, that is, those C such that the following four
+; critical points are in J_NMKC:  crit_1 = N, crit_2 = M, crit_3 = K, crit_4 = -(M+N+K)
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+  complex K = @Kparam
+  complex M = @Mparam
+   complex N = @Nparam
+  complex crit_1 = N
+  complex crit_2 = M
+  complex crit_3 = K
+  complex crit_4 = -(M+N+K)
+  complex coeff3 = - (5.0/3.0)*(N*M+ N*K + M*K + N^2 + M^2 + K^2)
+  complex coeff2 =   (2.5)*( 2*N*M*K + (N^2)*(M+K) + (M^2)*(N+K) + (K^2)*(N+M))
+  complex coeff1 = - 5*N*M*K*(N+M+K)
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex C = #pixel
+  complex z1 = crit_1
+  complex z2 = crit_2
+  complex z3 = crit_3
+  complex z4 = crit_4
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+; iterate for the four critical points
+	z1 = z1^5 + coeff3*z1^3 + coeff2*z1^2 + coeff1*z1 + C
+	z2 = z2^5 + coeff3*z2^3 + coeff2*z2^2 + coeff1*z2 + C
+	z3 = z3^5 + coeff3*z3^3 + coeff2*z3^2 + coeff1*z3 + C
+	z4 = z4^5 + coeff3*z4^3 + coeff2*z4^2 + coeff1*z4 + C
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+
+  |z1|< @bailout &&  |z2|< @bailout &&  |z3|< @bailout && |z4| < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Mandelbrot Quintic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+  complex param Nparam
+    caption = "N param"
+    hint = "We are drawing the generalized quintic Mandelbrot  set M_NMK which depends on  complex params N, M and K"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Mparam
+    caption = "M param"
+    hint = "We are drawing the generalized quintic Mandelbrot  set M_NMK which depends on  complex params N, M and K"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+  complex param Kparam
+    caption = "K param"
+    hint = "We are drawing the generalized quintic Mandelbrot  set M_NMK which depends on  complex params N, M and K"
+    default = (0.0, 0.0)
+    min = (-1.5, -1.5)
+    max = (1.5, 1.5)
+  endparam
+
+switch:
+; This section is optional and can be used to specify a formula
+; in the same file that forms a switch pair with this formula.
+}
+
+RudyQuintic {
+; The points inside the Quintic Rudy Set, or R5, are those points C
+;(with C taken from the pixel) which have the property that the generalized
+; quintic cubic Julia set J_CCCC is connected.  See more comments at the start
+; of the GeneralQuinticJulia algorithm.
+;See http://www.rudyrucker.com/blog/2010/04/02/the-rudy-set-fractal/
+;for more background information.
+
+global:
+; This section is executed once per image.
+
+init:
+; The code in this section is executed once per pixel.
+;  shared variables
+  complex K = #pixel
+  complex M = #pixel
+  complex N = #pixel
+  complex C = #pixel
+  complex crit_1 = N
+  complex crit_2 = M
+  complex crit_3 = K
+  complex crit_4 = -(M+N+K)
+  complex coeff3 = - (5.0/3.0)*(N*M + N*K + M*K + N^2 + M^2 + K^2)
+  complex coeff2 =   (2.5)*( 2*N*M*K + (N^2)*(M+K) + (M^2)*(N+K) + (K^2)*(N+M))
+  complex coeff1 = - 5*N*M*K*(N+M+K)
+  complex z1 = crit_1
+  complex z2 = crit_2
+  complex z3 = crit_3
+  complex z4 = crit_4
+
+loop:
+; The code in this section is repeatedly executed, until
+; either the maximum iteration count has been reached (then
+; the pixel being computed is considered to be inside), or
+; the boolean expression in the bailout: section becomes
+; false (then the pixel is considered to be outside).
+
+;iterate for the four critical points...
+; but, wait, crit_1, crit_2, and crit_3 all have the same value, C.
+; so we can comment out the first two lines.
+;	z1 = z1^5 + coeff3*z1^3 + coeff2*z1^2 + coeff1*z1 + C
+;	z2 = z2^5 + coeff3*z2^3 + coeff2*z2^2 + coeff1*z2 + C
+	z3 = z3^5 + coeff3*z3^3 + coeff2*z3^2 + coeff1*z3 + C
+	z4 = z4^5 + coeff3*z4^3 + coeff2*z4^2 + coeff1*z4 + C
+	 	
+bailout:
+; When this expression becomes false, the iteration
+; loop is stopped, and the pixel is considered to be outside.
+; z1 and z2 behave the same as z3, so we can comment out half the test
+;  |z1|< @bailout &&  |z2|< @bailout &&
+  |z3|< @bailout && |z4| < @bailout
+
+default:
+; This section contains default settings that make the
+; fractal formula and its parameters easier to use.
+  title = "Rudy Quintic"
+
+  float param bailout
+    caption = "Bail-out value"
+    hint = "This is the bail-out value"
+    default = 4.0
+    min = 1
+    max = 256
+    exponential = true
+  endparam
+
+
+switch:
+; This section is specifies a formula in the same file that we can switch down to.
+; We'll switch from the Rudy Quintic Set down to the Generalized Quintic Julia and
+; see if it's connected like it's supposed to be.
+  type = "GeneralQuinticJulia"
+  Nparam = #pixel
+  Mparam = #pixel
+  Kparam = #pixel
+  Cparam = #pixel
+  bailout = bailout
+}
+

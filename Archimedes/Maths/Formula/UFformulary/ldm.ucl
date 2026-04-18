@@ -1,0 +1,2775 @@
+comment {
+Coloring algorithms by Dennis Magar
+
+In order to take advantage of the 'blue 
+question mark' help button, the help file
+'ldm-help.htm' needs to be in a subdirectory 
+under the Formula (Help on Formulas - UF3) directory 
+with the name ldm-help.  It can be obtained from:
+
+http://saturn.spaceports.com/~dennism/ldm-help.htm
+}
+
+Dual2 { ; Dennis Magar, August 26, 2000
+       ; Some parts adapted from Sylvie Gallet's Triptych UCL
+       ; This coloring is for use with the Dual Transformation
+       ;
+       ; NOTE: This a bug-fix replacement for Dual
+final:
+  float x1 = 0.0
+  float y1 = 0.0 
+  float xp = real(#screenpixel)
+  float yp = imag(#screenpixel)
+  float b = #width * @bw / 400
+  if @orient == 1
+    float w = #width/2
+    float h = #height
+    if (yp < b) 
+      y1 = b - yp
+    endif
+    if (yp >= h - b) && (yp < h)
+      y1 = b - h + yp
+    endif
+    if (xp >= @part*w) && (xp < @part*w + b) 
+      x1 = abs(b - xp + @part*w - 1) 
+    endif
+    if (xp >= w + @part*w - b) && (xp < w + @part*w) 
+      x1 = b - w + xp - @part*w 
+    endif
+    if (x1 == 0) && (y1 == 0)
+      if @usesolid
+        #solid = true
+      else
+        #index = 0.01*#numiter
+      endif
+    elseif x1 > 0 && y1 < x1
+      #index = x1 * @fm
+    else
+      #index = y1 * @fm
+    endif
+  else
+    float w = #width
+    float h = #height/2
+    if (yp >= @part*h) && (yp < b + @part*h) 
+      y1 = abs(b - yp + @part*h - 1)
+    endif
+    if (yp >= h + @part*h - b) && (yp < h + @part*h)
+      y1 = b - h + yp - @part*h
+    endif
+    if (xp < b) 
+      x1 = b - xp 
+    endif
+    if (xp >= w - b) && (xp < w) 
+      x1 = b - w + xp 
+    endif
+    if (x1 == 0) && (y1 == 0)
+      if @usesolid
+        #solid = true
+      else
+        #index = 0.01*#numiter
+      endif
+    elseif x1 > 0 && y1 < x1
+      #index = x1 * @fm
+    else
+      #index = y1 * @fm
+    endif
+  endif
+default:
+title = "Dual2"
+param part
+  caption = "Part"
+  enum = "Left or Top" "Right or Bottom"
+endparam
+param orient
+  caption = "Orientation"
+  enum = "Vertical" "Horizontal" 
+  default = 1
+endparam
+param bw
+  caption = "Border Width"
+  default = 10.0
+endparam
+param usesolid
+  caption = "Use solid color"
+  default = false
+endparam
+param fm
+  caption = "Frame Color Density"
+  default = 0.02
+endparam
+}
+
+Hoops&Tubes{ ; Dennis Magar, August 26, 2000
+  ; Updated April 22, 2001
+  ; Added some optimizing code 9-18-01
+  ; Description may be found at:   
+  ; http://saturn.spaceports.com/~dennism/hoops.htm
+init:
+  int i = 0
+  int ti = 0
+  float zz = 0
+  float dist = 1e20
+  float tmp = 0.0
+  float md = 0
+  float pwr = @p + 1
+  float ml = real(@msk)*#maxiter
+  float mh = imag(@msk)*#maxiter
+  float rn = real(#random)
+  float ct = abs(@tc*1000)
+  float t2 = 0
+  float tx = abs(@tp)
+  float a2 = 0
+  complex tz = (0,0)
+loop:
+  float s1 = cabs(zz)
+  if @m > 1
+    a2 = atan2(@fn3(@fn1(@fn2(#z))))
+  endif
+  float g1 = cabs(@fn3(@fn1(@fn2(#z))))
+  if (@m==0) || (@m==1)
+    tmp = abs((g1-s1)/(g1^pwr-@v/10))      ;modes 1 & 2
+  elseif (@m==2)
+    tmp = abs((a2-s1)/(g1^pwr-@v/10))      ;mode 3
+  elseif (@m==3)
+    tmp = abs((g1-a2)/(s1-@v/10))          ;mode 4 
+  endif
+  if (@m == 0) || (@m==2)
+    tmp = tmp^(1/3)
+  endif
+  zz = |@fn5(tmp^(1/8))|
+  if zz > md
+    md = zz
+  endif
+  if (@m == 0) || (@m == 2) 
+    if !((i==0 || zz<1) && i>@v2)
+      ti = i
+      dist = zz
+      tz = #z
+    endif
+  elseif (@m == 1) || (@m == 3)        
+    if zz < dist && i>@v2
+      ti = i
+      dist = zz
+      tz = #z
+    endif
+  endif
+  i = i + 1
+final:
+  if (@im == false)
+    if (ti < ml) || (ti > mh)
+      #solid = true
+    endif
+  else
+    if !((ti < ml) || (ti > mh))
+      #solid = true
+    endif
+  endif
+;***********************************************************************
+  if tx > 0
+    if @tt == 0
+      tz = abs(@fn6(tz))
+    elseif @tt == 1
+      tz = cabs(@fn6(tz))
+    elseif @tt == 2
+      tz = abs(@fn6(real(tz))+@fn6(imag(tz)))
+    elseif @tt == 3
+      tz = abs(@fn6(#z))
+    endif
+    float zr = real(tz)%(@tv/10)/@ts*10
+    float zi = imag(tz)%(@tv/10)/@ts*10
+    float rz = floor(zr)
+    float iz = floor(zi)
+    if @tc > 0
+      float a1 = (rz + iz - 2)/ct
+      float a2 = (rz + iz + 2)/ct
+    else
+      float a1 = (rz + iz - 2)%ct
+      float a2 = (rz + iz + 2)%ct
+    endif
+    float a3 = a1
+    float a4 = a2
+    i = 0
+    float ez = 0
+    float h = 1
+    repeat
+      h = h / 2
+      float fr = rz + h
+      float fi = iz + h
+      float za = (a1 + a2 + a3 + a4) / 4
+      ez = ez + za
+      if (zr > fr)
+        rz = fr
+        if (zi > fi)
+          iz = fi
+          a1 = ez
+        else
+          a2 = ez
+        endif
+      else
+        if (zi > fi)
+          iz = fi
+          a3 = ez
+        else
+          a4 = ez
+        endif
+      endif
+      i = i + 1
+    until i >= 20
+    t2 = abs((za-trunc(za)))
+  endif
+;***********************************************************************
+  tmp = dist
+  if (@cm == 1)
+    tmp = ti * .1
+  elseif (@cm == 2)
+    tmp = ti%8*.8
+  elseif (@cm == 3)
+    tmp = md
+  elseif (@cm == 4)
+    tmp = cabs(tz)
+  elseif (@cm == 5)
+    tmp = abs(real(tz))
+  elseif (@cm == 6)
+    tmp = abs(imag(tz))
+  elseif (@cm == 7)
+    tmp = abs(atan2(tz)/pi)
+  endif
+;  #index = |@fn4(tmp)| + rn*@r ; old
+  #index = |@fn4(tmp)|*(100-tx)/100 + t2*tx/100 \
+           + rn*@r*(100-tx)/100
+default:
+  title = "Hoops and Tubes"
+  helpfile = "ldm-help\ldm-help.htm"
+  helptopic = "Hoops"
+  param m
+    caption = "Method"
+    enum = "1" "2" "3" "4"
+    default = 0
+  endparam
+  param cm
+    caption = "Coloring Mode"
+    enum = "Min Distance" "Iteration" "Modulated Iter" \
+           "Max Distance" "Magnitude" "Real" "Imaginary" "Angle"
+    default = 0
+  endparam
+  param v
+    caption = "Modifier 1"
+    hint = "Generally - 0 to 200; 20 to 60 seems to work best"
+    default = 20.0
+  endparam
+  param v2
+    caption = "Modifier 2"
+    hint = "Use Positive Integers"
+    default = 0
+  endparam
+  param p
+    caption = "Power"
+    hint = "Varies 'tube' width"
+    default = 1.0
+  endparam
+  param tp
+    caption = "Texture Percent"
+    hint = "'Blends' in texture from 0 to 100%"
+    default = 0.0
+  endparam
+  param tt
+    caption = "Texture Type"
+    enum = "1" "2" "3" "4"
+    default = 0
+    $ifdef VER30
+      visible = !(@tp == 0)
+    $endif
+  endparam
+  param tv
+    caption = "Texture Scale 1"
+    hint = "This and the next parameter work together \
+            to determine the scale of the texture"
+    default = 10.0
+    $ifdef VER30
+      visible = !(@tp == 0)
+    $endif
+  endparam
+  param ts
+    caption = "Texture Scale 2"
+    default = 2.0
+    $ifdef VER30
+      visible = !(@tp == 0)
+    $endif
+  endparam
+  param tc
+    caption = "Texture Density"
+    hint = "Works similarly to 'Color Density'. Positive \
+            numbers use division.  Negative numbers use modulus, \
+            producing a slightly different effect."
+    default = 5.0
+    $ifdef VER30
+      visible = !(@tp == 0)
+    $endif
+  endparam
+  param r
+    caption = "Randomness"
+    default = 0.0
+  endparam
+  param msk
+    caption = "Mask"
+    hint = "Re is lower threshold. Im is upper \
+            threshold. Expressed as decimal \
+            fraction of maxiter."
+    default = (0.0,1.0)
+  endparam
+  param im
+    caption = "Invert Mask"
+    default = false
+    $ifdef VER30
+      visible = !(real(@msk) == 0) || !(imag(@msk) == 1)
+    $endif
+  endparam
+  func fn1
+    caption  = "Function 1"
+    default = acos()
+  endfunc
+  func fn2
+    caption  = "Function 2"
+    default = sqr()
+  endfunc
+  func fn3
+    caption  = "Function 3"
+    default = ident()
+  endfunc
+  func fn5
+    caption  = "Another function"
+    default = ident()
+  endfunc
+  func fn6
+    caption  = "Texture Function"
+    default = ident()
+  endfunc
+  func fn4
+    caption = "Final #Index Fn"
+    hint = "Additional color transfer function"
+    default = asin()
+  endfunc
+}
+
+ldm-Triangles { ; Dennis Magar,     December 6, 2000
+  ; Updated April 22, 2001
+  ; Added some optimizing code 9-18-01
+  ; Description may be found at:   
+  ; http://saturn.spaceports.com/~dennism/triangles.htm
+init:
+  int i = 0
+  int ti = 0
+  float rn = real(#random)*@r
+  float zr = 0
+  float zi = 0
+  float t1 = 0
+  float t2 = 0
+  float sc = real(@v)/10
+  float pwr = imag(@v)
+  float zz = 0
+  float dist = 1e20
+  float md = 0
+  float rz = 0
+  float iz = 0
+  float xb = 0
+  float a3 = 0
+  float a4 = 0
+  float tst3 = 0
+  float g2 = 0
+  complex tz = (0,0)
+  complex cz = (0,0)
+loop:
+  zr = real(#z)
+  zi = imag(#z)
+  complex fz = @fn3(@fn1(@fn2(#z)))
+  if @uf == 5 || @uf == 17 || @md == 7 || @fm%2 == 1
+    cz = @fn3(@fn1(zr) + @fn2(flip(zi)))
+    g2 = cabs(cz)
+  endif
+  float a2 = atan2(fz)
+  float g1 = cabs(fz)
+  if @fm%2 == 1 && @md == 7 
+    t1 = g1
+    g1 = g2
+    g2 = t1
+  endif
+  float tst1 = abs((g1-zz)/(g1+1e-20))
+  float tst2 = abs((a2-zz)/(g1+1e-20))
+  if @uf == 15
+    tst3 = abs((g1-a2)/(zz+1e-20)) 
+  endif
+  float ang = atan(zi/zr)
+  if @uf < 5 || @uf > 14
+    zz = cabs(@fn4(g1))
+  elseif @uf == 5     ;a
+    zz = cabs(@fn4(g2))
+  elseif (@uf == 6)   ;b
+    zz = cabs(@fn3(@fn4(@fn1(zr)) - @fn2(zi)))
+  elseif (@uf == 7)   ;c
+    zz = cabs(@fn3(@fn4(@fn1(zr)) + recip(@fn3(@fn2(zi)))))
+  elseif (@uf == 8)   ;d
+    zz = cabs(@fn3(@fn4(@fn1(zr)) / (@fn3(@fn2(zi)))))
+  elseif (@uf == 9)   ;e
+    zz = cabs(@fn3(@fn4(@fn1(zr))) - @fn3(@fn2(zi)))*i*ang
+  elseif (@uf == 10)  ;f
+    zz = cabs(@fn3(@fn4(#z/#pixel)/(abs(@fn1(zr)-@fn2(zi)))))^(1/2)
+  elseif (@uf == 11)  ;g
+    if @md == 6
+      zz = cabs(@fn3(@fn1(@fn2(@fn4(#z/#pixel)))))
+    else
+      zz = cabs(@fn3(@fn4(#z/#pixel)))
+    endif
+  elseif (@uf == 12)  ;h
+    if @md == 6
+      zz = cabs(@fn3(@fn1(@fn2(@fn4((g1-zr)/(g1-zi))))))
+    else
+      zz = cabs(@fn3(@fn4((g1-zr)/(g1-zi))))
+    endif
+  elseif (@uf == 13)  ;i
+    if @md == 6
+      zz = cabs(@fn3(@fn1(@fn2(@fn4(tst2)))))
+    else
+      zz = cabs(@fn3(@fn4(tst2)))
+    endif
+  elseif (@uf == 14)  ;j
+    if @md == 6
+      zz = cabs(@fn3(@fn1(@fn2(@fn4(tst1)))))
+    else
+      zz = cabs(@fn3(@fn4(tst1)))
+    endif
+  endif
+  if @tm == 1
+    if !((i==0 || zz<1) && i>0)
+      dist = tst1
+      tz = #z
+      ti = i
+    endif
+  elseif @tm == 2
+    if !((i==0 || tst1<1) && i>0)
+      dist = a2
+      tz = #z
+      ti = i
+    endif
+  elseif @tm == 3
+    if !((i==0 || tst2<1) && i>0)
+      dist = zz
+      tz = #z
+      ti = i
+    endif
+  elseif @tm == 4
+    if !((i==0 || a2<1) && i>0)
+      dist = zz
+      tz = #z
+      ti = i
+    endif
+  elseif @tm == 5
+    if !((i==0 || ang<1) && i>0)
+      dist = zz
+      tz = #z
+      ti = i
+    endif
+  else
+    if i >= 0 && zz < dist
+      dist = zz
+      tz = #z
+      ti = i
+    endif
+  endif
+  i = i + 1
+  if zz > md
+    md = zz
+  endif
+  if g2 > xb
+    xb = g2
+  endif
+final:
+  zz = dist
+  if @v4 < 0
+    if ti <= abs(@v4)
+      #solid = true
+    endif
+  endif
+  if @uf == 0 || @uf > 4
+    rz = real(tz)
+    iz = imag(tz)
+  elseif @uf == 1
+    rz = real(#z)*.1
+    iz = imag(#z)*.1
+  elseif @uf == 2
+    rz = real(oldz(#numiter-trunc(abs(@v4))))
+    iz = imag(oldz(#numiter-trunc(abs(@v4))))
+  elseif @uf == 3
+    rz = tst1
+    iz = tst2
+  elseif @uf == 4
+    rz = zr*.1
+    iz = zi*.1
+  endif
+  if (@uf == 15)   ;k
+    rz = tst3/tst1/10
+    iz = abs((zr-zi)/(tst2-zr))/10
+  elseif (@uf == 16)   ;l
+    rz = abs((zr-zi)/(tst2-zr))/10
+    iz = zi/10
+  elseif (@uf == 17)   ;m
+    rz = g1/g2/10
+    iz = zi/10
+  endif
+; *************************************************************************
+  if @fm%4 > 1
+    rz = cabs(@fn1(rz))
+    iz = cabs(@fn2(iz))
+  endif
+  cz = rz + flip(iz)
+  if @fm > 3 
+    cz = @fn1(@fn2(rz + flip(iz)))
+  endif
+  if @vx < 0 || @md == 8
+    cz = @fn3(cz)
+  endif
+  cz = cz^(1/pwr)
+  zr = real(cz)/sc
+  zi = imag(cz)/sc
+  if @vx < 0
+    rz = abs(floor(zr))
+    iz = abs(floor(zi))
+  else
+    rz = floor(zr)
+    iz = floor(zi)
+  endif
+; *************************************************************************
+  if @fm%2 == 1
+    float a1 = cabs(@fn1(rz-@v3) + @fn2(iz-@v3))
+    float a2 = cabs(@fn1(rz+@v3) + @fn2(iz+@v3))
+  else
+    float a1 = rz + iz - @v3*2
+    float a2 = rz + iz + @v3*2
+  endif
+  if @v2 > 0
+    a1 = a1 / @v2
+    a2 = a2 / @v2
+  else
+    a1 = a1 % @v2
+    a2 = a2 % @v2
+  endif
+  if abs(a1-a2) > @sm/10
+    i = 0
+    repeat
+      a1 = (a1 + (a1 + a2)/2)/2
+      a2 = (a2 + (a1 + a2)/2)/2
+      i = i + 1
+    until (abs(a1-a2)<=@sm/10) || (i == 20)
+    if @md == 8
+      a3 = a1
+      a4 = a2
+    endif
+  endif
+; *************************************************************************
+  i = 0
+  float ez = 0
+  float h = 1 - abs(@vx)/100
+  repeat
+    h = h / 2
+    float fr = rz + h
+    float fi = iz + h
+    float za = (a1 + a2) / 2
+    if @md == 8
+      za = (a1 + a2 + a3 + a4) / 4
+    endif
+    ez = ez * @v1/100 + za + rn/10
+    if @md == 0 || @md == 7
+      if (zr > fr)
+        rz = fr
+        if (zi > fi)
+          if @nv == false
+            a1 = ez
+          else
+            a2 = ez
+          endif
+        endif
+      endif
+      if (zi > fi)
+        iz = fi
+      elseif (zr < fr)
+        if @nv == false
+          a2 = ez
+        else
+          a1 = ez
+        endif
+      endif
+    elseif @md == 1
+      if (zr < fr) && (zi < fi)
+        if @nv == false
+          a2 = (a1 + ez)/2
+        endif
+      elseif (zr < fr) && (zi > fi)
+        iz = fi
+        if @nv == true
+          a1 = (a2 + ez)/2
+        endif
+      elseif (zr > fr) && (zi < fi)
+        rz = fr
+        if @nv == true
+          a2 = (a1 + ez)/2
+        endif
+      else
+        rz = fr
+        iz = fi
+        if @nv == false
+          a1 = (a2 + ez)/2
+        endif
+      endif
+    elseif @md == 2
+      if (zr > fr)
+        rz = fr
+        if (zi > fi)
+          if @nv == false
+            a1 = ez
+          else
+            a2 = ez
+          endif
+        endif
+      elseif (zi > fi)
+        iz = fi
+        if @nv == false
+          a2 = ez
+        else
+          a1 = a2
+        endif
+      endif
+    elseif @md == 4
+      if (zr < fr) && (zi > fi)
+        iz = fi
+        if @nv == false
+          a1 = ez
+        else
+          a2 = ez
+        endif
+      elseif (zr > fr) && (zi < fi)
+        rz = fr
+        if @nv == false
+          a2 = ez
+        else
+          a1 = ez
+        endif
+      endif
+    elseif @md == 5
+      if (zr > fr)
+        rz = fr
+        if (zi > fi)
+          a2 = zz
+        endif
+      endif
+      if (zi > fi)
+        iz = fi
+      elseif (zr < fr)
+        a1 = zz
+      endif
+    elseif @md == 8
+       if (zr > fr)
+         rz = fr
+         if (zi > fi)
+           iz = fi
+           a1 = ez
+         else
+           a2 = ez
+         endif
+       else
+         if (zi > fi)
+           iz = fi
+           a3 = ez
+         else
+           a4 = ez
+         endif
+      endif
+    endif
+    i = i + 1
+  until i >= 20
+  t2 = (za-trunc(za))
+; *************************************************************************
+  t1 = t2
+  if (@cm == 1)
+    t1 = ti; * .1
+  elseif (@cm == 2)
+    t1 = ti%8*.8
+  elseif (@cm == 3)
+    t1 = acosh(md)/4
+  elseif (@cm == 4)
+    t1 = cabs(tz)
+  elseif (@cm == 5)
+    t1 = abs(real(tz))
+  elseif (@cm == 6)
+    t1 = abs(imag(tz))
+  elseif (@cm == 7)
+    t1 = abs(atan2(tz)/pi)
+  endif
+  if @md == 3 ; solid color
+    if @nv == false
+      zz = floor((rz-iz)/(zr-zi))
+      if zz > 0
+        t2 = zz
+      endif
+    else
+      t2 = ti 
+    endif
+  elseif @md == 6 ; none
+      if @cm == 0
+        t1 = zz
+      endif
+    if @nv == false
+      t2 = t1
+    else
+      t2 = (zr + zi)/3
+    endif
+  elseif @md == 7 ; blend
+    if @nv == false
+      t2 = xb%.9
+    else
+      t2 = zz%.9
+    endif
+  elseif @md == 8 ; HC 2
+    if @nv == false
+      t2 = zz%.9
+    else
+      t2 = t2*.6 + zz*ti*.4
+    endif
+  endif
+  #index = abs((t1 + t2)/2) + rn
+default:
+  title = "Triangles"
+  helpfile = "ldm-help\ldm-help.htm"
+  helptopic = "Triangles"
+  param v
+    caption = "Re:Scale   Im:Power"
+    hint = "These two parameters determine the size of the triangles"
+    default = (1.0,1.0)
+  endparam
+  param v2
+    caption = "Density"
+    hint = "Works similarly to 'Color Density'. Positive \
+            numbers use division.  Negative numbers use modulus, \
+            producing a slightly different effect."
+    default = 10.0
+  endparam
+  param uf
+    caption = "Method"
+    enum = "Trapped z" "#z" "Old z" "tst1,tst2" "zr,zi" \
+           "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M"
+    default = 0
+  endparam
+  param fm
+    caption = "Use of Functions"
+    enum = "000" "001" "010" "011" "100" "101" "110" "111"
+    hint = "Changes the number of times and the manner in which \
+            the functions are used."
+    default = 2
+  endparam
+  param md
+    caption = "Triangle Type"
+    enum = "Low Contrast" "High Contrast" "Relief" "Solid Color" \
+           "Blocks" "Mesh" "None" "Blend" "Blend 2"
+    hint = "Changes type of triangles"
+    default = 8
+  endparam
+  param nv
+    caption = "'Invert' Triangles"
+    hint = "Changes the orientation and/or coloring of the \
+            triangles/blocks in various ways"
+    default = false
+  endparam
+  param tm
+    caption = "Trap Method"
+    enum = "1" "2" "3" "4" "5" "6"
+    default = 0
+  endparam
+  param cm
+    caption = "Coloring Mode"
+    enum = "Min Distance" "Iteration" "Modulated Iter" \
+           "Max Distance" "Magnitude" "Real" "Imaginary" "Angle"
+    default = 0
+  endparam
+  param vx
+    caption = "Boundary Width"
+    hint = "Changes width of the 'border'.              \
+            0 to 100 percent"
+    default = 3.0
+  endparam
+  param sm
+    caption = "Smoothing"
+    default = 5.0
+  endparam
+  param v3
+    caption = "Contrast"
+    default = 1.0
+  endparam
+  param v1
+    caption = "Granularity"
+    default = 1.0
+  endparam
+  param v4
+    caption = "Iterations to Skip"
+    hint = "Use with Old z Method"
+    default = 1.0
+  endparam
+  param r
+    caption = "Randomness"
+    default = 0.0
+  endparam
+  func fn1
+    caption  = "Real function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption  = "Imag function"
+    default = ident()
+  endfunc
+  func fn3
+    caption  = "Overall function"
+    default = abs()
+  endfunc
+  func fn4
+    caption  = "Additional function"
+    default = ident()
+  endfunc
+}
+
+ldm-Thingamajigs { ; Dennis Magar,     September 28, 2001
+  ; Description may be found at:   
+  ; http://saturn.spaceports.com/~dennism/thingamajigs.htm
+  ; Several parameters added 1/05/02
+  ; More parameters and functions added by Toby Marshall
+  ; 7/07/03
+  
+init:
+  int i = 0
+  int ti = 0
+  int sn = 1
+  if @m % 2 == 1
+    sn = -1
+  endif
+  float vsa = sn*@sa/10
+  float vsb = @sb/10
+  float rsy = (real(@syc)-1)
+  float isy = imag(@syc)
+  float zz = 0
+  float md = 0
+  float dist = 1e20
+  float rn = abs(real(#random)*@r)
+  float tmp = 0
+  float t2 = 0
+  float scv = 0
+  complex avz = (0,0)
+  complex tz = (0,0)
+  complex z = (0,0)
+  float ta = @v1
+  float trl = trunc(@is)
+  if trl == 0
+    trl = 1e20
+  endif
+  float ico = @sk
+  float icd = abs(ico)-trunc(abs(ico))
+  float icm = 0
+  if ico <= 0
+    icm = trunc(abs(ico))
+    ico = ico + 1e7
+  endif
+  ico = ico - 1
+  float td = @tl
+  w = 0
+  ww = 0
+  float dis = (@is - trunc(@is))*10
+  if dis == 0
+    dis = 1
+  endif
+  float x = 0
+  float y = 0
+  float tst2 = 0
+  float tst4 = 0
+  complex fc = (0,0)
+  float ang = 0
+  float a2 = 0
+  float g1 = 0
+  complex gc = (0,0)
+  bool sol = false
+  float a = 0
+
+loop:
+  complex z1 = #z
+  if @change == "1"
+    z1 = @nufunc(z1-@tw)^@exp1
+  elseif @change == "2"
+    z1 = @nufunc(z1-@tw)^@exp3+@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "3"
+    z1 = @nufunc(z1-@tw)^@exp3-@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "4"
+    z1 = @nufunc(z1-@tw)^@exp3*@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "5"
+    z1 = @nufunc(z1-@tw)^@exp3/@nufunc2((z1-@tw2)^@exp1)        
+  elseif @change == "6"
+    z1 = @nufunc(z1-@tw)^@exp3^@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "7"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "8"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "9"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "10"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "11"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif   
+  endif
+  
+  
+  zc = @fn8(z1)
+  float s1 = cabs(z1)
+  if (@m > 3 && @m < 12) || @m > 16 || @fl == 4 \
+     || @fl == 6 || @fl > 8 || @tt == 5 || @tt == 6
+    gc = @fn3(@fn1(@fn2(z1)))
+    a2 = atan2(gc)
+    g1 = cabs(gc)
+  endif
+  if @fl == 4 || @fl > 8 || @m == 20 \
+     || (@m > 7 && @m < 12)
+    fc = @fn3(@fn1(real(z1))+@fn2(imag(z1)))
+    tst4 = abs((cabs(fc)-g1)/s1) 
+  endif
+  if @m == 17 || @m == 22
+    tst2 = abs((a2-s1)/g1)
+    tst4 = abs((cabs(fc)-g1)/s1) 
+  endif
+  float zr = real(zc)
+  float zi = imag(zc)
+  if @pc == true
+    float d = sqrt(sqr(zr)+sqr(zi))
+    if @pcf == true
+      a = atan2(zc)
+    else
+      if zr == 0
+        a = 0
+      else
+        a = atan2(zi/zr)
+      endif
+    endif
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    zr = d
+    zi = a
+  endif
+  if @fl == 3 || @fl == 7 || @tf == true \
+     || @m == 16 || @r < 0
+    ang = atan(zi/(zr+1e-20))
+  endif
+  int ii = i
+  if @is < 0
+    ii = -ii
+  endif
+  if (@fl == 0)       ;a
+    zz = abs(cabs(@fn3(abs(@fn1(zr)) \
+         +(@fn3(abs(@fn2(zi)))))+@vc))
+  elseif (@fl == 1)   ;b
+    zz = cabs(@fn8(@fn3(@fn1(real(z1))) \
+         +@vc+@fn3(flip(@fn2(imag(z1))))))
+  elseif (@fl == 2)   ;c
+    zz = abs(cabs(@fn3(@vc+abs(@fn1(zr)) \
+         + recip(@fn3(abs(@fn2(zi)))))))^.33
+  elseif (@fl == 3)   ;d
+    zz = real(@fn3(abs(@fn1(zr)) \
+         /(@fn3(abs(@fn2(zi)))))+@vc)*i*ang
+  elseif (@fl == 4)   ;e
+    zz = abs(cabs(@fn8(fc+gc)/zc+@vc))
+  elseif (@fl == 5)   ;f
+    zz = abs(cabs(recip(@fn3(zc+@vc))))
+  elseif (@fl == 6)   ;g
+    zz = cabs(@fn3(@fn1(abs((g1-zr) \
+         /(g1-zi))+@vc)))
+  elseif (@fl == 7)   ;h
+    zz =(cabs(@fn8(atan(@fn3(abs(@fn1(zr)+@vc) \
+        /(@fn3(abs(@fn2(zi^2))))))))*ang)
+  elseif (@fl == 8)   ;i
+    zz = real(@fn3(abs(@fn1(zr) \
+         -@fn2(zi)+@vc)))^.33
+  elseif (@fl == 9)   ;j
+    zz = cabs(@fn8(abs(fc-gc+@vc)))^.33
+  elseif (@fl == 10)   ;k
+    zz = cabs(@fn8(@fn3(abs(@fn1(g1) \
+         +@vc - @fn2(a2)))))
+  elseif (@fl == 11)   ;l
+    zz = abs(cabs(@fn8(fc-gc)/fc+@vc))
+  elseif (@fl == 12)   ;m
+    zz = cabs(@fn8(acos(@fn3(abs(@fn1(zr) \
+         +@vc - @fn2(g1))))))
+  endif
+  if @m == 19 || @cm == 7
+    if (zz > md) && ii < trl
+      md = zz
+    endif
+  endif
+  if @m < 14 || @m > 22     ;1-E, O,P
+    if @m < 2
+      y = zr
+    elseif @m == 2 || @m == 3
+      y = zi
+    elseif @m == 4 || @m == 5
+      y = g1^2
+    elseif @m == 6 || @m == 7
+      y = (a2-s1)/(g1*2)
+    elseif @m == 12 || @m == 13
+      y = real(@tc)/2
+    elseif @m == 23 || @m == 24
+      y = s1
+    else
+      y = g1-tst4
+    endif
+;*****************************
+    if @sa < 0 && sn == -1
+      y = y * (-@sa+5)/5
+      vsa = sn*@sa/20
+    endif
+    if isy > 0
+      if @wfl == false
+        y = y*(y - isy)/(y + isy)
+      else
+        y = (y - isy)/(y + isy)
+      endif
+    elseif isy < 0
+      if @wfl == false
+        y = y * (isy+1)
+      else
+        y = y + isy
+      endif
+    endif
+    if rsy < -1
+      y = y + (rsy + 1)/2
+    endif
+    if @sb < 0
+      y = y % vsb
+    endif
+    tmp = @ni*(real(@fn1(y+sn*@fn2(y)*-rsy)))
+    if @sb > 0
+      tmp = tmp % vsb
+    endif
+    x = zz - tmp + vsa
+;*****************************
+    xb = @fn9(x + flip(y))
+    if @m == 10 || @m == 11
+      xb = -xb
+    endif
+    if @so == true
+      zz = cabs(atan(z1 - xb))
+    elseif @cm == 0 && (@m < 14 || @m > 22) && @msk == 0
+      zz = cabs(z1 - xb)
+    else
+      zz = cabs(z1 - xb)^.1
+    endif
+    if zz < dist && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 14)  ;F
+    if zz < dist || zz < 1 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 15)    ;G  
+    if zz < dist && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 16)      ;H 
+    if  zz < ang && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 17)      ;I
+    if  zz < tst2 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 18)      ;J  
+    if  zz > g1 && dist > g1 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 19)      ;K
+    if zz < md && ii < trl
+      md = zz
+      ti = i
+      dist = zz * dis 
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 20)      ;L
+    if  zz < tst4^2 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  elseif (@m == 21)      ;M
+    if  zz > s1^2 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif  
+  elseif (@m == 22)      ;N
+    if tst2 > tst4 && ii < trl
+      ti = i
+      dist = zz * dis
+      tz = z1
+      avz = avz + z1
+    endif
+  endif
+  i = i + 1
+final:
+ if @cm == 0 && (@m < 14 || @m > 22) && @msk == 0 && @so == false
+   dist = dist ^ .1
+ endif
+ if @im == false && dist > @msk && !(@msk == 0)
+  #solid = true
+  sol = true
+ endif
+ if @im == true && dist <= @msk && !(@msk == 0)
+  #solid = true
+  sol = true
+ endif
+ if (ti > ico || ti < icm) && @co == true || sol == true
+  #solid = true
+ else
+  tmp = dist
+  scv = abs(@sc)*200
+  float caz = cabs(avz) / i
+  if (@cm == 1)
+    tmp = ti * .1
+  elseif (@cm == 2)
+    tmp = ti%@mc*.8
+  elseif (@cm == 3)
+    tmp = cabs(tz)
+  elseif (@cm == 4)
+    tmp = abs(real(tz))
+  elseif (@cm == 5)
+    tmp = abs(imag(tz))
+  elseif (@cm == 6)
+    tmp = abs(atan2(tz)/pi)
+  elseif (@cm == 7)
+    tmp = acosh(md)/4
+  elseif (@cm == 8)
+    tmp = caz*1.5
+  elseif (@cm == 9)
+    tmp = ti%imag(@tc)
+  elseif (@cm == 10)
+    tmp = dist
+  endif
+; --------------------------------------------------------
+  if @tt > 6 && !(@v1 == 0)
+    float pw = 1
+    float of = 1
+    if @r < 0
+      pw = @st
+    else 
+      of = @st
+    endif
+    if @tt == 9
+      if @r < 0
+        z = @fn5(@fn7(tz+@tc))
+      else
+        z = @fn7(tz+@tc)
+      endif
+    endif
+    if @tt == 10
+      z = @fn7(atanh(zc+@tc))
+      ta = ta * .5
+    endif
+    if @tt == 11
+      z = @fn7(atanh(z1+@tc))
+      ta = ta * .5
+    endif
+    if @tt == 7
+      z = @fn7(tz+@tc)
+      td = 100
+      scv = scv * 2
+      ta = ta * .2
+      pw = pw / 10
+    endif
+    if @tt == 8
+      z = @fn7(avz+@tc)
+      td = 100
+      scv = scv * 1.5
+      ta = ta * .2
+      pw = pw / 10
+    endif
+    if @r < 0
+      float zr = abs(real(z)/scv)
+    else
+      float zr = cabs(@fn5(abs(real(z))/scv))
+    endif
+    if @tf == false
+      if @r < 0
+        float zi = imag(z)/scv
+      else
+        float zi = cabs(@fn5(imag(z)))/scv
+      endif
+    else
+      if @r < 0
+        float zi = ang/scv
+      else
+        float zi = cabs(@fn5(ang))/scv
+      endif
+    endif
+    float rz = floor(zr)
+    float iz = floor(zi)
+    float az = cabs(@fn3(@fn1(rz-1) + @fn2(iz-1)))
+    float bz = cabs(@fn3(@fn1(rz-1) + @fn2(iz+1)))
+    float cz = cabs(@fn3(@fn1(rz+1) + @fn2(iz-1)))
+    float dz = cabs(@fn3(@fn1(rz+1) + @fn2(iz+1)))
+    int i = 1
+    zz = 0
+    float h = 1
+    repeat
+      h = h / 2
+      float fr = rz + h
+      float fi = iz + h
+      zz = (az + bz + cz + dz + of - 1) / 4
+      if (zr > fr)
+        if (zi > fi)
+         rz = fr
+          iz = fi
+          az = cabs(@fn6(zz))*td/25*@ff
+        else
+          rz = fr
+          cz = cabs(@fn6(zz))*td/25
+        endif
+      else
+        if (zi > fi)
+          iz = fi
+          bz = cabs(@fn6(zz))*td/25
+        else
+          dz = cabs(@fn6(zz))*td/25
+        endif
+      endif
+      i = i + 1
+    until i >= 20
+    if ti > ico || ti < icm
+      t2 = 0
+    else
+      t2 = ((zz-trunc(zz))+rn*i)^pw*ta*10
+    endif
+  endif
+; ---------------------------------------------------------
+  if (@tt == 0)
+    if @r < 0
+      t2 = cabs(@fn7(rn))
+    else
+      t2 = ti*icd+rn
+    endif
+  endif
+  if @tt > 0 && @tt < 7 && !(@v1 == 0)
+    px = real(#pixel)-real(#center) \
+         +flip(imag(#pixel)-imag(#center))
+    xb = abs(@vc - tz)^.05
+    bx = 0
+    scl = abs(@sc)
+    if @tt == 1                     ; Patterns 1
+      bx = @fn6(tz)-xb*(@ff-1)
+    elseif @tt == 2                 ; Patterns 2
+      if @r < 0
+        scl = scl * 8
+        bx = @fn6(exp(px))-xb*(@ff-1)
+      else
+        scl = scl * 2
+        bx = @fn6(px)-xb*(@ff-1)
+      endif
+    elseif @tt == 3                  ; Fuzz 1
+      if @r < 0
+        bx = @fn6(#pixel)
+      else
+        scl = scl * 10
+        bx = -abs(@fn6(acosh(sin(abs(#pixel*@ff*2.5)))))
+      endif
+    elseif @tt == 4                  ; Fuzz 2
+      xb = abs(@fn6(acos(@vc - avz)))^.05
+      scl = scl * 10
+      bx = -xb-abs(acosh(sin(px)*@ff))
+    elseif @tt == 5                  ; Fuzzy Patterns 1
+      scl = scl * 15
+      if @r < 0
+        scl = abs(@sc)
+        bx = g1 + flip(a2);sailing
+      else
+        xb = abs(@fn6(@vc - tz))^.05
+        bx = -abs(acosh(sin(abs(xb))*@ff))
+      endif
+    elseif @tt == 6                  ; Fuzzy Patterns 2
+      xb = abs(@fn6(@vc - gc))^.05
+      scl = scl * 8
+      bx = -xb*@ff
+    endif
+    if ti > ico || ti < icm
+      bx = (ti + flip(-ti))*icd
+    endif
+    w = acosh(bx*10^8)*scl
+    if @tf == true
+      ww = @fn5(w - round(w))
+    else
+      ww = @fn5(acosh(w - round(w)))
+    endif
+    t2 = cabs(@fn7((ww+@tc+rn))^@st)*td
+    t2 = (t2 - trunc(t2))*@v1
+  endif
+  #index = cabs(sqr(@fn4(tmp))) + t2
+ endif
+default:
+  title = "Thingamajigs"
+  helpfile = "ldm-help\ldm-help.htm"
+  helptopic = "Thingamajigs"
+  param trp
+    caption = "More Trap Parameters"
+    hint = "Additional parameters and functions added 7/07/03."
+    default = true
+  endparam
+  param m
+    caption = "Trap Mode"
+    enum = "1" "2" "3" "4" "5" "6" "7" "8" \
+           "9" "A" "B" "C" "D" "E" "F" "G" \
+           "H" "I" "J" "K" "L" "M" "N" "O" "P"
+    default = 0
+  endparam
+  param fl
+    caption = "'Flavor'"
+    enum = "A" "B" "C" "D" "E" "F" "G" "H" \
+           "I" "J" "K" "L" "M"
+    default = 0
+  endparam
+  param pc
+    caption = "Polar Coordinates"
+    hint = "Rectangular Coordinates is the default."
+    default = false
+  endparam
+  param pcf
+    caption = "Polar Coord Fix"
+    hint = "Thanks to Mark Hammond for bringing \
+            this to my attention."
+    default = false
+    $ifdef VER30
+      visible = @pc == true
+    $endif
+  endparam
+  param cm
+    caption = "Coloring Mode"
+    enum = "Min Distance*" "Iteration" "Modulated Iter" \
+           "Magnitude" "Real" "Imaginary" "Angle" \
+           "Maximum Distance" "Average" "Test" "Min Distance"
+    hint = "Changes the method of coloring.          \
+            * Uses more efficient calculation than the \
+            original 'Min Distance'."
+    default = 0
+  endparam
+  param mc
+    caption = "Mod. Iter Modulus"
+    hint = "The modulus value for Modulated \
+            Iter coloring."
+    default = 8.0
+    $ifdef VER30
+      visible = @cm == 2
+    $endif
+  endparam
+  param vc
+    caption = "Fractal Offset"
+    hint = "Changes the appearance of the fractal. \
+            Try values from -1.5 to 1.5."
+    default = (0,0)
+  endparam
+  param tt
+    caption = "Texture Mode"
+    enum = "Off" "Patterns 1-#z" "Patterns 2-#pixel" "Fuzz 1" \
+           "Fuzz 2" "Fuzzy Patterns 1" "Fuzzy Patterns 2" \
+           "Blocks 1" "Blocks 2" "Triangles 1" "Triangles 2" \
+           "Triangles 3"
+    default = 0
+  endparam
+  param tc
+    caption = "Texture Offset"
+    hint = "Changes the appearance of the texture. \
+            When 'Change Tx Style' is enabled, 0,0 \
+            here produces circular Patterns."
+    default = (1,1)
+    $ifdef VER30
+      visible = !(@tt == 0) || @m == 12 || @m == 13
+    $endif
+  endparam
+  param v1
+    caption = "Texture Amount"
+    default = 0.1
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param sc
+    caption = "Texture Scale"
+    hint = "Larger values decrease the scale of Patterns, \
+            and increase the scale of Triangles."
+    default = 5.0
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param tl
+    caption = "Texture Density"
+    hint = "Works similarly to 'Color Density', but is \
+            applied only to textures."
+    default = 5.0
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param st
+    caption = "Texture Modifier"
+    hint = "Try values of 0.1 to 5"
+    default = 1.0
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param ff
+    caption = "Fuzz Factor"
+    hint = "Values above 1 give a less well-defined \
+            edge to Patterns.  For Triangles, changes \
+            the 'Intensity'." 
+    default = 1.0
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param tf
+    caption = "Change Tx Style"
+    default = false
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param sk
+    caption = "Iteration Cutoff"
+    hint = "No texture is drawn after positive integer \
+            values, or before negative integer values. \
+            Any Decimal portion 'blends' in iteration \
+            coloring."
+    default = 0.0
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endparam
+  param co
+    caption = "Solid Color @ IC"
+    hint = "Turns on Solid Color at the 'Iteration \
+            Cutoff'."
+    default = false
+    $ifdef VER30
+      visible = !(@sk == 0)
+    $endif
+  endparam
+  param sa
+    caption = "Expand+|-Contract"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is around -10 to 10"
+    default = 0.0
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param syc
+    caption = "Warp Factor"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is around -1.5 to 1.5 \
+            Try 'Eyedropper' at low magnifications."
+    default = (0,0)
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param wfl
+    caption = "Warp Set 2"
+    hint = "Changes the way the Warp Factor works."
+    default = false
+    $ifdef VER30
+      visible = !(@syc == (0,0)) && (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param sb
+    caption = "'Ripple' Control"
+    hint = "Used with Trap Modes 1 through D. \
+            A few Trap Modes are unaffected by this \
+            parameter. Useful Range is -50 to 50"
+    default = 0.0
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param ni
+    caption = "Multiplier"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is about 1 to 9."
+    default = 3.0
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param is
+    caption = "Iters to Skip"
+    hint = "Trapping is discontinued after this \
+            (non-zero) number of iterations."
+    default = 0.0
+  endparam   
+  param change
+    caption = "Morph"
+    enum = "1""2""3""4""5""6""7""8""9""10""11"
+    default = 0
+    visible = @trp == true
+  endparam
+  complex param exp1
+    caption = "Bias 1"
+    default = (1,0)
+    visible = @trp == true    
+  endparam
+  complex param exp3
+    caption = "Bias 2"
+    default = (1,0)
+    visible = @trp == true && @change > 0
+  endparam  
+  complex param exp2
+    caption = "Bias 3"
+    default = (1,0)
+    visible = @trp == true && @change > 5
+  endparam
+  complex param tw
+    caption = "Twist 1"
+    default = (0,0)
+    visible = @trp == true    
+  endparam    
+  complex param tw2
+    caption = "Twist 2"
+    default = (0,0)
+    visible = @trp == true && @change > 0    
+  endparam      
+  complex param tw3
+    caption = "Twist 3"
+    default = (0,0)
+    visible = @trp == true  && @change > 5    
+  endparam  
+  param op
+    caption = "Operator"
+    enum = "+""-""*""/""^"
+    default = 0
+    visible = @trp == true && @change > 5    
+  endparam    
+  param so
+    caption = "Soften Color"
+    hint = "Two different approaches to coloring \
+            Trap Modes 1-E."
+    default = false
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endparam
+  param r
+    caption = "Randomness"
+    default = 0.0
+  endparam
+  param msk
+    caption = "Mask Threshold"
+    hint = "All values of trapped z1 that are less than \
+            this parameter are drawn in the Solid Color. \
+            For many formulas, the effective range \
+            is narrow - from 0.8 to 1.0 , but can be \
+            from .01 to about 2."
+    default = 0.0
+  endparam
+  param im
+    caption = "Reverse Mask"
+    hint = "Reverses the areas drawn in the Solid Color \
+            with those areas drawn normally."
+    default = false
+    $ifdef VER30
+      visible = !(@msk == 0)
+    $endif
+  endparam
+  
+  heading
+    caption = "Functions"
+  endheading
+   
+  func fn8
+    caption = "Initial function"
+    default = abs()
+  endfunc
+  func fn1
+    caption  = "Real function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption  = "Imag function"
+    default = abs()
+  endfunc
+  func fn3
+    caption  = "Overall function"
+    default = abs()
+  endfunc
+  func fn9
+    caption = "Trap Mode 1-E Fn"
+    default = sqr()
+    $ifdef VER30
+      visible = (@m < 14 || @m > 22)
+    $endif
+  endfunc
+  func fn7
+    caption = "Texture Fn 1"
+    default = abs()
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endfunc
+  func fn5
+    caption = "Texture Fn 2"
+    default = ident()
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endfunc
+  func fn6
+    caption = "Texture Fn 3"
+    default = ident()
+    $ifdef VER30
+      visible = !(@tt == 0)
+    $endif
+  endfunc
+  func fn4
+    caption = "Final #Index Fn"
+    default = asin()
+  endfunc 
+  func nufunc
+    caption = "Morph function 1"
+    default = ident()
+    visible = @trp == true    
+  endfunc 
+  func nufunc2
+    caption = "Morph function 2"
+    default = ident ()
+    visible = @trp == true && @change > 0
+  endfunc
+  func nufunc3
+    caption = "Morph function 3"
+    default = ident ()
+    visible = @trp == true && @change > 5
+  endfunc
+  
+}
+
+ldm-Doodads { ; Dennis Magar,     September 16, 2002
+  ; Description may be found at:   
+  ; http://saturn.spaceports.com/~dennism/doodads.htm
+  ; Some parameters and functions added by Toby Marshall
+  ; 7/07/03
+init:
+  float zr = 0
+  float zi = 0
+  float zz = 0
+  float a2 = 0
+  float za = 0
+  float t2 = 1
+  int ti = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+  float texFin = 0
+  float s1 = 0
+  float g1 = 0
+  float rn = abs(@r*real(#random))
+  float ff = 0
+  complex tz = (0,0)
+  complex gc = (0,0)
+  complex pt1 = (0,0)
+  int i = 0
+  bool sol = false
+  int sn = 1
+  if @m % 2 == 1
+    sn = -1
+  endif
+  float vsa = sn*@sa/10
+  float vsb = abs(@sb/10)
+  float ico = @sk
+  float icd = abs(ico)-trunc(abs(ico))
+  float icm = 0
+  if ico <= 0
+    icm = trunc(abs(ico))
+    ico = ico + 1e7
+  endif
+  ico = ico - 1
+  float fmr = real(@fm)
+  float fmi = imag(@fm)
+  float zr1 = 0
+  float zi1 = 0
+  complex fc = (0,0)
+loop:
+  complex z1 = #z
+  if @change == "1"
+    z1 = @nufunc(z1-@tw)^@exp1
+  elseif @change == "2"
+    z1 = @nufunc(z1-@tw)^@exp3+@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "3"
+    z1 = @nufunc(z1-@tw)^@exp3-@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "4"
+    z1 = @nufunc(z1-@tw)^@exp3*@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "5"
+    z1 = @nufunc(z1-@tw)^@exp3/@nufunc2((z1-@tw2)^@exp1)        
+  elseif @change == "6"
+    z1 = @nufunc(z1-@tw)^@exp3^@nufunc2((z1-@tw2)^@exp1)
+  elseif @change == "7"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3+(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "8"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3-(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "9"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3*(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "10"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3/(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif
+  elseif @change == "11"
+   if @op == "+"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     +@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "-"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     -@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "*"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     *@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "/"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     /@nufunc3((z1-@tw3)^@exp2))
+   elseif @op == "^"
+     z1 = @nufunc(z1-@tw)^@exp3^(@nufunc2((z1-@tw2)^@exp1)\
+     ^@nufunc3((z1-@tw3)^@exp2))
+   endif   
+  endif  
+    
+  zc = @fn4(z1)
+  zr = real(zc)
+  zi = imag(zc)
+  if (@m > 3 && @m < 26) || @mr == 5 || @mr == 8 \
+     || @mr == 9 || @mr == 12 || @ptt == 5 || @ptt == 9
+    gc = @fn3(@fn1(@fn2(z1)))
+    g1 = cabs(gc)
+  endif
+  if @m == 7 || @mr == 5
+    a2 = atan2(gc)
+  endif
+  if @m == 8 || @m == 9 || @m == 12 || @m == 13 \
+     || @m > 19 || @mr == 9 || @mr == 11
+    s1 = cabs(zc)
+  endif
+  if @m == 12 || @m == 13 || @m == 22 || @m == 23 \
+     || @m == 26 || @m == 27 || @mr == 10 || @mr == 12
+    ff = cabs(@fn3(@fn1(real(z1))+@fn2(imag(z1))))
+  endif
+  if @m >27
+    fc = @fn3(@fn1(real(z1))+flip(@fn2(imag(z1))))
+  endif
+  if @mr < 5
+    zr1 = real(@fn1(zr*fmr))
+    zi1 = real(@fn2(zi*fmi))
+  endif
+  if @mrf == true
+    zr1 = abs(zr1)
+    zi1 = abs(zi1)
+  endif
+  if @mr == 0      ;a
+    zz = real(@fn3(zr1*zi1))
+  elseif @mr == 1  ;b
+    zz = real(@fn3(zr1+zi1))
+  elseif @mr == 2  ;c
+    zz = real(@fn3(zr1/zi1))
+  elseif @mr == 3  ;d
+    zz = real(@fn3(zi1^zr1))
+  elseif @mr == 4  ;e
+    zz = real(@fn3(zr1^zi1))
+  elseif @mr == 5  ;f
+    zz = real(@fn4(@fn3(abs(@fn1(g1*fmr)-@fn2(a2*fmi)))))
+  elseif @mr == 6  ;g
+    if @mrf == false
+      zz = real(atan(@fn3(@fn1(zr*fmr)) \
+         /(@fn3(@fn2(zi^2*fmi)))))
+    else
+      zz = real(atan(@fn3(abs(@fn1(zr*fmr)) \
+         /(@fn3(abs(@fn2(zi^2*fmi)))))))
+    endif
+  elseif @mr == 7  ;h
+    zz = cabs(recip(@fn3(@fn2(@fn1(zc*fmr*2)))))
+  elseif @mr == 8  ;i
+    zz = real(@fn3(@fn1(abs((g1-zr)*fmr/(g1-zi)*fmi))))^.1
+  elseif @mr == 9  ;j
+    float temp = abs((g1-zr)*fmr/(g1+1e-20))
+    zz = real(@fn3(abs(@fn1(temp)-@fn2(s1*fmi))))
+  elseif @mr == 10 ;k
+    zz = cabs(@fn4(ff*fmr-gc*fmi))^2
+  elseif @mr == 11 ;l
+    zz = cabs(@fn4(s1-1)*fmr/(s1+1)*fmi)
+  elseif @mr == 12 ;m
+    zz = cabs(@fn4(g1)*fmr/(ff)*fmi)
+  endif
+  if @m < 2                  ;1,2
+    y = zr
+  elseif @m == 2 || @m == 3  ;3,4
+    if @tb < 0 
+      y = zr-zi
+    else
+      y = zr*3-zi
+    endif
+  elseif @m == 4             ;5
+    y = abs(g1^3/(zr-g1))
+  elseif @m == 5             ;6
+    y = zr/2+g1
+  elseif @m == 6             ;7
+    y = g1^3
+  elseif @m == 7             ;8
+    y = g1^2/a2
+  elseif @m == 8 || @m == 9  ;9,A
+    y = zr*s1/zi
+  elseif @m == 10 || @m == 11  ;B,C
+    y = g1^2
+  elseif @m == 12 || @m == 13  ;D,E
+    y = g1-abs((ff-g1)/s1)
+  elseif @m == 14 || @m == 15  ;F,G
+    y = g1-zr/g1
+  elseif @m == 16 || @m == 17  ;H,I
+    y = g1-abs(zr/g1)
+  elseif @m == 18 || @m == 19  ;J,K
+    y = g1
+  elseif @m == 20 || @m == 21  ;L,M
+    y = s1*.1/g1^2
+  elseif @m == 22 || @m == 23  ;N,O
+    y = g1^2-abs((ff-g1)/s1)
+  elseif @m == 24 || @m == 25  ;P,Q
+    y = g1^2-s1
+  elseif @m == 26 || @m == 27  ;R,S
+    y = ff
+  else                         ;T,U
+    y = imag(fc)
+  endif
+  y = real(@fn9(y - @tad/10))
+  if @sa < 0 && sn == -1
+    y = y * (-@sa+5)/5
+    vsa = sn*@sa/20
+  endif
+  if @sb > 0
+    y = y % vsb
+  endif
+  if @m % 2 == 0
+    x = zz - @mul*(real(abs(@fn1(y - abs(@fn2(y))))))
+  else
+    if @mc < 0
+      x = zz - @mul*(real(@fn1(y + @fn2(y))))/2
+    else
+
+      x = zz - @mul*y
+    endif
+  endif
+  if @sb < 0
+    x = x % vsb
+  endif
+  x = x + vsa
+  xb = (@fn8(x + flip(y)))^@pwr
+  zz = cabs(z1 - xb)
+
+  if zz < dist
+    ti = i
+    dist = zz
+    tz = z1
+  endif
+  i = i + 1
+final:
+  if @im == false && dist > @msk && !(@msk == 0)
+    #solid = true
+    sol = true
+  endif
+  if @im == true && dist <= @msk && !(@msk == 0)
+    #solid = true
+    sol = true
+  endif
+  if @ta > 0 && @tm > 0 && ti >= icm && ti <= ico && @co == true
+    #solid = true
+    sol = true
+  endif
+  if @pta > 0 && @ptt > 0 && (ti > ico || ti < icm) && @co == true
+    #solid = true
+    sol = true
+  endif
+  if sol == false
+    dist = dist ^ .1
+    complex pt3 = (0,0)
+;**********************************************
+    if @cm == 1 || @cm == 8 \
+       || (!(@ta == 0) && !(@tm == 0))\
+       || (!(@pta == 0) && @ptt > 8) \
+       || ((@ptt == 0) && @cm == 9)
+      float rz = 0
+      float iz = 0
+      float fr = 0
+      float fi = 0
+      float a1 = 0
+      float a3 = 0
+      float a4 = 0
+      float h = 1
+      float ez = 0
+      float rsc = real(@nsc)
+      if @ur == false
+        float isc = imag(@nsc)
+      else
+        float isc = rsc
+      endif
+      if @r < 0
+        pt1 = abs(@fn7(tz))^(@tp*.05)
+      else
+        pt1 = abs(@fn7(tz^(@tp*.05)))
+      endif
+      pt2 = (0,0)
+      pt2 = -pt1-abs(acosh(pt2))
+      w = acosh(pt2*10^(8))*10
+      pt3 = (acosh(w - round(w)))
+      if !(@cm == 8)
+        if @tm == 0
+          if @pct == false
+            zr = real(@fn5(pt3)/rsc)
+            zi = imag(@fn6(w)/isc)
+          else
+            zr = cabs(@fn5(pt3)/rsc*.5)
+            zi = cabs(@fn6(pt3)/isc*2)
+          endif
+        elseif @tm == 1
+          if @pct == false
+            zr = cabs(@fn5(dist)/rsc)
+            zi = cabs(@fn6(w)/isc*2)
+          else
+            zr = real(@fn5(pt3)/rsc)
+            zi = imag(@fn6(tz)/isc)
+          endif
+        elseif @tm == 2
+          if @pct == false
+            zr = cabs(@fn5(dist)/rsc)
+            zi = imag(@fn6(w)/isc)
+          else
+            zr = real(@fn5(tz)/rsc)
+            zi = imag(@fn6(pt3)/isc)
+          endif
+        elseif @tm == 3
+          if @pct == false
+            zr = cabs(@fn5(dist)/rsc)
+            zi = real(@fn6(pt3)/isc)
+          else
+            zr = cabs(@fn5(dist)/rsc)
+            zi = cabs(@fn6(pt3)/isc)
+          endif
+        elseif @tm == 4
+          if @pct == false
+            zr = real(@fn5(pt2)/rsc*.5)
+            zi = imag(@fn6(w)/isc)
+          else
+            zr = cabs(@fn5(pt2)/rsc*.5)
+            zi = imag(@fn6(w)/isc)
+          endif
+        elseif @tm == 5
+          if @pct == false
+            zr = real(@fn5(tz)/rsc)
+            zi = imag(@fn6(w)/isc)
+          else
+            zr = imag(@fn5(tz)/rsc)
+            zi = real(@fn6(w)/isc)
+          endif
+        elseif @tm == 6
+          if @pct == false
+            zr = real(@fn5(tz)/rsc)
+            zi = cabs(@fn6(pt3)/isc)
+          else
+            zr = cabs(@fn5(pt1)/rsc)
+            zi = cabs(@fn6(w)/isc)
+          endif
+        elseif @tm == 7
+          if @pct == false
+            zr = real(@fn5(pt3)/rsc/10)
+            zi = imag(@fn6(pt2)/isc*.5)
+          else
+            zr = cabs(@fn5(pt3)/rsc/50)
+            zi = imag(@fn6(pt2)/isc*1.3)
+          endif
+        elseif @tm == 8
+          ww = @fn7(pt2*100)
+          if @pct == false
+            zr = imag(@fn5(pt2)/rsc*10)
+            zi = imag(@fn6(ww)/isc*5)
+          else
+            zr = cabs(@fn5(dist)/rsc)
+            zi = imag(@fn6(ww)/isc)
+          endif
+        elseif @tm == 9
+          if @pct == false
+            zr = cabs(@fn5(dist)/rsc*5)
+            zi = real(@fn6(tz)/isc*5)
+          else
+            zr = cabs(@fn5(dist)/rsc*5)
+            zi = imag(@fn6(tz)/isc*5)
+          endif
+        elseif @tm == 10
+          if @pct == false
+            zr = real(@fn5((oldz(ti)-oldz(ti-1))/rsc))
+            zi = imag(@fn6((oldz(ti)+oldz(ti-1))/isc*10))
+          else
+            zr = real(@fn5(tz)/rsc)
+            zi = imag(@fn6(tz)/isc)
+          endif
+        endif
+        zr = zr + rn/10
+        zi = zi - rn/10
+        rz = floor(zr)
+
+        iz = floor(zi)
+        a1 = cabs(@fn3(@fn1(rz-1) + @fn2(iz-1)))
+        a1 = (a1 % (2^@f))/2^(@f-1) * (@tb%2)
+        a2 = cabs(@fn3(@fn1(rz-1) + @fn2(iz+1)))
+        a2 = (a2 % (2^@f))/2^(@f-1) * trunc(@tb%4/2)
+        a3 = cabs(@fn3(@fn1(rz+1) + @fn2(iz-1)))
+        a3 = (a3 % (2^@f))/2^(@f-1) * trunc(@tb%8/4)
+        a4 = cabs(@fn3(@fn1(rz+1) + @fn2(iz+1)))
+        a4 = (a4 % (2^@f))/2^(@f-1) * trunc(@tb%16/8)
+        i = 1
+        repeat
+          h = h / 2
+          fr = rz + h
+          fi = iz + h
+          za = (a1 + a2 + a3 + a4) / 4
+          ez = ez * h + za
+          if (zr > fr)
+            rz = fr
+            if (zi > fi)
+              iz = fi
+              a1 = ez
+            else
+              a2 = ez
+            endif
+          else
+            if (zi > fi)
+              iz = fi
+              a3 = ez
+            else
+              a4 = ez
+            endif
+          endif
+          i = i + 1
+        until i >= abs(@step)
+        if ti >= icm && ti > ico || ti < icm || @sk == 0
+          za = (za-trunc(za))^@v2
+        else
+          za = 0
+        endif
+      endif
+    endif
+; ---------------------------------------------------------
+; *********************************************************
+    if !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+      float df = 1
+      pt3 = @pto
+      float scale = abs(@psc)*.2
+      if @ptt == 1                  ; Patterns 1
+
+        pt1 = abs(@fn7(tz))^(@tp*.5)
+        scale = scale * 15
+        if @pff < 5
+          pt3 = -abs(@fn6(acosh(pt1)*(@pff+.0001)))
+        else
+          pt3 = -abs(@fn6(acosh(pt1*@pff)))
+        endif
+      elseif @ptt == 2               ; Patterns 2
+        pt1 = abs(@pto-sqr(@fn7(tz^(@tp*.5)))/cabs(@pto+(.0001,.0001)))
+        scale = scale * 20
+        pt3 = -abs(@fn6(acosh(pt1)*(@pff+.0001)))
+      elseif @ptt == 3               ; Patterns 3
+        scale=scale*15, pt1 = abs(@fn7(tz))^(@tp*.5)
+        pt3 = -pt1*(@pff+.0001)-abs(acosh(@fn6(pt3+2)))
+      elseif @ptt == 4               ; Patterns 4
+        scale=scale*20, pt1 = abs(@fn7(tz))^(@tp*.5)
+        pt3 = -pt1*(@pff-.25)-abs(acos(@fn6(pt1)))
+      elseif @ptt == 5               ; Patterns 5 #z
+        pt1 = abs(@fn7(@pto-gc))^(@tp*.05)
+        scale = scale * 25
+        pt3 = -abs(@fn6(pt1))*(@pff+.0001)
+      elseif @ptt == 6               ; Patterns 6 #pixel
+        PixDis = real(#pixel)-real(#center) \
+           +flip(imag(#pixel)-imag(#center))
+        pt1 = abs(@fn7(tz))^(@tp*.05)
+        scale = scale * 7.5
+        pt3 = @fn6(PixDis)-pt1*(@pff-1)
+      elseif @ptt == 7                ; Fuzz 1
+        pt1 = abs(@fn7(tz))^(@tp*.05)
+        scale = scale * 50
+        pt3 = -abs(@fn6(acosh(sin(#pixel*(@pff+1)))))-pt1
+      elseif @ptt == 8                ; Fuzz 2
+        PixDis = real(#pixel)-real(#center) \
+           +flip(imag(#pixel)-imag(#center))
+        pt1 = abs(@fn7(pt3-tz))^(@tp*.05)
+        scale = scale * 50
+        pt3 = -pt1-abs(@fn6(acosh(sin(PixDis)*@pff)))
+      elseif @ptt == 9                ; Tri - Patterns 1
+        df = .2, scale = scale * 1.25, pt1 = abs(@fn6(gc))^(@tp*.05)
+        pt3 = -abs((tz^za)/pt1)*@pff
+      elseif @ptt == 10               ; Tri - Patterns 2
+        df = .2, pt1 = abs(@fn6(tz))^(@tp*.05)
+        scale = scale * 15, pt3 = -abs(za^.1/pt1)*@pff
+      elseif @ptt == 11 || @ptt == 0  ; Tri - Patterns 3
+        df = .2
+        pt3 = @fn6(tz*za)^@tp*@pff
+      elseif @ptt == 12               ; Tri - Patterns 4
+        df = .2, scale=scale*5
+        pt3 = @fn6(-pt1-abs(acos(sin(za/10-tz/10)*@pff)))
+      elseif @ptt == 13               ; Tri - Patterns 5
+        df = .2
+        pt3 = -abs(@fn7(@fn6(tz+za)))*@pff
+      elseif @ptt == 14               ; Tri - Patterns 6
+        df = .2
+        pt3 = @fn6(tz)-za*@pff
+      elseif @ptt == 15               ; Tri - Patterns 7
+        df = .2, scale = scale * 2
+        pt3 = @fn6(tz)-za*(@pff)
+      endif
+      if ti > ico || ti < icm
+        pt3 = (ti + flip(-ti))*icd
+      endif
+      if @pct == true
+        scale = scale * 2
+      endif
+      w = acosh(pt3*10^8)*scale
+      pt3 = (w - round(w))
+      if @pct == true
+        pt3 = @fn5(pt3)
+      else
+        pt3 = @fn5(acosh(pt3))
+      endif
+      if (@ptt == 0) && !(@cm == 9)
+        texFin = 0
+      else
+        texFin = cabs(pt3+@pto^@ptm)*@ptd*df
+        if !(@pta == 0)
+          texFin = (texFin - trunc(texFin))*@pta
+        else
+          texFin = (texFin - trunc(texFin))*.25
+        endif
+      endif
+    endif
+;****************************
+    if @tm == 0
+      t2 = 0
+    endif
+    float tmp = dist
+    if (@cm == 1)
+      tmp = (za*(@ta+1))
+    elseif (@cm == 2)
+      tmp = ti*.1
+    elseif (@cm == 3)
+      tmp = ti%abs(@mc)*.8
+    elseif (@cm == 4)
+      tmp = cabs(tz)^.1
+    elseif (@cm == 5)
+      tmp = abs(real(tz))^.1
+    elseif (@cm == 6)
+      tmp = abs(imag(tz))^.1
+    elseif (@cm == 7)
+      tmp = abs(atan2(tz)/pi)
+    elseif (@cm == 8)
+      tmp = cabs(pt3)
+    elseif (@cm == 9)
+      tmp = 0
+    endif
+    if !(@cm == 1)
+      #index = tmp^2 + za*@ta*t2 + texFin
+    else
+      #index = tmp^2
+    endif
+  endif
+default:
+  title = "Doodads"
+  helpfile = "ldm-help\ldm-help.htm"
+  helptopic = "Doodads"
+  $ifdef VER30
+    param trp
+      caption = "More Trap Parameters"
+      hint = "Additional parameters less frequently used."
+      default = true
+    endparam
+  $endif
+  $ifdef VER30
+    param txp
+      caption = "More Texture Parameters"
+      hint = "Additional parameters less frequently used."
+      default = true
+    endparam
+  $endif
+  param m
+    caption = " Trap Mode"
+    enum = "1" "2" "3" "4" "5" "6" "7" "8" \
+           "9" "A" "B" "C" "D" "E" "F" "G" \
+           "H" "I" "J" "K" "L" "M" "N" "O" \
+           "P" "Q" "R" "S" "T" "U"
+    default = 0
+  endparam
+  param mr
+    caption = "Flavor"
+    enum = "A" "B" "C" "D" "E" "F" "G" \
+           "H" "I" "J" "K" "L" "M"
+    default = 0
+  endparam
+  param mrf
+    caption = "Apply ABS to Flavor"
+    default = false
+    $ifdef VER30
+      visible = @mr < 5 && @trp == true
+    $endif
+  endparam
+  param tad
+    caption = "Trap Addend"
+    default = 0.0
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endparam
+  param fm
+    caption = "Flavor Multiplier"
+    default = (1,1)
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endparam
+  param cm
+    caption = "Coloring Mode"
+    enum = "Min Distance" "Triangles Only" "Iteration" "Modulated Iter" \
+           "Magnitude" "Real" "Imaginary" "Angle" \
+           "'PreTex'" "Patterns+Triangles"
+    default = 0
+  endparam
+  param mc
+    caption = "Mod. Iter Modulus"
+    hint = "The modulus value for Modulated \
+            Iter coloring."
+    default = 8.0
+    $ifdef VER30
+      visible = @cm == 3
+    $endif
+  endparam
+  param tm
+    caption = "Triangle Mode"
+    enum = "Off" "1" "2" "3" "4" "5" "6" "7" "8" "9" "10"
+    default = 1
+  endparam
+  param ta
+    caption = " Triangle Amount"
+    default = 0.0
+  endparam
+ param change
+    caption = "Morph"
+    enum = "1""2""3""4""5""6""7""8""9""10""11"
+    visible = @trp == true    
+    default = 0
+  endparam
+  complex param exp1
+    caption = "Bias 1"
+    default = (1,0)
+    visible = @trp == true    
+  endparam
+  complex param exp3
+    caption = "Bias 2"
+    default = (1,0)
+    visible = @trp == true && @change > 0
+  endparam  
+  complex param exp2
+    caption = "Bias 3"
+    default = (1,0)
+    visible = @trp == true && @change > 5
+  endparam
+  complex param tw
+    caption = "Twist 1"
+    default = (0,0)
+    visible = @trp == true    
+  endparam    
+  complex param tw2
+    caption = "Twist 2"
+    default = (0,0)
+    visible = @trp == true && @change > 0    
+  endparam      
+  complex param tw3
+    caption = "Twist 3"
+    default = (0,0)
+    visible = @trp == true && @change > 5    
+  endparam  
+  param op
+    caption = "Operator"
+    enum = "+""-""*""/""^"
+    default = 0
+    visible = @trp == true && @change > 5    
+  endparam    
+  param ptt
+    caption = "P&F Texture Mode"
+    enum = " Off" "a Patterns 1" "b Patterns 2" "c Patterns 3" \
+           "d Patterns 4" "e Patterns #z" "f Patterns #pixel" \
+           "g Fuzz 1" "h Fuzz 2" "i Tri-Pattern 1" \
+           "j Tri-Pattern 2" "k Tri-Pattern 3" "l Tri-Pattern 4" \
+           "m Tri-Pattern 5" "n Tri-Pattern 6" "o Tri-Pattern 7"
+     default = 0
+  endparam
+  param pta
+    caption = " P&F Amount"
+    default = 0.2
+    $ifdef VER30
+      visible = (@cm == 9 || !(@ptt == 0))
+    $endif
+  endparam
+  param pct
+    caption = "Change Tx Style"
+    hint = "Another change in texture. Works with \
+            Triangles and Patterns"
+    default = false
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endparam
+  $ifdef VER30
+    heading
+      caption = "Triangle Texture Parameters"
+      visible = (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    endheading
+  $endif
+  param nsc
+    caption = " Triangle Scale"
+    hint = "If 'Use Real Scale' is enabled, the \
+            real value is applied to both the \
+            real and imaginary scales. Values from \
+            .01 to 100"
+    default = (1,1)
+    $ifdef VER30
+      visible = (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param ur
+    caption = "Use 'Real' Scale"
+    default = false
+    $ifdef VER30
+      visible = !(real(@nsc) == imag(@nsc)) \
+       && (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param v2
+    caption = " Triangle Contrast"
+    default = 1.0
+    $ifdef VER30
+      visible = (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param tb
+    caption = " Triangle Weight"
+    hint = "Changes the way the triangles are drawn. \
+            4 bit binary weighting."
+    default = 15
+    $ifdef VER30
+      visible = @txp && (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param f
+    caption = " Triangle 'Offset'"
+    hint = "Use small increments/decrements for best results."
+    default = 1.05
+    $ifdef VER30
+      visible = @txp && (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param step
+    caption = " Triangle Steps"
+    default = 20
+    $ifdef VER30
+      visible = @txp && (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  param r
+    caption = "Randomness"
+    default = 0.0
+    hint = "Only used for triangle modes."
+    $ifdef VER30
+      visible = @txp && (@cm == 1 || (!(@ta == 0) && !(@tm == 0)) \
+       || (!(@pta == 0) && (@ptt > 8)) \
+       || ((@ptt == 0) && @cm == 9))
+    $endif
+  endparam
+  $ifdef VER30
+    heading
+      visible = (@cm == 1 || (!(@ta == 0) && !(@tm == 0))) \
+       && (!(@cm == 9) && @ptt == 0)
+    endheading
+  $endif
+  $ifdef VER30
+    heading
+      caption = "Patterns & Fuzz Texture Parameters"
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    endheading
+  $endif
+  param pto
+    caption = " P&F Offset"
+    hint = "Changes the appearance of the texture. \
+            When 'Change Tx Style' is enabled, 0,0 \
+            here produces circular Patterns."
+    default = (-1,.75)
+    $ifdef VER30
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    $endif
+  endparam
+  param psc
+    caption = "P&F Scale"
+    hint = "Larger values decrease the scale."
+    default = 5.0
+    $ifdef VER30
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    $endif
+  endparam
+  param ptd
+    caption = " P&F Density"
+    hint = "Works similarly to 'Color Density', but is \
+            applied only to textures."
+    default = 5.0
+    $ifdef VER30
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    $endif
+  endparam
+  param ptm
+    caption = " P&F Modifier"
+    hint = "Try values of 0.1 to 5"
+    default = 1.0
+    $ifdef VER30
+      visible = @txp && !(@cm == 1) && (@cm == 9 \
+       || (!(@ptt == 0) && !(@pta == 0)))
+    $endif
+  endparam
+  param pff
+    caption = " P&F Fuzz Factor"
+    hint = "Values above 1 give a less well-defined \
+            edge to Patterns."
+    default = 1.0
+    $ifdef VER30
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    $endif
+  endparam
+  $ifdef VER30
+    heading
+      visible = !(@cm == 1) && (@cm == 9 || (!(@ptt == 0) && !(@pta == 0)))
+    endheading
+  $endif
+  param tp
+    caption = "Texture Power"
+    default = 1.0
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endparam
+  param sk
+    caption = "Iteration Cutoff"
+    hint = "No texture is drawn after positive integer \
+            values, or before negative integer values. \
+            Any Decimal portion 'blends' in iteration \
+            coloring."
+    default = 0.0
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endparam
+  param co
+    caption = "Solid Color @ IC"
+    hint = "Turns on Solid Color at the 'Iteration \
+            Cutoff'."
+    default = false
+    $ifdef VER30
+      visible = !(@sk == 0)
+    $endif
+  endparam
+  param pwr
+    caption = "`Trap Power'"
+    default = 3.0
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endparam
+  param mul
+    caption = " Trap Multiplier"
+    default = 3.0
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endparam
+  param sb
+    caption = "'Ripple' Control"
+    hint = "A few Trap Modes are unaffected by this \
+            parameter. Useful Range is -50 to 50"
+    default = 0.0
+    $ifdef VER30
+      visible = @trp
+    $endif
+    endparam
+  param sa
+    caption = "Expand+|-Contract"
+    hint = "Useful Range is around -10 to 10"
+    default = 0.0
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endparam
+  param msk
+    caption = " Mask Threshold"
+    default = 0.0
+  endparam
+  param im
+    caption = "Reverse Mask"
+
+    hint = "Reverses the areas drawn in the Solid Color \
+            with those areas drawn normally."
+    default = false
+    $ifdef VER30
+      visible = !(@msk == 0)
+    $endif
+  endparam
+  $ifdef VER30
+    heading
+      caption = "Functions"
+    endheading
+  $endif
+  func fn4
+    caption  = "Initial function"
+    default = ident()
+  endfunc
+  func fn1
+    caption  = "Real function"
+    default = ident()
+  endfunc
+  func fn2
+    caption  = "Imag function"
+    default = ident()
+  endfunc
+  func fn3
+    caption  = "Overall function"
+    default = ident()
+  endfunc
+  func fn9
+    caption  = "First Trap function"
+    default = ident()
+    $ifdef VER30
+      visible = @trp
+    $endif
+  endfunc
+  func fn8
+    caption  = "Final Trap function"
+    default = ident()
+  endfunc
+  func nufunc
+    caption = "Morph function 1"
+    default = ident()
+    visible = @trp == true    
+  endfunc 
+  func nufunc2
+    caption = "Morph function 2"
+    default = ident ()
+    visible = @trp == true && @change > 0
+  endfunc
+  func nufunc3
+    caption = "Morph function 3"
+    default = ident ()
+    visible = @trp == true && @change > 5
+  endfunc
+  
+  func fn5
+    caption  = "Texture function 1"
+    default = ident()
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endfunc
+  func fn6
+    caption  = "Texture function 2"
+    default = ident()
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endfunc
+  func fn7
+    caption  = "Texture function 3"
+    default = ident()
+    $ifdef VER30
+      visible = (@cm == 1 || @cm == 9 || (!(@ta == 0) && !(@tm == 0)) \
+         || ((@ptt > 0) && @pta > 0))
+    $endif
+  endfunc
+  
+}

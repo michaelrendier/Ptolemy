@@ -1,0 +1,401 @@
+Newton_poly {
+; coded by Anton Lorenz
+; February 2004
+
+
+
+init:
+
+  complex x=#pixel
+  complex delta_x
+  bool continue = true  ; bailout
+  complex a = 0
+  complex b = 0
+  float k = 0
+  float l = 0
+  float m = 0
+  complex t = (0,0)
+ 
+loop:
+  px = (0,0)
+  dpx = (0,0)
+
+ if @f1 != 0.0
+  a = @a1
+  k = @k1
+  px =  px + (x^k + a*x)*@f1
+  dpx = dpx + (k*x^(k-1) + a)*@f1
+ endif
+ 
+if @f2 != 0.0
+  a = @a2
+  k = @k2
+  px =  px + (x^k + a*x)*@f2
+  dpx = dpx + (k*x^(k-1) + a)*@f2
+endif 
+
+if @f3 != 0.0
+  a = @a3
+  b = @b3
+  px  = px + (b*x/(1+a)^2 + x^2/(2*(1+a)) - a*b*log(a*b+(1+a)*x)/(1+a)^3)*@f3
+  dpx = dpx + (x/(a + x/(b+x)))*@f3
+endif
+if @f3a != 0.0
+  a = @a3a
+  b = @b3a
+  k = @k3a
+  l = @l3a
+  m = @m3a
+  px  = px + (x^k/(a + x^l/(b+x^m)))*@f3a
+  dpx = dpx + (  (k*x^(k - 1))/(x^l/(x^m + b) + a) - \
+  (x^k*((l*x^(l - 1))/(x^m + b) - (m*x^(l + m - 1))/ \
+      (x^m + b)^2))/(x^l/(x^m + b) + a)^2  ) * @f3a
+endif
+if @f4 != 0.0
+  k = @k4
+  b = @b4
+  t = b*log(x)
+  px  = px + (((1+k)*x^(1+k)*cos(t)  + b*x^(1+k)*sin(t))/((1+k)^2-b^2))*@f4
+  dpx = dpx + (x^k * Cos(b*Log(x)))*@f4
+endif
+
+if @f5 != 0.0
+  a = @a5
+  t = exp(a - x^2) 
+  px  = px + ( t* x )*@f5
+  dpx = dpx + ( -t/2 )*@f5
+endif
+
+if @f6 != 0.0
+  k = @k6
+  l = @l6
+  a = @a6
+  b = @b6
+  t = x^l
+  px  = px +  (  x^(1+k-l)/(1+k-l) + (a*x/(1-l) + b*x^2)/t )*@f6
+  dpx = dpx + ( (a + b * x +  x^k)/t  )*@f6
+endif
+
+if @f7 != 0.0
+  a = @a7
+  b = @b7
+  k = @k7
+  l = @l7
+  m = @m7
+  px  = px + ( x^k/(a + x/(b + x)^m)^l )*@f7
+  dpx = dpx + (  (k*x^(k - 1))/(x/(b + x)^m + a)^l \
+            - l*x^k*((b + x)^(-m) - m*x*(b + x)^(-m - 1))*(x/(b + x)^m + a)^(-l - 1)  ) * @f7
+endif
+if @f8 != 0.0
+  a = @a8
+  b = @b8
+  k = @k8
+  l = @l8
+  m = @m8
+  px  = px + ( Sin(x^k/(a + x/(b + x)^l)^m)  )*@f8
+  dpx = dpx + ( ((k*x^(k - 1))/(x/(b + x)^l + a)^m  - m*x^k*((b + x)^(-l) \
+            - l*x*(b + x)^(-l - 1))*(x/(b + x)^l + a)^(-m - 1))* Cos(x^k/(x/(b + x)^l + a)^m)   ) * @f8
+endif
+if @f9 != 0.0
+  a = @a9
+  b = @b9
+  k = @k9
+  l = @l9
+  m = @m9
+  px  = px + ( x^l* b^(a + x)^m )*@f9
+  dpx = dpx + ( b^(a + x)^m*l*x^(-1 + l)  \
+            + b^(a + x)^m*m*x^l*(a + x)^(-1 + m)*Log(b)   ) * @f9
+endif
+
+
+  delta_x = (px + @q)  / dpx 
+  x = x - delta_x
+  
+   if @xmode=="x"  
+
+        z = delta_x
+    elseif @xmode == "dx" 
+        z = x
+    elseif @xmode == "1/x"  
+        z = 1/x 
+    elseif @xmode == "1/dx"
+        z = 1/delta_x
+    elseif @xmode =="sum x" 
+        z = z + x
+    elseif @xmode == "sum dx"
+        z = z + delta_x
+    elseif @xmode == "sum 1/x"
+        z = z + 1/x
+    elseif @xmode == "sum 1/dx"
+        z = z + 1/delta_x
+    endif ; xmode 
+    
+  if |delta_x| < @delta
+    continue = false
+  endif 
+bailout:
+   continue
+  
+default:
+  title = "x = x - P(x)/P'(x)" 
+;  or      x = x - integral[P(x)])/P(x)
+  periodicity = 0   ; turn off periodicity checking by default
+  magn = 0.5       ; default zoom factor.
+  
+  complex param q
+    caption="q"
+    hint="The coefficient q in the function P(x) := f(x) + q"
+    default=(-3,0.5)
+  endparam
+;---------------------------  
+  heading   
+    caption = "f1-------------"
+  endheading
+  float param f1
+    caption = "function 1"
+    default = 1.0
+  endparam
+  
+  float param k1
+    visible = @f1 != 0.0
+    default = -5.0
+  endparam
+  
+  complex param a1
+    visible = @f1 != 0.0
+    default =(5,0.20)
+  endparam
+;------------------------------
+  heading   
+    caption = "f2-------------"
+  endheading
+
+  float param f2
+    caption = "function 2"
+    default = 0.0
+  endparam
+  
+  float param k2
+    visible = @f2 != 0.0
+    default = -2
+  endparam 
+  complex param a2
+    visible = @f2 != 0.0
+    default =(1,0)
+  endparam
+
+;--------------------------------
+  heading   
+    caption = "f3-------------"
+  endheading
+  float param f3
+    caption = "function 3"
+    default = 0.0
+  endparam
+
+  complex param a3
+    visible = @f3 != 0.0
+    default =(1,0)
+  endparam
+
+  complex param b3
+    visible = @f3 != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+  heading   
+    caption = "f3A-------------"
+  endheading
+  float param f3a
+    caption = "function 3a"
+    default = 0.0
+  endparam
+  float param k3a
+    visible = @f3a != 0.0
+    default = 2.0
+  endparam
+  float param l3a
+    visible = @f3a != 0.0
+    default = 1.0
+  endparam
+  float param m3a
+    visible = @f3a != 0.0
+    default = 1.0
+  endparam
+  complex param a3a
+    visible = @f3a != 0.0
+    default =(1,0)
+  endparam
+
+  complex param b3a
+    visible = @f3a != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+  heading   
+    caption = "f4-------------"
+  endheading
+  float param f4
+    caption = "function 4"
+    default = 0.0
+  endparam
+
+  float param k4
+    visible = @f4 != 0.0
+    default = 2
+  endparam
+
+  complex param b4
+    visible = @f4 != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+  heading   
+    caption = "f5-------------"
+  endheading
+  float param f5
+    caption = "function 5"
+    default = 0.0
+  endparam
+
+  complex param a5
+    visible = @f5 != 0.0
+    default =(1,0)
+  endparam
+
+;-------------------------------- 
+
+  heading   
+    caption = "f6-------------"
+  endheading
+  float param f6
+    caption = "function 6"
+    default = 1.0
+  endparam
+
+  float param k6
+    visible = @f6 != 0.0
+    default = -1.0
+  endparam
+  float param l6
+    visible = @f6 != 0.0
+    default = 3  
+    endparam
+  complex param a6
+    visible = @f6 != 0.0
+    default =(-2,0)
+  endparam
+  complex param b6
+    visible = @f6 != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+   heading   
+    caption = "f7-------------"
+  endheading
+  float param f7
+    caption = "function 7"
+    default = 0.0
+  endparam
+  float param k7
+    visible = @f7 != 0.0
+    default = 1.0
+  endparam
+  float param l7
+    visible = @f7 != 0.0
+    default = -3.0
+  endparam
+  float param m7
+    visible = @f7 != 0.0
+    default = 5.0
+  endparam
+  complex param a7
+    visible = @f7 != 0.0
+    default =(2,0)
+  endparam
+
+  complex param b7
+    visible = @f7 != 0.0
+    default =(2,0)
+  endparam
+;-------------------------------- 
+    heading   
+    caption = "f8-------------"
+  endheading
+  float param f8
+    caption = "function 8"
+    default = 0.0
+  endparam
+  float param k8
+    visible = @f8 != 0.0
+    default = 1.0
+  endparam
+  float param l8
+    visible = @f8 != 0.0
+    default = -2.0
+  endparam
+  float param m8
+    visible = @f8 != 0.0
+    default = -3.0
+  endparam
+  complex param a8
+    visible = @f8 != 0.0
+    default =(1,0)
+  endparam
+
+  complex param b8
+    visible = @f8 != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+     heading   
+    caption = "f9-------------"
+  endheading
+  float param f9
+    caption = "function 9"
+    default = 0.0
+  endparam
+  float param k9
+    visible = @f9 != 0.0
+    default = 1.0
+  endparam
+  float param l9
+    visible = @f9 != 0.0
+    default = -2.0
+  endparam
+  float param m9
+    visible = @f9 != 0.0
+    default = -3.0
+  endparam
+  complex param a9
+    visible = @f9 != 0.0
+    default =(1,0)
+  endparam
+
+  complex param b9
+    visible = @f9 != 0.0
+    default =(1,0)
+  endparam
+;-------------------------------- 
+ 
+  heading   
+    caption = "Bailout"
+  endheading
+  
+  float param delta
+    caption="Bailout delta"
+    default=1e-4
+    min=0
+  endparam
+  
+  heading 
+    caption = "Colouring"
+  endheading
+
+  param xmode
+    caption = "final z"
+    enum = "x" "dx" "1/x" "1/dx" "sum x" "sum dx" "sum 1/x" "sum 1/dx"
+    default = 1
+  endparam
+  
+}

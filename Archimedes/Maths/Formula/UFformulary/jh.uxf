@@ -1,0 +1,448 @@
+jh-poles {
+; (c) Jussi Härkönen 2007-2008
+; This transform is related to the inverse transform - instead of just inverting
+; the origin to infinity, the user can choose up to three poles to where
+; the infinity is mapped. The user can also select a destination point to where
+; a specific source point is mapped.
+;
+; 07-12-26 First implementation
+; 08-03-05 Added the Pole Smoothing parameter to fix too busy spots at pole locations.
+;
+transform:
+  ; Calculate denominator
+  complex denominator
+
+  if (@numPoles == "1")
+    denominator = (#pixel - @firstPole)^2
+  elseif (@numPoles == "2")
+    denominator = (#pixel - @firstPole) * (#pixel - @secondPole)
+  else ; 3 poles
+    denominator = (#pixel - @firstPole) * (#pixel - @secondPole) * (#pixel - @thirdPole)
+  endif
+
+  denominatorConjugate = real(denominator) - flip(imag(denominator))
+  
+  ; Map source point to destination and infinity to poles
+  ; Nonzero pole smoothing stops the denominator from approaching zero. This
+  ; removes busy details around the poles.
+  #pixel = @source + (#pixel - @destination)^@exponent * denominatorConjugate / (@poleSmoothing + denominator*denominatorConjugate);/ denominator
+
+default:
+  title = "Poles"
+
+  param numPoles
+    caption = "Poles"
+    default = 2
+    enum = "1" "2" "3"
+    hint = "Specifies the number of poles to where the infinity is mapped."
+  endparam
+  
+  complex param poleSmoothing
+    caption = "Pole Smoothing"
+    default = (0,0)
+    hint = "Use nonzero values to remove busy details in pole locations."
+  endparam
+
+  complex param source
+    caption = "Source"
+    default = (0, 0)
+    hint = "Specifies the source point that is mapped to both the destination \
+            location and the infinity. Note that you should use an exponent smaller than the \
+            number of poles to make sure the source point is mapped correctly."
+  endparam
+
+  complex param destination
+    caption = "Destination"
+    default = (0, 0)
+    hint = "Destination location to where the source point is mapped."
+  endparam
+
+  int param exponent
+    caption = "Exponent"
+    default = 1
+    hint = "Exponent that affects the transform shape close to the \
+            destination point."
+  endparam
+
+  complex param firstPole
+    caption = "1st pole"
+    default = (1, 0)
+    hint = "First pole."
+  endparam
+
+  complex param secondPole
+    caption = "2nd pole"
+    default = (-1, 0)
+    hint = "Second pole."
+    enabled = @numPoles > 0
+  endparam
+  
+  complex param thirdPole
+    caption = "3rd pole"
+    default = (0, 1)
+    hint = "Third pole."
+    enabled = @numPoles > 1
+  endparam
+}
+
+TileTransform {
+; (c) 2007 Jussi Härkönen
+;
+; *** NOTE: This formula is deprecated. Use Tiles Deluxe instead! ***
+;
+; This transform offsets the image so that its edges coincide at the location
+; specified by the user. This is useful when designing
+; tiled textures, as the edges should blend to each other as seamlessly
+; as possible.
+;
+; 07-11-12 First version
+; 07-12-29 Added offset amount parameters
+;
+global:
+  ; View area variables
+  float aspect = (#width) / (#height)
+  float halfWidth
+  float halfHeight
+
+  ; Width and height as functions of aspect ratio as in the location tab
+  if (aspect > 4/3)
+    halfHeight = 1.5
+    halfWidth = aspect * halfHeight
+  else
+    halfWidth = 2.0
+    halfHeight = halfWidth / aspect
+  endif
+
+  if (@mode == "Vertical")
+    ; Don't offset x
+    halfWidth = 0
+  elseif (@mode == "Horizontal")
+    ; Don't offset y
+    halfHeight = 0
+  endif
+
+  ; Scale by magnification
+  halfWidth = halfWidth / #magn
+  halfHeight = halfHeight / #magn
+
+transform:
+  ; View coordinates denote the original coordinates used to calculate the fractal
+
+  ; Edge position in normalized coordinates
+  float xEdgePosition = -halfWidth + 2*halfWidth * (@xOffsetAmount % 1)
+  float yEdgePosition = -halfHeight + 2*halfHeight * (@yOffsetAmount % 1)
+
+  ; Transform pixel location to normalized coordinates - translate and rotate
+  complex normalizedLocation = exp(flip(-#angle)) * (#pixel - #center)
+
+  float xOffset
+  float yOffset
+
+  ; Determine horizontal offset
+  if (real(normalizedLocation) >= xEdgePosition)
+    ; Point is on the right of center - offset by -width/2 - offset
+    xOffset = -halfWidth - xEdgePosition
+  else
+    ; Offset by width/2 - offset
+    xOffset = halfWidth - xEdgePosition
+  endif
+
+  ; Determine vertical offset
+  if (imag(normalizedLocation) >= yEdgePosition)
+    yOffset = -halfHeight - yEdgePosition
+  else
+    yOffset = halfHeight - yEdgePosition
+  endif
+
+  ; Now offset is known in normalized coordinates. Rotate it to align with
+  ; the view coordinates.
+  ;complex locationOffset = exp(flip(#angle)) * (xOffset + flip(yOffset))
+  ;#pixel = #pixel + locationOffset
+
+  ; Untiled min and max values of normalized coordinates
+  #pixel = #center + exp(flip(#angle)) * (normalizedLocation + (xOffset + flip(yOffset)))
+
+default:
+  title = "Tile Transform"
+
+  heading
+    caption = "Fibers and Things"
+  endheading
+$ifdef VER40
+  heading
+    text = "NOTE: This transform is deprecated. Use Tiles Deluxe in jh.uxf instead to \
+            access additional tiling settings."
+  endheading
+$endif
+
+  param mode
+    caption = "Tile mode"
+    default = 1
+    enum = "Vertical" "Horizontal" "Both"
+    hint = "Specifies tiling in vertical (real), horizontal (imaginary) or both directions."
+  endparam
+
+  float param xOffsetAmount
+    caption = "Offset amount (Re)"
+    default = 0.5
+    enabled = @mode == 1 || @mode == 2
+    hint = "Specifies the amount of horizontal offset. 0 means no offset, 0.5 offsets edges to the center."
+  endparam
+  float param yOffsetAmount
+    caption = "Offset amount (Im)"
+    default = 0.5
+    enabled = @mode == 0 || @mode == 2
+    hint = "Specifies the amount of vertical offset. 0 means no offset, 0.5 offsets edges to the center."
+  endparam
+}
+
+
+jh-tiles-deluxe {
+; (c) 2007-2008 Jussi Härkönen
+;
+; This transform has been designed for easy creation and use of tiled images.
+;
+; 08-02-10 First version
+; 08-02-23 Implemented View mode and screen coordinate parameters
+; 08-03-02 Fixed some bugs in normalization/dernormalization calculations
+; 08-03-13 Fixed a bug with Use screen coordinates mode when tile aspect > image aspect
+; 08-03-18 Submitted to formula database
+;
+global:
+  ; Image view area variables:
+  float imageAspect = (#width) / (#height)
+  float halfImageHeight
+
+  ; Calculate image height as a function of the aspect ratio as in the
+  ; location tab
+  if (imageAspect > 4.0/3.0)
+    halfImageHeight = 1.5
+  else
+    halfImageHeight = 2.0 / imageAspect
+  endif
+
+  ; Scale image dimensions by magnification
+  halfImageHeight = halfImageHeight / #magn
+
+  ; Precalculate image dimensions
+  float imageHeight = 2 * halfImageHeight
+  float imageWidth = imageAspect * imageHeight
+
+
+  float tileAspect
+  if (@useImageAspect)
+    tileAspect = imageAspect
+  else
+    tileAspect = @tileAspect
+  endif
+
+  ; Calculate tile size and normalization scale
+  float tileHeight
+  float tileWidth
+  float centeredToNormalizedScale
+
+  if (tileAspect <= imageAspect)
+    ; Clip on left and right - use height to determine scale
+
+    if (@useScreenCoordinates)
+      tileHeight = imageHeight
+    else
+      ; Calculate height using the tile magnification parameter
+      tileHeight = imageHeight * #magn / @tileMagnification
+    endif
+    tileWidth = tileAspect * tileHeight
+
+    centeredToNormalizedScale = 1 / (imageHeight / 2)
+  else
+    ; Clip top and bottom - use width to determine scale
+    if (@useScreenCoordinates)
+      tileWidth = imageWidth
+    else
+      ; Calculate height using the tile magnification parameter
+      tileWidth = (imageWidth * #magn) / @tileMagnification
+    endif
+    tileHeight = tileWidth / tileAspect
+
+    centeredToNormalizedScale = tileAspect / (imageWidth / 2)
+  endif
+
+  ; Scaling coefficient for denormalization
+  float normalizedToCenteredScale
+  if (@useScreenCoordinates)
+    ; Use normalization scale
+    normalizedToCenteredScale = 1 / centeredToNormalizedScale
+  else
+    ; Use scale specified by tile area parameters
+
+    if (tileAspect <= imageAspect)
+      ; Tile height is used for normalization
+      normalizedToCenteredScale = (tileHeight/2)
+    else
+      ; Tile width is used for normalization - cancel scaling by tile aspect
+      normalizedToCenteredScale = tileWidth / (2*tileAspect)
+    endif
+  endif
+
+  complex relativeOffset = tileAspect * real(@offset) + flip(imag(@offset))
+
+  complex relativeTileSize = tileAspect + flip(1)
+
+  ; Calculate angle in radians (given in degrees by the user)
+  float tileAngle = 0.0174533 * @tileAngle
+
+transform:
+  ; View coordinates denote the original coordinates used to calculate the
+  ; fractal. #pixel (input) uses this coordinate system.
+
+  ; Centered coordinates have the origin translated to view center and the axes
+  ; are aligned parallel to the image edges.
+
+  ; Relative centered coordinate have the origin in view center
+  ; and the tile covers the area [-tileAspect,-1] x [tileAspect,1].
+
+  complex centeredLocation
+  complex relativeCenteredLocation
+
+  if (@viewMode != "Fixed grid")
+    ; Calculate centered coordinates
+    centeredLocation = exp(flip(-#angle)) * (#pixel - #center)
+
+    ; Calculate relative centered coordinates
+    relativeCenteredLocation = centeredLocation * centeredToNormalizedScale
+  else
+    ; Use pixel directly and skip transformation to relative centered coordinates
+    relativeCenteredLocation = @numTiles * #pixel
+  endif
+
+  ; Check if pixel is outside the tile (only in show tile mode)
+  if ((@viewMode == "One tile") && ((abs(real(relativeCenteredLocation)) > tileAspect) \
+       || (abs(imag(relativeCenteredLocation)) > 1)))
+    ; Pixel is outside the tile - Use solid color
+    #solid = true
+  else
+    ; Pixel is visible
+
+    ; Relative coordniates have the origin translated to lower left
+    ; corner and the tile covers the area [0,0] x [tileAspect,1].
+    complex relativeLocation = (relativeCenteredLocation + relativeTileSize) / 2
+
+    ; Apply scaling by number of tiles and offset
+    complex relativeOffsetLocation
+    if (@viewMode != "One tile")
+      relativeOffsetLocation = @numTiles * relativeLocation + relativeOffset
+    else
+      ; Show tile only - don't scale by number of tiles
+      relativeOffsetLocation = relativeLocation + relativeOffset
+    endif
+
+    ; Add offset
+    float xRelativeOffsetLocation = real(relativeOffsetLocation)
+    float yRelativeOffsetLocation = imag(relativeOffsetLocation)
+
+    if (@useSymmetry)
+      ; Scale by 0.5 to compensate for symmetry transform later on so the
+      ; tile size remains the same
+      xRelativeOffsetLocation = 0.5 * xRelativeOffsetLocation
+      yRelativeOffsetLocation = 0.5 * yRelativeOffsetLocation
+    endif
+
+    float xRrelativeTiledLocation = xRelativeOffsetLocation - tileAspect * floor(xRelativeOffsetLocation / tileAspect)
+    float yRrelativeTiledLocation = yRelativeOffsetLocation - floor(yRelativeOffsetLocation)
+
+    if (@useSymmetry)
+      ; Use symmetry for continuous tiling
+      xRrelativeTiledLocation = tileAspect - 2 * abs(xRrelativeTiledLocation - tileAspect/2)
+      yRrelativeTiledLocation = 1 - 2 * abs(yRrelativeTiledLocation - 0.5)
+
+    endif
+
+    ; Transform back to relative centered
+    relativeCenteredLocation = 2*(xRrelativeTiledLocation + flip(yRrelativeTiledLocation)) - relativeTileSize
+
+    centeredLocation = relativeCenteredLocation * normalizedToCenteredScale
+
+    ; Transform back from centered to view coordinates
+    if (@useScreenCoordinates)
+      #pixel = #center + exp(flip(#angle)) * centeredLocation
+    else
+      #pixel = @tileCenter + exp(flip(tileAngle)) * centeredLocation
+    endif
+  endif
+
+default:
+  title = "Tiles Deluxe"
+
+  param viewMode
+    caption = "View mode"
+    default = 0
+    enum = "One tile" "Tile grid" "Fixed grid"
+    hint = "View mode specifies how the tiles are shown. One tile mode simply \
+            shows one tile and clips outside areas. Tile grid shows a grid \
+            of tiles aligned to image edges and the Number of tiles parameter \
+            is used to specify the grid size. In the Fixed grid mode the \
+            visible area of the tile grid can be adjusted using the location \
+            tab."
+  endparam
+
+  complex param offset
+    caption = "Offset amount"
+    default = (0.0,0.0)
+    hint = "Specifies the amount of offset. 0 means no offset, (0.5,0.5) offsets edges to screen center."
+  endparam
+
+  bool param useSymmetry
+    caption = "Symmetric tiling"
+    default = true
+    hint = "Use symmetry (or mirroring) to achieve continuous tiling."
+  endparam
+
+  float param numTiles
+    caption = "Tile density"
+    default = 2
+    enabled = @viewMode != "One tile"
+    hint = "Specifies the number of times the tile is repeated in the Tile \
+            grid and Fixed grid view modes."
+  endparam
+
+  bool param useImageAspect
+    caption = "Use image aspect"
+    default = false
+    hint = "When checked, the image aspect ratio is used as the tile aspect \
+            ratio. Otherwise, the Tile aspect parameter is used."
+  endparam
+
+  float param tileAspect
+    caption = "Tile aspect ratio"
+    default = 1
+    enabled = @useImageAspect == false
+    hint = "Specifies the tile aspect ratio."
+  endparam
+
+  bool param useScreenCoordinates
+    caption = "Use screen coordinates"
+    default = true
+    hint = ""
+  endparam
+
+  complex param tileCenter
+    caption = "Tile center"
+    default = (0,0)
+    enabled = @useScreenCoordinates == false
+    hint = "Specifies the tile location center point."
+  endparam
+
+  float param tileMagnification
+    caption = "Tile magnification"
+    default = 1
+    enabled = @useScreenCoordinates == false
+    hint = "Specifies the tile location magnification."
+  endparam
+
+  float param tileAngle
+    caption = "Tile angle"
+    default = 0
+    enabled = @useScreenCoordinates == false
+    hint = "Specifies the tile location angle in degrees."
+  endparam
+}
+

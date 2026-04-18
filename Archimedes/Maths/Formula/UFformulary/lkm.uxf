@@ -1,0 +1,1569 @@
+comment {
+
+Transformations developed by Kerry Mitchell
+
+Includes:
+  Baker's Transformation
+  Cell 4
+  S Curve
+  Circle Zoom
+  Circle Color
+  Circle Clip
+  Trilateral Clip
+  Trilateral Color
+  Rectangle Clip
+  Rectangle Color
+  Quadrilateral Clip
+  Quadrilateral Color
+  Pentomino Clip
+  Pentomino Color
+  Placement
+  mirror
+
+Compilation last updated 25aug2008
+
+}
+
+baker { ; Kerry Mitchell 28mar99
+;
+; Based on the "Baker's Transformation" formula
+; see lkm.ufm for more information
+;
+transform:
+  float x=0.0
+  float tempx=0.0
+  float wholex=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float wholey=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+;
+; break plane into cells by taking fractional parts of x & y
+; add 0.5 to fractional parts to put them in range [0.0,1.0]
+;
+  x=real(#pixel-@cellcenter)
+  tempx=x/@cellsize
+  wholex=round(tempx)
+  fracx=tempx-wholex+0.5
+  y=imag(#pixel-@cellcenter)
+  tempy=y/@cellsize
+  wholey=round(tempy)
+  fracy=tempy-wholey+0.5
+  if(@maptype==1)               ; bottom to left
+    if(fracx<0.5)
+      fracu=2.0*fracx
+      fracv=0.5*fracy
+    else
+      fracu=2.0*fracx-1.0
+      fracv=0.5*fracy+0.5
+    endif
+  elseif(@maptype==2)           ; left to bottom
+    if(fracy<0.5)
+      fracu=0.5*fracx
+      fracv=2.0*fracy
+    else
+      fracu=0.5*fracx+0.5
+      fracv=2.0*fracy-1.0
+    endif
+  elseif(@maptype==3)           ; top to left
+    if(fracx<0.5)
+      fracu=2.0*fracx
+      fracv=0.5*fracy+0.5
+    else
+      fracu=2.0*fracx-1.0
+      fracv=0.5*fracy
+    endif
+  elseif(@maptype==4)           ; left to top
+    if(fracy<0.5)
+      fracu=0.5*fracx+0.5
+      fracv=2.0*fracy
+    else
+      fracu=0.5*fracx
+      fracv=2.0*fracy-1.0
+    endif
+  else                          ; none
+    fracu=fracx
+    fracv=fracy
+  endif
+;
+; reassemble #pixel with new fractional parts
+;
+  u=(wholex+fracu-0.5)*@cellsize
+  v=(wholey+fracv-0.5)*@cellsize
+  #pixel=u+flip(v)+@cellcenter
+default:
+  title="Baker's Transformation"
+  param maptype
+    caption="map type"
+    enum="none" "bottom to left" "left to bottom"\
+      "top to left" "left to top"
+    default=1
+  endparam
+  param cellsize
+    caption="cell size"
+    hint="try 1/magnification"
+    default=1.0
+  endparam
+  param cellcenter
+    caption="cell center"
+    default=(0.0,0.0)
+  endparam
+}
+
+cell4 { ; Kerry Mitchell 28mar99
+;
+; Based on the "Cell 4" formula
+; see lkm.ufm for more information
+;
+transform:
+  float x=0.0
+  float tempx=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+  x=real(#pixel-@cellcenter)
+  tempx=trunc(x/@cellsize)*@cellsize
+  fracx=x-tempx
+  y=imag(#pixel-@cellcenter)
+  tempy=trunc(y/@cellsize)*@cellsize
+  fracy=y-tempy
+;
+; determine which mapping to use
+;
+  if(@maptype==1)              ; 90 deg counter-clockwise rotation
+    fracu=-fracy
+    fracv=fracx
+  elseif(@maptype==2)          ; 180 deg rotation
+    fracu=-fracx
+    fracv=-fracy
+  elseif(@maptype==3)          ; 90 deg clockwise rotation
+    fracu=fracy
+    fracv=-fracx
+  elseif(@maptype==4)          ; flip horizontally
+    fracu=-fracx
+    fracv=fracy
+  elseif(@maptype==5)          ; flip vertically
+    fracu=fracx
+    fracv=-fracy
+  else                         ; no change
+    fracu=fracx
+    fracv=fracy
+  endif
+  u=tempx+fracu
+  v=tempy+fracv
+  #pixel=u+flip(v)+@cellcenter
+default:
+  title="Cell 4"
+  param maptype
+    caption="map type"
+    enum="none" "90 deg ccw" "180 deg" "90 deg cw" \
+      "flip horiz" "flip vert"
+    default=1
+  endparam
+  param cellsize
+    caption="cell size"
+    hint="try 1/magnification"
+    default=1.0
+  endparam
+  param cellcenter
+    caption="cell center"
+    default=(0.0,0.0)
+  endparam
+}
+
+scurve { ; Kerry Mitchell 28mar99
+;
+; Based on the "S Curve" formula
+; see lkm.ufm for more information
+;
+transform:
+  float x=0.0
+  float tempx=0.0
+  float wholex=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float wholey=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+  float onethird=1.0/3.0
+;
+; break plane into cells by taking fractional parts of x & y
+;
+  x=real(#pixel-@cellcenter)
+  tempx=x/@cellsize
+  wholex=round(tempx)
+  fracx=tempx-wholex
+  y=imag(#pixel-@cellcenter)
+  tempy=y/@cellsize
+  wholey=round(tempy)
+  fracy=tempy-wholey
+;
+; determine which mapping to use and apply it
+;
+  if(@maptype==1)               ; bottom to left
+    u=3.0*fracx
+    v=onethird*fracy
+    if(u<-0.5)
+      fracu=-1.0-u
+      fracv=-onethird-v
+    elseif(u>0.5)
+      fracu=1.0-u
+      fracv=onethird-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(@maptype==2)           ; left to bottom
+    u=onethird*fracx
+    v=3.0*fracy
+    if(v<-0.5)
+      fracu=-onethird-u
+      fracv=-1.0-v
+    elseif(v>0.5)
+      fracu=onethird-u
+      fracv=1.0-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(@maptype==3)           ; top to left
+    u=3.0*fracx
+    v=onethird*fracy
+    if(u<-0.5)
+      fracu=-1.0-u
+      fracv=onethird-v
+    elseif(u>0.5)
+      fracu=1.0-u
+      fracv=-onethird-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(@maptype==4)           ; left to top
+    u=onethird*fracx
+    v=3.0*fracy
+    if(v<-0.5)
+      fracu=onethird-u
+      fracv=-1.0-v
+    elseif(v>0.5)
+      fracu=-onethird-u
+      fracv=1.0-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  else                          ; none
+    fracu=fracx
+    fracv=fracy
+  endif
+;
+; reassemble #pixel with new fractional parts
+;
+  u=(wholex+fracu)*@cellsize
+  v=(wholey+fracv)*@cellsize
+  #pixel=u+flip(v)+@cellcenter
+default:
+  title="S Curve"
+  param maptype
+    caption="map types"
+    enum="none" "bottom to left" "left to bottom"\
+      "top to left" "left to top"
+  endparam
+  param cellsize
+    caption="cell size"
+    hint="try 1/magnification"
+    default=1.0
+  endparam
+  param cellcenter
+    caption="cell center"
+    default=(0.0,0.0)
+  endparam
+}
+
+circle-zoom { ; Kerry Mitchell 22jun99
+;
+; If the pixel is inside the specified circle, it
+; gets zoomed out to the same relative position inside
+; a new specifed circle.
+;
+transform:
+  float t=@newrot/180*#pi
+  rot=cos(t)+flip(sin(t))
+  float r=cabs(#pixel-@circlecenter)
+  if(r<=@circleradius)
+    #pixel=(#pixel-@circlecenter)/@circleradius
+    #pixel=#pixel*@newradius*rot+@newcenter
+  else
+    if(@solidtrue==true)
+      #solid=true
+    endif
+  endif
+default:
+  title="Circle Zoom"
+  param circlecenter
+    caption="old center"
+    default=(-1.0,0.0)
+    hint="center of the circle that the pixel is currently in"
+  endparam
+  param circleradius
+    caption="old radius"
+    default=0.25
+    hint="radius of the circle that the pixel is currently in"
+  endparam
+  param newcenter
+    caption="new center"
+    default=(-1.1,0.0)
+    hint="center of the circle that the pixel is zoomed to"
+  endparam
+  param newradius
+    caption="new radius"
+    default=0.4
+    hint="radius of the circle that the pixel is zoomed to"
+  endparam
+  param newrot
+    caption="new rotation"
+    default=0.0
+    hint="new rotation angle, in degrees"
+  endparam
+  param solidtrue
+    caption="outside solid?"
+    default=false
+    hint="enable to fill the outside of the circle with a solid color"
+  endparam
+}
+
+circle-color { ; Kerry Mitchell 08apr00
+;
+; Colors circular regions.  Specify the center, radius, 
+; inside/outside clipping, and a color parameter to be 
+; passed to the coloring algorithm.
+; 
+; This transform was written to be used with the 
+; "Passthru" coloring algorithm.
+;
+transform:
+  bool inside=false
+;
+; read the entering x and y flags
+;
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+;
+; determine the actual pixel coordinates
+;
+  xa=real(#pixel)-xflag*20
+  ya=imag(#pixel)-yflag*20
+  pixtemp=xa+flip(ya)
+;
+; check to see if the pixel is outside the circle
+;
+  if(cabs(pixtemp-@circlecenter)>@circleradius)
+    inside=false
+  else
+    inside=true
+  endif
+;
+; perform clipping & set flags:
+;   x flag = color parameter
+;   y flag = counter of how many times the pixel
+;     has been through this transform
+; encode pixel with flag data
+;
+  if((@inout==0)&&(inside==true))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+  if((@inout==1)&&(inside==false))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+default:
+  title="Circle Color"
+  helpfile="lkm-help\lkm-coloruxf.html"
+  param circlecenter
+    caption="circle center"
+    default=(0.0,0.0)
+  endparam
+  param circleradius
+    caption="radius"
+    default=1.0
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+  param setcolor
+    caption="set color"
+    default=1
+    hint="color parameter to pass to Passthru algorithm"
+  endparam
+}
+
+trilateral-clip { ; Kerry Mitchell 20jun99
+;
+; Clips out triangular regions.
+; Specify the 3 corner points, and
+; inside/outside clipping.
+;
+transform:
+  float t=0.0
+  float cost=0.0
+  float ttot=0.0
+  float xa=0.0
+  float ya=0.0
+  float xb=0.0
+  float yb=0.0
+  float pio2=0.5*#pi
+  float eps=0.00001
+;
+; find angle between first 2 corner vectors
+;
+  tempa=@corner1-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner2-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; find angle between second 2 corner vectors
+;
+  tempa=@corner2-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner3-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; find angle between third 2 corner vectors
+;
+  tempa=@corner3-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner1-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; compare total angle with 2*pi
+;
+  ttot=abs(2.0*#pi-ttot)
+;
+; perform clipping
+;
+  if((@inout==0)&&(ttot<eps))
+    #solid=true
+  endif
+  if((@inout==1)&&(ttot>eps))
+    #solid=true
+  endif
+default:
+  title="Trilateral Clip"
+  param corner1
+    caption="corner 1"
+    default=(1.0,0.0)
+  endparam
+  param corner2
+    caption="corner 2"
+    default=(0.0,1.0)
+  endparam
+  param corner3
+    caption="corner 3"
+    default=(-1.0,0.0)
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+}
+
+triangle-color { ; Kerry Mitchell 08apr00
+;
+; Colors triangular regions.  Specify the 3 corner points, 
+; inside/outside clipping, and a color parameter to be passed to the
+; coloring algorithm.
+; 
+; Bounding boxes are use to speed the calculation.  To use, enable
+; with the "bounding box?" checkbox, and enter the minimum x and y
+; values in the "xmin, ymin" parameter, and the maximum x and y values
+; in "xmax, ymax".
+;
+; This transform was written to be used with the "Passthru" coloring
+; algorithm.
+;
+transform:
+  float t=0.0
+  float cost=0.0
+  float ttot=0.0
+  float xa=0.0
+  float ya=0.0
+  float xb=0.0
+  float yb=0.0
+  float pio2=0.5*#pi
+  float eps=0.00001
+  bool inside=false
+;
+; read the entering x and y flags
+;
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+;
+; determine the actual pixel coordinates
+;
+  xa=real(#pixel)-xflag*20
+  ya=imag(#pixel)-yflag*20
+  pixtemp=xa+flip(ya)
+;
+; check to see if the pixel is outside of the bounding box
+;
+  if((@boxflag==true)&&(xa<real(@boxmin)))
+    inside=false
+  elseif((@boxflag==true)&&(ya<imag(@boxmin)))
+    inside=false
+  elseif((@boxflag==true)&&(xa>real(@boxmax)))
+    inside=false
+  elseif((@boxflag==true)&&(ya>imag(@boxmax)))
+    inside=false
+  else
+;
+; if not, work through each of the 3 sides and check the angles
+;
+;   find angle between first 2 corner vectors
+;
+  tempa=@corner1-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner2-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+;   find angle between second 2 corner vectors
+;
+  tempa=@corner2-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner3-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+;   find angle between third 2 corner vectors
+;
+  tempa=@corner3-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner1-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+  ttot=abs(2.0*#pi-ttot)
+  if(ttot<eps)
+    inside=true
+  endif
+  endif
+;
+; perform clipping & set flags:
+;   x flag = color parameter
+;   y flag = counter of how many times the pixel
+;     has been through this transform
+; encode pixel with flag data
+;
+  if((@inout==0)&&(inside==true))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+  if((@inout==1)&&(inside==false))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+default:
+  title="Triangle Color"
+  helpfile="lkm-help\lkm-coloruxf.html"
+  param corner1
+    caption="corner 1"
+    default=(1.0,0.0)
+  endparam
+  param corner2
+    caption="corner 2"
+    default=(0.0,1.0)
+  endparam
+  param corner3
+    caption="corner 3"
+    default=(-1.0,0.0)
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+  param setcolor
+    caption="set color"
+    default=1
+    hint="color parameter to pass to Passthru algorithm"
+  endparam
+  param boxflag
+    caption="bounding box?"
+    default=false
+  endparam
+  param boxmin
+    caption="xmin, ymin"
+    default=(-1.0,-1.0)
+  endparam
+  param boxmax
+    caption="xmax, ymax"
+    default=(1.0,1.0)
+  endparam
+}
+
+rectangle-clip { ; Kerry Mitchell 08may99
+;
+; Quick and dirty transform to clip out rectangular
+; regions.  Specify center, height, and width of
+; rectangle, and whether the inside or outside is to
+; be clipped.  Based on Luke Plant's "Scissors" and
+; Damien Jones' "Clipping", without as many useful features.
+;
+transform:
+  temp=#pixel-@center
+  float x=cabs(real(temp))
+  float y=cabs(imag(temp))
+  if(@inout==0)
+    if((x<@width)&&(y<@height))
+      #solid=true
+    endif
+  else
+    if((x>@width)||(y>@height))
+      #solid=true
+    endif
+  endif
+default:
+  title="Rectangle Clip"
+  param center
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param width
+    caption="width"
+    default=1.0
+  endparam
+  param height
+    caption="height"
+    default=1.0
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+}
+
+rectangle-color { ; Kerry Mitchell 08apr00
+;
+; Colors rectangular regions.  Specify the center, height, 
+; width, inside/outside clipping, and a color parameter to
+; be passed to the coloring algorithm.  For more general
+; shapes, use the "Quadrilateral Color" transform.
+; 
+; This transform was written to be used with the 
+; "Passthru" coloring algorithm.
+;
+transform:
+  bool inside=false
+;
+; read the entering x and y flags
+;
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+;
+; determine the actual pixel coordinates
+;
+  float xa=real(#pixel)-xflag*20
+  float ya=imag(#pixel)-yflag*20
+  pixtemp=xa+flip(ya)
+  pixtempmc=pixtemp-@rectanglecenter
+  float halfwidth=0.5*@width
+  float halfheight=0.5*@height
+;
+; check to see if the pixel is outside the square
+;
+  if((abs(real(pixtempmc))>halfwidth)||\
+     (abs(imag(pixtempmc))>halfheight))
+    inside=false
+  else
+    inside=true
+  endif
+;
+; perform clipping & set flags:
+;   x flag = color parameter
+;   y flag = counter of how many times the pixel
+;     has been through this transform
+; encode pixel with flag data
+;
+  if((@inout==0)&&(inside==true))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+  if((@inout==1)&&(inside==false))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+default:
+  title="Rectangle Color"
+  helpfile="lkm-help\lkm-coloruxf.html"
+  param rectanglecenter
+    caption="rectangle center"
+    default=(0.0,0.0)
+  endparam
+  param width
+    caption="width"
+    default=1.0
+  endparam
+  param height
+    caption="height"
+    default=1.0
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+  param setcolor
+    caption="set color"
+    default=1
+    hint="color parameter to pass to Passthru algorithm"
+  endparam
+}
+
+quadrilateral-clip { ; Kerry Mitchell 20jun99
+;
+; Clips out CONVEX quadrilateral regions.
+; Specify the 4 corner points, and
+; inside/outside clipping.
+;
+transform:
+  float t=0.0
+  float cost=0.0
+  float ttot=0.0
+  float xa=0.0
+  float ya=0.0
+  float xb=0.0
+  float yb=0.0
+  float pio2=0.5*#pi
+  float eps=0.00001
+;
+; find angle between first 2 corner vectors
+;
+  tempa=@corner1-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner2-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; find angle between second 2 corner vectors
+;
+  tempa=@corner2-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner3-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; find angle between third 2 corner vectors
+;
+  tempa=@corner3-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner4-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+; find angle between fourth 2 corner vectors
+;
+  tempa=@corner4-#pixel
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner1-#pixel
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+  ttot=abs(2.0*#pi-ttot)
+;
+; perform clipping
+;
+  if((@inout==0)&&(ttot<eps))
+    #solid=true
+  endif
+  if((@inout==1)&&(ttot>eps))
+    #solid=true
+  endif
+default:
+  title="Quadrilateral Clip"
+  param corner1
+    caption="corner 1"
+    default=(1.0,0.0)
+  endparam
+  param corner2
+    caption="corner 2"
+    default=(0.0,1.0)
+  endparam
+  param corner3
+    caption="corner 3"
+    default=(-1.0,0.0)
+  endparam
+  param corner4
+    caption="corner 4"
+    default=(0.0,-1.0)
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+}
+
+quadrilateral-color { ; Kerry Mitchell 02jul99
+;
+; Colors CONVEX quadrilateral regions.  Specify the 4 corner points, 
+; inside/outside clipping, and a color parameter to be passed to the
+; coloring algorithm.
+; 
+; Bounding boxes are use to speed the calculation.  To use, enable
+; with the "bounding box?" checkbox, and enter the minimum x and y
+; values in the "xmin, ymin" parameter, and the maximum x and y values
+; in "xmax, ymax".
+;
+; This transform was written to be used with the "Passthru" coloring
+; algorithm.
+;
+transform:
+  float t=0.0
+  float cost=0.0
+  float ttot=0.0
+  float xa=0.0
+  float ya=0.0
+  float xb=0.0
+  float yb=0.0
+  float pio2=0.5*#pi
+  float eps=0.00001
+  bool inside=false
+;
+; read the entering x and y flags
+;
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+;
+; determine the actual pixel coordinates
+;
+  xa=real(#pixel)-xflag*20
+  ya=imag(#pixel)-yflag*20
+  pixtemp=xa+flip(ya)
+;
+; check to see if the pixel is outside of the bounding box
+;
+  if((@boxflag==true)&&(xa<real(@boxmin)))
+    inside=false
+  elseif((@boxflag==true)&&(ya<imag(@boxmin)))
+    inside=false
+  elseif((@boxflag==true)&&(xa>real(@boxmax)))
+    inside=false
+  elseif((@boxflag==true)&&(ya>imag(@boxmax)))
+    inside=false
+  else
+;
+; if not, work through each of the 4 sides and check the angles
+;
+;   find angle between first 2 corner vectors
+;
+  tempa=@corner1-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner2-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+;   find angle between second 2 corner vectors
+;
+  tempa=@corner2-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner3-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+;   find angle between third 2 corner vectors
+;
+  tempa=@corner3-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner4-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+;
+;   find angle between fourth 2 corner vectors
+;
+  tempa=@corner4-pixtemp
+  xa=real(tempa)
+  ya=imag(tempa)
+  tempb=@corner1-pixtemp
+  xb=real(tempb)
+  yb=imag(tempb)
+  cost=(xa*xb+ya*yb)/cabs(tempa*tempb)
+  t=acos(cost)
+  if(t<0.0)
+    t=t+#pi
+  endif
+  if((pio2-abs(t-pio2))>eps)
+    ttot=ttot+t
+  endif
+  ttot=abs(2.0*#pi-ttot)
+  if(ttot<eps)
+    inside=true
+  endif
+  endif
+;
+; perform clipping & set flags:
+;   x flag = color parameter
+;   y flag = counter of how many times the pixel
+;     has been through this transform
+; encode pixel with flag data
+;
+  if((@inout==0)&&(inside==true))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+  if((@inout==1)&&(inside==false))
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+default:
+  title="Quadrilateral Color"
+  param corner1
+    caption="corner 1"
+    default=(1.0,0.0)
+  endparam
+  param corner2
+    caption="corner 2"
+    default=(0.0,1.0)
+  endparam
+  param corner3
+    caption="corner 3"
+    default=(-1.0,0.0)
+  endparam
+  param corner4
+    caption="corner 4"
+    default=(0.0,-1.0)
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+  param setcolor
+    caption="set color"
+    default=1
+    hint="color parameter to pass to Passthru algorithm"
+  endparam
+  param boxflag
+    caption="bounding box?"
+    default=false
+  endparam
+  param boxmin
+    caption="xmin, ymin"
+    default=(-1.0,-1.0)
+  endparam
+  param boxmax
+    caption="xmax, ymax"
+    default=(1.0,1.0)
+  endparam
+}
+
+pentomino-clip { ; Kerry Mitchell 08apr00
+transform:
+  bool inside=false
+  float u=0.0
+  float v=0.0
+  pixtemp=#pixel
+  rot=exp(-@tdeg*#pi/180*(0,1))
+  ll1=(0.0,0.0)
+  ur1=(0.0,0.0)
+  ll2=(0.0,0.0)
+  ur2=(0.0,0.0)
+  ll3=(0.0,0.0)
+  ur3=(0.0,0.0)
+  ll4=(0.0,0.0)
+  ur4=(0.0,0.0)
+  ll5=(0.0,0.0)
+  ur5=(0.0,0.0)
+  if(@type==1)               ; I type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(0.0,3.0)
+    ll5=(0.0,4.0)
+  elseif(@type==2)           ; L type
+    ll1=(1.0,0.0)
+    ll2=(0.0,0.0)
+    ll3=(0.0,1.0)
+    ll4=(0.0,2.0)
+    ll5=(0.0,3.0)
+  elseif(@type==3)           ; N type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,2.0)
+    ll5=(1.0,3.0)
+  elseif(@type==4)           ; P type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(1.0,2.0)
+    ll5=(1.0,1.0)
+  elseif(@type==5)           ; T type
+    ll1=(1.0,0.0)
+    ll2=(1.0,1.0)
+    ll3=(1.0,2.0)
+    ll4=(0.0,2.0)
+    ll5=(2.0,2.0)
+  elseif(@type==6)           ; U type
+    ll1=(0.0,1.0)
+    ll2=(0.0,0.0)
+    ll3=(1.0,0.0)
+    ll4=(2.0,0.0)
+    ll5=(2.0,1.0)
+  elseif(@type==7)           ; V type
+    ll1=(0.0,2.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,0.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  elseif(@type==8)           ; W type
+    ll1=(0.0,2.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  elseif(@type==9)           ; X type
+    ll1=(1.0,1.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,2.0)
+    ll4=(2.0,1.0)
+    ll5=(1.0,0.0)
+  elseif(@type==10)          ; Y type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(0.0,3.0)
+    ll5=(1.0,2.0)
+  elseif(@type==11)          ; Z type
+    ll1=(0.0,2.0)
+    ll2=(1.0,2.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  else                       ; F type
+    ll1=(0.0,1.0)
+    ll2=(1.0,0.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,2.0)
+    ll5=(2.0,2.0)
+  endif
+  ur1=ll1+(1.0,1.0)
+  ur2=ll2+(1.0,1.0)
+  ur3=ll3+(1.0,1.0)
+  ur4=ll4+(1.0,1.0)
+  ur5=ll5+(1.0,1.0)
+  ztemp=pixtemp-@origin
+  u=real(ztemp)
+  v=imag(ztemp)
+  if(@fliptype==1)           ; flip x
+    u=-u
+  elseif(@fliptype==2)       ; flip y
+    v=-v
+  elseif(@fliptype==3)       ; flip x & y
+    u=-u
+    v=-v
+  endif
+  ztemp=rot*(u+flip(v))/@scale
+  u=real(ztemp)
+  v=imag(ztemp)
+;
+; square 1
+;
+  if((u>=real(ll1))&&(u<=real(ur1))&&\
+    (v>=imag(ll1))&&(v<=imag(ur1)))
+    inside=true
+;
+; square 2
+;
+  elseif((u>=real(ll2))&&(u<=real(ur2))&&\
+    (v>=imag(ll2))&&(v<=imag(ur2)))
+    inside=true
+;
+; square 3
+;
+  elseif((u>=real(ll3))&&(u<=real(ur3))&&\
+    (v>=imag(ll3))&&(v<=imag(ur3)))
+    inside=true
+;
+; square 4
+;
+  elseif((u>=real(ll4))&&(u<=real(ur4))&&\
+    (v>=imag(ll4))&&(v<=imag(ur4)))
+    inside=true
+;
+; square 5
+;
+  elseif((u>=real(ll5))&&(u<=real(ur5))&&\
+    (v>=imag(ll5))&&(v<=imag(ur5)))
+    inside=true
+  endif
+  if(inside!=true)
+    #solid=true
+  endif
+default:
+  title="Pentomino Clipping"
+  param type
+    caption="type"
+    default=0
+    enum="F" "I" "L" "N" "P" "T" "U" "V" "W" "X" "Y" "Z"
+  endparam
+  param origin
+    caption="origin"
+    default=(0.0,0.0)
+    hint="Position of the tile."
+  endparam
+  param scale
+    caption="scale"
+    default=1.0
+    min=0.0
+    hint="Scale the tile up or down."
+  endparam
+  param tdeg
+    caption="rotation, deg"
+    default=0.0
+  endparam
+  param fliptype
+    caption="flip"
+    default=0
+    enum="none" "x only" "y only" "both x & y"
+  endparam
+}
+
+pentomino-color { ; Kerry Mitchell 08apr00
+transform:
+  bool inside=false
+  float u=0.0
+  float v=0.0
+;
+; read the entering x and y flags
+;
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+;
+; determine the actual pixel coordinates
+;
+  float xa=real(#pixel)-xflag*20
+  float ya=imag(#pixel)-yflag*20
+  pixtemp=xa+flip(ya)
+  rot=exp(-@tdeg*#pi/180*(0,1))
+  ll1=(0.0,0.0)
+  ur1=(0.0,0.0)
+  ll2=(0.0,0.0)
+  ur2=(0.0,0.0)
+  ll3=(0.0,0.0)
+  ur3=(0.0,0.0)
+  ll4=(0.0,0.0)
+  ur4=(0.0,0.0)
+  ll5=(0.0,0.0)
+  ur5=(0.0,0.0)
+  if(@type==1)               ; I type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(0.0,3.0)
+    ll5=(0.0,4.0)
+  elseif(@type==2)           ; L type
+    ll1=(1.0,0.0)
+    ll2=(0.0,0.0)
+    ll3=(0.0,1.0)
+    ll4=(0.0,2.0)
+    ll5=(0.0,3.0)
+  elseif(@type==3)           ; N type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,2.0)
+    ll5=(1.0,3.0)
+  elseif(@type==4)           ; P type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(1.0,2.0)
+    ll5=(1.0,1.0)
+  elseif(@type==5)           ; T type
+    ll1=(1.0,0.0)
+    ll2=(1.0,1.0)
+    ll3=(1.0,2.0)
+    ll4=(0.0,2.0)
+    ll5=(2.0,2.0)
+  elseif(@type==6)           ; U type
+    ll1=(0.0,1.0)
+    ll2=(0.0,0.0)
+    ll3=(1.0,0.0)
+    ll4=(2.0,0.0)
+    ll5=(2.0,1.0)
+  elseif(@type==7)           ; V type
+    ll1=(0.0,2.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,0.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  elseif(@type==8)           ; W type
+    ll1=(0.0,2.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  elseif(@type==9)           ; X type
+    ll1=(1.0,1.0)
+    ll2=(0.0,1.0)
+    ll3=(1.0,2.0)
+    ll4=(2.0,1.0)
+    ll5=(1.0,0.0)
+  elseif(@type==10)          ; Y type
+    ll1=(0.0,0.0)
+    ll2=(0.0,1.0)
+    ll3=(0.0,2.0)
+    ll4=(0.0,3.0)
+    ll5=(1.0,2.0)
+  elseif(@type==11)          ; Z type
+    ll1=(0.0,2.0)
+    ll2=(1.0,2.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,0.0)
+    ll5=(2.0,0.0)
+  else                       ; F type
+    ll1=(0.0,1.0)
+    ll2=(1.0,0.0)
+    ll3=(1.0,1.0)
+    ll4=(1.0,2.0)
+    ll5=(2.0,2.0)
+  endif
+  ur1=ll1+(1.0,1.0)
+  ur2=ll2+(1.0,1.0)
+  ur3=ll3+(1.0,1.0)
+  ur4=ll4+(1.0,1.0)
+  ur5=ll5+(1.0,1.0)
+  ztemp=pixtemp-@origin
+  u=real(ztemp)
+  v=imag(ztemp)
+  if(@fliptype==1)           ; flip x
+    u=-u
+  elseif(@fliptype==2)       ; flip y
+    v=-v
+  elseif(@fliptype==3)       ; flip x & y
+    u=-u
+    v=-v
+  endif
+  ztemp=rot*(u+flip(v))/@scale
+  u=real(ztemp)
+  v=imag(ztemp)
+;
+; square 1
+;
+  if((u>=real(ll1))&&(u<=real(ur1))&&\
+    (v>=imag(ll1))&&(v<=imag(ur1)))
+    inside=true
+;
+; square 2
+;
+  elseif((u>=real(ll2))&&(u<=real(ur2))&&\
+    (v>=imag(ll2))&&(v<=imag(ur2)))
+    inside=true
+;
+; square 3
+;
+  elseif((u>=real(ll3))&&(u<=real(ur3))&&\
+    (v>=imag(ll3))&&(v<=imag(ur3)))
+    inside=true
+;
+; square 4
+;
+  elseif((u>=real(ll4))&&(u<=real(ur4))&&\
+    (v>=imag(ll4))&&(v<=imag(ur4)))
+    inside=true
+;
+; square 5
+;
+  elseif((u>=real(ll5))&&(u<=real(ur5))&&\
+    (v>=imag(ll5))&&(v<=imag(ur5)))
+    inside=true
+  endif
+;
+; perform clipping & set flags:
+;   x flag = color parameter
+;   y flag = counter of how many times the pixel
+;     has been through this transform
+; encode pixel with flag data
+;
+  if(inside==true)
+    xa=real(pixtemp)+@setcolor*20
+    ya=imag(pixtemp)+(yflag+1)*20
+    #pixel=xa+flip(ya)
+  endif
+default:
+  title="Pentomino Color"
+  helpfile="lkm-help\lkm-coloruxf.html"
+  param type
+    caption="tile type"
+    default=0
+    enum="F" "I" "L" "N" "P" "T" "U" "V" "W" "X" "Y" "Z"
+  endparam
+  param origin
+    caption="origin"
+    default=(0.0,0.0)
+    hint="Position of the tile."
+  endparam
+  param scale
+    caption="scale"
+    default=1.0
+    min=0.0
+    hint="Scale the tile up or down."
+  endparam
+  param tdeg
+    caption="rotation, deg"
+    default=0.0
+  endparam
+  param fliptype
+    caption="flip"
+    default=0
+    enum="none" "x only" "y only" "both x & y"
+  endparam
+  param setcolor
+    caption="set color"
+    default=1
+    hint="color parameter to pass to Passthru algorithm"
+  endparam
+}
+
+circle-clip { ; Kerry Mitchell 30nov2002
+;
+; Quick and dirty transform to clip out circular
+; regions.  Specify center and radius of circle,
+; and whether the inside or outside is to be clipped.
+; Based on Luke Plant's "Scissors" and Damien Jones' 
+; "Clipping", without as many useful features.
+;
+transform:
+  temp=#pixel-@center
+  float r=cabs(temp)
+  if(@inout==0)
+    if(r<@radius)
+      #solid=true
+    endif
+  else
+    if(r>@radius)
+      #solid=true
+    endif
+  endif
+default:
+  title="Circle Clip"
+  param center
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param radius
+    caption="radius"
+    default=1.0
+  endparam
+  param inout
+    caption="region"
+    default=0
+    enum="inside" "outside"
+  endparam
+}
+
+placement { ; Kerry Mitchell 10jan06
+;
+; Useful for placing zooms on a layer so that they are
+; aligned with masks and frames.  Specify the center of
+; the zoom, the magnification and rotation, and the point
+; where you want the zoom to be.
+;
+transform:
+  float t=@rotd/180*#pi
+  complex rot=@scale*(cos(t)-flip(sin(t)))
+  pixel=(#pixel-@aligncenter)/rot+@zoomcenter
+default:
+  title="Placement"
+  complex param zoomcenter
+    caption="zoom center"
+    default=(0,0)
+  endparam
+  float param scale
+    caption="magnification"
+    default=1
+  endparam
+  float param rotd
+    caption="rotation, deg"
+    default=0
+  endparam
+  complex param aligncenter
+    caption="align center"
+    default=(0,0)
+  endparam
+}
+
+mirror { ; Kerry Mitchell June 2001
+;
+; Quick and dirty transform to flip a layer
+;
+transform:
+  float x=real(#pixel)
+  float y=imag(#pixel)
+  if(@flip==1)               ; horizontal
+    x=2*@q-x
+  elseif(@flip==2)           ; vertical
+    y=2*@q-y
+  elseif(@flip==3)           ; both
+    x=2*@q-x
+    y=2*@q-y
+  endif
+  #pixel=x+flip(y)
+default:
+  title="mirror"
+  param flip
+    caption="flip"
+    default=0
+    enum="none" "horizontal" "vertical" "both"
+  endparam
+  param q
+    caption="flip axis"
+    default=0.0
+  endparam
+}
+

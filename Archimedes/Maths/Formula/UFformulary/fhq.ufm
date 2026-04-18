@@ -1,0 +1,797 @@
+ifs-leaf-m { 
+init:
+  a0 = real(@a), b0 = real(@b), c0 = real(@c), d0 = real(@d),m0 = real(@m)
+  a1 = imag(@a), b1 = imag(@b), c1 = imag(@c), d1 = imag(@d),m1 = imag(@m)
+  n0 = real(@n),al0 = real(@al), k0 = real(@k), l0 = real(@l)
+  n1 = imag(@n),al1 = imag(@al), k1 = imag(@k), l1 = imag(@l)
+  z = #pixel
+loop:
+  x = @fn1(real(z))
+  y = @fn2(imag(z))
+  if(@type!=0)
+    if(@type==1)
+      a0 = -0.21053, b0 = -0.93117, c0 = -0.31579, d0 = 0.21862 ,m0=0,n0=0 
+      a1 = 0.89474, b1 = -0.23482, c0=0.0,  d1=0.84615 ,m1=0,n1=0
+      al0 = -0.34008,k0 = -6.00400, l0 = -2.53258
+      al1 = 0.75709, k1 = -0.82044, l1 = -0.99777
+    elseif @type==2
+      a0 = 0.82407, b0 = 0.28148, c0 = -0.21235, d0 = 0.86420,m0=0,n0=0
+      a1 = 0.08827, b1 = 0.52099, c1 = -0.46389, d1 = -0.37778,m1=0,n1=0
+      al0 = 0.77193, k0 = 1.59554, l0 = 0.49085
+      al1 = 0.20833, k1 = 4.51450, l1 = -1.07895
+    elseif @type==3
+      IF (imag(z)>@orbit)
+        a0=2,b0=0,c0=0,d0=2,a1=2,b1=0,c1=0,d1=2,m0=0,n0=0
+        al0=1,k0=0,l0=-2*@orbit,al1=1,k1=0,l1=-2*@orbit,m1=0,n1=0
+      ELSEIF (real(z)>@orbit)
+        a0=2,b0=0,c0=0,d0=2,a1=2,b1=0,c1=0,d1=2,m0=0,n0=0
+        al0=1,k0=-2*@orbit,l0=0,al1=1,k1=-2*@orbit,l1=0,m1=0,n1=0
+      ELSE
+        a0=2,b0=0,c0=0,d0=2,a1=2,b1=0,c1=0,d1=2,m0=0,n0=0
+        al0=1,k0=0,l0=0,al1=1,k1=0,l1=0,m1=0,n1=0
+      ENDIF
+    elseif @type==4
+      IF (imag(z)>@orbit)
+        l0=-l0,l1=-l1
+      ELSEIF (real(z)>@orbit)
+        k0=-k0,k1=-k1
+      ELSE
+        k0=k0,l0=l0,k1=k0,l1=l0
+      ENDIF
+    elseif @type==5
+      a0=0,c0=-c0,d0=-d0*x,a1=0,c1=-c1,d1=-d1*x
+      al0=1,k0=1,l0=0,al1=1,k1=1,l1=0
+    endif
+  endif 
+  o0 = (d0 * x - b0 * y + n0*x*y + k0) / al0 + flip((-c0 * x + a0 * y + m0*x*y + l0) / al0)
+  o1 = (d1 * x - b1 * y + n1*x*y + k1) / al1 + flip((-c1 * x + a1 * y + m1*x*y + l1) / al1)
+  if @mode
+    op0 = |o0 - @c|
+    op1 = |o1 - @c|
+  else
+    op0 = |o0 - #pixel|
+    op1 = |o1 - #pixel|
+  endif
+  if (|op0| <= |op1|)
+    z = o0
+  else
+    z = o1
+  endif
+bailout:  
+  |z| <= @bailout
+default:
+  title = "IFS Leaf Mset"  
+  center = (0,4)
+  magn = 0.2
+  param type
+    caption="IFS type"
+    default=0
+    enum="user type""type 2""type 3""Sierpinksi Triangle""test""henon(b,c,d are used)"
+  endparam
+  param mode
+    caption="Mode"
+    default=true
+  endparam  
+  param c
+    caption = "Julia seed"
+    default = (0,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1000.0
+  endparam
+  param orbit
+    caption="Orbit value"
+    default=5
+  endparam
+  param a
+    caption="Imag(y) value"
+    default=(0.74546,-0.42424)
+  endparam
+  param b
+    caption="Real(y) value"
+    default=(-0.36460,0.65969)
+  endparam
+  param c
+    caption="Imag(x) value"
+    default=(0.40606,-0.17576)
+  endparam
+  param d
+    caption="real(y) value"
+    default=(0.51996,-0.41768)
+  endparam
+  param m
+    caption="Imag(x*y)"
+    default=(1.75,0.0)
+  endparam
+  param n
+    caption="Real(x*y)"
+    default=(0.0,0.0)
+  endparam
+  param k
+    caption="Real(R) value"
+    default=(-0.89714,4.62115)
+  endparam
+  param al
+    caption="Divide value"
+    default=(0.53566,0.29314)
+  endparam
+  param l
+    caption="Imag(R) value"
+    default=(-2.74193,2.78720)
+  endparam
+  func fn1
+    caption="X Input function"
+    default=ident()
+  endfunc
+  func fn2
+    caption="Y Input function"
+    default=ident()
+  endfunc
+}
+e {
+init:
+  alpha=(sqrt(5)-1)/2
+  power=2*pi*@n*alpha
+  r=@fn1(power)
+  z=#pixel
+loop:
+  z=z^2+r*z
+bailout:
+  |z|>@bailout
+default:
+  title = "e"
+  param n
+    caption="Power Value"
+    default=(2,0)
+  endparam
+  param bailout
+    caption="Bailout Valut"
+    default=1000.0
+  endparam
+  func fn1
+    caption="function about R"
+    default=exp()
+  endfunc
+}
+
+newton--z*e^z-1=0 {
+init:
+  z=#pixel
+  complex zold=0.0
+loop:
+  zold=z
+  z=z-(z-e^z)/(1+z)  
+bailout:
+  |z-zold|>=@bailout
+default:
+  title = "newton--z*e^n-1=0"
+  param bailout
+    caption="bailout value"
+    default=0.00001
+  endparam
+}
+
+newton {
+init:
+  complex z1=0
+  complex z2=0
+  complex z3=0
+  complex p=0
+  complex q=0
+  complex zold=0
+  z=#pixel
+loop:
+  zold=z
+  z1=z-1
+  z2=z+0.5
+  z3=sqr(z)+1
+  p=z1*z2*z3
+  q=z2*z3+z1*z3+2*z*z1*z2
+  z=z-p/(q+imag(@s))
+bailout:
+  |z-zold|>@bailout
+default:
+  title = "newton"
+  param s
+    caption="Value S"
+    default=(0,1.25)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=0.000001
+  endparam
+}
+
+newton-z^n-1 {
+init:
+  z=#pixel
+  complex zold=0.0
+loop:
+  zold=z
+  z=((@n-1)*z^@n+@a)/(@n*z^(@n-1))  
+bailout:
+  |z-zold|>=@bailout
+default:
+  title = "newton-z^n-1"
+  param bailout
+    caption="bailout value"
+    default=0.00001
+  endparam
+  param n
+    caption="Value N"
+    default=(3,0)
+  endparam
+  param s
+    caption="Value S"
+    default=(0,-0.5)
+  endparam
+  param a
+    caption="Value A"
+    default=(1,0)
+  endparam
+}
+
+newton--P1,p2 {
+init:
+  z=#pixel
+  complex z1=0
+  complex z2=0
+  complex z3=0
+  complex z4=0
+  complex p=0
+  complex q=0
+  complex m=0
+  complex n=0
+  complex zold=0
+loop:
+  zold=z
+  z1=z+@s3
+  z2=z+@s4
+  z3=z^@f1+@s5
+  z31=@f1*z^(@f1-1)
+  z4=z^@f2+z^@f3+@s6
+  z41=@f2*z^(@f2-1)+@f3*z^(@f3-1)
+  p=z1*z2*z3
+  q=z1*z4
+  m=z2*z3+z1*z3+z31*z1*z2
+  n=z4+z41*z1
+  z=z+@a*q/(n+@fn1(@s1))+(1-@a)*p/(m-@fn2(@s2))
+bailout:
+  |z-zold|>=@bailout
+default:
+  title = "newton--(p1,p2)"
+  param bailout
+    caption="bailout value"
+    default=0.154
+    hint="(0.01-1)"
+  endparam
+  param a
+    caption="Value A (0-1)"
+    default=0.1
+  endparam
+  param s1
+    caption="Imag S1"
+    default=(0,0.25)
+  endparam
+  param s2
+    caption="Imag S2"
+    default=(0,-0.5)
+  endparam
+  param s3
+    caption="Value S3"
+    default=(-1,0)
+    hint="重要参数"
+  endparam
+  param s4
+    caption="Value S4"
+    default=(0.5,0)
+    hint="重要参数"
+  endparam
+  param s5
+    caption="Value S5"
+    default=(1,0)
+    hint="可微调图形形状，取值范围很大"
+  endparam
+  param s6
+    caption="Value S6"
+    default=(1.25,0)
+    hint="可微调图形形状，取值范围很大"
+  endparam
+  param f1
+    caption="power f1"
+    default=(2,0)
+    hint="重要参数，取值不能太大"
+  endparam
+  param f2
+    caption="power f2"
+    default=(2,0)
+    hint="重要参数，取值不能太大"
+  endparam
+  param f3
+    caption="power f3"
+    default=(1,0)
+    hint="重要参数，取值不能太大"
+  endparam 
+  func fn1
+    caption="function 1"
+    default=ident()
+    hint="对图形影响不大"
+  endfunc
+  func fn2
+    caption="function 2"
+    default=ident()
+    hint="对图形影响不大"
+  endfunc
+}
+
+Weierstrass {
+init:
+  complex w=(0,0)
+  complex sum=(0,0)
+  complex t=@paramt
+loop:
+  n=#z
+  r=@param1
+  s=@param2-2
+  sum=sum+w  
+  w=r^(s*n)*(1-@fn1(imag(r^n*t)))*@fn1(imag(@phi))
+bailout:
+  |w|>=|@bailout|
+default:
+  title = "Weierstrass"
+  param paramt
+    caption="函数初始值"
+    default=(0,0)
+  endparam
+  param param1
+    caption="参数 1"
+   default=(2,0)
+   hint="取值大于 1"
+  endparam
+  param param2
+    caption="参数 2"
+    default=1.34
+    hint="取值在 1～2 之间"
+  endparam
+  param phi
+    caption="参数 φ"
+    default=2
+    hint="取值任意"
+  endparam
+  param bailout
+    caption="bailout valut"
+    default=(1000.0,0)
+  endparam
+  func fn1
+    caption="函数 1"
+    default=exp()
+  endfunc
+}
+
+weierstrass-01 {
+init:
+  int n=0
+  z=#pixel
+  complex sum=0.0
+loop:
+  n=n+1
+  sum=sum+z
+  z=(@param1^(@s*n-2*n))*@fn(@param1^n*z)
+bailout:
+  |sum|<@bailout1&&|z|>@bailout2
+default:
+  title = "weierstrass-01"
+  param param1
+    caption="Valut param 1"
+    default=2.0
+    hint="param > 1"
+  endparam
+  param s
+    caption="valut S"
+    default=1.45
+    hint="1 < s < 2"
+  endparam
+  param bailout1
+    caption="bailout 1 valut"
+    default=10000.0
+  endparam
+  param bailout2
+    caption="bailout 2 valut"
+    default=0.0001
+  endparam
+  func fn
+    caption="function 1"
+    default=sin()
+  endfunc
+}
+
+fhq-02 {
+init:
+  complex a=@parama
+  z=#pixel
+loop:
+  z=(z^2+1)^2/(a*z*(z^2-1))
+bailout:
+  |z|<@bailout
+default:
+  title = "fhq-02"
+  param parama
+    caption="A valut"
+    default=(1,1)
+    hint="imag(a) 取值对图形影响很大 \
+          real(a) not dig" 
+  endparam
+  param bailout
+    caption="bailout valut"
+    default=4.0
+    hint="The valut is in (0.01 - 10.0)"
+  endparam
+}
+
+palette {
+init:
+  complex a=flip(@powera)
+  complex alpha=@alpha
+  z=#pixel
+loop:
+  z=@fn1(a)*(z-alpha)/(z*(1-@fn2(alpha)*z))
+bailout:
+  |z|>@bailout
+default:
+  title = "palette"
+  param powera
+    caption="The power A"
+    default=2.0
+  endparam
+  param alpha
+    caption="Alpha Valut"
+    default=(2,1)
+  endparam
+  param bailout
+    caption="Bailout Valut"
+    default=1.0
+  endparam
+  func fn1
+    caption="Frist Function"
+    default=exp()
+  endfunc
+  func fn2
+    caption="Second Function"
+    default=flip()
+  endfunc
+}
+
+palette-sum {
+init:
+  complex a=flip(@powera)
+  complex alpha=@alpha
+  complex sum=0.0
+  z=#pixel
+loop:
+  sum=sum+z
+  z=@fn1(a)*(z-alpha)/(z*(1-@fn2(alpha)*z))
+bailout:
+  |sum|>=@bailout
+default:
+  title = "palette-aum"
+  param powera
+    caption="The power A"
+    default=2.0
+  endparam
+  param alpha
+    caption="Alpha Valut"
+    default=(2,1)
+  endparam
+  param bailout
+    caption="Bailout Valut"
+    default=1.0
+  endparam
+  func fn1
+    caption="First Function"
+    default=exp()
+  endfunc
+  func fn2
+    caption="Second Function"
+    default=flip()
+  endfunc
+}
+
+黎曼Function {
+init:
+  int n=0
+  complex sum=0.0
+  z=cabs(#pixel)
+  s=@s+flip(z)
+loop:
+  n=n+1
+  sum=sum+1/(n^s)
+bailout:
+  (@test==0&&|sum|<=@bailout)||(@test==1&&|sum|>=@bailout)
+default:
+  title = "黎曼 function"
+  maxiter = 2000
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "<=" ">="
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1.0
+  endparam
+  param s
+    caption="real(s)"
+    default=1.23
+    hint="default > 1"
+  endparam
+switch:
+  type = "barnsleyj2"
+  start = pixel
+  bailout = bailout
+  test = test  
+}
+
+newton2 {
+init:
+  complex z1=0
+  complex z2=0
+  complex z3=0
+  complex p=0
+  complex q=0
+  z=#pixel
+  complex zold=0.0
+loop:
+  zold=z
+  z1=z-1
+  z2=z+0.5
+  z3=sqr(z)+1
+  p=z1*z2*z3
+  q=z2*z3+z1*z3+2*z*z1*z2
+  z=((@n-1)*z^@n+@a)/(@n*z^(@n-1))-p/(q+imag(@s))  
+bailout:
+  |z-zold|>=@bailout
+default:
+  title = "newton2"
+  param bailout
+    caption="bailout value"
+    default=0.00001
+  endparam
+  param n
+    caption="Value N"
+    default=(3,0)
+  endparam
+  param a
+    caption="Value A"
+    default=(1,0)
+  endparam
+  param s
+    caption="Value S"
+    default=(0,1.25)
+  endparam
+}
+
+TEST1 {
+init:
+  z=#pixel
+loop:
+  z=-z^@power+@c
+bailout:
+  z<=@bailout
+default:
+  title = "TEST1"
+  param power
+    caption="power"
+    default=2.0
+  endparam
+  param bailout
+    caption="bailout"
+    default=4.0
+  endparam
+  param c
+    caption="C"
+    default=0
+  endparam
+}
+
+henon1 {
+init:
+  z=#pixel
+  complex temp=0
+loop:
+  x=real(z)
+  y=imag(z)
+  temp=y+1-real(@a)*x^2+flip(imag(@a)*x)
+  if @mode
+    z=temp-@c
+  else
+    z=temp-#pixel
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title = "henon"
+  Center=(0.250,1.0)
+  Magn=0.4
+  param bailout
+    caption="Bailout Value"
+    default=1000
+  endparam
+  param mode
+    caption="Mode"
+    default=true
+  endparam
+  param a
+    caption="A Value"
+    default=(1,1)
+  endparam
+  param c
+    caption="C Value"
+    default=(0,0)
+  endparam
+}
+
+flow {
+init:
+  a=#pi/(30.0*@n)
+  z=#pixel
+loop:
+  x=real(z)
+  y=imag(z)
+  temp=@p*x+(@b/5.0*sin(@n*@p*a)+@b*sin(@n*a))*cos(a)+\
+  flip(@p*y+(@b/5.0*sin(@n*@p*a)+@b*sin(@n*a))*sin(a))
+  if @mode
+    z=temp-@c
+  else
+    z=temp-#pixel
+  endif
+bailout:
+  (|z|<@bailout && @bailtype==0) || (|z|>@bailout && @bailtype==1)
+default:
+  title = "flow"
+  param bailout
+    caption="bailout"
+    default=1E-6
+  endparam
+  param bailtype
+    caption="bailtype"
+    default=1
+    enum="bailtype 1""bailtype 2"
+  endparam
+  param n
+    caption="flows n"
+    default=5
+    min=2
+    max=7
+  endparam
+  param p
+    caption="P value"
+    default=3
+    min=1
+  endparam
+  param b
+    caption="B value"
+    default=1
+  endparam
+  param c
+    caption="measure value C"
+    default=(0,0)
+  endparam
+  param mode
+    caption="measure Mode"
+    default=true
+  endparam  
+}
+
+IFSFractalTest {
+init:
+  z=#pixel
+  complex temp=0
+loop:
+  x=real(z)
+  y=imag(z)
+  temp=y+1-real(@a)*x^2+flip(imag(@a)*x)
+  if @mode
+    z=temp-@c
+  else
+    z=temp-#pixel
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title = "IFS fractal  test"
+  Center=(0.250,1.0)
+  Magn=0.4
+  param bailout
+    caption="Bailout Value"
+    default=1000
+  endparam
+  param mode
+    caption="Mode"
+    default=true
+  endparam
+  param a
+    caption="A Value"
+    default=(1,1)
+  endparam
+  param c
+    caption="C Value"
+    default=(0,0)
+  endparam
+}
+
+斐波那 {
+init:
+  a=@fn1(@a)
+  z=@fnz(#pixel)
+loop:
+  z=a*(((a+1)/2)^z-((-a+1)/2)^z)
+bailout:
+  (|z|<@bailout && @bailtype==0) || (|z|>@bailout && @bailtype==1)
+default:
+  title = "斐波那"
+  magn=0.1
+  param bailout
+    caption="bailout"
+    default=1E-6
+  endparam
+  param bailtype
+    caption="bailtype"
+    default=1
+    enum="bailtype 1""bailtype 2"
+  endparam
+  param a
+    caption="param A"
+    default=5
+  endparam
+  func fn1
+    caption="func(a)"
+    default=sqrt()
+  endfunc
+  func fnz
+    caption="Input Z"
+    default=ident()
+  endfunc
+}
+
+testFormula {
+init:
+  z=@fn4(#pixel)
+loop:
+  z=@fn1(z)/(@fn2(z)^@fn3(z))+@c
+bailout:
+  (|z|<@bailout && @bailtype==0) || (|z|>@bailout && @bailtype==1)
+default:
+  title = "test formula"
+  Center=(0,0)
+  magn=0.02
+  param bailout
+    caption="bailout"
+    default=1E-12
+  endparam
+  param bailtype
+    caption="bailtype"
+    default=1
+    enum="bailtype 1""bailtype 2"
+  endparam
+  param c
+    caption="param c value"
+    default=(0,0)
+  endparam
+  func fn1
+    caption="function 1"
+    default=ident()
+  endfunc
+  func fn2
+    caption="function 2"
+    default=ident()
+  endfunc
+  func fn3
+    caption="power function"
+    default=ident()
+  endfunc
+  func fn4
+    caption="Input Z function"
+    default=ident()
+  endfunc  
+}

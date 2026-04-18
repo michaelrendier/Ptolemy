@@ -1,0 +1,4732 @@
+comment {
+
+MMFS formulae V4.0 (27th November 2004)
+
+Added convergent Hinrich smoothing and 'Integrate' to
+Mixer and Formula Wars #2.
+(November 2004)
+
+Added Earl Hinrich's smoothing algorithm to Mixer and
+Formula Wars #2.
+(July 2003)
+
+Added Formula Wars #2.
+(November 2002)
+
+Fixed a bug in the Morgan-Voyce formula.
+(September 2002)
+
+Added the following:
+Switch Recursion - a general recursive polynomial formula.
+Switch Gamma - using the gamma function (Lanczos approx).
+Switch Morgan-Voyce - recursive polynomials.
+Switch Mixer - allows you to mix two formulas, iterates
+both for the current z and then mixes the result according
+to the fraction parameter.
+Switch Brahmagupta - based on the Brahmagupta recursion.
+Manowar and s*zold*z^p+c to Switch Standard.
+P(z)+zold+c,c*P(z)+zold,zold*P(z)+c and c*zold*P(z)
+to Switch Lucas.
+(August 2002)
+
+These formulas extend the possibilities of UF's
+switching function to preview modification of
+many different complex parameters.
+
+© David Makin (Makin' Magic)
+
+http://www.crosswinds.net/~makinmagic/
+http://website.lineone.net/~dave_makin/
+http://skyscraper.fortunecity.com/terabyte/966/
+
+Please send any comments/suggestions about
+these formulae to:
+makinmagic@themutual.net
+
+}
+
+MMFSh-Wars {
+; 
+; This formula allows you to combine two formulas.
+; On each iteration the new z is calculated for both
+; formulas and one or other of these values (or a
+; combination) is passed on to the next iteration.
+;
+; Tips:
+;
+; If you want to use the Mandelbrot mode as a map of
+; the Julias then in many cases it's worth using
+; the switch to find the critical value of zstart first.
+; To do this, select Mc(zstart) as the "Switch using"
+; parameter then use the switch to search.
+; The critical point is generally when the "inside" area
+; of the Mandelbrot is largest.
+; When you've switched to the critical point you can then
+; change "Switch using" back to J(constant) and switch to
+; the Julias, (ideally you should first copy the switched
+; value into the start value).
+;
+; It's very often interesting to mix a generally divergent
+; formula with a convergent one - but remember you may
+; need to enable convergence bailout and/or use a non-zero
+; zstart value for the Mandelbrot.
+;
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; This formula impliments an algorithm for smooth colouring
+; suggested by Earl Hinrichs.
+; When creating a new fractal and using this option, the best
+; setting is "Frac+Atan".
+;
+; Created 3rd November 2002
+;
+; November 2004
+; Added convergent Hinrich smoothing and "Integrate".
+; Try Integrate with 'Iterate the sum'.
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex p = #pixel
+
+  if @usescale != 1.0
+    p = p/@usescale
+  endif
+  if @usecentre != (0,0)
+    p = p + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<3
+    z = @value
+  elseif @mjmode<6
+    c = @value
+  elseif @mjmode<9
+    m = @value
+  elseif @mjmode<12
+    n = @value
+  endif
+
+  if @mjmode==3 || @mjmode==6 || @mjmode==9
+    z = p
+  elseif @mjmode==0 || @mjmode==7 || @mjmode==10
+    c = p
+  elseif @mjmode==1 || @mjmode==4 || @mjmode==11
+    m = p
+  elseif @mjmode==2 || @mjmode==5 || @mjmode==8
+    n = p
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = (0,0)
+  if @fixold
+    zold = z
+  endif
+  complex zo = zold
+  complex z1 = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex zsold = zs
+  complex zpold = zp
+  complex q = zs
+  float v = sqrt(@bailout)
+  float v1 = sqrt(@bailout1)
+  float mag = 0
+  float mag1 = 1e100
+  complex t1 = (0,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  complex sum2 = @nr1 + @nr2
+  complex pro2 = @nr1*@nr2
+  complex sum3a = sum2 + @nr3
+  complex sum3b = pro2 + @nr3*sum2
+  complex pro3 = pro2*@nr3
+  complex sum4a = sum3a + @nr4
+  complex sum4b = sum3b + @nr4*sum3a
+  complex sum4c = pro3 + @nr4*sum3b
+  complex pro4 = pro3*@nr4
+  complex sum5a = sum4a + @nr5
+  complex sum5b = sum4b + @nr5*sum4a
+  complex sum5c = sum4c + @nr5*sum4b
+  complex sum5d = pro4 + @nr5*sum4c
+  complex pro5 = pro4*@nr5
+  complex sum6a = sum5a + @nr6
+  complex sum6b = sum5b + @nr6*sum5a
+  complex sum6c = sum5c + @nr6*sum5b
+  complex sum6d = sum5d + @nr6*sum5c
+  complex sum6e = pro5 + @nr6*sum5d
+
+  complex s2um2 = @n2r1 + @n2r2
+  complex p2ro2 = @n2r1*@n2r2
+  complex s2um3a = s2um2 + @n2r3
+  complex s2um3b = p2ro2 + @n2r3*s2um2
+  complex p2ro3 = p2ro2*@n2r3
+  complex s2um4a = s2um3a + @n2r4
+  complex s2um4b = s2um3b + @n2r4*s2um3a
+  complex s2um4c = p2ro3 + @n2r4*s2um3b
+  complex p2ro4 = p2ro3*@n2r4
+  complex s2um5a = s2um4a + @n2r5
+  complex s2um5b = s2um4b + @n2r5*s2um4a
+  complex s2um5c = s2um4c + @n2r5*s2um4b
+  complex s2um5d = p2ro4 + @n2r5*s2um4c
+  complex p2ro5 = p2ro4*@n2r5
+  complex s2um6a = s2um5a + @n2r6
+  complex s2um6b = s2um5b + @n2r6*s2um5a
+  complex s2um6c = s2um5c + @n2r6*s2um5b
+  complex s2um6d = s2um5d + @n2r6*s2um5c
+  complex s2um6e = p2ro5 + @n2r6*s2um5d
+
+  float pwr = 1.0
+  float fac =  1.0
+  float pwr1 = 1.0
+  float fac1 = 1.0
+  int i = 0
+  bool r = true
+
+loop:
+  zsold = zs
+  zpold = zp
+  zo = zold
+  zold = z
+
+  repeat
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn2(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + p
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  t1 = z
+
+  if @fractal == 0
+    z = z^@power + c
+  elseif @fractal == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal == 3
+    z=@Fn(z)+c
+  elseif @fractal == 4
+    z=1/@Fn(z)+c
+  elseif @fractal == 5
+    z=z*@Fn(z)+c
+  elseif @fractal == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal == 11
+    z=c*@Fn(z)
+  elseif @fractal == 12
+    z=@Fn(z)+z+c
+  elseif @fractal == 13
+    z=c*@Fn(z)+z
+  elseif @fractal == 14
+    z = c*z*(1-z)
+  elseif @fractal == 15
+    z = z*(1-z) + c
+  elseif @fractal == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal == 22
+    z = z^(i+1) + c
+  elseif @fractal == 23 && @ndegree==0
+    z = z - (z-@nr1)*(z-@nr2)/(2*z-sum2) + c
+  elseif @fractal == 23 && @ndegree==1
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)/(3*z^2 - 2*sum3a*z + sum3b) + c
+  elseif @fractal == 23 && @ndegree==2
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)/(4*z^3 - 3*sum4a*z^2 + 2*sum4b*z - sum4c) + c
+  elseif @fractal == 23 && @ndegree==3
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5) \
+            /(5*z^4 - 4*sum5a*z^3 + 3*sum5b*z^2 - 2*sum5c*z + sum5d) + c
+  elseif @fractal == 23 && @ndegree==4
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5)*(z-@nr6) \
+            /(6*z^5 - 5*sum6a*z^4 + 4*sum6b*z^3 - 3*sum6c*z^2 + 2*sum6d*z - sum6e) + c
+  elseif @fractal == 24
+    z = z^@power1 + c
+  elseif @fractal == 25 && @ndegree1==0
+    z = z - (z-@n2r1)*(z-@n2r2)/(2*z-s2um2) + c
+  elseif @fractal == 25 && @ndegree1==1
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)/(3*z^2 - 2*s2um3a*z + s2um3b) + c
+  elseif @fractal == 25 && @ndegree1==2
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)/(4*z^3 - 3*s2um4a*z^2 + 2*s2um4b*z - s2um4c) + c
+  elseif @fractal == 25 && @ndegree1==3
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5) \
+            /(5*z^4 - 4*s2um5a*z^3 + 3*s2um5b*z^2 - 2*s2um5c*z + s2um5d) + c
+  elseif @fractal == 25 && @ndegree1==4
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5)*(z-@n2r6) \
+            /(6*z^5 - 5*s2um6a*z^4 + 4*s2um6b*z^3 - 3*s2um6c*z^2 + 2*s2um6d*z - s2um6e) + c
+  elseif @fractal == 26
+    z = z^@power + zo + c
+  elseif @fractal == 27
+    z = zo*z^@power + c
+  elseif @fractal == 28
+    z = z^@power1 + zo + c
+  elseif @fractal == 29
+    z = zo*z^@power1 + c
+  elseif @fractal == 30
+    z = @fn1(@power*@fn(z)) + c
+  elseif @fractal == 31
+    F = @fn(z)
+    z = @fn1((1+@power)*F)/@fn3(F) + c
+  elseif @fractal == 32
+    z = @fn1(@power1*@fn(z)) + c
+  elseif @fractal == 33
+    F = @fn(z)
+    z = @fn1((1+@power1)*F)/@fn3(F) + c
+  elseif @fractal == 34
+    z = fac*z^pwr + c
+    pwr=pwr+1
+    fac=fac/pwr
+  endif
+
+  z1=z
+  z=t1
+
+  if @fractal1 == 0
+    z = z^@power + c
+  elseif @fractal1 == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal1 == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal1 == 3
+    z=@Fn(z)+c
+  elseif @fractal1 == 4
+    z=1/@Fn(z)+c
+  elseif @fractal1 == 5
+    z=z*@Fn(z)+c
+  elseif @fractal1 == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal1 == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal1 == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal1 == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal1 == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal1 == 11
+    z=c*@Fn(z)
+  elseif @fractal1 == 12
+    z=@Fn(z)+z+c
+  elseif @fractal1 == 13
+    z=c*@Fn(z)+z
+  elseif @fractal1 == 14
+    z = c*z*(1-z)
+  elseif @fractal1 == 15
+    z = z*(1-z) + c
+  elseif @fractal1 == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal1 == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal1 == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal1 == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal1 == 22
+    z = z^(i+1) + c
+  elseif @fractal1 == 23 && @ndegree==0
+    z = z - (z-@nr1)*(z-@nr2)/(2*z-sum2) + c
+  elseif @fractal1 == 23 && @ndegree==1
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)/(3*z^2 - 2*sum3a*z + sum3b) + c
+  elseif @fractal1 == 23 && @ndegree==2
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)/(4*z^3 - 3*sum4a*z^2 + 2*sum4b*z - sum4c) + c
+  elseif @fractal1 == 23 && @ndegree==3
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5) \
+            /(5*z^4 - 4*sum5a*z^3 + 3*sum5b*z^2 - 2*sum5c*z + sum5d) + c
+  elseif @fractal1 == 23 && @ndegree==4
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5)*(z-@nr6) \
+            /(6*z^5 - 5*sum6a*z^4 + 4*sum6b*z^3 - 3*sum6c*z^2 + 2*sum6d*z - sum6e) + c
+  elseif @fractal1 == 24
+    z = z^@power1 + c
+  elseif @fractal1 == 25 && @ndegree1==0
+    z = z - (z-@n2r1)*(z-@n2r2)/(2*z-s2um2) + c
+  elseif @fractal1 == 25 && @ndegree1==1
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)/(3*z^2 - 2*s2um3a*z + s2um3b) + c
+  elseif @fractal1 == 25 && @ndegree1==2
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)/(4*z^3 - 3*s2um4a*z^2 + 2*s2um4b*z - s2um4c) + c
+  elseif @fractal1 == 25 && @ndegree1==3
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5) \
+            /(5*z^4 - 4*s2um5a*z^3 + 3*s2um5b*z^2 - 2*s2um5c*z + s2um5d) + c
+  elseif @fractal1 == 25 && @ndegree1==4
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5)*(z-@n2r6) \
+            /(6*z^5 - 5*s2um6a*z^4 + 4*s2um6b*z^3 - 3*s2um6c*z^2 + 2*s2um6d*z - s2um6e) + c
+  elseif @fractal1 == 26
+    z = z^@power + zo + c
+  elseif @fractal1 == 27
+    z = zo*z^@power + c
+  elseif @fractal1 == 28
+    z = z^@power1 + zo + c
+  elseif @fractal1 == 29
+    z = zo*z^@power1 + c
+  elseif @fractal1 == 30
+    z = @fn1(@power*@fn(z)) + c
+  elseif @fractal1 == 31
+    F = @fn(z)
+    z = @fn1((1+@power)*F)/@fn3(F) + c
+  elseif @fractal1 == 32
+    z = @fn1(@power1*@fn(z)) + c
+  elseif @fractal1 == 33
+    F = @fn(z)
+    z = @fn1((1+@power1)*F)/@fn3(F) + c
+  elseif @fractal1 == 34
+    z = fac1*z^pwr1 + c
+    pwr1=pwr1+1
+    fac1=fac1/pwr1
+  endif
+
+  if @distance
+    z1=z1-@target
+    z=z-@target
+  endif
+
+  if @mode==0
+    if |z1|<=|z|
+      z=z1
+    endif
+  elseif @mode==1
+    if |z1|>|z|
+      z=z1
+    endif
+  elseif @mode==2
+    if abs(real(z1))<=abs(real(z))
+      z=z1
+    endif
+  elseif @mode==3
+    if abs(real(z1))>abs(real(z))
+      z=z1
+    endif
+  elseif @mode==4
+    if abs(imag(z1))<=abs(imag(z))
+      z=z1
+    endif
+  elseif @mode==5
+    if abs(imag(z1))>abs(imag(z))
+      z=z1
+    endif
+  elseif @mode==6
+    if real(z1)<=real(z)
+      z=z1
+    endif
+  elseif @mode==7
+    if real(z1)>real(z)
+      z=z1
+    endif
+  elseif @mode==8
+    if imag(z1)<=imag(z)
+      z=z1
+    endif
+  elseif @mode==9
+    if imag(z1)>imag(z)
+      z=z1
+    endif
+  elseif @mode==10
+    if abs(real(z1))<=abs(real(z))
+      z=real(z1)+flip(imag(z))
+    endif
+    if abs(imag(z1))<=abs(imag(z))
+      z=real(z)+flip(imag(z1))
+    endif
+  elseif @mode==11
+    if abs(real(z1))>abs(real(z))
+      z=real(z1)+flip(imag(z))
+    endif
+    if abs(imag(z1))>abs(imag(z))
+      z=real(z)+flip(imag(z1))
+    endif
+  elseif @mode==12
+    if real(z1)<=real(z)
+      z=real(z1)+flip(imag(z))
+    endif
+    if imag(z1)<=imag(z)
+      z=real(z)+flip(imag(z1))
+    endif
+  elseif @mode==13
+    if real(z1)>real(z)
+      z=real(z1)+flip(imag(z))
+    endif
+    if imag(z1)>imag(z)
+      z=real(z)+flip(imag(z1))
+    endif
+  endif
+
+  if @distance
+    z=z+@target
+  endif
+
+  if r
+    mag = |z|
+    if @smallbail != 0 && |z-zold| < @bailout1
+      if @smallbail < 2 || |z-1.0| < @bailout1
+        mag1 = |z - zold|
+      endif
+    endif
+  endif
+
+  if @smooth>0
+    if mag>@bailout && (@smooth<9 || @smooth>12)
+      if r
+        r = false
+        q = z
+        z = v*zold/cabs(zold)
+        zold = zo
+        if @sigma == true
+          zs = zsold
+        endif
+        if @product == true
+          zp = zpold
+        endif
+      else
+        r = true
+        if @smooth>4
+          x = log(0.5*log(|z|))
+          x = (x-log(0.5*log(|q|)))/(x-log(log(v)))
+          if (x<0)
+            x = 0
+          elseif x>1
+            x = 1
+          endif
+          z = x
+        else
+          z = (z-q)/(z-v*q/sqrt(mag))
+          if @smooth==1 || @smooth == 3
+            z = z^@fudge
+          else
+            z = ((@fudge^z)-1)/(@fudge-1)
+          endif
+        endif
+        if @smooth==7 || @smooth==8 || @smooth>14
+          z = z + flip(atan2(q))
+        endif
+        if @smooth==3 || @smooth==4 || @smooth==6 || @smooth==8 \
+           || @smooth==14 || @smooth==16
+          z = i + z
+        endif
+        if @smooth<5
+          z = (real(z)+flip(@fudge1*imag(z)))/@fudge2
+        endif
+        bail = false
+      endif
+    elseif (@smooth>8)&&(@smallbail>0)&&(mag1<@bailout1)
+      if r
+        r = false
+        q = z-zold
+        z = zold+(v1*(z-zold))/cabs(zold-zo)
+        zold = zo
+        if @sigma == true
+          zs = zsold
+        endif
+        if @product == true
+          zp = zpold
+        endif
+      else
+        r = true
+        x = log(-0.5*log(|z-zold|))
+        x = -@cfudge*((x+log(-0.5*log(|q|)))/(x+log(-0.5*log(@bailout1)))-1)
+        if x>=0
+          x = -1e-100
+        elseif x<-1.0
+          x = -1.0
+        endif
+        if @smooth==11 || @smooth==12 || @smooth==15 || @smooth==16
+          z = flip(atan2(q))
+        endif
+        if @smooth==10 || @smooth==12 || @smooth==14 || @smooth==16
+          x = x + i
+        endif
+        z = x + flip(imag(z))
+        bail = false
+      endif
+    endif
+  endif
+
+  until r
+
+  if @smallbail != 0 && mag1 < @bailout1
+    if @smallbail < 2 || |z-1.0| < @bailout1
+      bail = false
+    endif
+  endif
+
+  i = i + 1
+
+bailout:
+  bail && ((@test == 0 && mag <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Formula Wars #2"
+  magn = 1.0
+  center = (-.5, 0)
+  method = multipass
+  periodicity = 0
+  helpfile = "MMF.html"
+  param value
+    caption = "Switched value"
+    default = (0,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in f(z)+c, used in all modes except the 'Mc' ones."
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+  endparam
+  param fractal
+    caption = "Formula 1"
+    enum = "Standard z^p+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda" "Breeder" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "z^p+c (#2)" "Nova (#2)" "Manowar" \
+            "zold*z^p+c" "Manowar (#2)" "zold*z^p+c (#2)" "Cheb1 power" \
+            "Cheb2 power" "Cheb1 power(#2)" "Cheb2 power(#2)" "Integrate"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 0
+  endparam
+  param fractal1
+    caption = "Formula 2"
+    enum = "Standard z^p+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda" "Breeder" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "z^p+c (#2)" "Nova (#2)" "Manowar" \
+            "zold*z^p+c" "Manowar (#2)" "zold*z^p+c (#2)" "Cheb1 power" \
+            "Cheb2 power" "Cheb1 power(#2)" "Cheb2 power(#2)" "Integrate"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 16
+  endparam
+  param fixold
+    caption = "Start zold=z"
+    default = false
+    hint = "When enabled the initial older values of z are set to z \
+            instead of (0,0)."
+  endparam
+  param mode
+    caption = "Combination mode"
+    enum = "cabs(z1)<=cabs(z2)" "cabs(z1)>cabs(z2)" "abs(rz1)<=abs(rz2)" \
+           "abs(rz1)>abs(rz2)" "abs(iz1)<=abs(iz2)" "abs(iz1)>abs(iz2)" \
+           "rz1<=rz2" "rz1>rz2" "iz1<=iz2" "iz1>iz2" \
+           "*2 abs(z1)<=abs(z2)" "*2 abs(z1)>abs(z2)" "*2 z1<=z2" "*2 z1>z2"
+    hint = "For single conditions if the condition is met the first \
+            formula is used, otherwise the second is used. For double \
+            conditions (*2) the condition is applied to values of real(z) \
+            and imag(z) separately hence the real and imag values used may \
+            not be from the same formula."
+    default = 0
+  endparam
+  param distance
+    caption = "Distance from target"
+    default = false
+    hint = "If enabled then the z1 and z2 values tested for the Combination \
+            mode are actually z1-Target and z2-Target."
+  endparam
+  param target
+    caption = "Target"
+    default = (1,0)
+    hint = "Only used when Distance to target is enabled."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Can be used in combination with \
+            the translations and general transformation \
+            matrix."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    enum = "disabled" "enabled" "Magnet (1,0)"
+    default = 0
+    hint = "Enables or disables convergence testing, some fractal \
+            types or other settings may require convergence testing \
+            to be enabled to produce any image."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param smooth
+    caption = "Smooth colouring"
+    default = 0
+    enum = "Off" "Smooth#1" "Smooth#2" "+Iter#1" "+Iter#2" \
+           "loglog" "loglog+Iter" \
+           "Frac+Atan" "Frac+Atan+Iter" \
+           "Hinrich (Conv)" "Hinrich+Iter (Conv)" \
+           "Hinrich+Atan (Conv)" "Hinrich+Atan+Iter(Conv)" \
+           "Hinrich (Both)" "Hinrich+Iter (Both)" \
+           "Hinrich+Atan (Both)" "Hinrich+Atan+Iter(Both)"
+  hint = "Modifies the final z value so it's a smoothing \
+            value. Use for colourings that are based on \
+            final z or for ones that use a final z smoothing fraction. \
+            The new Hinrich versions work best, note that the Divergent \
+            Hinrich versions still have the old names - loglog or Frac+."
+  endparam
+  param cfudge
+    caption = "Convergent fudge"
+    default = 1.0
+    hint = "Scaling factor for when the convergence smoothing fraction \
+            doesn't go all the way from 0 to 1."
+  endparam
+  param fudge
+    caption = "Smooth fudge"
+    default = 10.0
+    hint = "Use this in combination with the Smooth colouring variations \
+            to get the colouring as smooth as possible. Typically use \
+            values 2 - 200, but sometimes very large values, fractions \
+            or negative values may help. Not needed for the loglog smoothing."
+  endparam
+  param fudge1
+    caption = "Smooth scale imag"
+    default = 100.0
+    hint = "This only applies when using the Smooth colouring. Use \
+            it to scale up the imaginary component of the final z, this \
+            will improve results with some colourings. \
+            Not used for loglog smoothing."
+  endparam
+  param fudge2
+    caption = "Smooth divide"
+    default = 1.0
+    hint = "This only applies when using the Smooth colouring. The final z \
+            value is divided by this value, eg. set it to Maximum Iterations. \
+            Not used for loglog smoothing."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "Sets the power for the z^p+c, Manowar and zold*z^p+c \
+            formula types."
+  endparam
+  param ndegree
+    caption = "Nova degree"
+    default = 1
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova formula type and \
+            hence the number of roots used."
+  endparam
+  param nr1
+    caption = "Nova 1st root"
+    default = (1,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+  endparam
+  param nr2
+    caption = "Nova 2nd root"
+    default = (-0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+  endparam
+  param nr3
+    caption = "Nova 3rd root"
+    default = (-0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 3 or more."
+  endparam
+  param nr4
+    caption = "Nova 4th root"
+    default = (-1,0)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 4 or more."
+  endparam
+  param nr5
+    caption = "Nova 5th root"
+    default = (0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 5 or 6."
+  endparam
+  param nr6
+    caption = "Nova 6th root"
+    default = (0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 6."
+  endparam
+  param power1
+    caption = "Power (#2)"
+    default = (3,0)
+    hint = "Sets the power for the z^p+c (#2), Manowar (#2) \
+            and zold*z^p+c (#2) formula types."
+  endparam
+  param ndegree1
+    caption = "Nova degree (#2)"
+    default = 2
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova (#2) formula type and \
+            hence the number of roots used."
+  endparam
+  param n2r1
+    caption = "Nova (#2) 1st root"
+    default = (2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+  endparam
+  param n2r2
+    caption = "Nova (#2) 2nd root"
+    default = (-2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+  endparam
+  param n2r3
+    caption = "Nova (#2) 3rd root"
+    default = (0,2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 3 or more."
+  endparam
+  param n2r4
+    caption = "Nova (#2) 4th root"
+    default = (0,-2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 4 or more."
+  endparam
+  param n2r5
+    caption = "Nova (#2) 5th root"
+    default = (1.5,1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 5 or 6."
+  endparam
+  param n2r6
+    caption = "Nova (#2) 6th root"
+    default = (-1.5,-1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 6."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 3
+    enum = "Mc(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func Fn
+    caption = "Fn (all Fn types)"
+    default = acos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'acos' with the Chebyshev types for the \
+            standard Chebyshev polynomials."
+  endfunc
+  func Fn1
+    caption = "Fn1 (Chebyshevs)"
+    default = cos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'cos' with 'Cheb' and 'Cheb1' for the type 1 \
+            Chebyshev polynomials, use 'sin' with the \
+            'fn1(a*fn(b))/fn1(fn(b))' types for the type 2 \
+            Chebyshev polynomials."
+  endfunc
+  func Fn2
+    caption = "Fn2 (done first)"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+  func Fn3
+    caption = "Fn3 (Cheb2 (Power))"
+    default = sin()
+    hint = "Only used for the Cheb2 (Power) fractal type. This is \
+            of the form 'Fn1((power+1)*Fn(z))/Fn3(Fn(z)) + c'."
+  endfunc
+
+switch:
+  type = "MMFSh-Wars"
+  value = #pixel
+  start = start
+  c = c
+  m = m
+  n = n
+  fractal = fractal
+  fractal1 = fractal1
+  fixold = fixold
+  mode = mode
+  distance = distance
+  target = target
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test  = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  smooth = smooth
+  cfudge = cfudge
+  fudge = fudge
+  fudge1 = fudge1
+  fudge2 = fudge2
+  power = power
+  ndegree = ndegree
+  nr1 = nr1
+  nr2 = nr2
+  nr3 = nr3
+  nr4 = nr4
+  nr5 = nr5
+  nr6 = nr6
+  power1 = power1
+  ndegree1 = ndegree1
+  n2r1 = n2r1
+  n2r2 = n2r2
+  n2r3 = n2r3
+  n2r4 = n2r4
+  n2r5 = n2r5
+  n2r6 = n2r6
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  Fn = Fn
+  Fn1 = Fn1
+  Fn2 = Fn2
+}
+
+MMFSg-Recursion {
+;
+; This formula uses a generalised recursion algorithm to
+; generate a complex polynomial P(z), it's basically an
+; extension of the Lucas recursion formula.
+;
+; The recursion formula used is defined as follows:
+;
+; P0(z) = P0a*z + P0b
+; P1(z) = P1a*z + P1b
+;
+; where P0a,P0b,P1a and P1b are constants.
+;
+; Pn(z) = p(z)*Pn-1(z) + q(z)*Pn-2(z)
+;
+; (n= 2,3,4.....)
+; where p(z) and q(z) are linear in z
+;
+; p(z) = (pa*n + pb)*z + pc*n + pd
+; q(z) = (qa*n + qb)*z + qc*n + qd
+;
+; where pa,pb,pc,pd,qa,qb,qc and qd are constants.
+;
+; All the constants are user parameters and may be replaced
+; by the switched value.
+;
+; When using this formula remember you can use the switching
+; to help find the critical value of zstart for a Mandelbrot
+; set ie. so the Mandelbrot is a decent map of the Julias.
+;
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 16th August 2002
+;
+; © David Makin 2002
+;
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex F0a = @P0a
+  complex F0b = @P0b
+  complex qa = @qa
+  complex qb = @qb
+  complex qc = @qc
+  complex qd = @qd
+  complex F1a = @P1a
+  complex F1b = @P1b
+  complex pa = @pa
+  complex pb = @pb
+  complex pc = @pc
+  complex pd = @pd
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<15
+    z = @value
+  elseif @mjmode<30
+    c = @value
+  elseif @mjmode<45
+    F0a = @value
+  elseif @mjmode<60
+    F0b = @value
+  elseif @mjmode<75
+    F1a = @value
+  elseif @mjmode<90
+    F1b = @value
+  elseif @mjmode<105
+    pa = @value
+  elseif @mjmode<120
+    pb = @value
+  elseif @mjmode<135
+    pc = @value
+  elseif @mjmode<150
+    pd = @value
+  elseif @mjmode<165
+    qa = @value
+  elseif @mjmode<180
+    qb = @value
+  elseif @mjmode<195
+    qc = @value
+  elseif @mjmode<210
+    qd = @value
+  elseif @mjmode<225
+    m = @value
+  elseif @mjmode<240
+    n = @value
+  endif
+
+  if (@mjmode!=0) && ((@mjmode%15)==0)
+    z = px
+  elseif (@mjmode==0) || ((@mjmode>30)&&((@mjmode%15)==1))
+    c = px
+  elseif ((@mjmode<30)&&((@mjmode%15)==1)) || ((@mjmode>45)&&((@mjmode%15)==2))
+    F0a = px
+  elseif ((@mjmode<45)&&((@mjmode%15)==2)) || ((@mjmode>60)&&((@mjmode%15)==3))
+    F0b = px
+  elseif ((@mjmode<60)&&((@mjmode%15)==3)) || ((@mjmode>75)&&((@mjmode%15)==4))
+    F1a = px
+  elseif ((@mjmode<75)&&((@mjmode%15)==4)) || ((@mjmode>90)&&((@mjmode%15)==5))
+    F1b = px
+  elseif ((@mjmode<90)&&((@mjmode%15)==5)) || ((@mjmode>105)&&((@mjmode%15)==6))
+    pa = px
+  elseif ((@mjmode<105)&&((@mjmode%15)==6)) || ((@mjmode>120)&&((@mjmode%15)==7))
+    pb = px
+  elseif ((@mjmode<120)&&((@mjmode%15)==7)) || ((@mjmode>135)&&((@mjmode%15)==8))
+    pc = px
+  elseif ((@mjmode<135)&&((@mjmode%15)==8)) || ((@mjmode>150)&&((@mjmode%15)==9))
+    pd = px
+  elseif ((@mjmode<150)&&((@mjmode%15)==9)) || ((@mjmode>165)&&((@mjmode%15)==10))
+    qa = px
+  elseif ((@mjmode<165)&&((@mjmode%15)==10)) || ((@mjmode>180)&&((@mjmode%15)==11))
+    qb = px
+  elseif ((@mjmode<180)&&((@mjmode%15)==11)) || ((@mjmode>195)&&((@mjmode%15)==12))
+    qc = px
+  elseif ((@mjmode<195)&&((@mjmode%15)==12)) || ((@mjmode>210)&&((@mjmode%15)==13))
+    qd = px
+  elseif ((@mjmode<210)&&((@mjmode%15)==13)) || (@mjmode==239)
+    m = px
+  elseif ((@mjmode<225)&&((@mjmode%15)==14))
+    n = px
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = z
+  complex zo = (0,0)
+  complex zs = zo
+  complex zp = (1,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  complex F = F0a*z + F0b
+  complex F0 = F
+  complex F1 = F1a*z + F1b
+
+  int r = 2
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn1(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + px
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if @fractal%4 < 2       ;Pn(z)
+    F0 = F0a*z + F0b
+    F1 = F1a*z + F1b
+    r = 2
+    while r <= @degree
+      F = F1
+      F1 = ((pa*r+pb)*z+pc*r+pd)*F1 + ((qa*r+qb)*z+qc*r+qd)*F0
+      F0 = F
+      r = r + 1
+    endwhile
+  else                  ;Piter(z)
+    F = F1
+    F1 = ((pa*r+pb)*z+pc*r+pd)*F1 + ((qa*r+qb)*z+qc*r+qd)*F0
+    F0 = F
+    r = r + 1
+  endif
+
+  if @fractal==0 || @fractal==2
+    z = @fn2(F1) + c
+  elseif @fractal == 1 || @fractal == 3
+    z = c*@fn2(F1)
+  elseif @fractal == 4 || @fractal == 6
+    z = @fn2(F1) + zo + c
+  elseif @fractal == 5 || @fractal == 7
+    z = c*@fn2(F1) + zo
+  elseif @fractal == 8 || @fractal == 10
+    z = zo*@fn2(F1) + c
+  elseif @fractal == 9 || @fractal == 11
+    z = c*zo*@fn2(F1)
+  endif
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Recursion"
+  center = (-0.1, 0)
+  magn = 6
+  method = multipass
+  periodicity = 0
+  param value
+    caption = "Switched value"
+    default = (0,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in s*z^p+c, used in all modes except the 'Mc' ones."
+  endparam
+  param P0a
+    caption = "P0a"
+    default = (0,0)
+    hint = "The coefficient of z in the first term of the polynomial sequence, P0(z). \
+            Very often zero for 'classic' polynomial sequences."
+  endparam
+  param P0b
+    caption = "P0b"
+    default = (1,0)
+    hint = "The constant in the first term of the polynomial sequence, P0(z)."
+  endparam
+  param qa
+    caption = "qa"
+    default = (-1,0)
+    hint = "The value of qa in q(z)=(qa*n+qb)*z+qc*n+qd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param qb
+    caption = "qb"
+    default = (0,0)
+    hint = "The value of qb in q(z)=(qa*n+qb)*z+qc*n+qd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param qc
+    caption = "qc"
+    default = (0,0)
+    hint = "The value of qc in q(z)=(qa*n+qb)*z+qc*n+qd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param qd
+    caption = "qd"
+    default = (0,0)
+    hint = "The value of qd in q(z)=(qa*n+qb)*z+qc*n+qd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param P1a
+    caption = "P1a"
+    default = (1,0)
+    hint = "The coefficient of z in the second term of the polynomial sequence, P1(z). \
+            Usually this would be non-zero."
+  endparam
+  param P1b
+    caption = "P1b"
+    default = (0,0)
+    hint = "The constant in the second term of the polynomial sequence, P1(z)."
+  endparam
+  param pa
+    caption = "pa"
+    default = (0,0)
+    hint = "The value of pa in p(z)=(pa*n+pb)*z+pc*n+pd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param pb
+    caption = "pb"
+    default = (1,0)
+    hint = "The value of pb in p(z)=(pa*n+pb)*z+pc*n+pd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param pc
+    caption = "pc"
+    default = (0,0)
+    hint = "The value of pc in p(z)=(pa*n+pb)*z+pc*n+pd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param pd
+    caption = "pd"
+    default = (0,0)
+    hint = "The value of pd in p(z)=(pa*n+pb)*z+pc*n+pd \
+            where Pn(z)=p(z)*Pn-1(z)+q(z)*Pn-2(z)."
+  endparam
+  param m
+    caption = "Matrix col 0 (m)"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix. Used in all \
+            modes except the 'Mm' ones."
+  endparam
+  param n
+    caption = "Matrix col 1 (n)"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix. Used in all \
+            modes except the 'Mn' ones."
+  endparam
+  param fractal
+    caption = "Fractal type"
+    default = 0
+    enum = "Pn(z)+c" "c*Pn(z)" "Piter(z)+c" "c*Piter(z)" \
+           "Pn(z)+zold+c" "c*Pn(z)+zold" "Piter(z)+zold+c" "c*Piter(z)+zold" \
+           "zold*Pn(z)+c" "c*zold*Pn(z)" "zold*Piter(z)+c" "c*zold*Piter(z)"
+    hint = "Use the degree parameter to set the degree for the \
+            Pn types. In the Piter types the recurrence relation \
+            for the polynomials is continued with iterations, \
+            the degree of the polynomial rising with iteration count."
+  endparam
+  param degree
+    caption = "Degree"
+    default = 4
+    min = 2
+    hint = "Sets the degree for Pn(z)+c and c*Pn(z)."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Really only signficant when First \
+            function is not ident."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "MP0a(Zstart)" "MP0b(Zstart)" "MP1a(Zstart)" "MP1b(Zstart)" \
+           "Mpa(Zstart)" "Mpb(Zstart)" "Mpc(Zstart)" "Mpd(Zstart)" \
+           "Mqa(Zstart)" "Mqb(Zstart)" "Mqc(Zstart)" "Mqd(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "MP0a(Constant)" "MP0b(Constant)" "MP1a(Constant)" "MP1b(Constant)" \
+           "Mpa(Constant)" "Mpb(Constant)" "Mpc(Constant)" "Mpd(Constant)" "Mqa(Constant)" \
+           "Mqb(Constant)" "Mqc(Constant)" "Mqd(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(P0a)" "Mc(P0a)" "MP0b(P0a)" "MP1a(P0a)" "MP1b(P0a)" "Mpa(P0a)" "Mpb(P0a)" "Mpc(P0a)" \
+           "Mpd(P0a)" "Mqa(P0a)" "Mqb(P0a)" "Mqc(P0a)" "Mqd(P0a)" "Mm(P0a)" "Mn(P0a)" \
+           "J(P0b)" "Mc(P0b)" "MP0a(P0b)" "MP1a(P0b)" "MP1b(P0b)" "Mpa(P0b)" "Mpb(P0b)" "Mpc(P0b)" \
+           "Mpd(P0b)" "Mqa(P0b)" "Mqb(P0b)" "Mqc(P0b)" "Mqd(P0b)" "Mm(P0b)" "Mn(P0b)" \
+           "J(P1a)" "Mc(P1a)" "MP0a(P1a)" "MP0b(P1a)" "MP1b(P1a)" "Mpa(P1a)" "Mpb(P1a)" "Mpc(P1a)" \
+           "Mpd(P1a)" "Mqa(P1a)" "Mqb(P1a)" "Mqc(P1a)" "Mqd(P1a)" "Mm(P1a)" "Mn(P1a)" \
+           "J(P1b)" "Mc(P1b)" "MP0a(P1b)" "MP0b(P1b)" "MP1a(P1b)" "Mpa(P1b)" "Mpb(P1b)" "Mpc(P1b)" \
+           "Mpd(P1b)" "Mqa(P1b)" "Mqb(P1b)" "Mqc(P1b)" "Mqd(P1b)" "Mm(P1b)" "Mn(P1b)" \
+           "J(pa)" "Mc(pa)" "MP0a(pa)" "MP0b(pa)" "MP1a(pa)" "MP1b(pa)" "Mpb(pa)" "Mpc(pa)" \
+           "Mpd(pa)" "Mqa(pa)" "Mqb(pa)" "Mqc(pa)" "Mqd(pa)" "Mm(pa)" "Mn(pa)" \
+           "J(pb)" "Mc(pb)" "MP0a(pb)" "MP0b(pb)" "MP1a(pb)" "MP1b(pb)" "Mpa(pb)" "Mpc(pb)" \
+           "Mpd(pb)" "Mqa(pb)" "Mqb(pb)" "Mqc(pb)" "Mqd(pb)" "Mm(pb)" "Mn(pb)" \
+           "J(pc)" "Mc(pc)" "MP0a(pc)" "MP0b(pc)" "MP1a(pc)" "MP1b(pc)" "Mpa(pc)" "Mpb(pc)" \
+           "Mpd(pc)" "Mqa(pc)" "Mqb(pc)" "Mqc(pc)" "Mqd(pc)" "Mm(pc)" "Mn(pc)" \
+           "J(pd)" "Mc(pd)" "MP0a(pd)" "MP0b(pd)" "MP1a(pd)" "MP1b(pd)" "Mpa(pd)" "Mpb(pd)" \
+           "Mpc(pd)" "Mqa(pd)" "Mqb(pd)" "Mqc(pd)" "Mqd(pd)" "Mm(pd)" "Mn(pd)" \
+           "J(qa)" "Mc(qa)" "MP0a(qa)" "MP0b(qa)" "MP1a(qa)" "MP1b(qa)" "Mpa(qa)" "Mpb(qa)" \
+           "Mpc(qa)" "Mpd(qa)" "Mqb(qa)" "Mqc(qa)" "Mqd(qa)" "Mm(qa)" "Mn(qa)" \
+           "J(qb)" "Mc(qb)" "MP0a(qb)" "MP0b(qb)" "MP1a(qb)" "MP1b(qb)" "Mpa(qb)" "Mpb(qb)" \
+           "Mpc(qb)" "Mpd(qb)" "Mqa(qb)" "Mqc(qb)" "Mqd(qb)" "Mm(qb)" "Mn(qb)" \
+           "J(qc)" "Mc(qc)" "MP0a(qc)" "MP0b(qc)" "MP1a(qc)" "MP1b(qc)" "Mpa(qc)" "Mpb(qc)" \
+           "Mpc(qc)" "Mpd(qc)" "Mqa(qc)" "Mqb(qc)" "Mqd(qc)" "Mm(qc)" "Mn(qc)" \
+           "J(qd)" "Mc(qd)" "MP0a(qd)" "MP0b(qd)" "MP1a(qd)" "MP1b(qd)" "Mpa(qd)" "Mpb(qd)" \
+           "Mpc(qd)" "Mpd(qd)" "Mqa(qd)" "Mqb(qd)" "Mqc(qd)" "Mm(qd)" "Mn(qd)" \
+           "J(Matrix m)" "Mc(Matrix m)" "MP0a(Matrix m)" "MP0b(Matrix m)" "MP1a(Matrix m)" \
+           "MP1b(Matrix m)" "Mpa(Matrix m)" "Mpb(Matrix m)" "Mpc(Matrix m)" "Mpd(Matrix m)" \
+           "Mqa(Matrix m)" "Mqb(Matrix m)" "Mqc(Matrix m)" "Mqd(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "MP0a(Matrix n)" "MP0b(Matrix n)" "MP1a(Matrix n)" \
+           "MP1b(Matrix n)" "Mpa(Matrix n)" "Mpb(Matrix n)" "Mpc(Matrix n)" "Mpd(Matrix n)" \
+           "Mqa(Matrix n)" "Mqb(Matrix n)" "Mqc(Matrix n)" "Mqd(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 15
+    enum = "Mc(Zstart)" "MP0a(Zstart)" "MP0b(Zstart)" "MP1a(Zstart)" "MP1b(Zstart)" \
+           "Mpa(Zstart)" "Mpb(Zstart)" "Mpc(Zstart)" "Mpd(Zstart)" \
+           "Mqa(Zstart)" "Mqb(Zstart)" "Mqc(Zstart)" "Mqd(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "MP0a(Constant)" "MP0b(Constant)" "MP1a(Constant)" "MP1b(Constant)" \
+           "Mpa(Constant)" "Mpb(Constant)" "Mpc(Constant)" "Mpd(Constant)" "Mqa(Constant)" \
+           "Mqb(Constant)" "Mqc(Constant)" "Mqd(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(P0a)" "Mc(P0a)" "MP0b(P0a)" "MP1a(P0a)" "MP1b(P0a)" "Mpa(P0a)" "Mpb(P0a)" "Mpc(P0a)" \
+           "Mpd(P0a)" "Mqa(P0a)" "Mqb(P0a)" "Mqc(P0a)" "Mqd(P0a)" "Mm(P0a)" "Mn(P0a)" \
+           "J(P0b)" "Mc(P0b)" "MP0a(P0b)" "MP1a(P0b)" "MP1b(P0b)" "Mpa(P0b)" "Mpb(P0b)" "Mpc(P0b)" \
+           "Mpd(P0b)" "Mqa(P0b)" "Mqb(P0b)" "Mqc(P0b)" "Mqd(P0b)" "Mm(P0b)" "Mn(P0b)" \
+           "J(P1a)" "Mc(P1a)" "MP0a(P1a)" "MP0b(P1a)" "MP1b(P1a)" "Mpa(P1a)" "Mpb(P1a)" "Mpc(P1a)" \
+           "Mpd(P1a)" "Mqa(P1a)" "Mqb(P1a)" "Mqc(P1a)" "Mqd(P1a)" "Mm(P1a)" "Mn(P1a)" \
+           "J(P1b)" "Mc(P1b)" "MP0a(P1b)" "MP0b(P1b)" "MP1a(P1b)" "Mpa(P1b)" "Mpb(P1b)" "Mpc(P1b)" \
+           "Mpd(P1b)" "Mqa(P1b)" "Mqb(P1b)" "Mqc(P1b)" "Mqd(P1b)" "Mm(P1b)" "Mn(P1b)" \
+           "J(pa)" "Mc(pa)" "MP0a(pa)" "MP0b(pa)" "MP1a(pa)" "MP1b(pa)" "Mpb(pa)" "Mpc(pa)" \
+           "Mpd(pa)" "Mqa(pa)" "Mqb(pa)" "Mqc(pa)" "Mqd(pa)" "Mm(pa)" "Mn(pa)" \
+           "J(pb)" "Mc(pb)" "MP0a(pb)" "MP0b(pb)" "MP1a(pb)" "MP1b(pb)" "Mpa(pb)" "Mpc(pb)" \
+           "Mpd(pb)" "Mqa(pb)" "Mqb(pb)" "Mqc(pb)" "Mqd(pb)" "Mm(pb)" "Mn(pb)" \
+           "J(pc)" "Mc(pc)" "MP0a(pc)" "MP0b(pc)" "MP1a(pc)" "MP1b(pc)" "Mpa(pc)" "Mpb(pc)" \
+           "Mpd(pc)" "Mqa(pc)" "Mqb(pc)" "Mqc(pc)" "Mqd(pc)" "Mm(pc)" "Mn(pc)" \
+           "J(pd)" "Mc(pd)" "MP0a(pd)" "MP0b(pd)" "MP1a(pd)" "MP1b(pd)" "Mpa(pd)" "Mpb(pd)" \
+           "Mpc(pd)" "Mqa(pd)" "Mqb(pd)" "Mqc(pd)" "Mqd(pd)" "Mm(pd)" "Mn(pd)" \
+           "J(qa)" "Mc(qa)" "MP0a(qa)" "MP0b(qa)" "MP1a(qa)" "MP1b(qa)" "Mpa(qa)" "Mpb(qa)" \
+           "Mpc(qa)" "Mpd(qa)" "Mqb(qa)" "Mqc(qa)" "Mqd(qa)" "Mm(qa)" "Mn(qa)" \
+           "J(qb)" "Mc(qb)" "MP0a(qb)" "MP0b(qb)" "MP1a(qb)" "MP1b(qb)" "Mpa(qb)" "Mpb(qb)" \
+           "Mpc(qb)" "Mpd(qb)" "Mqa(qb)" "Mqc(qb)" "Mqd(qb)" "Mm(qb)" "Mn(qb)" \
+           "J(qc)" "Mc(qc)" "MP0a(qc)" "MP0b(qc)" "MP1a(qc)" "MP1b(qc)" "Mpa(qc)" "Mpb(qc)" \
+           "Mpc(qc)" "Mpd(qc)" "Mqa(qc)" "Mqb(qc)" "Mqd(qc)" "Mm(qc)" "Mn(qc)" \
+           "J(qd)" "Mc(qd)" "MP0a(qd)" "MP0b(qd)" "MP1a(qd)" "MP1b(qd)" "Mpa(qd)" "Mpb(qd)" \
+           "Mpc(qd)" "Mpd(qd)" "Mqa(qd)" "Mqb(qd)" "Mqc(qd)" "Mm(qd)" "Mn(qd)" \
+           "J(Matrix m)" "Mc(Matrix m)" "MP0a(Matrix m)" "MP0b(Matrix m)" "MP1a(Matrix m)" \
+           "MP1b(Matrix m)" "Mpa(Matrix m)" "Mpb(Matrix m)" "Mpc(Matrix m)" "Mpd(Matrix m)" \
+           "Mqa(Matrix m)" "Mqb(Matrix m)" "Mqc(Matrix m)" "Mqd(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "MP0a(Matrix n)" "MP0b(Matrix n)" "MP1a(Matrix n)" \
+           "MP1b(Matrix n)" "Mpa(Matrix n)" "Mpb(Matrix n)" "Mpc(Matrix n)" "Mpd(Matrix n)" \
+           "Mqa(Matrix n)" "Mqb(Matrix n)" "Mqc(Matrix n)" "Mqd(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func fn1
+    caption = "First function"
+    default = ident()
+    hint = "Applied to z before P(z), ie. as P(Fn(z)). Try using Conj or Flip."
+  endfunc
+  func fn2
+    caption = "Last function"
+    default = ident()
+    hint = "Applied to z after P(z), ie. as Fn(P(z))."
+  endfunc
+
+switch:
+  type = "MMFSg-Recursion"
+  value = #pixel
+  start = start
+  c = c
+  P0a = P0a
+  P0b = P0b
+  P1a = P1a
+  P1b = P1b
+  pa = pa
+  pb = pb
+  pc = pc
+  pd = pd
+  qa = qa
+  qb = qb
+  qc = qc
+  qd = qd
+  m = m
+  n = n
+  fractal = fractal
+  degree = degree
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  fn1 = fn1
+  fn2 = fn2
+}
+
+MMFSf-Gamma {
+;
+; The gamma function as z = s*g(z) + c or z = s*g(z) + zold + c
+; or s*zold*g(z) + c where g() is the gamma function.
+;
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 27th July 2002
+;
+; Algorithm based on an application of the Lanczos approximation
+; for the gamma function by Paul Godfrey, if you're interested
+; then see:
+;
+; http://www.fit.edu/~gabdo/paulbio.html
+; http://www.rskey.org/gamma.htm
+;
+; Note that I've changed a couple of things as compared to the "gamma.m"
+; version after experimentation.
+; In the "gamma.m" file Paul Godfrey checks for asymptotes by testing
+; real(z)==0 and real(z)==round(real(z)) when real(z)<0, I've corrected
+; this by testing z==0 and if the complex value of the divisor is zero
+; when calculating g(z) if real(z)<0.
+;
+; This formula impliments an algorithm to pass a smooth colouring
+; fraction to the colouring as real(#z) and the angle of the true
+; final z as imag(#z). The smooth colouring algorithm was suggested
+; by Earl Hinrichs. When creating a new fractal using this method
+; you should choose the "Frac+Atan" option.
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex p = #pixel
+
+  if @usescale != 1.0
+    p = p/@usescale
+  endif
+  if @usecentre != (0,0)
+    p = p + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex s = @s
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<4
+    z = @value
+  elseif @mjmode<8
+    c = @value
+  elseif @mjmode<12
+    s = @value
+  elseif @mjmode<16
+    m = @value
+  elseif @mjmode<20
+    n = @value
+  endif
+
+  if @mjmode==4 || @mjmode==8 || @mjmode==12 || @mjmode==16
+    z = p
+  elseif @mjmode==0 || @mjmode==9 || @mjmode==13 || @mjmode==17
+    c = p
+  elseif @mjmode==1 || @mjmode==5 || @mjmode==14 || @mjmode==18
+    s = p
+  elseif @mjmode==2 || @mjmode==6 || @mjmode==10 || @mjmode==19
+    m = p
+  elseif @mjmode==3 || @mjmode==7 || @mjmode==11 || @mjmode==15
+    n = p
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = (0,0)
+  complex zo = zold
+  complex zs = zold
+  complex zp = (1,0)
+  complex q = zs
+  float v = sqrt(@bailout)
+  float mag = 0
+  bool r = true
+  int i = 0
+  complex w = z
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  float sqr2pi = sqrt(2*#pi)
+  float gplus = 5.2421875
+  bool bail = true
+
+loop:
+  zo = zold
+  zold = z
+
+  repeat
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + p
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if z==0
+    z = 1e300
+  else
+  if (real(z)<0)&&(@fix)
+    w = -z
+  else
+    w = z
+  endif
+  w = (sqr2pi* \
+        (0.99999999999999709182 + 57.156235665862923517/(w+1) \
+        - 59.597960355475491248/(w+2) + 14.136097974741747174/(w+3) \
+        - 0.49191381609762019978/(w+4) + .33994649984811888699E-4/(w+5) \
+        + .46523628927048575665E-4/(w+6) - .98374475304879564677e-4/(w+7) \
+        + .15808870322491248884E-3/(w+8) - .21026444172410488319e-3/(w+9) \
+        + .21743961811521264320e-3/(w+10) - .16431810653676389022e-3/(w+11) \
+        + .84418223983852743293e-4/(w+12) - .26190838401581408670e-4/(w+13) \
+        + .36899182659531622704e-5/(w+14)) \
+      /w) * exp(-w-gplus)*(w+gplus)^(w+0.5)
+  if real(z)<0
+    w = z*w*sin(#pi*z)
+    if (w==0)
+      z = 1e300
+    else
+      z = s*fn1(-#pi/w)
+    endif
+  else
+    z = s*fn1(w)
+  endif
+  endif
+
+  if @fractal == 0
+    z = z + c
+  elseif @fractal == 1
+    z = z + zo + c
+  elseif @fractal == 2
+    z = zo*z + c
+  endif
+
+  if r
+    mag = |z|
+  endif
+
+  if (@smooth>0)&&(mag>@bailout)
+    if r
+      r = false
+      q = z
+      z = v*zold/cabs(zold)
+      if @sigma == true
+        zs = zs - zold
+      endif
+      if (@product == true) && (|zs|>0)
+        zp = zp/zs
+      endif
+    else
+      r = true
+      if @smooth>6
+        x = log(log(cabs(z)))
+        x = (x-log(log(cabs(q))))/(x-log(log(v)))
+        z = x + flip(atan2(q))
+      elseif @smooth>4
+        x = log(log(cabs(z)))
+        z = (x-log(log(cabs(q))))/(x-log(log(v)))
+      else
+        z = (z-q)/(z-v*q/sqrt(mag))
+        if @smooth==1 || @smooth == 3
+          z = z^@fudge
+        else
+          z = ((@fudge^z)-1)/(@fudge-1)
+        endif
+      endif
+      if @smooth>2 && @smooth!=5 && @smooth!=7
+        z = i - 1 + z
+      endif
+      if @smooth<5
+        z = (real(z)+flip(@fudge1*imag(z)))/@fudge2
+      endif
+      bail = false
+    endif
+  endif
+
+  until r
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+  i = i + 1
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Gamma"
+  magn = 0.4
+  center = (2, 0)
+  method = multipass
+  periodicity = 0
+  helpfile = "MMF.html"
+  param value
+    caption = "Switched value"
+    default = (1,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in s*g(z)+c, used in all modes except the Mc ones."
+  endparam
+  param s
+    caption = "Scale"
+    default = (1,0)
+    hint = "The scale s in s*g(z)+c, used in all modes except the Ms ones."
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Can be used in combination with \
+            the translations and general transformation \
+            matrix."
+  endparam
+  param fractal
+    caption = "Formula"
+    enum = "s*g(z)+c" "s*g(z)+zold+c" "s*zold*g(z)+c"
+    default = 0
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc."
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 256.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param fix
+    caption = "Fix"
+    default = true
+    hint = "When enabled the gamma calculation is correct, when \
+            disabled it isn't - this is because I rendered several \
+            images using an incorrect formula before I realised !"
+  endparam
+  param smooth
+    caption = "Smooth colouring"
+    default = 0
+    enum = "Off" "Smooth#1" "Smooth#2" "+Iter#1" "+Iter#2" "loglog" "loglog+Iter" \
+           "Frac+Atan" "Frac+Atan+Iter"
+    hint = "Modifies the final z value so it's a smooth \
+            value. Use for colourings that are based on \
+            final z or for ones that use a final z smoothing fraction. \
+            The new loglog versions work best."
+  endparam
+  param fudge
+    caption = "Smooth fudge"
+    default = 10.0
+    hint = "Use this in combination with the Smooth colouring variations \
+            to get the colouring as smooth as possible. Typically use \
+            values 2 - 200, but sometimes very large values, fractions \
+            or negative values may help. Not needed for the loglog smoothing."
+  endparam
+  param fudge1
+    caption = "Smooth scale imag"
+    default = 100.0
+    hint = "This only applies when using the Smooth colouring. Use \
+            it to scale up the imaginary component of the final z, this \
+            will improve results with some colourings. \
+            Not used for loglog smoothing."
+  endparam
+  param fudge2
+    caption = "Smooth divide"
+    default = 1.0
+    hint = "This only applies when using the Smooth colouring. The final z \
+            value is divided by this value, eg. set it to Maximum Iterations. \
+            Not used for loglog smoothing."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "Ms(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(c)" "Ms(c)" "Mm(c)" "Mn(c)" \
+           "J(s)" "Mc(s)" "Mm(s)" "Mn(s)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Ms(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Ms(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 4
+    enum = "Mc(Zstart)" "Ms(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(c)" "Ms(c)" "Mm(c)" "Mn(c)" \
+           "J(s)" "Mc(s)" "Mm(s)" "Mn(s)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Ms(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Ms(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func Fn
+    caption = "Fn (done first)"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+  func Fn1
+    caption = "Fn1 (as Fn1(g(z)))"
+    default = ident()
+    hint = "Try using Log."
+  endfunc
+
+switch:
+  type = "MMFSf-Gamma"
+  value = #pixel
+  start = start
+  c = c
+  s = s
+  m = m
+  n = n
+  ang = ang
+  fractal = fractal
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test  = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  fix = fix
+  smooth = smooth
+  fudge = fudge
+  fudge1 = fudge1
+  fudge2 = fudge2
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  Fn = Fn
+  Fn1 = Fn1
+}
+
+MMFSe-MorganVoyce {
+;
+; This formula was fixed on 8th Sept. 2002 so that UPRs
+; that did not reload correctly can be fixed.
+; The problem involved "b" and "B" when used in some of
+; the parameters, specifically UF is not case-sensitive
+; with respect to parameters.
+; To fix a broken UPR edit the text of the UPR by replacing
+; the "B" in any parameters with "Bb" - leave any "b"'s alone.
+; eg. replace "z=Bn+c" with "z=Bbn+c"
+;     or "MB(zstart)" with "MBb(zstart)" etc.
+; You should be able to do the above with a case-sensitive
+; search/replace in a decent text editor.
+;
+; The basis for this formula is the recurrance relation
+; for the Morgan-Voyce polynomials, ie.
+; bn+1 = z*Bn + bn
+; Bn+1 = (z+1)*Bn + bn
+; For the standard polynomials b0 and B0 start as (1,0).
+;
+; Note that the default is set to a degree 4 polynomial
+; and that the SWITCH SCALE and SWITCH CENTRE have been
+; set for use with this setting - if you change the formula
+; to be iterated then you will need to find the critical
+; value of zstart for the Mandelbrot again and probably
+; change the Switch Scale and Switch Centre values if you
+; want to use switching.
+; Note also that if you switch with a Switch Scale other
+; than 1.0 and/or a Switch Centre other than (0,0) then
+; you should reset the Current Scale and Current Centre
+; back to 1.0 and (0,0) after switching and use UF's standard
+; zooming to set position and scale.
+;
+; Tips:
+; If you want to use the Mandelbrot mode as a map of
+; the Julias then in many cases it's worth using
+; the switch to find the critical value of zstart - this
+; is generally when the "inside" area of the Mandelbrot
+; is largest, some of the Mandelbrots for this formula
+; are very small though and you may be better modifying
+; the start value by hand - remember for the Mx(Zstart)
+; formulas the Switched value is used as zstart.
+;
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 21st July 2002
+;
+; © David Makin 2002
+;
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex b = @b
+  complex bb = @bb
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<5
+    z = @value
+  elseif @mjmode<10
+    c = @value
+  elseif @mjmode<15
+    b = @value
+  elseif @mjmode<20
+    bb = @value
+  elseif @mjmode<25
+    m = @value
+  elseif @mjmode<30
+    n = @value
+  endif
+
+  if @mjmode==5 || @mjmode==10 || @mjmode==15 || @mjmode==20 || @mjmode==25
+    z = px
+  elseif @mjmode==0 || @mjmode==11 || @mjmode==16 || @mjmode==21 || @mjmode==26
+    c = px
+  elseif @mjmode==1 || @mjmode==6 || @mjmode==17 || @mjmode==22 || @mjmode==27
+    b = px
+  elseif @mjmode==2 || @mjmode==7 || @mjmode==12 || @mjmode==23 || @mjmode==28
+    bb = px
+  elseif @mjmode==3 || @mjmode==8 || @mjmode==13 || @mjmode==18 || @mjmode==29
+    m = px
+  elseif @mjmode==4 || @mjmode==9 || @mjmode==14 || @mjmode==19 || @mjmode==24
+    n = px
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex bn = b
+  complex bbn = bb
+  complex t1 = b
+  complex zold = (0,0)
+  complex zo = zold
+  complex zs = zold
+  complex zp = (1,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  int i=0
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn1(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + px
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if @fractal == 0
+    bn = b
+    bbn = bb
+    i = 0
+    while i<@degree
+      t1 = bn
+      bn = z*bbn + bn
+      bbn = (z+1)*bbn + t1
+      i = i + 1
+    endwhile
+  elseif @fractal == 1
+    t1 = bn
+    bn = z*bbn + bn
+    bbn = (z+1)*bbn + t1
+  endif
+
+  if @use%2==0
+    z = bn
+  elseif @use%2==1
+    z = bbn
+  endif
+
+  if @use < 2
+    z = z + c
+  elseif @use < 4
+    z = c*z
+  elseif @use < 6
+    z = z + zo + c
+  elseif @use < 8
+    z = c*z + zo
+  elseif @use < 10
+    z = zo*z + c
+  endif
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Morgan-Voyce"
+  center = (0.45, 0)
+  magn = 7
+  method = multipass
+  periodicity = 0
+  param value
+    caption = "Switched value"
+    default = (-0.5,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones, or the \
+            (Zstart) ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c, used in all modes except the 'Mc' ones \
+            or the (Constant) ones."
+  endparam
+  param b
+    caption = "Start value of b"
+    default = (1,0)
+    hint = "The start value of b, used in all modes except the 'Mb' ones \
+            or the (bStart) ones."
+  endparam
+  param bb
+    caption = "Start value of Bb"
+    default = (1,0)
+    hint = "The start value of Bb, used in all modes except the 'MBb' ones \
+            or the (BbStart) ones)."
+  endparam
+  param fractal
+    caption = "Fractal type"
+    default = 0
+    enum = "Degree" "Iteration"
+    hint = "When choosing Degree you can set the degree of the polynomial \
+            to be used using the Degree parameter, when using Iteration the \
+            recurrance relation is continued over consecutive iterations instead."
+  endparam
+  param use
+    caption = "Formula to use"
+    default = 0
+    enum = "z=bn+c" "z=Bbn+c" "z=c*bn" "z=c*Bbn" \
+           "z=bn+zold+c" "z=Bbn+zold+c" "z=c*bn+zold" "z=c*Bbn+zold" \
+           "z=zold*bn+c" "z=zold*Bbn+c"
+    hint = "Choosing bn or Bbn changes the polynomial to be used as P(z)."
+  endparam
+  param degree
+    caption = "Degree"
+    default = 4
+    hint = "Sets the degree to use for fractal type Degree."
+  endparam
+  param m
+    caption = "Matrix col 0 (m)"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix. Used in all \
+            modes except the 'Mm' ones or the (Matrix m) ones."
+  endparam
+  param n
+    caption = "Matrix col 1 (n)"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix. Used in all \
+            modes except the 'Mn' ones or the (Matrix n) ones."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Really only signficant when First \
+            function is not ident."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 8.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (-.5,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "Mb(Zstart)" "MBb(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Mb(Constant)" "MBb(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(bStart)" "Mc(bStart)" "MBb(bStart)" "Mm(bStart)" "Mn(bStart)" \
+           "J(BbStart)" "Mc(BbStart)" "Mb(BbStart)" "Mm(BbStart)" "Mn(BbStart)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Mb(Matrix m)" "MBb(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Mb(Matrix n)" "MBb(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 5
+    enum = "Mc(Zstart)" "Mb(Zstart)" "MBb(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Mb(Constant)" "MBb(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(bStart)" "Mc(bStart)" "MBb(bStart)" "Mm(bStart)" "Mn(bStart)" \
+           "J(BbStart)" "Mc(BbStart)" "Mb(BbStart)" "Mm(BbStart)" "Mn(BbStart)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Mb(Matrix m)" "MBb(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Mb(Matrix n)" "MBb(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func fn1
+    caption = "First function"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+
+switch:
+  type = "MMFSe-MorganVoyce"
+  value = #pixel
+  start = start
+  c = c
+  b = b
+  bb = bb
+  fractal = fractal
+  use = use
+  degree = degree
+  m = m
+  n = n
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  fn1 = fn1
+}
+
+MMFSa-Standard {
+;
+; Generic Mandelbrot set with extended switching.
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 21st April 2002
+;
+; © David Makin 2002
+;
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex s = @s
+  complex p = @p*4
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<5
+    z = @value
+  elseif @mjmode<10
+    c = @value
+  elseif @mjmode<15
+    s = @value
+  elseif @mjmode<20
+    p = @value*4
+  elseif @mjmode<25
+    m = @value
+  elseif @mjmode<30
+    n = @value
+  endif
+
+  if @mjmode==5 || @mjmode==10 || @mjmode==15 || @mjmode==20 || @mjmode==25
+    z = px
+  elseif @mjmode==0 || @mjmode==11 || @mjmode==16 || @mjmode==21 || @mjmode==26
+    c = px
+  elseif @mjmode==1 || @mjmode==6 || @mjmode==17 || @mjmode==22 || @mjmode==27
+    s = px
+  elseif @mjmode==2 || @mjmode==7 || @mjmode==12 || @mjmode==23 || @mjmode==28
+    p = px*4
+  elseif @mjmode==3 || @mjmode==8 || @mjmode==13 || @mjmode==18 || @mjmode==29
+    m = px
+  elseif @mjmode==4 || @mjmode==9 || @mjmode==14 || @mjmode==19 || @mjmode==24
+    n = px
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = (0,0)
+  complex zo = zold
+  complex zs = (0,0)
+  complex zp = (1,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn1(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + px
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if @fractal == 0
+    z = s*z^p + c
+  elseif @fractal == 1
+    z = s*z^p + zo + c
+  elseif @fractal == 2
+    z = s*zo*z^p + c
+  endif
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Standard"
+  center = (-0.5, 0)
+  method = multipass
+  periodicity = 0
+  param value
+    caption = "Switched value"
+    default = (0,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones, or the \
+            (Zstart) ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in s*z^p+c, used in all modes except the 'Mc' ones \
+            or the (Constant) ones."
+  endparam
+  param s
+    caption = "Scale"
+    default = (1,0)
+    hint = "The scale s in s*z^p+c, used in all modes except the 'Ms' ones \
+            or the (Scale) ones."
+  endparam
+  param p
+    caption = "Power/4"
+    default = (0.5,0)
+    hint = "The power p/4 in s*z^p+c, used in all modes except the 'Mp' ones \
+            or the (Power) ones). \
+            The actual exponent used is 4* the displayed value - this \
+            is to allow a better range of values for switching."
+  endparam
+  param fractal
+    caption = "Fractal type"
+    default = 0
+    enum = "s*z^p+c" "s*z^p+zold+c" "s*zold*z^p+c"
+    hint = "Choose the classic standard Mandelbrot, the classic 'Manowar' or \
+           the third option which uses zold like Manowar but multiplies by it \
+           instead of adding it."
+  endparam
+  param m
+    caption = "Matrix col 0 (m)"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix. Used in all \
+            modes except the 'Mm' ones or the (Matrix m) ones."
+  endparam
+  param n
+    caption = "Matrix col 1 (n)"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix. Used in all \
+            modes except the 'Mn' ones or the (Matrix n) ones."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Really only signficant when First \
+            function is not ident."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "Ms(Zstart)" "Mp(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Ms(Constant)" "Mp(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Scale)" "Mc(Scale)" "Mp(Scale)" "Mm(Scale)" "Mn(Scale)" \
+           "J(Power)" "Mc(Power)" "Ms(Power)" "Mm(Power)" "Mn(Power)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Ms(Matrix m)" "Mp(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Ms(Matrix n)" "Mp(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 5
+    enum = "Mc(Zstart)" "Ms(Zstart)" "Mp(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "Ms(Constant)" "Mp(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Scale)" "Mc(Scale)" "Mp(Scale)" "Mm(Scale)" "Mn(Scale)" \
+           "J(Power)" "Mc(Power)" "Ms(Power)" "Mm(Power)" "Mn(Power)" \
+           "J(Matrix m)" "Mc(Matrix m)" "Ms(Matrix m)" "Mp(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "Ms(Matrix n)" "Mp(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func fn1
+    caption = "First function"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+
+switch:
+  type = "MMFSa-Standard"
+  value = #pixel
+  start = start
+  c = c
+  s = s
+  p = p
+  fractal = fractal
+  m = m
+  n = n
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  fn1 = fn1
+}
+
+MMFSb-Lucas {
+;
+; Lucas polynomials with extended switching.
+;
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 5th May 2002
+;
+; © David Makin 2002
+;
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  complex L0 = @L0
+  complex L1 = @L1
+  complex L2 = @L2
+  complex L3 = @L3
+  complex L4 = @L4
+  complex L5 = @L5
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<9
+    z = @value
+  elseif @mjmode<18
+    c = @value
+  elseif @mjmode<27
+    L0 = @value
+  elseif @mjmode<36
+    L1 = @value
+  elseif @mjmode<45
+    L2 = @value
+  elseif @mjmode<54
+    L3 = @value
+  elseif @mjmode<63
+    L4 = @value
+  elseif @mjmode<72
+    L5 = @value
+  elseif @mjmode<81
+    m = @value
+  elseif @mjmode<90
+    n = @value
+  endif
+
+  if @mjmode==9 || @mjmode==18 || @mjmode==27 || @mjmode==36 || @mjmode==45 \
+     || @mjmode==54 || @mjmode==63 || @mjmode==72 || @mjmode==81
+    z = px
+  elseif @mjmode==0 || @mjmode==19 || @mjmode==28 || @mjmode==37 || @mjmode==46 \
+     || @mjmode==55 || @mjmode==64 || @mjmode==73 || @mjmode==82
+    c = px
+  elseif @mjmode==1 || @mjmode==10 || @mjmode==29 || @mjmode==38 || @mjmode==47 \
+     || @mjmode==56 || @mjmode==65 || @mjmode==74 || @mjmode==83
+    L0 = px
+  elseif @mjmode==2 || @mjmode==11 || @mjmode==20 || @mjmode==39 || @mjmode==48 \
+     || @mjmode==57 || @mjmode==66 || @mjmode==75 || @mjmode==84
+    L1 = px
+  elseif @mjmode==3 || @mjmode==12 || @mjmode==21 || @mjmode==30 || @mjmode==49 \
+     || @mjmode==58 || @mjmode==67 || @mjmode==76 || @mjmode==85
+    L2 = px
+  elseif @mjmode==4 || @mjmode==13 || @mjmode==22 || @mjmode==31 || @mjmode==40 \
+     || @mjmode==59 || @mjmode==68 || @mjmode==77 || @mjmode==86
+    L3 = px
+  elseif @mjmode==5 || @mjmode==14 || @mjmode==23 || @mjmode==32 || @mjmode==41 \
+     || @mjmode==50 || @mjmode==69 || @mjmode==78 || @mjmode==87
+    L4 = px
+  elseif @mjmode==6 || @mjmode==15 || @mjmode==24 || @mjmode==33 || @mjmode==42 \
+     || @mjmode==51 || @mjmode==60 || @mjmode==79 || @mjmode==88
+    L5 = px
+  elseif @mjmode==7 || @mjmode==16 || @mjmode==25 || @mjmode==34 || @mjmode==43 \
+     || @mjmode==52 || @mjmode==61 || @mjmode==70 || @mjmode==89
+    m = px
+  elseif @mjmode==8 || @mjmode==17 || @mjmode==26 || @mjmode==35 || @mjmode==44 \
+     || @mjmode==53 || @mjmode==62 || @mjmode==71 || @mjmode==80
+    n = px
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = z
+  complex zo =(0,0)
+  complex zs = zo
+  complex zp = (1,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  complex F = L0
+  complex F0 = L0
+  complex F1 = L1*z + L2
+
+  int r = 0
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn1(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + px
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if @fractal%4 < 2  ;Lucas Pn(z)+c, c*Pn(z)
+    F0 = L0
+    F1 = L1*z + L2
+    r = @degree - 1
+    while r > 0
+      F = F1
+      F1 = (L4*z + L5)*F1 + L3*F0
+      F0 = F
+      r = r - 1
+    endwhile
+  elseif @fractal%4 > 1  ;Lucas Piter(z)+c, c*Piter(z)
+    if r > 0
+      F = F1
+      F1 = (L4*z + L5)*F1 + L3*F0
+      F0 = F
+    endif
+    r = r + 1
+  endif
+
+  if @fractal==0 || @fractal==2
+    z = F1 + c
+  elseif @fractal==1 || @fractal==3
+    z = c*F1
+  elseif @fractal==4 || @fractal==6
+    z = F1 + zo + c
+  elseif @fractal==5 || @fractal==7
+    z = c*F1 + zo
+  elseif @fractal==8 || @fractal==10
+    z = zo*F1 + c
+  elseif @fractal==9 || @fractal==11
+    z = c*zo*F1
+  endif
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Lucas"
+  center = (-0.5, 0)
+  method = multipass
+  periodicity = 0
+  param value
+    caption = "Switched value"
+    default = (0,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in s*z^p+c, used in all modes except the 'Mc' ones."
+  endparam
+  param L0
+    caption = "L0 (First constant)"
+    default = (1.0,0)
+    hint = "Sets the base first constant for a Lucas polynomial, \
+            recurrence relation first term F0(z)."
+  endparam
+  param L1
+    caption = "L1 (Base Linear coeff)"
+    default = (1.0,0)
+    hint = "Sets the base linear coefficient for a Lucas polynomial, \
+            recurrence relation second term F1(z)."
+  endparam
+  param L2
+    caption = "L2 (Base Linear const)"
+    default = (0,0)
+    hint = "Sets the base linear constant for a Lucas polynomial, \
+            recurrence relation second term F1(z)."
+  endparam
+  param L3
+    caption = "L3 (c in c*Fn-2(z))"
+    default = (-1.0,0)
+    hint = "Sets the constant multiplier of Fn-2(z) \
+            for a Lucas polynomial, \
+            recurrence relation nth term Fn(z)."
+  endparam
+  param L4
+    caption = "L4 (a in (a*z+c)*Fn-1(z))"
+    default = (2.0,0)
+    hint = "Sets the coefficient a in (a*z+c)*Fn-1(z) \
+            for a Lucas polynomial, \
+            recurrence relation nth term Fn(z)."
+  endparam
+  param L5
+    caption = "L5 (c in (a*z+c)*Fn-1(z))"
+    default = (0,0)
+    hint = "Sets the constant c in (a*z+c)*Fn-1(z) \
+            for a Lucas polynomial, \
+            recurrence relation nth term Fn(z)."
+  endparam
+  param m
+    caption = "Matrix col 0 (m)"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix. Used in all \
+            modes except the 'Mm' ones."
+  endparam
+  param n
+    caption = "Matrix col 1 (n)"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix. Used in all \
+            modes except the 'Mn' ones."
+  endparam
+  param fractal
+    caption = "Fractal type"
+    default = 0
+    enum = "Pn(z)+c" "c*Pn(z)" "Piter(z)+c" "c*Piter(z)" \
+           "Pn(z)+zold+c" "c*Pn(z)+zold" "Piter(z)+zold+c" "c*Piter(z)+zold" \
+           "zold*Pn(z)+c" "c*zold*Pn(z)" "zold*Piter(z)+c" "c*zold*Piter(z)"
+    hint = "Use the degree parameter to set the degree for the \
+            Pn types. In the Piter types the recurrence relation \
+            for the Lucas polynomials is continued with iterations \
+            the degree of the polynomial rising with iteration count."
+  endparam
+  param degree
+    caption = "Degree"
+    default = 4
+    min = 1
+    hint = "Sets the degree for Pn(z)+c and c*Pn(z)."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Really only signficant when First \
+            function is not ident."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+
+    enum = "Mc(Zstart)" "ML0(Zstart)" "ML1(Zstart)" "ML2(Zstart)" "ML3(Zstart)" \
+           "ML4(Zstart)" "ML5(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "ML0(Constant)" "ML1(Constant)" "ML2(Constant)" "ML3(Constant)" \
+           "ML4(Constant)" "ML5(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Lucas0)" "Mc(Lucas0)" "ML1(Lucas0)" "ML2(Lucas0)" "ML3(Lucas0)" \
+           "ML4(Lucas0)" "ML5(Lucas0)" "Mm(Lucas0)" "Mn(Lucas0)" \
+           "J(Lucas1)" "Mc(Lucas1)" "ML0(Lucas1)" "ML2(Lucas1)" "ML3(Lucas1)" \
+           "ML4(Lucas1)" "ML5(Lucas1)" "Mm(Lucas1)" "Mn(Lucas1)" \
+           "J(Lucas2)" "Mc(Lucas2)" "ML0(Lucas2)" "ML1(Lucas2)" "ML3(Lucas2)" \
+           "ML4(Lucas2)" "ML5(Lucas2)" "Mm(Lucas2)" "Mn(Lucas2)" \
+           "J(Lucas3)" "Mc(Lucas3)" "ML0(Lucas3)" "ML1(Lucas3)" "ML2(Lucas3)" \
+           "ML4(Lucas3)" "ML5(Lucas3)" "Mm(Lucas3)" "Mn(Lucas3)" \
+           "J(Lucas4)" "Mc(Lucas4)" "ML0(Lucas4)" "ML1(Lucas4)" "ML2(Lucas4)" \
+           "ML3(Lucas4)" "ML5(Lucas4)" "Mm(Lucas4)" "Mn(Lucas4)" \
+           "J(Lucas5)" "Mc(Lucas5)" "ML0(Lucas5)" "ML1(Lucas5)" "ML2(Lucas5)" \
+           "ML3(Lucas5)" "ML4(Lucas5)" "Mm(Lucas5)" "Mn(Lucas5)" \
+           "J(Matrix m)" "Mc(Matrix m)" "ML0(Matrix m)" "ML1(Matrix m)" "ML2(Matrix m)" \
+           "ML3(Matrix m)" "ML4(Matrix m)" "ML5(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "ML0(Matrix n)" "ML1(Matrix n)" "ML2(Matrix n)" \
+           "ML3(Matrix n)" "ML4(Matrix n)" "ML5(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 9
+    enum = "Mc(Zstart)" "ML0(Zstart)" "ML1(Zstart)" "ML2(Zstart)" "ML3(Zstart)" \
+           "ML4(Zstart)" "ML5(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "ML0(Constant)" "ML1(Constant)" "ML2(Constant)" "ML3(Constant)" \
+           "ML4(Constant)" "ML5(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Lucas0)" "Mc(Lucas0)" "ML1(Lucas0)" "ML2(Lucas0)" "ML3(Lucas0)" \
+           "ML4(Lucas0)" "ML5(Lucas0)" "Mm(Lucas0)" "Mn(Lucas0)" \
+           "J(Lucas1)" "Mc(Lucas1)" "ML0(Lucas1)" "ML2(Lucas1)" "ML3(Lucas1)" \
+           "ML4(Lucas1)" "ML5(Lucas1)" "Mm(Lucas1)" "Mn(Lucas1)" \
+           "J(Lucas2)" "Mc(Lucas2)" "ML0(Lucas2)" "ML1(Lucas2)" "ML3(Lucas2)" \
+           "ML4(Lucas2)" "ML5(Lucas2)" "Mm(Lucas2)" "Mn(Lucas2)" \
+           "J(Lucas3)" "Mc(Lucas3)" "ML0(Lucas3)" "ML1(Lucas3)" "ML2(Lucas3)" \
+           "ML4(Lucas3)" "ML5(Lucas3)" "Mm(Lucas3)" "Mn(Lucas3)" \
+           "J(Lucas4)" "Mc(Lucas4)" "ML0(Lucas4)" "ML1(Lucas4)" "ML2(Lucas4)" \
+           "ML3(Lucas4)" "ML5(Lucas4)" "Mm(Lucas4)" "Mn(Lucas4)" \
+           "J(Lucas5)" "Mc(Lucas5)" "ML0(Lucas5)" "ML1(Lucas5)" "ML2(Lucas5)" \
+           "ML3(Lucas5)" "ML4(Lucas5)" "Mm(Lucas5)" "Mn(Lucas5)" \
+           "J(Matrix m)" "Mc(Matrix m)" "ML0(Matrix m)" "ML1(Matrix m)" "ML2(Matrix m)" \
+           "ML3(Matrix m)" "ML4(Matrix m)" "ML5(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "ML0(Matrix n)" "ML1(Matrix n)" "ML2(Matrix n)" \
+           "ML3(Matrix n)" "ML4(Matrix n)" "ML5(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func fn1
+    caption = "First function"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+
+switch:
+  type = "MMFSb-Lucas"
+  value = #pixel
+  start = start
+  c = c
+  L0 = L0
+  L1 = L1
+  L2 = L2
+  L3 = L3
+  L4 = L4
+  L5 = L5
+  m = m
+  n = n
+  fractal = fractal
+  degree = degree
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  fn1 = fn1
+}
+
+MMFSc-Mixer {
+; 
+; This formula allows you to mix two formulas.
+; On each iteration the new z is calculated for both
+; formulas and these two values are combined to give
+; the value actually passed on to the next iteration.
+;
+; Tips:
+; If you want to use the Mandelbrot mode as a map of
+; the Julias then in many cases it's worth using
+; the switch to find the critical value of zstart - this
+; is generally when the "inside" area of the Mandelbrot
+; is largest.
+; It's very often interesting to mix a generally divergent
+; formula with a convergent one - but remember you may
+; need to enable convergence bailout and/or use a non-zero
+; zstart value for the Mandelbrot.
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 19th May 2002
+;
+; November 2004
+; Added convergent Hinrich smoothing and "Integration".
+; Try Integration with 'Iterate the sum'.
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex p = #pixel
+
+  if @usescale != 1.0
+    p = p/@usescale
+  endif
+  if @usecentre != (0,0)
+    p = p + @usecentre
+  endif
+
+  complex z = @start
+  complex c = @c
+  float fx = real(@f)
+  float fy = imag(@f)
+  float fx1 = fx
+  float fy1 = fy
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<4
+    z = @value
+  elseif @mjmode<8
+    c = @value
+  elseif @mjmode<12
+    fx = real(@value)
+    fy = imag(@value)
+  elseif @mjmode<16
+    m = @value
+  elseif @mjmode<20
+    n = @value
+  endif
+
+  if @mjmode==4 || @mjmode==8 || @mjmode==12 || @mjmode==16
+    z = p
+  elseif @mjmode==0 || @mjmode==9 || @mjmode==13 || @mjmode==17
+    c = p
+  elseif @mjmode==1 || @mjmode==5 || @mjmode==14 || @mjmode==18
+    fx = real(p)
+    fy = imag(p)
+  elseif @mjmode==2 || @mjmode==6 || @mjmode==10 || @mjmode==19
+    m = p
+  elseif @mjmode==3 || @mjmode==7 || @mjmode==11 || @mjmode==15
+    n = p
+  endif
+
+  if fx>1
+    fx=1
+  elseif fx<-1
+    fx=-1
+  endif
+
+  if fy>1
+    fy=1
+  elseif fy<-1
+    fy=-1
+  endif
+
+  if fx>0
+    fx1 = 1 - fx
+  else
+    fx1 = -1 - fx
+  endif
+  
+  if fy>0
+    fy1 = 1 - fy
+  else
+    fy1 = -1 - fy
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = (0,0)
+  if @fixzold
+    zold = z
+  endif
+  complex zo = zold
+  complex z1 = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex zsold = zs
+  complex zpold = zp
+  complex q = zs
+  float v = sqrt(@bailout)
+  float v1 = sqrt(@bailout1)
+  float mag = 0
+  float mag1 = 1e100
+  complex t1 = (0,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  complex sum2 = @nr1 + @nr2
+  complex pro2 = @nr1*@nr2
+  complex sum3a = sum2 + @nr3
+  complex sum3b = pro2 + @nr3*sum2
+  complex pro3 = pro2*@nr3
+  complex sum4a = sum3a + @nr4
+  complex sum4b = sum3b + @nr4*sum3a
+  complex sum4c = pro3 + @nr4*sum3b
+  complex pro4 = pro3*@nr4
+  complex sum5a = sum4a + @nr5
+  complex sum5b = sum4b + @nr5*sum4a
+  complex sum5c = sum4c + @nr5*sum4b
+  complex sum5d = pro4 + @nr5*sum4c
+  complex pro5 = pro4*@nr5
+  complex sum6a = sum5a + @nr6
+  complex sum6b = sum5b + @nr6*sum5a
+  complex sum6c = sum5c + @nr6*sum5b
+  complex sum6d = sum5d + @nr6*sum5c
+  complex sum6e = pro5 + @nr6*sum5d
+
+  complex s2um2 = @n2r1 + @n2r2
+  complex p2ro2 = @n2r1*@n2r2
+  complex s2um3a = s2um2 + @n2r3
+  complex s2um3b = p2ro2 + @n2r3*s2um2
+  complex p2ro3 = p2ro2*@n2r3
+  complex s2um4a = s2um3a + @n2r4
+  complex s2um4b = s2um3b + @n2r4*s2um3a
+  complex s2um4c = p2ro3 + @n2r4*s2um3b
+  complex p2ro4 = p2ro3*@n2r4
+  complex s2um5a = s2um4a + @n2r5
+  complex s2um5b = s2um4b + @n2r5*s2um4a
+  complex s2um5c = s2um4c + @n2r5*s2um4b
+  complex s2um5d = p2ro4 + @n2r5*s2um4c
+  complex p2ro5 = p2ro4*@n2r5
+  complex s2um6a = s2um5a + @n2r6
+  complex s2um6b = s2um5b + @n2r6*s2um5a
+  complex s2um6c = s2um5c + @n2r6*s2um5b
+  complex s2um6d = s2um5d + @n2r6*s2um5c
+  complex s2um6e = p2ro5 + @n2r6*s2um5d
+
+  float fac=1
+  float pwr=1
+  float fac1=1
+  float pwr1=1
+
+  int i = 0
+  bool r = true
+
+loop:
+  zsold = zs
+  zpold = zp
+  zo = zold
+  zold = z
+
+  repeat
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn2(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + p
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  t1 = z
+
+  if @fractal == 0
+    z = z^@power + c
+  elseif @fractal == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal == 3
+    z=@Fn(z)+c
+  elseif @fractal == 4
+    z=1/@Fn(z)+c
+  elseif @fractal == 5
+    z=z*@Fn(z)+c
+  elseif @fractal == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal == 11
+    z=c*@Fn(z)
+  elseif @fractal == 12
+    z=@Fn(z)+z+c
+  elseif @fractal == 13
+    z=c*@Fn(z)+z
+  elseif @fractal == 14
+    z = c*z*(1-z)
+  elseif @fractal == 15
+    z = z*(1-z) + c
+  elseif @fractal == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal == 22
+    z = z^(i+1) + c
+  elseif @fractal == 23 && @ndegree==0
+    z = z - (z-@nr1)*(z-@nr2)/(2*z-sum2) + c
+  elseif @fractal == 23 && @ndegree==1
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)/(3*z^2 - 2*sum3a*z + sum3b) + c
+  elseif @fractal == 23 && @ndegree==2
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)/(4*z^3 - 3*sum4a*z^2 + 2*sum4b*z - sum4c) + c
+  elseif @fractal == 23 && @ndegree==3
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5) \
+            /(5*z^4 - 4*sum5a*z^3 + 3*sum5b*z^2 - 2*sum5c*z + sum5d) + c
+  elseif @fractal == 23 && @ndegree==4
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5)*(z-@nr6) \
+            /(6*z^5 - 5*sum6a*z^4 + 4*sum6b*z^3 - 3*sum6c*z^2 + 2*sum6d*z - sum6e) + c
+  elseif @fractal == 24
+    z = z^@power1 + c
+  elseif @fractal == 25 && @ndegree1==0
+    z = z - (z-@n2r1)*(z-@n2r2)/(2*z-s2um2) + c
+  elseif @fractal == 25 && @ndegree1==1
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)/(3*z^2 - 2*s2um3a*z + s2um3b) + c
+  elseif @fractal == 25 && @ndegree1==2
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)/(4*z^3 - 3*s2um4a*z^2 + 2*s2um4b*z - s2um4c) + c
+  elseif @fractal == 25 && @ndegree1==3
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5) \
+            /(5*z^4 - 4*s2um5a*z^3 + 3*s2um5b*z^2 - 2*s2um5c*z + s2um5d) + c
+  elseif @fractal == 25 && @ndegree1==4
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5)*(z-@n2r6) \
+            /(6*z^5 - 5*s2um6a*z^4 + 4*s2um6b*z^3 - 3*s2um6c*z^2 + 2*s2um6d*z - s2um6e) + c
+  elseif @fractal == 26
+    z = z^@power + zo + c
+  elseif @fractal == 27
+    z = zo*z^@power + c
+  elseif @fractal == 28
+    z = z^@power1 + zo + c
+  elseif @fractal == 29
+    z = zo*z^@power1 + c
+  elseif @fractal == 30
+    z = @fn1(@power*@fn(z)) + c
+  elseif @fractal == 31
+    F = @fn(z)
+    z = @fn1((1+@power)*F)/@fn3(F) + c
+  elseif @fractal == 32
+    z = @fn1(@power1*@fn(z)) + c
+  elseif @fractal == 33
+    F = @fn(z)
+    z = @fn1((1+@power1)*F)/@fn3(F) + c
+  elseif @fractal == 34
+    z = fac*z^pwr + c
+    pwr=pwr+1
+    fac=fac/pwr
+  endif
+
+  z1=z
+  z=t1
+
+  if @fractal1 == 0
+    z = z^@power + c
+  elseif @fractal1 == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal1 == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal1 == 3
+    z=@Fn(z)+c
+  elseif @fractal1 == 4
+    z=1/@Fn(z)+c
+  elseif @fractal1 == 5
+    z=z*@Fn(z)+c
+  elseif @fractal1 == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal1 == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal1 == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal1 == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal1 == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal1 == 11
+    z=c*@Fn(z)
+  elseif @fractal1 == 12
+    z=@Fn(z)+z+c
+  elseif @fractal1 == 13
+    z=c*@Fn(z)+z
+  elseif @fractal1 == 14
+    z = c*z*(1-z)
+  elseif @fractal1 == 15
+    z = z*(1-z) + c
+  elseif @fractal1 == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal1 == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal1 == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal1 == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal1 == 22
+    z = z^(i+1) + c
+  elseif @fractal1 == 23 && @ndegree==0
+    z = z - (z-@nr1)*(z-@nr2)/(2*z-sum2) + c
+  elseif @fractal1 == 23 && @ndegree==1
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)/(3*z^2 - 2*sum3a*z + sum3b) + c
+  elseif @fractal1 == 23 && @ndegree==2
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)/(4*z^3 - 3*sum4a*z^2 + 2*sum4b*z - sum4c) + c
+  elseif @fractal1 == 23 && @ndegree==3
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5) \
+            /(5*z^4 - 4*sum5a*z^3 + 3*sum5b*z^2 - 2*sum5c*z + sum5d) + c
+  elseif @fractal1 == 23 && @ndegree==4
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5)*(z-@nr6) \
+            /(6*z^5 - 5*sum6a*z^4 + 4*sum6b*z^3 - 3*sum6c*z^2 + 2*sum6d*z - sum6e) + c
+  elseif @fractal1 == 24
+    z = z^@power1 + c
+  elseif @fractal1 == 25 && @ndegree1==0
+    z = z - (z-@n2r1)*(z-@n2r2)/(2*z-s2um2) + c
+  elseif @fractal1 == 25 && @ndegree1==1
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)/(3*z^2 - 2*s2um3a*z + s2um3b) + c
+  elseif @fractal1 == 25 && @ndegree1==2
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)/(4*z^3 - 3*s2um4a*z^2 + 2*s2um4b*z - s2um4c) + c
+  elseif @fractal1 == 25 && @ndegree1==3
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5) \
+            /(5*z^4 - 4*s2um5a*z^3 + 3*s2um5b*z^2 - 2*s2um5c*z + s2um5d) + c
+  elseif @fractal1 == 25 && @ndegree1==4
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5)*(z-@n2r6) \
+            /(6*z^5 - 5*s2um6a*z^4 + 4*s2um6b*z^3 - 3*s2um6c*z^2 + 2*s2um6d*z - s2um6e) + c
+  elseif @fractal1 == 26
+    z = z^@power + zo + c
+  elseif @fractal1 == 27
+    z = zo*z^@power + c
+  elseif @fractal1 == 28
+    z = z^@power1 + zo + c
+  elseif @fractal1 == 29
+    z = zo*z^@power1 + c
+  elseif @fractal1 == 30
+    z = @fn1(@power*@fn(z)) + c
+  elseif @fractal1 == 31
+    F = @fn(z)
+    z = @fn1((1+@power)*F)/@fn3(F) + c
+  elseif @fractal1 == 32
+    z = @fn1(@power1*@fn(z)) + c
+  elseif @fractal1 == 33
+    F = @fn(z)
+    z = @fn1((1+@power1)*F)/@fn3(F) + c
+  elseif @fractal1 == 34
+    z = fac*z^pwr + c
+    pwr1=pwr1+1
+    fac1=fac1/pwr1
+  endif
+
+  z = real(z1)*fx+real(z)*fx1 + flip(imag(z1)*fy+imag(z)*fy1)
+
+  if r
+    mag = |z|
+    if @smallbail != 0 && |z-zold| < @bailout1
+      if @smallbail < 2 || |z-1.0| < @bailout1
+        mag1 = |z - zold|
+      endif
+    endif
+  endif
+
+  if @smooth>0
+    if mag>@bailout && (@smooth<9 || @smooth>12)
+      if r
+        r = false
+        q = z
+        z = v*zold/cabs(zold)
+        zold = zo
+        if @sigma == true
+          zs = zsold
+        endif
+        if @product == true
+          zp = zpold
+        endif
+      else
+        r = true
+        if @smooth>4
+          x = log(0.5*log(|z|))
+          x = (x-log(0.5*log(|q|)))/(x-log(log(v)))
+          if (x<0)
+            x = 0
+          elseif x>1
+            x = 1
+          endif
+          z = x
+        else
+          z = (z-q)/(z-v*q/sqrt(mag))
+          if @smooth==1 || @smooth == 3
+            z = z^@fudge
+          else
+            z = ((@fudge^z)-1)/(@fudge-1)
+          endif
+        endif
+        if @smooth==7 || @smooth==8 || @smooth>14
+          z = z + flip(atan2(q))
+        endif
+        if @smooth==3 || @smooth==4 || @smooth==6 || @smooth==8 \
+           || @smooth==14 || @smooth==16
+          z = i + z
+        endif
+        if @smooth<5
+          z = (real(z)+flip(@fudge1*imag(z)))/@fudge2
+        endif
+        bail = false
+      endif
+    elseif (@smooth>8)&&(@smallbail>0)&&(mag1<@bailout1)
+      if r
+        r = false
+        q = z-zold
+        z = zold+(v1*(z-zold))/cabs(zold-zo)
+        zold = zo
+        if @sigma == true
+          zs = zsold
+        endif
+        if @product == true
+          zp = zpold
+        endif
+      else
+        r = true
+        x = log(-0.5*log(|z-zold|))
+        x = -@cfudge*((x+log(-0.5*log(|q|)))/(x+log(-0.5*log(@bailout1)))-1)
+        if x>=0
+          x = -1e-100
+        elseif x<-1.0
+          x = -1.0
+        endif
+        if @smooth==11 || @smooth==12 || @smooth==15 || @smooth==16
+          z = flip(atan2(q))
+        endif
+        if @smooth==10 || @smooth==12 || @smooth==14 || @smooth==16
+          x = x + i
+        endif
+        z = x + flip(imag(z))
+        bail = false
+      endif
+    endif
+  endif
+
+
+  until r
+
+  if @smallbail != 0 && mag1 < @bailout1
+    if @smallbail < 2 || |z-1.0| < @bailout1
+      bail = false
+    endif
+  endif
+
+  i = i + 1
+
+bailout:
+  bail && ((@test == 0 && mag <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Mixer"
+  magn = 1.0
+  center = (-.5, 0)
+  method = multipass
+  periodicity = 0
+  helpfile = "MMF.html"
+  param value
+    caption = "Switched value"
+    default = (0,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param c
+    caption = "Constant"
+    default = (0.5,0)
+    hint = "The constant c in f(z)+c, used in all modes except the 'Mc' ones."
+  endparam
+  param f
+    caption = "Mixing fraction (f)"
+    default = (0.5,0.5)
+    hint = "The fractional part of the parameter specifies the proportion of z to \
+            use from Formula 1, the real part of the parameter controls the mixing \
+            of the real part of z and the imaginary controls the imaginary. Only \
+            values from -1 to +1 are useful."
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+  endparam
+  param fractal
+    caption = "Formula 1"
+    enum = "Standard z^p+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda" "Breeder" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "z^p+c (#2)" "Nova (#2)" "Manowar" \
+            "zold*z^p+c" "Manowar (#2)" "zold*z^p+c (#2)" "Cheb1 power" \
+            "Cheb2 power" "Cheb1 power(#2)" "Cheb2 power(#2)" "Integration"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 0
+  endparam
+  param fractal1
+    caption = "Formula 2"
+    enum = "Standard z^p+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda" "Breeder" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "z^p+c (#2)" "Nova (#2)" "Manowar" \
+            "zold*z^p+c" "Manowar (#2)" "zold*z^p+c (#2)" "Cheb1 power" \
+            "Cheb2 power" "Cheb1 power(#2)" "Cheb2 power(#2)" "Integration"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 16
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Can be used in combination with \
+            the translations and general transformation \
+            matrix."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    enum = "disabled" "enabled" "Magnet (1,0)"
+    default = 0
+    hint = "Enables or disables convergence testing, some fractal \
+            types or other settings may require convergence testing \
+            to be enabled to produce any image."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param smooth
+    caption = "Smooth colouring"
+    default = 0
+    enum = "Off" "Smooth#1" "Smooth#2" "+Iter#1" "+Iter#2" \
+           "loglog" "loglog+Iter" \
+           "Frac+Atan" "Frac+Atan+Iter" \
+           "Hinrich (Conv)" "Hinrich+Iter (Conv)" \
+           "Hinrich+Atan (Conv)" "Hinrich+Atan+Iter(Conv)" \
+           "Hinrich (Both)" "Hinrich+Iter (Both)" \
+           "Hinrich+Atan (Both)" "Hinrich+Atan+Iter(Both)"
+  hint = "Modifies the final z value so it's a smoothing \
+            value. Use for colourings that are based on \
+            final z or for ones that use a final z smoothing fraction. \
+            The new Hinrich versions work best, note that the Divergent \
+            Hinrich versions still have the old names - loglog or Frac+."
+  endparam
+  param cfudge
+    caption = "Convergent fudge"
+    default = 1.0
+    hint = "Scaling factor for when the convergence smoothing fraction \
+            doesn't go all the way from 0 to 1."
+  endparam
+  param fudge
+    caption = "Smooth fudge"
+    default = 10.0
+    hint = "Use this in combination with the Smooth colouring variations \
+            to get the colouring as smooth as possible. Typically use \
+            values 2 - 200, but sometimes very large values, fractions \
+            or negative values may help. Not needed for the loglog smoothing."
+  endparam
+  param fudge1
+    caption = "Smooth scale imag"
+    default = 100.0
+    hint = "This only applies when using the Smooth colouring. Use \
+            it to scale up the imaginary component of the final z, this \
+            will improve results with some colourings. \
+            Not used for loglog smoothing."
+  endparam
+  param fudge2
+    caption = "Smooth divide"
+    default = 1.0
+    hint = "This only applies when using the Smooth colouring. The final z \
+            value is divided by this value, eg. set it to Maximum Iterations. \
+            Not used for loglog smoothing."
+  endparam
+  param fixzold
+    caption = "Fix old z"
+    default = false
+    hint = "Uses the initial value of z instead of (0,0) as the initial \
+            value of zolder."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "Sets the power for the z^p+c, Manowar and zold*z^p+c \
+            formula types."
+  endparam
+  param ndegree
+    caption = "Nova degree"
+    default = 1
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova formula type and \
+            hence the number of roots used."
+  endparam
+  param nr1
+    caption = "Nova 1st root"
+    default = (1,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+  endparam
+  param nr2
+    caption = "Nova 2nd root"
+    default = (-0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+  endparam
+  param nr3
+    caption = "Nova 3rd root"
+    default = (-0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 3 or more."
+  endparam
+  param nr4
+    caption = "Nova 4th root"
+    default = (-1,0)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 4 or more."
+  endparam
+  param nr5
+    caption = "Nova 5th root"
+    default = (0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 5 or 6."
+  endparam
+  param nr6
+    caption = "Nova 6th root"
+    default = (0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 6."
+  endparam
+  param power1
+    caption = "Power (#2)"
+    default = (3,0)
+    hint = "Sets the power for the z^p+c (#2), Manowar (#2) \
+            and zold*z^p+c (#2) formula types."
+  endparam
+  param ndegree1
+    caption = "Nova degree (#2)"
+    default = 2
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova (#2) formula type and \
+            hence the number of roots used."
+  endparam
+  param n2r1
+    caption = "Nova (#2) 1st root"
+    default = (2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+  endparam
+  param n2r2
+    caption = "Nova (#2) 2nd root"
+    default = (-2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+  endparam
+  param n2r3
+    caption = "Nova (#2) 3rd root"
+    default = (0,2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 3 or more."
+  endparam
+  param n2r4
+    caption = "Nova (#2) 4th root"
+    default = (0,-2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 4 or more."
+  endparam
+  param n2r5
+    caption = "Nova (#2) 5th root"
+    default = (1.5,1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 5 or 6."
+  endparam
+  param n2r6
+    caption = "Nova (#2) 6th root"
+    default = (-1.5,-1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 6."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "Mc(Zstart)" "MF(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "MF(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Fraction)" "Mc(Fraction)" "Mm(Fraction)" "Mn(Fraction)" \
+           "J(Matrix m)" "Mc(Matrix m)" "MF(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "MF(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 4
+    enum = "Mc(Zstart)" "MF(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(Constant)" "MF(Constant)" "Mm(Constant)" "Mn(Constant)" \
+           "J(Fraction)" "Mc(Fraction)" "Mm(Fraction)" "Mn(Fraction)" \
+           "J(Matrix m)" "Mc(Matrix m)" "MF(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "Mc(Matrix n)" "MF(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func Fn
+    caption = "Fn (all Fn types)"
+    default = acos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'acos' with the Chebyshev types for the \
+            standard Chebyshev polynomials."
+  endfunc
+  func Fn1
+    caption = "Fn1 (Chebyshevs)"
+    default = cos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'cos' with 'Cheb' and 'Cheb1' for the type 1 \
+            Chebyshev polynomials, use 'sin' with the \
+            'fn1(a*fn(b))/fn1(fn(b))' types for the type 2 \
+            Chebyshev polynomials."
+  endfunc
+  func Fn2
+    caption = "Fn2 (done first)"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+  func Fn3
+    caption = "Fn3 (Cheb2 (Power))"
+    default = sin()
+    hint = "Only used for the Cheb2 (Power) fractal type. This is \
+            of the form 'Fn1((power+1)*Fn(z))/Fn3(Fn(z)) + c'."
+  endfunc
+
+switch:
+  type = "MMFSc-Mixer"
+  value = #pixel
+  start = start
+  c = c
+  f = f
+  m = m
+  n = n
+  fractal = fractal
+  fractal1 = fractal1
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test  = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  smooth = smooth
+  cfudge = cfudge
+  fudge = fudge
+  fudge1 = fudge1
+  fudge2 = fudge2
+  fixzold = fixzold
+  power = power
+  ndegree = ndegree
+  nr1 = nr1
+  nr2 = nr2
+  nr3 = nr3
+  nr4 = nr4
+  nr5 = nr5
+  nr6 = nr6
+  power1 = power1
+  ndegree1 = ndegree1
+  n2r1 = n2r1
+  n2r2 = n2r2
+  n2r3 = n2r3
+  n2r4 = n2r4
+  n2r5 = n2r5
+  n2r6 = n2r6
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  Fn = Fn
+  Fn1 = Fn1
+  Fn2 = Fn2
+}
+
+MMFSd-Brahmagupta {
+; 
+; The basis for this formula is the recurrance relation
+; for the Brahmagupta polynomials, ie.
+; Xn = X*Xn + T*Y*Yn
+; Yn = X*Yn + Y*Xn
+; After playing around with various ways of implimenting
+; this to produce fractals I eventually came up with this
+; result - where "Z" is fed-back as "T" and all the values
+; are complex.
+;
+; Tips:
+; If you want to use the Mandelbrot mode as a map of
+; the Julias then in many cases it's worth using
+; the switch to find the critical value of zstart - this
+; is generally when the "inside" area of the Mandelbrot
+; is largest.
+; IMPORTANT NOTE - After switching by replacing
+; the value of one of the parameters by the switched
+; value if you wish to switch by replacing a DIFFERENT
+; parameter with the switched value then you must
+; first copy the current switched value into the
+; parameter it is replacing.
+;
+; Created 20th July 2002
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex p = #pixel
+
+  if @usescale != 1.0
+    p = p/@usescale
+  endif
+  if @usecentre != (0,0)
+    p = p + @usecentre
+  endif
+
+  complex z = @start
+  complex x0 = @x0
+  complex y0 = @y0
+  complex m = @m
+  complex n = @n
+
+  if @mjmode<4
+    z = @value
+  elseif @mjmode<8
+    x0 = @value
+  elseif @mjmode<12
+    y0 = @value
+  elseif @mjmode<16
+    m = @value
+  elseif @mjmode<20
+    n = @value
+  endif
+
+  if @mjmode==4 || @mjmode==8 || @mjmode==12 || @mjmode==16
+    z = p
+  elseif @mjmode==0 || @mjmode==9 || @mjmode==13 || @mjmode==17
+    x0 = p
+  elseif @mjmode==1 || @mjmode==5 || @mjmode==14 || @mjmode==18
+    y0 = p
+  elseif @mjmode==2 || @mjmode==6 || @mjmode==10 || @mjmode==19
+    m = p
+  elseif @mjmode==3 || @mjmode==7 || @mjmode==11 || @mjmode==15
+    n = p
+  endif
+
+  if @simple==true
+    y0=x0
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+  float t = x
+  complex zold = z
+  complex zo = z
+  complex xn = x0
+  complex yn = y0
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex t1 = (0,0)
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(m)*ca-real(n)*sa
+  float r0c1 = real(m)*sa+real(n)*ca
+  float r1c0 = imag(m)*ca-imag(n)*sa
+  float r1c1 = imag(m)*sa+imag(n)*ca
+  bool bail = true
+
+  int i = 0
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  z = @fn(z)
+
+  if @selfrot > 0
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+    if @selfrot == 2
+      z = z + p
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y)
+
+  if @fractal%2 == 0
+    xn = x0
+    yn = y0
+    i=0
+    while i<@degree
+      t1=xn
+      xn=x0*xn+z*y0*yn
+      yn=x0*yn+y0*t1
+      i = i + 1
+    endwhile
+  elseif @fractal%2 == 1
+    t1=xn
+    xn=x0*xn+z*y0*yn
+    yn=x0*yn+y0*t1
+  endif
+
+  if @use==0
+    z = xn
+  elseif @use==1
+    z = yn
+  endif
+  
+  if @fractal > 3
+    z = zo*z
+  elseif @fractal > 1
+    z = z + zo
+  endif
+
+  if @smallbail == true && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail && ((@test == 0 && |z| <= @bailout) ||                                \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@test == 9 && (sqr(real(z))/imag(z) <= @bailout)) ||                      \
+  (@test == 10 && (sqr(imag(z))/real(z) <= @bailout)))
+
+default:
+  title = "Switch Brahmagupta"
+  magn = 2.0
+  center = (0, 0)
+  method = multipass
+  periodicity = 0
+  helpfile = "MMF.html"
+  param value
+    caption = "Switched value"
+    default = (-0.5,0)
+    hint = "This is the value passed using the switch function. \
+            After switching it should be copied into the parameter \
+            that was replaced using the switch (before you use the \
+            switch again replacing a different parameter)."
+  endparam
+  param start
+    caption = "Start z"
+    default = (0,0)
+    hint = "The starting z value for the Mandelbrot modes. \
+            Used in all modes except the 'J' ones."
+  endparam
+  param x0
+    caption = "X0"
+    default = (-0.5,0)
+    hint = "The start value of X0, used in all modes except the MX0 ones."
+  endparam
+  param y0
+    caption = "Y0"
+    default = (1,0)
+    hint = "The start value of Y0, used in all modes except the MY0 ones."
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+  endparam
+  param fractal
+    caption = "Formula"
+    enum = "Degree" "Iterative" "Degree+zold" "Iter+zold" "zold*Degree" "zold*Iter"
+    default = 0
+    hint = "If using the Degree option you need to set the Degree parameter."
+  endparam
+  param use
+    caption = "Method"
+    enum = "Use Z = Xn" "Use Z = Yn"
+    default = 0
+    hint = "Choose to feedback Xn or Yn as Z (and T)."
+  endparam
+  param simple
+    caption = "Simplify"
+    default = false
+    hint = "When enabled Y0 is set to the same value as X0."
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration. Can be used in combination with \
+            the translations and general transformation \
+            matrix."
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc."
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = 0
+    enum = "Disabled" "Enabled" "Plus c"
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration. \
+            Plus c does the same but also adds #pixel to the rotated value, it's \
+            only here as it produces some interesting results."
+  endparam
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "abs(x*x/y)" \
+           "abs(y*y/x)" "x*x/y" "y*y/x"
+    hint = "Modifies the divergent bailout test condition, some modes \
+            will require smaller bailout values to produce a good effect. \
+            'x*x/y' and 'y*y/x' were added for MMFrac compatibility."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param smallbail
+    caption = "Convergence"
+    default = false
+    hint = "Enables or disables convergence testing."
+  endparam
+  param bailout1
+    caption = "Small bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  param degree
+    caption = "Degree"
+    default = 3
+    hint = "Sets the degree for the Degree formula type."
+  endparam
+  param usescale
+    caption = "Current scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Switch scale adjust. \
+            After switching you should really set this value back to 1.0."
+  endparam
+  param usecentre
+    caption = "Current centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Switch centre adjust. \
+            After switching you should really set this value back to (0,0)."
+  endparam
+  param swscale
+    caption = "Switch scale adjust"
+    default = 1.0
+    hint = "Used for switching in combination with the Current scale adjust. \
+            Modify the value to zoom the switch preview. 0<values<1.0 will \
+            reduce the switch, values>1.0 will magnify the switch. Particularly \
+            useful for finding interesting small Julias."
+  endparam
+  param swcentre
+    caption = "Switch centre adjust"
+    default = (0,0)
+    hint = "Used for switching in combination with the Current centre adjust. \
+            Modify the value to centre the switch preview. Particularly useful \
+            for finding interesting small Julias."
+  endparam
+  param mjmode
+    caption = "Current mode"
+    default = 0
+    enum = "MX0(Zstart)" "MY0(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(X0)" "MY0(X0)" "Mm(X0)" "Mn(X0)" \
+           "J(Y0)" "MX0(Y0)" "Mm(Y0)" "Mn(Y0)" \
+           "J(Matrix m)" "MX0(Matrix m)" "MY0(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "MX0(Matrix n)" "MY0(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Switch to parameter. \
+            The item in brackets indicates which parameter is \
+            replaced by the switched value. The J modes are where \
+            #pixel is used as Zstart and n in Mn indicates how #pixel \
+            is used otherwise."
+  endparam
+  param swmode
+    caption = "Switch using"
+    default = 4
+    enum = "MX0(Zstart)" "MY0(Zstart)" "Mm(Zstart)" "Mn(Zstart)" \
+           "J(X0)" "MY0(X0)" "Mm(X0)" "Mn(X0)" \
+           "J(Y0)" "MX0(Y0)" "Mm(Y0)" "Mn(Y0)" \
+           "J(Matrix m)" "MX0(Matrix m)" "MY0(Matrix m)" "Mn(Matrix m)" \
+           "J(Matrix n)" "MX0(Matrix n)" "MY0(Matrix n)" "Mm(Matrix n)"
+    hint = "Works for switching in combination with the Current mode parameter. \
+            After switching the Switched value parameter is used instead of the \
+            parameter in brackets and should be copied into that parameter before \
+            switching a different parameter - see the hints for Current mode."
+  endparam
+  func Fn
+    caption = "Fn (done first)"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+
+switch:
+  type = "MMFSd-Brahmagupta"
+  value = #pixel
+  start = start
+  x0 = x0
+  y0 = y0
+  m = m
+  n = n
+  fractal = fractal
+  use = use
+  simple = simple
+  ang = ang
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  test  = test
+  bailout = bailout
+  smallbail = smallbail
+  bailout1 = bailout1
+  degree = degree
+  usescale = swscale
+  usecentre = swcentre
+  swscale = swscale
+  swcentre = swcentre
+  mjmode = swmode
+  swmode = swmode
+  Fn = Fn
+}

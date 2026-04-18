@@ -1,0 +1,136 @@
+import os
+import re
+import pandas as pd
+import numpy as np
+#import nltk
+import spacy
+from spacy.matcher import Matcher
+#from nltk.corpus import stopwords
+nlp=spacy.load('en_core_web_sm'a)
+matcher=Matcher(nlp.vocab)
+import PyPDF2
+from pywintypes import com_error
+import win32com.client as win32
+import io
+
+from pdfminer.converter import TextConverter
+from pdfminer.pdfinterp import PDFPageInterpreter
+from pdfminer.pdfinterp import PDFResourceManager
+from pdfminer.layout import LAParams
+from pdfminer.pdfpage import PDFPage
+import spacy
+
+def generate_ngrams(filename, n):
+    words = filename.split()
+    output = []  
+    for i in range(len(words)-n+1):
+        output.append(words[i:i+n])
+    f=[]            
+    for i in output:
+        if 'years' in i:
+            f.append(output[output.index(i)])
+            if len(f)==1:
+                n=f[0][0]
+                n=n + " " + "years"
+                break
+    
+    if len(f)<1:
+        n='Not specified'
+    return n
+
+def exper(fullText):
+    print(fullText)
+    mi=fullText.lower()
+    #print(mi)
+    h=mi.replace("_"," ")
+    h=h.replace("-"," ")
+    h=h.replace(","," ")
+    h=h.replace("("," ")
+    h=h.replace(")"," ")
+    h=h.replace(".docx"," ")
+    h=h.replace(".pdf"," ")
+    h=h.split()              #look at h only years get it
+    if 'years' in h and 'months' in h:
+        d=h[h.index('years')-1] + " " + h[h.index('years')]+ " " +h[h.index('months')-1] + " " +h[h.index('months')]
+    #elif 'year' in h:
+        #d=h[h.index('year')-1] + " " + h[h.index('year')]
+    elif 'years' in h:
+        d=h[h.index('years')-1] + " " + h[h.index('years')]
+    elif 'months' in h:
+        d=h[h.index('months')-1] + " " + h[h.index('months')]
+    #elif 'month' in h:
+     #   d=h[h.index('month')-1] + " " + h[h.index('month')]
+    elif re.search('no experience',str(h),re.M|re.I) :
+        d='No Experience'
+    else:
+        d=generate_ngrams(fullText, 2)  
+    return d  
+
+def extract_text_from_pdf(path, filename):
+    with open(path+filename, 'rb') as fh:
+        # iterate over all pages of PDF document
+        for page in PDFPage.get_pages(fh, caching=True, check_extractable=True):
+            # creating a resoure manager
+            resource_manager = PDFResourceManager()
+            
+            # create a file handle
+            fake_file_handle = io.StringIO()
+            
+            # creating a text converter object
+            converter = TextConverter(
+                                resource_manager, 
+                                fake_file_handle, 
+                                codec='utf-8', 
+                                laparams=LAParams()
+                        )
+
+
+            # creating a page interpreter
+            page_interpreter = PDFPageInterpreter(
+                                resource_manager, 
+                                converter
+                            )
+
+
+            # process current page
+            page_interpreter.process_page(page)
+            
+            # extract text
+            text = fake_file_handle.getvalue()
+            yield text
+
+
+            # close open handles
+            converter.close()
+            fake_file_handle.close()
+
+
+path = "C:\\Users\\LENOVO\\Desktop\\res\\resume\\"
+data = pd.DataFrame(columns = ["FileName","FileContents","Name","Email Address","Contact Number","Experience","rank"])
+####IMPORTING PDF ONLY
+for filename in os.listdir(path):
+    if filename.endswith(('.pdf')):
+        print(filename)
+        for page in extract_text_from_pdf(path, filename):
+            res = []
+            res.append(''+page)
+            res = ''.join(res)
+            res = res.replace('\n', ' ')
+            res = res.strip()
+            #print(res)
+            #res = res.replace('\n', ' ')
+            #res = res.strip('\n')
+            #print(res)
+            #print(res)
+
+        #res = ''.join(res)     
+        #res = res.replace('\n', ' ')
+        #res = res.strip()
+        #print(res)
+        exp= exper(res)
+        
+        data = data.append({"Experience": exp},ignore_index=True)
+
+        df2 = pd.DataFrame(data, columns = ["Experience"])    
+        df.to_csv("resumes_filter8.csv", index=False)
+   

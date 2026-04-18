@@ -1,0 +1,4430 @@
+comment { Copyright © 2008-2018 by Mark Townsend.
+
+  Plug-in classes for Ultra Fractal 5.0 and above
+
+  Last update 24 October 2018
+
+; This work is licensed under a Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International License.
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
+
+}
+
+; Trap shapes ------------------------------------------------------------------
+
+class MT_TrapShapeHarlequin(common.ulb:TrapShape) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  float func Iterate(complex pz)
+    x = real(pz)
+    y = imag(pz)
+    complex a = @m * real(atan(y / x))
+    if @variation == 0
+      a = a * a + @c
+      a = fn1(1 - a) / a
+    elseif @variation == 1
+      a = a * a + @c
+      a = fn1(1 - a^2)
+    elseif @variation == 2
+      a = @m * (fn1(a + @c)^2 + fn2(a + @c)^2)
+    endif
+   	m_LastZ = a
+    if @mode == 0
+        float d = abs(|pz| - |a|)
+     else
+        d = cabs(pz - a)
+     endif
+    return d
+  endfunc
+	
+default:
+  title = "Harlequin"
+  param variation
+    caption = "Variation"
+    enum = "1" "2" "3"
+    default = 1
+  endparam
+  param mode
+    caption = "Flavor"
+    enum = "1" "2"
+    default = 1
+  endparam
+  param m
+    caption = "Angle multiplier"
+    default = 2.0
+  endparam
+  param c
+    caption = "Harlequin seed"
+    default = (0,0)
+  endparam
+  func fn1
+    caption = "First function"
+    hint = "This function is used in all variations."
+    default = exp()
+  endfunc
+  func fn2
+    caption = "Second function"
+    hint = "This function is only used in variaton 3."
+    default = exp()
+    visible = @variation == "3"
+  endfunc
+}
+
+class MT_TrapShapePopcorn(common.ulb:TrapShape) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  float func Iterate(complex pz)
+    int i = 0
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(real(@a) * y)))
+      y = y - @h * real(@fn3(xx + @fn4(imag(@a) * xx)))
+      i = i + 1
+    endwhile
+    m_LastZ = x + flip(y)
+    return cabs(m_LastZ)
+  endfunc
+	
+default:
+  title = "Popcorn"
+  param a
+    caption = "Alpha"
+    default = (3.0, 3.0)
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Popcorn formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Popcorn formula."
+  endparam
+  func fn1
+    caption = "Re Popcorn #1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Re Popcorn #2"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "Im Popcorn #1"
+    default = sin()
+  endfunc
+  func fn4
+    caption = "Im Popcorn #2"
+    default = tan()
+  endfunc
+}
+
+class MT_TrapShapeGnarl(common.ulb:TrapShape) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  float func Iterate(complex pz)
+    int i = 0
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(@a * (y + @fn3(@b * y)))))
+      y = y + @h * real(@fn1(xx + @fn2(@a * (xx + @fn3(@b * xx)))))
+      i = i + 1
+    endwhile
+    m_LastZ = x + flip(y)
+    return cabs(m_LastZ)
+  endfunc
+	
+default:
+  title = "Gnarl"
+  param a
+    caption = "Alpha"
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    default = 3.0
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Gnarl formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Gnarl formula."
+  endparam
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc
+  func fn3
+    caption = "Third Function"
+    default = sin()
+  endfunc
+}
+
+class MT_TrapShapeMartin(common.ulb:TrapShape) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  float func Iterate(complex pz)
+    float x = real(pz)
+    float y = imag(pz)
+    int iter = 0
+    while iter < @max_iterations
+      float xx = x
+      x = y - sin(x)
+      y = @a - xx
+      iter = iter + 1
+    endwhile
+   	m_LastZ = x + flip(y)
+    return cabs(m_LastZ)
+  endfunc
+	
+default:
+  title = "Martin"
+  param a
+    caption = "Martin parameter"
+    default = 3.14159
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 10
+    min = 1
+    hint = "This is the number of iterations for the \
+            Martin formula."
+  endparam
+}
+
+class MT_TrapShapeCardioid(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = @a * (1 - cos(theta))
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Cardioid"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeRose(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = @a * cos(@n * theta)
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Rose"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+  float param n
+    caption = "N"
+    default = 4
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeRhodonea(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = @a * sin(@n * theta)
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Rhodonea"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+  float param n
+    caption = "N"
+    default = 4
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeFolium(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = -@n * cos(theta) + 4 * @a * cos(theta) * sin(theta)^2
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Folium"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+  float param n
+    caption = "N"
+    default = 4
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeSextic(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = 4 * @a * cos(theta / 3)^3
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Sextic"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeButterfly(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float theta = atan2(pz)
+    float radius = @a * exp(cos(theta))-2*cos(@n*theta)+ (sin(theta/12))^5
+    if @trap_mode == "Radius"
+      return abs(cabs(pz) - radius)
+    else
+      complex p = radius * sin(theta) + flip(radius * cos(theta))
+      m_LastZ = p
+      return cabs(pz - p)
+    endif
+  endfunc
+	
+default:
+  title = "Butterfly"
+  float param a
+    caption = "Curve radius"
+    default = 1
+  endparam
+ float param n
+    caption = "N"
+    default = 4
+  endparam
+  param trap_mode
+    caption = "Mode"
+    enum = "Radius" "Point"
+  endparam
+}
+
+class MT_TrapShapeSine(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    x = @ha * real(sin(@ht * imag(@fn1(pz))))
+    y = @va * real(sin(@vt * real(@fn2(pz))) )
+    m_LastZ = x + flip(y)
+    return cabs(pz - m_LastZ)
+  endfunc
+	
+default:
+  title = "Sine"
+  param ht
+    caption = "Frequency #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Amplitude #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Frequency #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Amplitude #2"
+    default = 0.5
+  endparam
+  func fn1
+    caption = "First Function"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = ident()
+  endfunc
+}
+
+class MT_TrapShape_Transform(common.ulb:TrapShape) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  func MT_TrapShape_Transform(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    fTransform = new @p_transform(this)
+  endfunc
+
+	func init(complex pz)
+	  fTransform.init(pz)
+	endfunc
+	
+  float func Iterate(complex pz)
+    m_LastZ = fTransform.Iterate(pz)
+    if @mode == "Magnitude"
+      return cabs(m_LastZ)
+    else
+      return cabs(pz - m_LastZ)
+    endif
+   endfunc
+
+private:
+  UserTransform fTransform
+  
+default:
+  title = "Transform"
+  param mode
+    caption = "Mode"
+    enum = "Magnitude" "Distance"
+  endparam
+  UserTransform param p_transform
+    caption = "Transform"
+    default = MT_GravitationalLens
+  endparam
+}
+
+; Textures ---------------------------------------------------------------------
+
+class MT_PopcornTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    int i = 0
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(real(@a) * y)))
+      y = y - @h * real(@fn3(xx + @fn4(imag(@a) * xx)))
+      i = i + 1
+    endwhile
+    m_LastZ = x + flip(y)
+    return cabs(pz - m_LastZ)
+  endfunc
+	
+default:
+  title = "Popcorn Texture"
+  param a
+    caption = "Alpha"
+    default = (3.0, 3.0)
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Popcorn formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Popcorn formula."
+  endparam
+  func fn1
+    caption = "Re Popcorn #1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Re Popcorn #2"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "Im Popcorn #1"
+    default = sin()
+  endfunc
+  func fn4
+    caption = "Im Popcorn #2"
+    default = tan()
+  endfunc
+}
+
+class MT_GnarlTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Iterate(complex pz)
+    int i = 0
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(@a * (y + @fn3(@b * y)))))
+      y = y + @h * real(@fn1(xx + @fn2(@a * (xx + @fn3(@b * xx)))))
+      i = i + 1
+    endwhile
+    m_LastZ = x + flip(y)
+    return cabs(pz - m_LastZ)
+  endfunc
+	
+default:
+  title = "Gnarl Texture"
+  param a
+    caption = "Alpha"
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    default = 3.0
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Gnarl formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Gnarl formula."
+  endparam
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc
+  func fn3
+    caption = "Third Function"
+    default = sin()
+  endfunc
+}
+
+class MT_PerlinNoiseTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_PerlinNoiseTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    int i = 0
+    int j = 0
+    int k = 0
+    int seed = @seed
+    while i < 256
+      p[i] = i
+      j = 0
+      while j < 2
+        seed = random(seed)
+        g[i, j] = seed / #randomrange
+        j = j + 1
+      endwhile
+      float s = sqrt(g[i, 0]* g[i, 0] + g[i, 1] * g[i, 1])
+      g[i, 0] = g[i, 0] / s
+      g[i, 1] = g[i, 1] / s
+      i = i + 1
+    endwhile
+    i = 0
+    while i < 256
+      k = p[i]
+      seed = random(seed)
+      j = abs(seed) % 256
+      p[i] = p[j]
+      p[j] = k
+      i = i + 1
+    endwhile
+    i = 0
+    while i < 256
+      p[256 + i] = p[i]
+      j = 0
+      while j < 2
+        g[256 + i, j] = g[i, j]
+        j = j + 1
+      endwhile
+      i = i + 1
+    endwhile
+  endfunc
+	
+  float func Iterate(complex pz)
+    int iter = 0, float sum = 0
+    float amplitude = 1.0
+    r = (0,1) ^ (1/3)
+    w = pz
+    while iter < @octaves
+      float t = real(w) % 4096 + 4096
+      int bx0 = floor(t) % 256
+      int bx1 = (bx0 + 1) % 256
+      float rx0 = t - floor(t)
+      float rx1 = rx0 - 1
+      t = imag(w) % 4096 + 4096
+      int by0 = floor(t) % 256
+      int by1 = (by0 + 1) % 256
+      float ry0 = t - floor(t)
+      float ry1 = ry0 - 1
+      int b00 = p[p[bx0] + by0]
+      int b10 = p[p[bx1] + by0]
+      int b01 = p[p[bx0] + by1]
+      int b11 = p[p[bx1] + by1]
+      float sx = (rx0 * rx0 * (3 - 2 * rx0))
+      float sy = (ry0 * ry0 * (3 - 2 * ry0))
+      float u = rx0 * g[b00, 0] + ry0 * g[b00, 1]
+      float v = rx1 * g[b10, 0] + ry0 * g[b10, 1]
+      float a = u + sx * (v - u)
+      u = rx0 * g[b01, 0] + ry1 * g[b01, 1]
+      v = rx1 * g[b11, 0] + ry1 * g[b11, 1]
+      float b = u + sx * (v - u)
+      sum = sum + real(@fn1(a + sy * (b - a))) * amplitude
+      w = w * r / 0.5
+      amplitude = amplitude * @persistence
+      iter = iter + 1
+    endwhile
+    return  (sum + 1) * 0.5
+  endfunc
+  
+private:
+  int p[514]
+  float g[514, 2]
+	
+default:
+	title = "Perlin Noise Texture"
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+  endparam
+  param persistence
+    caption = "Persistence"
+    default = 0.5
+  endparam
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc
+  param @seed
+    caption = "Random Seed"
+    default = 1234567
+  endparam
+}
+
+class MT_PerlinNoise3DTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_PerlinNoise3DTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    int i = 0
+    int j = 0
+    int k = 0
+    int seed = @seed
+    while i < 256
+      p[i] = i
+      j = 0
+      while j < 3
+        seed = random(seed)
+        g[i, j] = seed / #randomrange
+        j = j + 1
+      endwhile
+      float s = sqrt(g[i, 0] * g[i, 0] + g[i, 1] * \
+                g[i, 1] + g[i, 2] * g[i, 2])
+      g[i, 0] = g[i, 0] / s
+      g[i, 1] = g[i, 1] / s
+      g[i, 2] = g[i, 2] / s
+      i = i + 1
+    endwhile
+    i = 0
+    while i < 256
+      k = p[i]
+      j = abs(seed) % 256
+      seed = random(seed)
+      p[i] = p[j]
+      p[j] = k
+      i = i + 1
+    endwhile
+    i = 0
+    while i < 256
+      p[256 + i] = p[i]
+      j = 0
+      while j < 3
+        g[256 + i , j] = g[i, j]
+        j = j + 1
+      endwhile
+      i = i + 1
+    endwhile
+  endfunc
+	
+  float func Iterate(complex pz)
+    int iter = 0, float sum = 0
+    float amplitude = 1.0
+    r = (0,1) ^ (1/3)
+    w = pz
+    while iter < @octaves
+      float t = real(w) % 4096 + 4096
+      int bx0 = floor(t) % 256
+      int bx1 = (bx0 + 1) % 256
+      float rx0 = t - floor(t)
+      float rx1 = rx0 - 1
+      t = imag(w) % 4096 + 4096
+      int by0 = floor(t) % 256
+      int by1 = (by0 + 1) % 256
+      float ry0 = t - floor(t)
+      float ry1 = ry0 - 1
+      t = @z % 4096 + 4096
+      int bz0 = floor(t) % 256
+      int bz1 = (bz0 + 1) % 256
+      float rz0 = t - floor(t)
+      float rz1 = rz0 - 1
+      int b00 = p[p[bx0] + by0]
+      int b10 = p[p[bx1] + by0]
+      int b01 = p[p[bx0] + by1]
+      int b11 = p[p[bx1] + by1]
+      t = (rx0 * rx0 * (3.0 - 2.0 * rx0))
+      float sy = (ry0 * ry0 * (3.0 - 2.0 * ry0))
+      float sz = (rz0 * rz0 * (3.0 - 2.0 * rz0))
+      float u = (rx0 * g[b00 + bz0, 0] + ry0 * g[b00 + bz0, 1] + rz0 * g[b00 + bz0, 2])
+      float v = (rx1 * g[b10 + bz0, 0] + ry0 * g[b10 + bz0, 1] + rz0 * g[b10 + bz0, 2])
+      float a = (u + t * (v - u))
+      u = (rx0 * g[b01 + bz0, 0] + ry1 * g[b01 + bz0, 1] + rz0 * g[b01 + bz0, 2])
+      v = (rx1 * g[b11 + bz0, 0] + ry1 * g[b11 + bz0, 1] + rz0 * g[b11 + bz0, 2])
+      float b = (u + t * (v - u))
+      float c = (a + sy * (b - a))
+      u = (rx0 * g[b00 + bz1, 0] + ry0 * g[b00 + bz1, 1] + rz1 * g[b00 + bz1, 2])
+      v = (rx1 * g[b10 + bz1, 0] + ry0 * g[b10 + bz1, 1] + rz1 * g[b10 + bz1, 2])
+      a = (u + t * (v - u))
+      u = (rx0 * g[b01 + bz1, 0] + ry1 * g[b01 + bz1, 1] + rz1 * g[b01 + bz1, 2])
+      v = (rx1 * g[b11 + bz1, 0] + ry1 * g[b11 + bz1, 1] + rz1 * g[b11 + bz1, 2])
+      b = (u + t * (v - u))
+      float d = (a + sy *(b - a))
+      sum = sum + real(@fn1(c + sz * (d - c))) * amplitude
+      w = w * r / 0.5
+      amplitude = amplitude * @persistence
+      iter = iter + 1
+    endwhile
+    return  (sum + 1) * 0.5
+  endfunc
+private:
+  int p[514]
+  float g[514, 3]
+	
+default:
+	title = "Perlin Noise 3D Texture"
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+  endparam
+  param persistence
+    caption = "Persistence"
+    default = 0.5
+  endparam
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc
+  param z
+    caption = "Z Coordinate"
+    default = 0.0
+  endparam
+  param @seed
+    caption = "Random Seed"
+    default = 1234567
+  endparam
+}
+
+class MT_MarbleTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  float func Triangle_Wave(float value)
+    float offset
+    if (value >= 0.0)
+      offset = value - floor(value)
+    else
+      offset = value + 1.0 + floor(abs(value))
+    endif
+    if (offset >= 0.5)
+      return 1.0 - offset
+    else
+      return offset
+    endif
+  endfunc
+
+  func MT_MarbleTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    fTurbulence = new @p_turbulence(this)
+  endfunc
+	
+  func Init(complex pz)
+    fTurbulence.Init(pz)
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    if @wave == "Sine"
+      float a = 0.5 * (sin(@p_frequency * real(pz) + (@p_amount * fTurbulence.Iterate(pz))) + 1)
+    elseif @wave == "Sine 2"
+      float a = sin(@p_frequency * real(pz) + (@p_amount * fTurbulence.Iterate(pz))) + 1
+    else
+      a = triangle_wave(@p_frequency * real(pz) + (@p_amount * fTurbulence.Iterate(pz)))
+    endif
+    return a
+  endfunc
+
+private:
+  TrapShape fTurbulence
+
+default:
+	title = "Marble Texture"
+	param wave
+	  caption = "Wave"
+	  enum = "Sine" "Sine 2" "Triangle"
+	endparam
+  TrapShape param p_turbulence
+    caption = "Turbulence"
+    default = MT_PerlinNoiseTexture
+  endparam
+  float param p_frequency
+    caption = "Frequency"
+    default = 10
+  endparam
+  float param p_amount
+    caption = "Amount"
+    default = 10
+  endparam
+}
+
+class MT_TurbulenceTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_TurbulenceTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    fTurbulence = new @p_turbulence(this)
+    fPattern = new @p_pattern(this)
+  endfunc
+	
+  func Init(complex pz)
+    fTurbulence.Init(pz)
+    fPattern.Init(pz)
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    float a = fTurbulence.Iterate(pz)
+    complex p = pz + exp(flip(2 * #pi * sqrt(2) * a)) * @strength
+    a = fPattern.Iterate(p)
+    m_LastZ = fPattern.GetTransformedPoint()
+    return a
+  endfunc
+
+private:
+  TrapShape fTurbulence
+  TrapShape fPattern
+
+default:
+	title = "Turbulence Texture"
+  TrapShape param p_pattern
+    caption = "Pattern"
+    default = MT_PerlinNoiseTexture
+  endparam
+  TrapShape param p_turbulence
+    caption = "Turbulence"
+    default = MT_PerlinNoiseTexture
+  endparam
+  float param strength
+    caption = "Strength"
+    default = 0.2
+  endparam
+}
+
+class MT_BumpMapsTexture(common.ulb:TrapShape) {
+;
+; Based on formulas by David Makin and Damien Jones
+; <p>
+; Mark Townsend, May 2008
+;
+public:
+  func MT_BumpMapsTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    fTrapShape[0] = new @TrapShapeClass(this)
+    fTrapShape[1] = new @TrapShapeClass(this)
+    fTrapShape[2] = new @TrapShapeClass(this)
+  endfunc
+	
+  float func Iterate(complex pz)
+    float e1 = fTrapShape[0].Iterate(pz)
+    float vx = fTrapShape[1].Iterate(pz + @offset) - e1
+    float vy = fTrapShape[2].Iterate(pz + flip(@offset)) - e1
+    float vd = 1 / sqrt(sqr(vx) + sqr(vy) + sqr(@offset))
+    complex z = vd * (vx + flip(vy))
+    float vz = -sqrt(1 - |z|)		
+    float d2r = #pi / 180			
+    float lx = cos((270 - @angle) * d2r) * cos(@elevation * d2r)
+    float ly = sin((270 - @angle) * d2r) * cos(@elevation * d2r)
+    float lz = -sin(@elevation * d2r)
+    float l = lx * real(z) + ly * imag(z) + lz * vz
+    if (l < @ambient)
+      l = @ambient	
+    endif
+    if (@ambient < 0)
+      l = l + 1			
+    endif
+    if @invert
+      return 1 - l
+    else
+      return l * 0.99
+    endif
+  endfunc
+	
+private:
+  TrapShape fTrapShape[3]
+
+default:
+  title = "Bump Maps Texture"
+  TrapShape param TrapShapeClass
+    caption = "Texture"
+    default = MT_PerlinNoiseTexture
+  endparam
+  float param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    exponential = true
+    hint = "Defines how far apart the simultaneous orbits are. Smaller \
+            distances will produce more accurate results, the deeper you zoom \
+            the smaller the value needs to be to keep detail."
+  endparam
+  param @angle
+    caption = "Light Rotation"
+    default = 90.0
+    hint = "Gives the rotation of the light source, in degrees. With 0 \
+            degrees, the light comes from above. Positive values give \
+            clockwise rotation."
+  endparam
+  param @elevation
+    caption = "Light Elevation"
+    default = 30.0
+    hint = "Gives the elevation of the light source, in degrees."
+  endparam
+  param @ambient
+    caption = "Ambient Light"
+    default = 0.0
+    min = -1.0
+    max = 1.0
+    hint = "Specifies the level of ambient light.  Use -1.0 to \
+            color all surfaces."
+  endparam
+  bool param @invert
+    caption = "Invert Value"
+    default = true
+  endparam
+}
+
+class MT_TextureTransform(common.ulb:UserTransform) {
+;
+; From TrapTransform in common.ulb
+;	
+public:
+	func MT_TextureTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+		m_Rotation = (0,1) ^ (@p_texturerotation / 90.0)
+		m_Skew = (0,1) ^ (@p_textureskew / 90.0)
+		m_TextureCenter = @p_texturecenter
+	endfunc
+
+	complex func Iterate(complex pz)
+		; apply offset and rotation and size
+		pz = (pz - m_TextureCenter) * m_Rotation * recip(@p_texturescale)
+		; apply aspect
+		if (@p_textureaspect != 1.0)
+			pz = real(pz) + flip(imag(pz) * @p_textureaspect)
+		endif
+		; apply skew
+		pz = real(pz * m_Skew) + flip(imag(pz))
+		
+		return pz
+	endfunc
+	
+protected:
+	complex m_Rotation
+	complex m_Skew
+	complex m_TextureCenter
+
+default:
+	title = "Texture Position"
+	complex param p_texturecenter
+		caption = "Center"
+		default = (0,0)
+		hint = "This is the location of the texture in the complex plane."
+	endparam
+	float param p_texturescale
+		caption = "Scale"
+		default = 1.0
+		hint = "This can be used to resize the texture. "
+	endparam
+	float param p_texturerotation
+		caption = "Rotation"
+		default = 0.0
+		hint = "This is the angle, in degrees, that the texture should be rotated."
+	endparam
+	float param p_textureskew
+		caption = "Skew"
+		default = 0.0
+		hint = "This is the angle, in degrees, to skew the vertical axis of the texture."
+	endparam	
+	float param p_textureaspect
+		caption = "Aspect Ratio"
+		default = 1.0
+		hint = "This is how square the texture is. You can distort the texture by using a value other than 1.0."
+	endparam
+}
+
+class MT_TextureBlock(common.ulb:TrapShape) {
+;
+; From TrapShapeBlock in common.ulb
+;
+public:
+  import "mt.ulb"
+	func MT_TextureBlock(Generic pparent)
+		TrapShape.TrapShape(pparent)
+
+		m_TextureTransform = new @f_texturetransform(this)
+		m_Texture = new @f_texture(this)
+		m_TextureTransfer = new @f_texturetransfer(this)
+	endfunc
+
+	func Init(complex pz)
+		TrapShape.Init(pz)
+		
+		m_TextureTransform.Init(pz)
+		m_Texture.Init(pz)
+		m_TextureTransfer.Init(pz)
+	endfunc
+
+	float func Iterate(complex pz)
+		complex zt = m_TextureTransform.Iterate(pz)
+		float distance = m_Texture.Iterate(zt)
+		distance = m_TextureTransfer.Iterate(distance)
+		return distance
+	endfunc
+	
+	complex func GetTransformedPoint()
+		return m_Texture.GetTransformedPoint()
+	endfunc
+
+	float func GetTextureValue()
+		return m_Texture.GetTextureValue()
+	endfunc
+	
+protected:
+	UserTransform m_TextureTransform
+	TrapShape m_Texture
+	Transfer m_TextureTransfer
+
+default:
+	title = "Texture Block"
+	UserTransform param f_Texturetransform
+		caption = "Texture Position"
+		default = MT_TextureTransform
+		expanded = false
+	endparam
+	TrapShape param f_texture
+		caption = "Texture"
+		default = MT_PerlinNoiseTexture
+	endparam
+	Transfer param f_texturetransfer
+		caption = "Texture Transfer"
+		default = NullTransfer
+	endparam
+}
+
+class MT_YorkeTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_YorkeTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    A110 = -0.26813663648754
+    B110 =  0.98546084298505
+    A210 =  0.08818611671542
+    B210 =  0.99030722865609
+    A101 = -0.91067559396390
+    B101 =  0.50446045609351
+    A201 = -0.56502889980448
+    B201 =  0.33630697012268
+    A111 =  0.31172026382793
+    B111 =  0.94707472523078
+    A211 =  0.16299548727086
+    B211 =  0.29804921230971
+    A11m1 = -0.04003977835470
+    B11m1 =  0.23350105508507
+    A21m1 = -0.80398881978155
+    B21m1 =  0.15506467277737
+    twopi = 2 * #PI
+  endfunc
+	
+  float func Iterate(complex pz)
+    int i = 0
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float trigx = A110 * sin(TWOPI * (x + B110)) + \
+          A101 * sin(TWOPI * (y + B101)) +     \
+          A111 * sin(TWOPI * (x + y + B111)) + \
+          A11m1 * sin(TWOPI * (x - y + B11m1))
+      float trigy = A210 * sin(TWOPI * (x + B210)) + \
+          A201 * sin(TWOPI * (y + B201)) +     \
+          A211 * sin(TWOPI * (x + y + B211)) + \
+          A21m1 * sin(TWOPI * (x - y + B21m1))
+      x = (x + @xshift + @a * trigx)
+      y = (y + @yshift + @a * trigy)
+      i = i + 1
+    endwhile
+    m_LastZ = x + flip(y)
+    return cabs(pz - m_LastZ)
+  endfunc
+
+private:
+    float A110
+    float B110
+    float A210
+    float B210
+    float A101
+    float B101
+    float A201
+    float B201
+    float A111
+    float B111
+    float A211
+    float B211
+    float A11m1
+    float B11m1
+    float A21m1
+    float B21m1
+    float twopi
+	
+default:
+  title = "Yorke Texture"
+  float param a
+    caption = "Chaoticity"
+    default = 0.5
+  endparam
+  float param xshift
+    caption = "X Shift"
+    default = 0.486
+  endparam
+  float param yshift
+    caption = "Y Shift"
+    default = 0.905
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+  endparam
+}
+
+class MT_CrackleTexture(common.ulb:TrapShape) {
+;
+; Based on the Mosaic (Fast) transformation in dmj3.uxf,
+; with the kind permission of Damien M. Jones
+; <p>
+; Mark Townsend, June 2008
+;
+public:
+  func MT_CrackleTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+
+    complex center2 = (0.0)
+
+    int i = 0
+    int j = 0
+    int k = 0
+    int l = 0
+    int rightbranch = 0
+    float random1 = @seed1
+    float random2 = @seed2
+    complex p = 0
+    float range = 1.0 / 2147483648.0
+
+    tiletree[0] = -1; initialize tree (one leaf node)
+    tiletree[1] = -1
+    tileorder[0] = -1; initialize order (one double-endpoint)
+    tileorder[1] = -1
+    WHILE (i < @mostiles); still another tile to generate
+
+      ;
+      ; generate random data
+      ;
+      random1 = (random1 * 1103515245 + 12345) % 2147483648.0
+      random2 = (random2 * 1103515245 + 12345) % 2147483648.0
+      p = center2 + ((random1 - 1073741824) + flip(random2 - 1073741824)) * range * @mosscale
+      tilecenters[j] = real(p)
+      tilecenters[j+1] = imag(p)
+
+      ;
+      ; find appropriate insertion point in the tree
+      ;
+      IF (i > 0); have at least one item in the tree
+        k = 0; current node
+        WHILE (k >= 0); not at a leaf node
+          l = k; save current node
+          IF (real(p) < tilecenters[k] ||   \
+              (real(p) == tilecenters[k] && \
+               imag(p) < tilecenters[k+1])) ; less than current node
+            k = tiletree[k]; follow left branch
+            rightbranch = 0
+          ELSE; greater than current node
+            k = tiletree[k+1]; follow right branch
+            rightbranch = 1
+          ENDIF
+        ENDWHILE
+
+        ;
+        ; insert node into tree
+        ;
+        tiletree[j]   = -1; this node is a leaf node
+        tiletree[j+1] = -1
+        tiletree[l+rightbranch] = j; point this item to it
+
+        ;
+        ; insert node into sorted list
+        ;
+        IF (rightbranch == 0); followed the left branch
+          IF (tileorder[l] >= 0); not the leftmost node so far
+            tileorder[tileorder[l]+1] = j; follow it and point it to the new node
+          ENDIF
+          tileorder[j] = tileorder[l]; point new node to nodes it's between
+          tileorder[j+1] = l
+          tileorder[l] = j; point previous tree node's left to this node
+        ELSE
+          IF (tileorder[l+1] >= 0); not the rightmost node so far
+            tileorder[tileorder[l+1]] = j; follow it and point it to the new node
+          ENDIF
+          tileorder[j] = l; point new node to nodes it's between
+          tileorder[j+1] = tileorder[l+1]
+          tileorder[l+1] = j; point previous tree node's right to this node
+        ENDIF
+      ENDIF
+
+      i = i + 1
+      j = j + 2
+    ENDWHILE
+
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    ;
+    ; At this point, we already have a list of tile
+    ; centers, with forward and backward order links,
+    ; and a tree structure for finding the closest X
+    ; value. For each pixel, find the tile center with
+    ; the closest X value, then scan outwards until
+    ; the tile centers under examination are too far
+    ; (in the X direction) to beat what we already have.
+    ;
+    int i2 = 0
+    int j2 = 0
+    int k2 = 0
+    int l2 = 0
+
+    int i3 = 0
+    int j3 = 0
+
+    BOOL scanleft = TRUE
+    BOOL scanright = TRUE
+    float d = 0
+    float closest1 = 1e20
+    float closest2 = 1e20
+    complex q = 0
+    complex point1 = 0
+    complex point2 = 0
+    ;
+    ; First, find the closest X value.
+    ;
+    k2 = 0; current node
+    WHILE (k2 >= 0); not at a leaf node
+      l2 = k2; save current node
+      IF (real(pz) < tilecenters[k2] ||   \
+          (real(pz) == tilecenters[k2] && \
+           imag(pz) < tilecenters[k2+1])) ; less than current node
+        k2 = tiletree[k2]; follow left branch
+      ELSE; greater than current node
+        k2 = tiletree[k2+1]; follow right branch
+      ENDIF
+    ENDWHILE
+
+    q = tilecenters[l2]+flip(tilecenters[l2+1]) ; tile center (as a complex)
+    closest1 = |q - pz|; save distance
+    point1 = q; save center
+    i2 = tileorder[l2]; left node to check
+    j2 = tileorder[l2+1]; right node to check
+
+    WHILE (scanleft || scanright); still scanning in at least one direction
+      IF (i2 < 0); hit the leftmost node
+        scanleft = FALSE; don't scan to the left
+      ENDIF
+      IF (scanleft); scanning to the left...
+        q = tilecenters[i2]+flip(tilecenters[i2+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest1); X distance alone is greater than our closest
+          scanleft = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest1); new closest value!
+            closest1 = d; save distance
+            l2 = i2; save index
+            point1 = q; save center
+          ENDIF
+          i2 = tileorder[i2]; follow link to the left
+        ENDIF
+      ENDIF
+
+      IF (j2 < 0); hit the rightmost node
+        scanright = FALSE; don't scan to the right
+      ENDIF
+      IF (scanright); scanning to the right...
+        q = tilecenters[j2]+flip(tilecenters[j2+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest1); X distance alone is greater than our closest
+          scanright = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest1); new closest value!
+            closest1 = d; save distance
+            l2 = j2; save index
+            point1 = q; save center
+          ENDIF
+          j2 = tileorder[j2+1]; follow link to the right
+        ENDIF
+      ENDIF
+    ENDWHILE
+    
+    scanleft  = TRUE
+    scanright = TRUE
+    i3 = tileorder[l2]; left node to check
+    j3 = tileorder[l2+1]; right node to check
+
+    WHILE (scanleft || scanright); still scanning in at least one direction
+      IF (i3 < 0); hit the leftmost node
+        scanleft = FALSE; don't scan to the left
+      ENDIF
+      IF (scanleft); scanning to the left...
+        q = tilecenters[i3]+flip(tilecenters[i3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanleft = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+            point2 = q; save center
+          ENDIF
+          i3 = tileorder[i3]; follow link to the left
+        ENDIF
+      ENDIF
+
+      IF (j3 < 0); hit the rightmost node
+        scanright = FALSE; don't scan to the right
+      ENDIF
+      IF (scanright); scanning to the right...
+        q = tilecenters[j3]+flip(tilecenters[j3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanright = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+            point2 = q; save center
+          ENDIF
+          j3 = tileorder[j3+1]; follow link to the right
+        ENDIF
+      ENDIF
+    ENDWHILE
+
+    float dist = cabs(pz - point1)
+    float dist2 = cabs(pz - point2)
+    float v = sin(dist) +  cos(dist2^(1 / @nudge)) * 2 - 1.5
+    if @invert
+      return 1 - v
+    else
+      return v
+    endif
+
+  endfunc
+
+private:
+  float tilecenters[@mostiles*2]; tile center points
+  int tiletree[@mostiles*2]; tile tree structure
+  int tileorder[@mostiles*2]; tile ordering
+
+default:
+	title = "Crackle Texture"
+	param mostiles
+    caption = "Number of Tiles"
+    default = 500
+    hint = "Sets the number of mosaic tiles. More tiles take \
+            longer to render."
+  endparam
+	float param nudge
+	  caption = "Nudge"
+	  default = 1
+	  min = 0
+	endparam
+  param mosscale
+    caption = "Tile Density"
+    default = 5.0
+    hint = "Specifies the overall scale of the tiles. Smaller numbers \
+            will pack the tiles together more closely."
+  endparam
+  bool param invert
+    caption = "Invert Value"
+    default = false
+  endparam
+  param seed1
+    caption = "Random Seed 1"
+    default = 51853571
+    hint = "This is the 'seed' for the random number generator for \
+            horizontal positions."
+  endparam
+  param seed2
+    caption = "Random Seed 2"
+    default = 8072177
+    hint = "This is the 'seed' for the random number generator for \
+            vertical positions."
+  endparam
+}
+
+class MT_VoronoiTexture(common.ulb:TrapShape) {
+;
+; Based on the Mosaic (Fast) transformation in dmj3.uxf
+; with the kind permission of Damien M. Jones.
+; <p>
+; Mark Townsend, June 2008
+;
+public:
+  func MT_VoronoiTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+
+    fPattern = new @p_pattern(this)
+    ;
+    ; The general idea is to generate, one time, the
+    ; entire list of center points for each tile. But,
+    ; as the list is generated, it is stored in sorted
+    ; order (by X coordinate). This will allow fast
+    ; finding of nearest center point.
+    ;
+    ; We store centerpoints as an array of float instead
+    ; of an array of complex so we don't have to keep
+    ; cutting our tree node numbers in half.
+    ;
+
+    int i = 0
+    int j = 0
+    int k = 0
+    int l = 0
+    int rightbranch = 0
+    float random1 = @seed1
+    float random2 = @seed2
+    complex p = 0
+    float range = 1.0 / 2147483648.0
+
+    tiletree[0] = -1; initialize tree (one leaf node)
+    tiletree[1] = -1
+    tileorder[0] = -1; initialize order (one double-endpoint)
+    tileorder[1] = -1
+    WHILE (i < @mostiles); still another tile to generate
+      ;
+      ; generate random data
+      ;
+      random1 = (random1 * 1103515245 + 12345) % 2147483648.0
+      random2 = (random2 * 1103515245 + 12345) % 2147483648.0
+      p = ((random1 - 1073741824) + flip(random2 - 1073741824)) * range * @mosscale
+      tilecenters[j] = real(p)
+      tilecenters[j+1] = imag(p)
+
+      ;
+      ; find appropriate insertion point in the tree
+      ;
+      IF (i > 0); have at least one item in the tree
+        k = 0; current node
+        WHILE (k >= 0); not at a leaf node
+          l = k; save current node
+          IF (real(p) < tilecenters[k] ||   \
+              (real(p) == tilecenters[k] && \
+               imag(p) < tilecenters[k+1])) ; less than current node
+            k = tiletree[k]; follow left branch
+            rightbranch = 0
+          ELSE; greater than current node
+            k = tiletree[k+1]; follow right branch
+            rightbranch = 1
+          ENDIF
+        ENDWHILE
+
+        ;
+        ; insert node into tree
+        ;
+        tiletree[j]   = -1; this node is a leaf node
+        tiletree[j+1] = -1
+        tiletree[l+rightbranch] = j; point this item to it
+
+        ;
+        ; insert node into sorted list
+        ;
+        IF (rightbranch == 0); followed the left branch
+          IF (tileorder[l] >= 0); not the leftmost node so far
+            tileorder[tileorder[l]+1] = j; follow it and point it to the new node
+          ENDIF
+          tileorder[j] = tileorder[l]; point new node to nodes it's between
+          tileorder[j+1] = l
+          tileorder[l] = j; point previous tree node's left to this node
+        ELSE
+          IF (tileorder[l+1] >= 0); not the rightmost node so far
+            tileorder[tileorder[l+1]] = j; follow it and point it to the new node
+          ENDIF
+          tileorder[j] = l; point new node to nodes it's between
+          tileorder[j+1] = tileorder[l+1]
+          tileorder[l+1] = j; point previous tree node's right to this node
+        ENDIF
+      ENDIF
+
+      i = i + 1
+      j = j + 2
+    ENDWHILE
+
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    ;
+    ; At this point, we already have a list of tile
+    ; centers, with forward and backward order links,
+    ; and a tree structure for finding the closest X
+    ; value. For each pixel, find the tile center with
+    ; the closest X value, then scan outwards until
+    ; the tile centers under examination are too far
+    ; (in the X direction) to beat what we already have.
+    ;
+    int i2 = 0
+    int j2 = 0
+    int k2 = 0
+    int l2 = 0
+
+    int i3 = 0
+    int j3 = 0
+
+    BOOL scanleft = TRUE
+    BOOL scanright = TRUE
+    float d = 0
+    float closest1 = 1e20
+    float closest2 = 1e20
+    complex q = 0
+    complex point1 = 0
+
+    ;
+    ; First, find the closest X value.
+    ;
+    k2 = 0; current node
+    WHILE (k2 >= 0); not at a leaf node
+      l2 = k2; save current node
+      IF (real(pz) < tilecenters[k2] ||   \
+          (real(pz) == tilecenters[k2] && \
+           imag(pz) < tilecenters[k2+1])) ; less than current node
+        k2 = tiletree[k2]; follow left branch
+      ELSE; greater than current node
+        k2 = tiletree[k2+1]; follow right branch
+      ENDIF
+    ENDWHILE
+
+    q = tilecenters[l2]+flip(tilecenters[l2+1]) ; tile center (as a complex)
+    closest1 = |q - pz|; save distance
+    point1 = q; save center
+    i2 = tileorder[l2]; left node to check
+    j2 = tileorder[l2+1]; right node to check
+
+    WHILE (scanleft || scanright); still scanning in at least one direction
+      IF (i2 < 0); hit the leftmost node
+        scanleft = FALSE; don't scan to the left
+      ENDIF
+      IF (scanleft); scanning to the left...
+        q = tilecenters[i2]+flip(tilecenters[i2+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest1); X distance alone is greater than our closest
+          scanleft = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest1); new closest value!
+            closest1 = d; save distance
+            l2 = i2; save index
+            point1 = q; save center
+          ENDIF
+          i2 = tileorder[i2]; follow link to the left
+        ENDIF
+      ENDIF
+
+      IF (j2 < 0); hit the rightmost node
+        scanright = FALSE; don't scan to the right
+      ENDIF
+      IF (scanright); scanning to the right...
+        q = tilecenters[j2]+flip(tilecenters[j2+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest1); X distance alone is greater than our closest
+          scanright = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest1); new closest value!
+            closest1 = d; save distance
+            l2 = j2; save index
+            point1 = q; save center
+          ENDIF
+          j2 = tileorder[j2+1]; follow link to the right
+        ENDIF
+      ENDIF
+    ENDWHILE
+
+    ;
+    ; We now have the location of the closest tile
+    ; (point1) and the index of it (l2). If we're
+    ; shading, we'll need the second-closest point,
+    ; too. We scan left and right for it.
+    ;
+    if @mode == "Mosaic"
+    ; If we're in Mosaic mode iterate the pattern
+    ; and exit here.
+      return fPattern.Iterate(point1)
+    endif
+
+    scanleft  = TRUE
+    scanright = TRUE
+    i3 = tileorder[l2]; left node to check
+    j3 = tileorder[l2+1]; right node to check
+
+    WHILE (scanleft || scanright); still scanning in at least one direction
+      IF (i3 < 0); hit the leftmost node
+        scanleft = FALSE; don't scan to the left
+      ENDIF
+      IF (scanleft); scanning to the left...
+        q = tilecenters[i3]+flip(tilecenters[i3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanleft = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+          ENDIF
+          i3 = tileorder[i3]; follow link to the left
+        ENDIF
+      ENDIF
+
+      IF (j3 < 0); hit the rightmost node
+        scanright = FALSE; don't scan to the right
+      ENDIF
+      IF (scanright); scanning to the right...
+        q = tilecenters[j3]+flip(tilecenters[j3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(pz)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanright = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - pz|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+          ENDIF
+          j3 = tileorder[j3+1]; follow link to the right
+        ENDIF
+      ENDIF
+    ENDWHILE
+
+    closest1 = closest1^(1/@metric)
+    closest2 = closest2^(1/@metric)
+    float v = (closest2-closest1)
+    if @invert
+      return 1 - v
+    else
+      return v
+    endif
+  endfunc
+
+private:
+  float tilecenters[@mostiles*2]; tile center points
+  int tiletree[@mostiles*2]; tile tree structure
+  int tileorder[@mostiles*2]; tile ordering
+  TrapShape fPattern
+
+default:
+	title = "Voronoi Texture"
+	param mode
+	  caption = "Mode"
+	  enum = "Crackle" "Mosaic"
+	endparam
+	float param metric
+	  caption = "Metric"
+	  default = 2
+	  visible = @mode == "Crackle"
+	endparam
+	param invert
+	  caption = "Invert Value"
+	  default = true
+	  visible = @mode == "Crackle"
+	endparam
+  TrapShape param p_pattern
+    caption = "Pattern"
+    default = MT_PerlinNoiseTexture
+    visible = @mode == "Mosaic"
+  endparam
+  param mostiles
+    caption = "Number of Tiles"
+    default = 500
+    hint = "Sets the number of tiles. More tiles take \
+            longer to render."
+  endparam
+  param mosscale
+    caption = "Tile Density"
+    default = 5.0
+    hint = "Specifies the overall scale of the tiles. Smaller numbers \
+            will pack the tiles together more closely."
+  endparam
+  param seed1
+    caption = "Random Seed 1"
+    default = 51853571
+    hint = "This is the 'seed' for the random number generator for \
+            horizontal positions."
+  endparam
+  param seed2
+    caption = "Random Seed 2"
+    default = 8072177
+    hint = "This is the 'seed' for the random number generator for \
+            vertical positions."
+  endparam
+}
+
+class MT_ImageMapsTexture(common.ulb:TrapShape) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  func MT_ImageMapsTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    fImage = new @p_image(this)
+    if !fImage.getEmpty()
+      fRatio = fImage.getWidth() / fImage.getHeight()
+    else
+      fRatio = 1
+    endif
+  endfunc
+
+  float func Iterate(complex pz)
+    TrapShape.Iterate(pz)
+    color clr = fImage.getColor(real(pz)+ flip(imag(pz) * fRatio))
+    return 1 - (0.3 * red(clr)+ 0.59 * green(clr) + 0.11 * blue(clr))
+  endfunc
+
+private:
+  ImageWrapper fImage
+  float fRatio
+
+default:
+	title = "Image Maps Texture"
+  ImageWrapper param p_image
+    caption = "Image"
+    default = ImageImport
+  endparam
+}
+
+; Trap Colorings ---------------------------------------------------------------
+
+class MT_TrapColoringModulatedIter(common.ulb:TrapColoring) {
+public:
+   float func Result(TrapMode pTrapMode)
+     return (pTrapMode.getIteration(0) % @iter_mod) / @iter_mod + ptrapmode.GetTexture(0)
+   endfunc
+
+default:
+   title = "Modulated Iter"
+   param iter_mod
+     caption = "No. of Colors"
+     default = 8
+     hint = "The number of different colors used."
+   endparam
+}
+
+; Formula classes --------------------------------------------------------------
+
+class MT_Druid(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  complex func Init(complex pz)
+    fPixel = pz
+    fIter = 0
+    return @start
+  endfunc
+
+  complex func Iterate(complex pz)
+    if fIter % 2 == 0
+      complex newz = pz^@p_power + fPixel
+    else
+      newz = pz^@p_power
+      newz = newz - real(newz) + abs(real(newz)) + fPixel
+    endif
+    fIter = fIter + 1
+    return newz
+  endfunc
+
+private:
+  complex fPixel
+  int fIter
+
+default:
+  title = "Druid"
+  param start
+    caption = "Starting point"
+    default = (0,0)
+  endparam
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_DruidJulia(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  complex func Init(complex pz)
+    fIter = 0
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    if fIter % 2 == 0
+      complex newz = pz^@p_power + @seed
+    else
+      newz = pz^@p_power
+      newz = newz - real(newz) + abs(real(newz)) + @seed
+    endif
+    fIter = fIter + 1
+    return newz
+  endfunc
+
+private:
+  int fIter
+
+default:
+  title = "Druid Julia"
+  param seed
+    caption = "Julia seed"
+    default = (-0.77, 0.14)
+  endparam
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_PopcornJulia(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    float x = real(pz)
+    float y = imag(pz)
+    float xx = x
+    x = x - @h * sin(y + tan(3 * y))
+    y = y - @h * sin(xx + tan(3 * xx))
+    return (x + flip(y))
+  endfunc
+
+default:
+  title = "Popcorn Julia"
+  param p_power
+    visible = false
+  endparam
+  float param h
+    caption = "Step Size"
+    default = (0.05)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 4
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_JewelNewton(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fPixel = pz
+    fH = 0.0001
+    return @p_start
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = pz^@p_power + pz + fPixel
+    complex fzd =  1 / fH * ((zh^@p_power + zh + fPixel) - fz)
+    return pz - fz / fzd
+  endfunc
+
+protected:
+  complex fPixel
+  complex fH
+
+default:
+  title = "Jewel Newton"
+  complex param @p_start
+    caption = "Starting point"
+    default = (0, 0)
+  endparam
+  complex param p_power
+    caption = "Exponent"
+    default = (4,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_JewelNewtonJulia(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fH = 0.0001
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = pz^@p_power + pz + @p_seed
+    complex fzd =  1 / fH * ((zh^@p_power + zh + @p_seed) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fH
+
+default:
+  title = "Jewel Newton Julia"
+  complex param p_seed
+    caption = "Julia seed"
+    default = (-1.3, 1.3)
+  endparam
+  complex param p_power
+    caption = "Exponent"
+    default = (5,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_BofNewtonII(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fPixel = pz
+    fH = 0.0001
+    return @p_start
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = (pz - 1) * (pz^2 + pz + fPixel)
+    complex fzd = 1 / fH * ((zh - 1) * (zh^2 + zh + fPixel) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fPixel
+  complex fH
+
+default:
+  title = "Bof Newton II"
+  complex param @p_start
+    caption = "Starting point"
+    default = (0, 0)
+  endparam
+  complex param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_BofNewtonIIJulia(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fH = 0.0001
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = (pz - 1) * (pz^2 + pz + @p_seed)
+    complex fzd = 1 / fH * ((zh - 1) * (zh^2 + zh + @p_seed) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fH
+
+default:
+  title = "Bof Newton II Julia"
+  complex param p_seed
+    caption = "Julia seed"
+    default = (1.02, 0.975)
+  endparam
+  complex param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_Celtic(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    fPixel = pz
+    return @start
+  endfunc
+
+  complex func Iterate(complex pz)
+    complex zn = pz^@p_power
+    return zn - real(zn) + abs(real(zn)) - fPixel
+  endfunc
+
+private:
+  complex fPixel
+
+default:
+  title = "Celtic"
+  param start
+    caption = "Starting point"
+    default = (0,0)
+  endparam
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_CelticJulia(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    complex zn = pz^@p_power
+    return zn - real(zn) + abs(real(zn)) - @p_seed
+  endfunc
+
+default:
+  title = "Celtic Julia"
+  param p_seed
+    caption = "Julia seed"
+    default = (1, 0.3)
+  endparam
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_BarnsleyI(common.ulb:DivergentFormula) {
+;
+; Based on Barnsley 1 (Mandelbrot) in Fractint.ufm
+; <p>
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    fPixel = pz
+    return fPixel + @start
+  endfunc
+
+  complex func Iterate(complex pz)
+    if real(pz) >= 0
+      return (pz - 1) * fPixel
+    else
+      return (pz + 1) * fPixel
+    endif
+  endfunc
+
+private:
+  complex fPixel
+
+default:
+  title = "Barnsley I"
+  param start
+    caption = "Perturbation"
+    default = (0,0)
+  endparam
+  param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_BarnsleyIJulia(common.ulb:DivergentFormula) {
+;
+; Based on Barnsley 1 (Julia) in Fractint.ufm
+; <p>
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    if real(pz) >= 0
+      return (pz - 1) * @p_seed
+    else
+      return (pz + 1) * @p_seed
+    endif
+  endfunc
+
+default:
+  title = "Barnsley I Julia"
+  param p_seed
+    caption = "Julia seed"
+    default = (0.6, 1.1)
+  endparam
+  param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 4
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_BofNewtonI(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fPixel = pz
+    fH = 0.0001
+    return @p_start
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = (pz - 1) * (pz + fPixel) * (pz^2 + 1)
+    complex fzd = 1 / fH *((zh - 1) * (zh + fPixel) *(zh^2 + 1) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fPixel
+  complex fH
+
+default:
+  title = "Bof Newton I"
+  complex param @p_start
+    caption = "Starting point"
+    default = (0, 0)
+  endparam
+  complex param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_BofNewtonIJulia(common.ulb:ConvergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    fH = 0.0001
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentFormula.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = (pz - 1) * (pz + @p_seed) * (pz^2 + 1)
+    complex fzd = 1 / fH * ((zh - 1) * (zh + @p_seed) * (zh^2 + 1) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fH
+
+default:
+  title = "Bof Newton I Julia"
+  complex param p_seed
+    caption = "Julia seed"
+    default = (1, 0)
+  endparam
+  complex param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_Alternate(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "Standard.ulb"
+
+  func MT_Alternate(Generic pparent)
+    fFormula1 = new @formula1Class(this)
+    fFormula2 = new @formula2Class(this)
+  endfunc
+
+  complex func Init(complex pz)
+    complex start = fFormula1.Init(pz)
+    fFormula2.Init(pz)
+    fIter = 0
+    return start
+  endfunc
+
+  complex func Iterate(complex pz)
+    if fIter % 2 == 0
+      newZ = fFormula1.Iterate(pz)
+    else
+      newZ = fFormula2.Iterate(pz)
+    endif
+    fIter = fIter + 1
+    return newZ
+  endfunc
+
+private:
+  Formula fFormula1
+  Formula fFormula2
+  int fIter
+
+default:
+  title = "Alternate"
+  Formula param formula1Class
+    caption = "First Formula"
+    default = Standard_Mandelbrot
+  endparam
+  Formula param formula2Class
+    caption = "Second Formula"
+    default = Standard_Mandelbrot
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e20
+  endparam
+  param p_power
+    visible = false
+  endparam
+}
+
+class MT_Boost(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  import "Standard.ulb"
+
+  func MT_Boost(Generic pparent)
+    fFormula1 = new @formula1Class(this)
+    fFormula2 = new @formula2Class(this)
+    fTrapShape = new @TrapShapeClass(this)
+  endfunc
+
+  complex func Init(complex pz)
+    complex start = fFormula1.Init(pz)
+    fFormula2.Init(pz)
+    fTrapShape.Init(pz)
+    return start
+  endfunc
+
+  complex func Iterate(complex pz)
+    z = fFormula1.Iterate(pz)
+    if fTrapShape.Iterate(z) < @p_threshold
+      z = fFormula2.Iterate(z)
+    endif
+    return z
+  endfunc
+
+private:
+  Formula fFormula1
+  Formula fFormula2
+  TrapShape fTrapShape
+
+default:
+  title = "Mark's Boost"
+  float param p_threshold
+    caption = "Threshold"
+    default = 0.5
+    min = 1E-10
+  endparam
+  Formula param formula1Class
+    caption = "First Formula"
+    default = Standard_Mandelbrot
+  endparam
+  Formula param formula2Class
+    caption = "Second Formula"
+    default = Standard_Newton
+  endparam
+  TrapShape param TrapShapeClass
+    caption = "Trap Shape"
+    default = TrapShapeBlock
+  endparam
+  float param p_bailout
+    caption = "Bailout"
+    default = 1.0e20
+  endparam
+  param p_power
+    visible = false
+  endparam
+}
+
+class MT_Traps(common.ulb:DivergentFormula) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  import "Standard.ulb"
+
+  func MT_Traps(Generic pparent)
+    fFormula = new @formulaClass(this)
+    fTrapShape = new @TrapShapeClass(this)
+  endfunc
+
+  complex func Init(complex pz)
+    complex start = fFormula.Init(pz)
+    fTrapShape.Init(pz)
+    return start
+  endfunc
+
+  complex func Iterate(complex pz)
+    z = fFormula.Iterate(pz)
+    fDis = fTrapShape.Iterate(z)
+    return z
+  endfunc
+  
+ 	bool func IsBailedOut(complex pz)
+ 	  if fFormula.IsBailedOut(pz) || fDis < @p_threshold
+   	  m_BailedOut = True
+   	else
+   	  m_BailedOut = false
+   	endif
+		return m_BailedOut
+	endfunc
+
+
+private:
+  Formula fFormula
+  TrapShape fTrapShape
+  float fDis
+  
+default:
+  title = "Traps"
+  float param p_threshold
+    caption = "Threshold"
+    default = 0.025
+    min = 1E-10
+  endparam
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = Standard_Mandelbrot
+  endparam
+  TrapShape param TrapShapeClass
+    caption = "Trap Shape"
+    default = Standard_TrapShapeCross
+  endparam
+  param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    visible = false
+  endparam
+}
+
+; Coloring classes -------------------------------------------------------------
+
+class MT_ConvolutionHelper {
+;
+; Helper class for MT_ConvolutionColoring.
+; <p>
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  import "Standard.ulb"
+
+  func MT_ConvolutionHelper(MT_ConvolutionColoring owner)
+    fFormula = new @formulaClass(owner)
+    fColouring = new @coloringClass(owner)
+  endfunc
+
+  complex func Init(const complex pz)
+    fZ = fFormula.Init(pz)
+    fColouring.Init(fZ, pz)
+    return fZ
+  endfunc
+
+  complex func Iterate()
+    return (fZ = fFormula.Iterate(fZ))
+  endfunc
+
+  func IterateCol()
+    fColouring.Iterate(fZ)
+    return
+  endfunc
+
+  bool func IsBailedOut()
+    return fFormula.IsBailedOut(fZ)
+  endfunc
+
+  color func Result()
+    return fColouring.Result(fZ)
+  endfunc
+  
+  bool func IsSolid()
+    return fColouring.IsSolid()
+  endfunc
+
+private:
+  Formula fFormula
+  Coloring fColouring
+  complex fZ
+
+default:
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = Standard_Mandelbrot
+    hint = "Sets the actual fractal formula to use for the lighting effect."
+  endparam
+  Coloring param coloringClass
+    caption = "Coloring Algorithm"
+    default = Standard_Smooth
+    hint = "Selects the colouring algorithm to be used. Note that where \
+            necessary you should ensure duplicate parameters in the 'Fractal \
+            Formula' and the 'Colouring Algorithm' match each other - \
+            typically bailout values and degree/exponent/power values."
+  endparam
+}
+
+class MT_ConvolutionColoring(common.ulb:DirectColoring) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_ConvolutionColoring(Generic pparent)
+    DirectColoring(pparent)
+    fHelper[0] = new @helperClass(this)
+    fHelper[1] = new @helperClass(this)
+    fHelper[2] = new @helperClass(this)
+    fHelper[3] = new @helperClass(this)
+    fHelper[4] = new @helperClass(this)
+    fHelper[5] = new @helperClass(this)
+    fHelper[6] = new @helperClass(this)
+    fHelper[7] = new @helperClass(this)
+    fHelper[8] = new @helperClass(this)
+    float dis = @p_distance / #magn
+    fAdd[0] = -dis + flip(-dis)
+    fAdd[1] = flip(-dis)
+    fAdd[2] = -dis + flip(-dis)
+    fAdd[3] = -dis
+    fAdd[4] = 0
+    fAdd[5] = dis
+    fAdd[6] = -dis + flip(dis)
+    fAdd[7] = flip(dis)
+    fAdd[8] = dis + flip(dis)
+    fKernel = new @kernel(this)
+    int i = 0
+    while i < 9
+      fSv[i] = fKernel.GetWeight(i)
+      i = i + 1
+    endwhile
+  endfunc
+
+  color func Result(complex pz)
+    color c
+    float alpha = 0
+    float red = 0
+    float green = 0
+    float blue = 0
+    int cIter = 0
+    float dv = 0
+    ; Main loop goes through each of the sample points
+    while cIter < 9
+      if fSv[cIter] != 0 ; for speed we don't calculate if weight is zero
+     ; initalize
+        dv = dv + fSv[cIter] ; summing weights
+        fHelper[cIter].Init(pz + fAdd[cIter])
+        int iter = 0
+       ; Fractal iteration loop
+        repeat
+          fHelper[cIter].Iterate()
+          bool bail = fHelper[cIter].IsBailedOut()
+          if !bail
+            fHelper[cIter].IterateCol()
+          endif
+          iter = iter + 1
+        until iter == #maxiter || bail
+        if iter < #maxiter
+          c = fHelper[cIter].Result()
+          if fHelper[cIter].IsSolid()
+            c = @solid_color
+          endif
+        else
+          c = @inside_color
+        endif
+        red = red +  fSv[citer] * red(c)
+        green = green +  fSv[citer] * green(c)
+        blue = blue +  fSv[citer] * blue(c)
+        alpha = alpha +  fSv[citer] * alpha(c)
+      endif
+      cIter = cIter + 1
+    endwhile
+    if dv == 0 ; can't divide by zero, of course
+      dv = 1
+    endif
+    ; Divide components with summed divisor
+    red = red / dv
+    green = green / dv
+    blue = blue / dv
+    alpha = alpha / dv
+    if @trans == "None"
+      return rgb(red, green, blue)
+    elseif @trans == "Gradient"
+      ; use convoluted alpha
+      return rgba(red, green, blue, alpha)
+    elseif @trans == "Luminance"
+      ; construct color from components
+      c = rgb(red, green, blue)
+      ; grab the luminance
+      float alpha = lum(c)
+      ; construct new color with luminance value used for alpha
+      return rgba(red, green, blue, alpha)
+    endif
+    return rgb(red, green, blue)
+  endfunc
+
+private:
+  MT_ConvolutionHelper fHelper[9]
+  MT_Kernel fKernel
+  complex fAdd[9]
+  float fSv[9]
+
+default:
+  title = "Convolution"
+  param p_distance
+    caption = "Sample distance"
+    default = 0.01
+  endparam
+  MT_Kernel param kernel
+    caption = "Kernel"
+    default = MT_CenterKernel
+  endparam
+  MT_ConvolutionHelper param helperClass
+    selectable = false
+  endparam
+  heading
+    caption = "Color parameters"
+  endheading
+  color param inside_color
+    caption = "Inside color"
+    default = rgb(0,0,0)
+  endparam
+  color param solid_color
+    caption = "Solid color"
+    default = rgb(0,0,0)
+  endparam
+  param trans
+    caption = "Opacity"
+    enum = "None" "Gradient" "Luminance"
+  endparam
+}
+
+class MT_TextureColoring(common.ulb:GradientColoring) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_TextureColoring(Generic pparent)
+    GradientColoring(pparent)
+    fTexture = new @p_texture(this)
+  endfunc
+  
+  func Init(complex pz, complex ppixel)
+    GradientColoring.Init(pz, ppixel)
+    fTexture.Init(pz)
+  endfunc
+
+  float func ResultIndex(complex pz)
+    return fTexture.Iterate(pz)
+  endfunc
+
+private:
+  TrapShape fTexture
+
+default:
+  title = "Texture"
+  TrapShape param p_texture
+    caption = "Texture"
+    default = MT_PerlinNoiseTexture
+  endparam
+}
+
+class MT_DiskTexture(common.ulb:GradientColoring) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_DiskTexture(Generic pparent)
+    GradientColoring(pparent)
+    fTexture = new @p_texture(this)
+  endfunc
+  
+  func Init(complex pz, complex ppixel)
+    GradientColoring.Init(pz, ppixel)
+    fTexture.Init(pz)
+    fW = 0
+    fIter = 0
+    fMax_iter = 0
+  endfunc
+
+  func Iterate(complex pz)
+    fIter = fIter + 1
+    if cabs(pz - @doffset) < @r
+      float d = (@r - cabs(pz - @doffset)) / @r
+      fW = fW + d * pz
+      fMax_iter = fIter
+    endif
+  endfunc
+
+  float func ResultIndex(complex pz)
+    float index = 0
+    if @coloring == 0
+      index = 0.1 * cabs(fW)
+    elseif @coloring == 1
+      index = 0.1 * abs(real(fW))
+    elseif @coloring == 2
+      index = 0.1 * abs(imag(fW))
+    elseif @coloring == 3
+      float b = atan2(fW)
+      if b < 0
+        b = b + 2 * #pi
+      endif
+      b = 1 / (2 * #pi) * b
+      index = b
+    elseif @coloring == 4
+      index = 0.1 * fMax_iter
+    elseif @coloring == 5
+      index = fTexture.Iterate(fW)
+    endif
+    return index
+  endfunc
+
+private:
+  TrapShape fTexture
+  complex fW
+  int fIter
+  int fMax_iter
+
+default:
+  title = "Disk Texture"
+  param coloring
+    caption = "Coloring mode"
+    enum = "Magnitude" "Real" "Imaginary" "Angle" "Iteration" "Texture"
+  endparam
+  param r
+    caption = "Disk radius"
+    default = 2.0
+    min = 0
+  endparam
+  param doffset
+    caption = "Disk offset"
+    default = (0,0)
+  endparam
+ TrapShape param p_texture
+    caption = "Texture"
+    default = MT_PerlinNoiseTexture
+  endparam
+}
+
+class MT_SpriteTrap(common.ulb:DirectColoring) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_SpriteTrap(Generic pparent)
+    DirectColoring(pparent)
+ 		fTrapTransform = new @p_traptransform(this)
+    fImage = new @p_image(this)
+   ; if !fImage.getEmpty()
+   ;   fRatio = fImage.getWidth() / fImage.getHeight()
+   ; else
+   ;   fRatio = 1
+   ; endif
+  endfunc
+
+  func Init(complex pz, complex ppixel)
+    DirectColoring.Init(pz, ppixel)
+    fTrapTransform.Init(pz)
+    fTrapZ = 0
+    fTrapped = false
+    fTrapIter = 0
+    fIter = 0
+    fClr = rgb(0,0,0)
+    fFirst = @firstiter - 1
+    fLast = fFirst + @no_iters
+  endfunc
+
+  func Iterate(complex pz)
+    DirectColoring.Iterate(pz)
+    if !fTrapped && (fIter >= fFirst) && (fIter < fLast)
+			complex zt = fTrapTransform.Iterate(pz)
+;      fClr = fImage.getColor(real(zt) + flip(imag(zt) * fRatio))
+      fClr = fImage.getColor(real(zt) + flip(imag(zt)))
+
+      if alpha(fClr) > @threshold
+        fTrapped = true
+        fTrapIter = fIter
+        fTrapZ = pz
+      endif
+    endif
+    fIter = fIter + 1
+  endfunc
+
+  color func Result(complex pz)
+    color c = rgb(0,0,0)
+    if fTrapped
+      if @color_mode == "Image"
+        c = rgba(red(fClr), green(fClr),blue(fClr),1)
+      elseif @color_mode == "Iteration"
+        c = Gradient(0.1 * fTrapIter)
+      elseif @color_mode == "Magnitude"
+        c = Gradient(cabs(fTrapZ))
+      elseif @color_mode == "Real"
+        c = Gradient(abs(real(fTrapZ)))
+      elseif @color_mode == "Imag"
+        c = Gradient(abs(imag(fTrapZ)))
+      elseif @color_mode == "Angle"
+        float bb = atan2(fTrapZ)
+        if bb < 0
+          bb = bb + 2 * #pi
+        endif
+        bb = 1 / (2 * #pi) * bb
+        c = Gradient(bb)
+      elseif @color_mode == "Modulated Iter"
+        c = Gradient((fTrapIter % 8) / 8)
+      elseif @color_mode == "Gradient Index"
+        c = gradient(0.3* red(fClr)+ 0.59 * green(fClr) + 0.11 * blue(fClr))
+      elseif @color_mode == "Negative"
+        c = rgba(1-red(fClr),1-green(fClr),1-blue(fClr),1)
+      elseif @color_mode == "Greyscale"
+        float y = 0.3* red(fClr)+ 0.59 * green(fClr) + 0.11 * blue(fClr)
+        c = rgba(y, y, y, 1)
+      endif
+    else
+      m_solid = true
+    endif
+    return c
+  endfunc
+
+private:
+	UserTransform fTrapTransform
+  ImageWrapper fImage
+  complex fTrapZ
+  bool fTrapped
+  int fTrapIter
+  int fIter
+  color fClr
+  int fFirst
+  int fLast
+default:
+  title = "Sprite Trap"
+	UserTransform param p_traptransform
+		caption = "Trap Position"
+		default = TrapTransform
+		expanded = false
+	endparam
+  param color_mode
+    caption = "Coloring Mode"
+    enum = "Image" "Negative" "Greyscale" "Gradient Index" "Iteration" "Magnitude" "Real" \
+            "Imag" "Angle" "Modulated Iter"
+    hint = "Specifies how the trap will be colored."
+  endparam
+  float param threshold
+     caption = "Alpha Threshold"
+     default = 0.7
+     min = 0
+     max = 1
+     hint = "Determines what level of opacity in the image will be considered inside the trap."
+  endparam
+  int param firstiter
+    caption = "First Iteration"
+    default = 1
+    min = 1
+    hint = "Sets the first iteration that will be looked at. Raising it will remove larger elements from the foreground."
+  endparam
+  int param no_iters
+    caption = "No. of Iterations"
+    default = 10000
+    min = 1
+    hint = "Sets the number of iterations to look at. Decreasing it can remove smaller elements from the background."
+  endparam
+  ImageWrapper param p_image
+    caption = "Image"
+    default = ImageImport
+  endparam
+}
+
+; Kernel classes for convolution -----------------------------------------------
+
+class MT_Kernel(common.ulb:Generic) {
+;
+; Base class for convolution kernels.
+; <p>
+; Mark Townsend, May 2008
+;
+public:
+  func MT_Kernel(Generic pparent)
+    Generic.Generic(pparent)
+  endfunc
+	
+  float func GetWeight(int n)
+    return fWeight[n]
+  endfunc
+	
+protected:
+  float fWeight[9]
+  
+default:
+}
+
+class MT_EdgeDetectKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_EdgeDetectKernel(Generic pparent)
+    fWeight[0] = 1, fWeight[1] = 1, fWeight[2] = 1
+    fWeight[3] = 1, fWeight[4] = -8, fWeight[5] = 1
+    fWeight[6] = 1, fWeight[7] = 1, fWeight[8] = 1
+  endfunc
+
+default:
+  title = "Edge Detect"
+}
+
+class MT_CenterKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_CenterKernel(Generic pparent)
+    fWeight[0] = 0, fWeight[1] = 0, fWeight[2] = 0
+    fWeight[3] = 0, fWeight[4] = 1, fWeight[5] = 0
+    fWeight[6] = 0, fWeight[7] = 0, fWeight[8] = 0
+  endfunc
+
+default:
+  title = "Center"
+}
+
+class MT_SoftenKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_SoftenKernel(Generic pparent)
+    fWeight[0] = 1, fWeight[1] = 1, fWeight[2] = 1
+    fWeight[3] = 1, fWeight[4] = 1, fWeight[5] = 1
+    fWeight[6] = 1, fWeight[7] = 1, fWeight[8] = 1
+  endfunc
+
+default:
+  title = "Soften"
+}
+
+class MT_EmbossKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_EmbossKernel(Generic pparent)
+    fWeight[0] = 2, fWeight[1] = 0, fWeight[2] = 0
+    fWeight[3] = 0, fWeight[4] = -1, fWeight[5] = 0
+    fWeight[6] = 0, fWeight[7] = 0, fWeight[8] = -1
+  endfunc
+
+default:
+  title = "Emboss"
+}
+
+class MT_SharpenKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_SharpenKernel(Generic pparent)
+    fWeight[0] = -1, fWeight[1] = -2, fWeight[2] = -1
+    fWeight[3] = -2, fWeight[4] = 13, fWeight[5] = -2
+    fWeight[6] = -1, fWeight[7] = -2, fWeight[8] = -1
+  endfunc
+
+default:
+  title = "Sharpen"
+}
+
+class MT_CustomKernel(MT_Kernel) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  import "common.ulb"
+  func MT_CustomKernel(Generic pparent)
+    fWeight[0] = @s0, fWeight[1] = @s1, fWeight[2] = @s2
+    fWeight[3] = @s3, fWeight[4] = @s4, fWeight[5] = @s5
+    fWeight[6] = @s6, fWeight[7] = @s7, fWeight[8] = @s8
+  endfunc
+
+default:
+  title = "Custom"
+  float param s0
+    caption = "NW"
+    default = 1
+  endparam
+  float param s1
+    caption = "N"
+    default = 1
+  endparam
+  float param s2
+    caption = "NE"
+    default = 1
+  endparam
+  float param s3
+    caption = "W"
+    default = 1
+  endparam
+  float param s4
+    caption = "Centre"
+    default = -8
+  endparam
+  float param s5
+    caption = "E"
+    default = 1
+  endparam
+  float param s6
+    caption = "SW"
+    default = 1
+  endparam
+  float param s7
+    caption = "S"
+    default = 1
+  endparam
+  float param s8
+    caption = "SE"
+    default = 1
+  endparam
+}
+
+; Transformations --------------------------------------------------------------
+
+class MT_RadialWaves(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_RadialWaves(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    float r = cabs(pz - @center)
+    float theta = atan2(pz - @center)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    int iter = 0
+    while iter < @iterations
+      float or = r
+      r = r + @a * sin(@t * theta)
+      theta = theta + @a2 * cos(@t2 * or)
+      iter = iter + 1
+    endwhile
+    float x = r * cos(theta)
+    float y = r * sin(theta)
+    return x + flip(y) + @center
+  endfunc
+
+default:
+  title = "Radial Waves"
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param iterations
+    caption = "Iterations"
+    default = 2
+  endparam
+  param t2
+    caption = "Theta frequency"
+    default = 20.0
+  endparam
+  param a2
+    caption = "Theta amplitude"
+    default = 0.1
+  endparam
+  param t
+    caption = "Radius frequency"
+    default = 20.0
+  endparam
+  param a
+    caption = "Radius amplitude"
+    default = 0.1
+  endparam
+}
+
+class MT_PopcornTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_PopcornTransform(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    int i = 0
+    pz = pz * recip(@scale) - @center
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(real(@a) * y)))
+      y = y - @h * real(@fn3(xx + @fn4(imag(@a) * xx)))
+      i = i + 1
+    endwhile
+    return x + flip(y)
+  endfunc
+
+default:
+  title = "Popcorn"
+  param center
+    caption = "Center"
+    default = (0, 0)
+  endparam
+  float param scale
+    caption = "Scale"
+    default = 1
+  endparam
+  param a
+    caption = "Alpha"
+    default = (3.0, 3.0)
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Popcorn formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Popcorn formula."
+  endparam
+  func fn1
+    caption = "Re Popcorn #1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Re Popcorn #2"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "Im Popcorn #1"
+    default = sin()
+  endfunc
+  func fn4
+    caption = "Im Popcorn #2"
+    default = tan()
+  endfunc
+}
+
+class MT_BarnsleyTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_BarnsleyTransform(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    int iter = 0
+    complex z = pz
+    while iter < @max_iter
+      if real(z) * imag(@start) + real(@start) * imag(z) >= 0
+        z = (z - 1) * @start
+      else
+        z = (z + 1) * @start
+      endif
+      iter = iter + 1
+    endwhile
+    return z
+  endfunc
+
+default:
+  title = "Barnsley"
+  param start
+    caption = "Julia Seed"
+    hint = "This is the Julia seed for the Barnsley fractal."
+    default = (0.6, 1.1)
+  endparam
+  param max_iter
+    caption = "Iterations"
+    hint = "This is the number of iterations to \
+            calculate the Barnsley fractal."
+    default = 10
+  endparam
+ }
+
+class MT_GravitationalLens(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_GravitationalLens(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    w = pz - @center
+    float r = cabs(w)
+    float theta = atan2(w)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    r = r - @a * @a / r
+    float x = r * cos(theta)
+    float y = r * sin(theta)
+    return x + flip(y) + @center
+  endfunc
+
+default:
+  title = "Gravitational Lens"
+  param center
+    caption = "Center"
+    default = (-.5,.5)
+  endparam
+  param a
+    caption = "Einstein radius"
+    default = 1.0
+  endparam
+}
+
+class MT_CrazySpiral(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_CrazySpiral(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    w = pz - @center
+    float r = cabs(w)
+    float theta = atan2(w)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    theta = @a * real(@fn1(r)) + theta + @amp * sin(@b  * theta)
+    float x = r * cos(theta)
+    float y = r * sin(theta)
+    return x + flip(y) + @center
+  endfunc
+
+default:
+  title = "Crazy Spiral"
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+   param a
+    caption = "Tightness"
+    default = 3.0
+  endparam
+  param b
+    caption = "Wave frequency"
+    default = 20.0
+  endparam
+  param amp
+    caption = "Wave amplitude"
+    default = 1.0
+  endparam
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc
+}
+
+class MT_WheelTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_WheelTransform(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    float  outer = @inner + @width
+    float r = cabs(pz - @center)
+    if (r > @inner) && (r < outer)
+      ; within the wheel
+      float theta = atan2(pz - @center)
+      if theta < 0
+        theta = theta + 2 * #pi
+      endif
+      float outer_dist = abs(outer - r)
+      float inner_dist = abs(@inner - r)
+      if outer_dist < inner_dist
+        float ratio = @width / outer_dist
+      else
+        ratio = @width / inner_dist
+      endif
+      theta = theta + real(@fn1(@distort / ratio))
+      float x = r * cos(theta)
+      float y = r * sin(theta)
+      return x + flip(y) + @center
+    else
+      return pz
+    endif
+  endfunc
+
+default:
+  title = "Wheel"
+  param inner
+    caption = "Inner rim"
+    default = 0.3
+  endparam
+  param width
+    caption = "Width"
+    default = 0.6
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param distort
+    caption = "Distortion"
+    default = 2.0
+  endparam
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc
+}
+
+class MT_GnarlTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_GnarlTransform(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    int i = 0
+    pz = pz * recip(@scale) - @center
+    float x = real(pz)
+    float y = imag(pz)
+    while i < @max_iterations
+      float xx = x
+      x = x - @h * real(@fn1(y + @fn2(@a * (y + @fn3(@b * y)))))
+      y = y + @h * real(@fn1(xx + @fn2(@a * (xx + @fn3(@b * xx)))))
+      i = i + 1
+    endwhile
+    return x + flip(y)
+  endfunc
+
+default:
+  title = "Gnarl"
+  param center
+    caption = "Center"
+    default = (0, 0)
+  endparam
+  float param scale
+    caption = "Scale"
+    default = 1
+  endparam
+  param a
+    caption = "Alpha"
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    default = 3.0
+  endparam
+  param h
+    caption = "Step Size"
+    default = 0.05
+    hint = "This is step size for the Gnarl formula."
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            Gnarl formula."
+  endparam
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc
+  func fn3
+    caption = "Third Function"
+    default = sin()
+  endfunc
+}
+
+class MT_GnarlyTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, May 2008
+;
+public:
+  func MT_GnarlyTransform(Generic pparent)
+    UserTransform.UserTransform(pparent)
+  endfunc
+	
+  complex func Iterate(complex pz)
+    m_Iterations = m_Iterations + 1
+    complex z = pz - @offset
+    float x = real(z) / @scale
+    float y = imag(z) / @scale
+    float xx = 0
+    int i = 0
+    while (i < @iters)
+      xx = x
+      if @formula == 0
+       ; Martin
+        x = y - sin(x)
+        y = @a - xx
+      elseif @formula == 1
+       ; Popcorn
+        x = x - @h * sin(y + tan(@a * y))
+        y = y - @h * sin(xx + tan(@a * xx))
+      elseif @formula == 2
+        ; Vine
+        if @flavor == 0
+          x = x - @h * sin(y + sin(@a * y ))
+          y = y + @h * sin(xx + sin(@a * xx))
+        elseif @flavor == 1
+          x = x - @h * sin(y^@b + sin(@a * y))
+          y = y + @h * sin(xx^@b + sin(@a * xx))
+        elseif @flavor == 2
+         x = x - @h * sin(y + sin(@a * (y + sin(@a * y))))
+         y = y + @h * sin(xx + sin(@a * (xx + sin(@a * xx))))
+        else
+          float newx = y
+          float newy = x
+          int j = 0
+          while j < @flavor
+            j = j + 1
+            newx = y + sin(@a * newx)
+            newy = x + sin(@a * newy)
+          endwhile
+          x = x - @h * sin(newx)
+          y = y + @h * sin(newy)
+        endif
+      elseif @formula == 3
+        ; Gnarl
+        x = x - @h * real(@gn1(y + @gn2(@a * (y + @gn3(@b * y)))))
+        y = y + @h * real(@gn1(xx + @gn2(@a * (xx + @gn3(@b * xx)))))
+      endif
+      i = i + 1
+    endwhile
+    x = (real(pz) - (@scale * x + real(@offset))) * @strength
+    y = (imag(pz) - (@scale * y + imag(@offset))) * @strength
+    return pz + x + flip(y)
+  endfunc
+
+default:
+  title = "Gnarly Transformation"
+  param formula
+    caption = "Formula"
+    enum = "Martin" "Popcorn" "Vine" "Gnarl"
+    default = 1
+  endparam
+  param flavor
+    caption = "Flavor"
+    default = 2
+    visible = @formula == "Vine"
+  endparam
+  param strength
+    caption = "Strength"
+    default = 1.0
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam
+  param a
+    caption = "Alpha"
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    default = 2.0
+  endparam
+  param h
+    caption = "Step size"
+    default = 0.01
+  endparam
+  param iters
+    caption = "Iterations"
+    default = 20
+  endparam
+  func gn1
+    caption = "Gnarl function #1"
+    default = sin()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn2
+    caption = "Gnarl function #2"
+    default = tan()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn3
+    caption = "Gnarl function #3"
+    default = cos()
+    visible = @formula == "Gnarl"
+  endfunc
+}
+
+class MT_Scale(common.ulb:UserTransform) {
+;
+; Mark Townsend, June 2008
+;	
+public:
+	func MT_Scale(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+	endfunc
+
+	complex func Iterate(complex pz)
+		return pz * recip(@p_scale)
+	endfunc
+	
+default:
+	title = "Scale"
+	float param p_scale
+		caption = "Scale"
+		default = 1.0
+		hint = "This can be used to resize the texture. "
+	endparam
+}
+
+class MT_TrapShapeTransform(common.ulb:UserTransform) {
+;
+; Mark Townsend, June 2008
+;	
+public:
+	func MT_TrapShapeTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+    fTrapShape = new @p_trapshape(this)
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+		fTrapShape.Init(pz)
+	endfunc
+
+	complex func Iterate(complex pz)
+	  if @mode == "Return Value"
+      float a = fTrapShape.Iterate(pz)
+      return pz + exp(flip(2 * #pi * sqrt(2) * a)) * @strength
+    else
+       fTrapShape.Iterate(pz)
+       return fTrapShape.GetTransformedPoint()
+    endif
+  endfunc
+private:
+  TrapShape fTrapShape
+	
+default:
+	title = "Trap Shape"
+	param mode
+	  caption = "Value to use"
+	  enum = "Return Value" "Transformed Point"
+	endparam
+	float param strength
+	  caption = "Strength"
+	  default = 0.25
+	  min = 1E-20
+	  visible = @mode == "Return Value"
+	endparam
+  TrapShape param p_trapshape
+    caption = "Trap Shape"
+    default = MT_PerlinNoiseTexture
+  endparam
+}
+
+; Many Julie Classes -----------------------------------------------------------
+
+class DivergentManyJulia(common.ulb:DivergentFormula) {
+;
+; Mark Townsend. June 2008
+;
+public:
+  func DivergentManyJulia(Generic pparent)
+    Formula.Formula(pparent)
+  endfunc
+	
+  complex func Init(complex pz)
+    DivergentFormula.Init(pz)
+    float iscale = 1 / @scale
+    m_seed = round(pz * @scale) * iscale
+    z = (pz - m_seed) * @scale * @jscale		
+    return z
+  endfunc
+	
+protected:
+  complex m_seed
+  	
+default:
+  param scale
+    caption = "Julia Density"
+    default = 2.0
+    hint = "Specifies the density of separate Julia sets; higher \
+            numbers will produce more divisions."
+  endparam
+  param jscale
+    caption = "Julia Zoom"
+    default = 3.0
+    hint = "Specifies the zoom level of Julia sets within each division."
+  endparam
+}
+
+class ConvergentManyJulia(common.ulb:ConvergentFormula) {
+;
+; mark Townsend, June 2008
+;
+public:
+  func ConvergentManyJulia(Generic pparent)
+    Formula.Formula(pparent)
+  endfunc
+	
+  complex func Init(complex pz)
+    ConvergentFormula.Init(pz)
+    float iscale = 1 / @scale
+    m_seed = round(pz * @scale) * iscale
+    z = (pz - m_seed) * @scale * @jscale		
+    return z
+  endfunc
+	
+protected:
+  complex m_seed
+  	
+default:
+  param scale
+    caption = "Julia Density"
+    default = 2.0
+    hint = "Specifies the density of separate Julia sets; higher \
+            numbers will produce more divisions."
+  endparam
+  param jscale
+    caption = "Julia Zoom"
+    default = 3.0
+    hint = "Specifies the zoom level of Julia sets within each division."
+  endparam
+}
+
+class ConvergentDivergentManyJulia(common.ulb:ConvergentDivergentFormula) {
+;
+; mark Townsend, July 2008
+;
+public:
+  func ConvergentDivergentManyJulia(Generic pparent)
+    Formula.Formula(pparent)
+  endfunc
+	
+  complex func Init(complex pz)
+    ConvergentDivergentFormula.Init(pz)
+    float iscale = 1 / @scale
+    m_seed = round(pz * @scale) * iscale
+    z = (pz - m_seed) * @scale * @jscale		
+    return z
+  endfunc
+	
+protected:
+  complex m_seed
+  	
+default:
+  param scale
+    caption = "Julia Density"
+    default = 2.0
+    hint = "Specifies the density of separate Julia sets; higher \
+            numbers will produce more divisions."
+  endparam
+  param jscale
+    caption = "Julia Zoom"
+    default = 3.0
+    hint = "Specifies the zoom level of Julia sets within each division."
+  endparam
+}
+
+class MT_ManyCelticJulia(DivergentManyJulia) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  complex func Init(complex pz)
+    return DivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    complex zn = pz^@p_power
+    return zn - real(zn) + abs(real(zn)) - m_seed
+  endfunc
+
+default:
+  title = "Many Celtic Julia"
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_ManyBarnsleyIJulia(DivergentManyJulia) {
+;
+; Based on Barnsley 1 (Julia) in Fractint.ufm
+; <p>
+; Mark Townsend, June 2008
+;
+public:
+  complex func Init(complex pz)
+    return DivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    if real(pz) >= 0
+      return (pz - 1) * m_seed
+    else
+      return (pz + 1) * m_seed
+    endif
+  endfunc
+
+default:
+  title = "Many Barnsley I Julia"
+  param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_ManyJulia(DivergentManyJulia) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  complex func Init(complex pz)
+    return DivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    return pz^@p_power +  m_seed
+  endfunc
+
+default:
+  title = "Many Julia"
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_ManyDuidJulia(DivergentManyJulia) {
+;
+; Mark Townsend, April 2008
+;
+public:
+  complex func Init(complex pz)
+    fIter = 0
+    return DivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    if fIter % 2 == 0
+      complex newz = pz^@p_power + m_seed
+    else
+      newz = pz^@p_power
+      newz = newz - real(newz) + abs(real(newz)) + m_seed
+    endif
+    fIter = fIter + 1
+    return newz
+  endfunc
+
+private:
+  int fIter
+
+default:
+  title = "Many Druid Julia"
+  param p_power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1.0
+    exponential = true
+  endparam
+}
+
+class MT_ManyBofNewtonIIJulia(ConvergentManyJulia) {
+;
+; Mark Townsend, June 2008
+;
+public:
+  complex func Init(complex pz)
+    fH = 0.0001
+    return ConvergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentManyJulia.Iterate(pz)
+    complex zh = pz + fH
+    complex fz = (pz - 1) * (pz^2 + pz + m_seed)
+    complex fzd = 1 / fH * ((zh - 1) * (zh^2 + zh + m_seed) - fz)
+    return pz - fz / fzd
+  endfunc
+
+private:
+  complex fH
+
+default:
+  title = "Many Bof Newton II Julia"
+  complex param p_power
+    visible = false
+  endparam
+  float param p_bailout
+    caption = "Bailout value"
+    default = 1.0e-6
+  endparam
+}
+
+class MT_ManyMagnetIJulia(ConvergentDivergentManyJulia) {
+;
+; Mark Townsend, July 2008
+;
+public:
+  complex func Init(complex pz)
+    return ConvergentDivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentDivergentManyJulia.Iterate(pz)
+    return sqr((pz^2 + m_seed - 1) / (2*pz + m_seed - 2))
+  endfunc
+
+default:
+  title = "Many Magnet I Julia"
+  complex param p_power
+    visible = false
+  endparam
+  param p_upperbailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  param p_lowerbailout
+    caption = "Convergent bailout value"
+    default = 0.0001
+    min = 0
+  endparam
+}
+
+class MT_ManyMagnetIIJulia(ConvergentDivergentManyJulia) {
+;
+; Mark Townsend, July 2008
+;
+public:
+  complex func Init(complex pz)
+    return ConvergentDivergentManyJulia.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    ConvergentDivergentManyJulia.Iterate(pz)
+    return sqr( (pz^3 + 3 * (m_seed-1) * pz + (m_seed-1) * (m_seed-2))  / \
+           (3 * pz^2 + 3 * (m_seed-2) * pz + (m_seed-1) * (m_seed-2) + 1) )
+  endfunc
+
+default:
+  title = "Many Magnet II Julia"
+  complex param p_power
+    visible = false
+  endparam
+  param p_upperbailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1
+  endparam
+  param p_lowerbailout
+    caption = "Convergent bailout value"
+    default = 0.0001
+    min = 0
+  endparam
+}
+
+class MT_ReactionDiffusionTexture(common.ulb:TrapShape) {
+; Mark Townsend, 18 January 2014
+; Activator-inhibitor type reaction-diffusion system
+; from Meinhardt's "The Algorithmic Beauty of Shells"
+; as simulated on continuous-valued cellular automata
+; by Rudy Rucker for his program Capow!
+public:
+  float func clamp(const float a, const float l, const float h)
+    if a > h
+      return h
+    elseif a < l
+      return l
+    else
+      return a
+    endif
+  endfunc
+  
+  func MT_ReactionDiffusionTexture(Generic pparent)
+    TrapShape.TrapShape(pparent)
+    int x = 0, int y = 0, int seed = @seed
+    while x < @xsize
+      y = 0
+      while y < @ysize
+        seed = random(seed)
+        olda[x, y] = abs(seed) / #randomrange
+        seed = random(seed)
+        oldb[x, y] = abs(seed) / #randomrange
+        y = y + 1
+      endwhile
+      x = x + 1
+    endwhile
+    int gen = 0
+    while gen < @max
+      x = 0
+      while x < @xsize
+        y = 0
+        while y < @ysize
+          int l = (x + @xsize - 1) % @xsize
+          int r = (x + 1) % @xsize
+          int u = (y + @ysize - 1) % @ysize
+          int d = (y + 1) % @ysize
+          float na = olda[x, u]
+          float sa = olda[x, d]
+          float ea = olda[l, y]
+          float wa = olda[r, y]
+          float nea = olda[r, u]
+          float nwa = olda[l, u]
+          float sea = olda[r, d]
+          float swa = olda[l, d]
+          float ca = olda[x, y]
+          float suma = na + sa + ea + wa + 0.75 * (nea + nwa + sea + swa);
+          float nb = oldb[x, u]
+          float sb = oldb[x, d]
+          float eb = oldb[l, y]
+          float wb = oldb[r, y]
+          float neb = oldb[r, u]
+          float nwb = oldb[l, u]
+          float seb = oldb[r, d]
+          float swb = oldb[l, d]
+          float cb = oldb[x, y]
+          float sumb = nb + sb + eb + wb + 0.75 * (neb + nwb + seb + swb);
+          float inhibitor = cb
+          if inhibitor < @Min_b
+            inhibitor = @Min_b
+          endif
+          float newa = ca + @Da * (suma - 7.0 * ca) + @s * (@ba + ca^2 / inhibitor)- @ra * ca
+          float newb = cb + @Db *(sumb - 7.0 * cb) + @bb + @s * ca^2 - @rb * cb
+          a[x, y] = clamp(newa, 0, 1)
+          b[x, y] = clamp(newb, 0, 1)
+          y = y + 1
+        endwhile
+        x = x + 1
+      endwhile
+      olda = a
+      oldb = b
+      gen = gen + 1
+    endwhile
+  endfunc
+	
+  float func Iterate(complex pz)
+    float xx = (real(pz * @scale) % 4096 + 4096) % @xsize
+    float yy = (imag(pz * @scale) % 4096 + 4096) % @ysize
+    int bx0 = floor(xx), int bx1 = (bx0 + 1) % @xsize
+    int by0 = floor(yy), int by1 = (by0 + 1) % @ysize
+    float rx0 = xx - floor(xx)
+    float ry0 = yy - floor(yy)
+    if @vc == "a"
+      float v0 = a[bx0, by0] + rx0 * (a[bx1, by0] - a[bx0, by0])
+      float v1 = a[bx0, by1] + rx0 * (a[bx1, by1] - a[bx0, by1])
+    else
+      float v0 = b[bx0, by0] + rx0 * (b[bx1, by0] - b[bx0, by0])
+      float v1 = b[bx0, by1] + rx0 * (b[bx1, by1] - b[bx0, by1])
+    endif
+  return(v0 + ry0 * (v1 - v0))
+ endfunc
+
+private:
+  float a[@xsize, @ysize], float olda[@xsize, @ysize]
+  float b[@xsize, @ysize], float oldb[@xsize, @ysize]
+	
+default:
+	title = "Reaction Diffusion Texture"
+  heading
+    caption = "System Parameters"
+  endheading
+  float param Da
+    caption = "Activator Diffusion Rate"
+    default = 0.0227
+    min = 0.0001
+    max = 1
+  endparam
+  float param Db
+    caption = "Inhibitor Diffusion Rate"
+    default = 0.1787
+    min = 0.0001
+    max = 1
+  endparam
+  float param ba
+    caption = "Activator Production"
+    default = 0.0670
+    min = 0.0001
+    max = 1
+  endparam
+  float param bb
+    caption = "Inhibitor Production"
+    default = 0.0139
+    min = 0.0001
+    max = 1
+  endparam
+  float param ra
+    caption = "Activator Decay Rate"
+    default = 0.0893
+    min = 0.0001
+    max = 1
+  endparam
+  float param rb
+    caption = "Inhibitor Decay Rate"
+    default = 0.0754
+    min = 0.0001
+    max = 1
+  endparam
+  float param s
+    caption = "Source Density"
+    default = 0.0810
+    min = 0.0001
+    max = 1
+  endparam
+  float param Min_b
+    caption = "Minimum Inhibitor"
+    default = 0.0392
+    min = 0.0001
+    max = 1
+  endparam
+  heading
+    Caption = "General"
+  endheading
+  param vc
+    caption = "Show Chemical"
+    enum = "a" "b"
+    default = 0
+  endparam
+  int param max
+    caption = "Generations"
+    default = 400
+    min = 1
+  endparam
+  int param xsize
+    caption = "Width"
+    default = 250
+    min = 10
+  endparam
+  int param ysize
+    caption = "Height"
+    default = 250
+    min = 10
+  endparam
+  float param scale
+    caption = "Scale"
+    default = 100
+  endparam
+  int param seed
+    caption = "Random Seed"
+    default = 12345678
+  endparam
+}
+
+; Function classes for Dynamical Systems --------------------------------------------------
+
+class MT_DynamicalFunction {
+; Mark Townsend, September 2018
+public:
+  func MT_DynamicalFunction()
+  endfunc
+  float func f(const float x, const float y, const float p)
+    return sin(x + sin(3 * x))
+  endfunc
+default:
+  title = "Dynamical Function"
+}
+
+class MT_PopcornFunction(MT_DynamicalFunction){
+; Mark Townsend, September 2018
+public:
+  float func f(const float x, const float y, const float p)
+    return sin(x + tan(@p * x))
+  endfunc
+default:
+  title = "Popcorn"
+  float param p
+    caption = "Frequency"
+    default = 3.0
+  endparam
+}
+
+class MT_VineFunction(MT_DynamicalFunction){
+; Mark Townsend, September 2018
+; Various equations form Chapter 14 of Clifford
+; Pickover's book "Computers, Pattern, Chaos and Beauty"
+; as implemented by Rudy Rucker for his DOS program
+; "Vine".
+public:
+  float func saw(float x)
+    x = x / (2.0 * #pi)
+    x = x - trunc(x)
+    x = x * 4
+    if ( -4 <= x && x < -3 )
+     return (4 + x)
+    elseif ( -3 <= x && x < -1 )
+     return (-2 - x)
+    elseif ( -1 <= x && x < 1)
+     return x
+    elseif ( 1 <= x && x < 3)
+     return (2 - x)
+    else
+     return (-4 + x)
+    endif	
+  endfunc
+  float func f(const float x, const float y, const float p)
+    if @flavor == 0
+      return sin(x + sin(@a * x ))
+    elseif @flavor == 1
+      return sin(x^@b + sin(@a * x))
+    elseif @flavor == 2
+      return sin(x + sin(@a * (x + sin(@a * x))))
+    elseif @flavor == -1
+        return saw(x + saw(@a * x))
+    else
+      float newx = x
+      int i = 0
+      while i < @flavor
+        i = i + 1
+        newx = x + sin(@a * newx)
+      endwhile
+      return sin(newx)
+    endif
+  endfunc
+default:
+  title = "Vine"
+  param flavor
+    caption = "Flavor"
+    default = 0
+    min = -1
+  endparam
+  param a
+    caption = "Frequency"
+    default = 3.0
+  endparam
+  param b
+    caption = "Power"
+    default = 2.0
+    visible = @flavor == 1
+  endparam
+}
+
+class MT_GnarlFunction(MT_DynamicalFunction){
+; Mark Townsend, September 2018
+public:
+  float func f(const float x, const float y, const float p)
+    return real(@fn1(x + @fn2(@a * (x + @fn3(@b * x)))))
+  endfunc
+default:
+  title = "Gnarl"
+  float param a
+    caption = "Frequancy a"
+    default = 3.0
+  endparam
+  float param b
+    caption = "Frequency b"
+    default = 3.0
+  endparam
+  func fn1
+    caption = "Function 1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Function 2"
+    default = sin()
+  endfunc
+  func fn3
+    caption = "Function 3"
+    default = sin()
+  endfunc
+}
+
+class MT_GnarlNoiseFunction(MT_DynamicalFunction) {
+; Mark Townsend, September 2018
+public:
+  float func f(const float x, const float y, const float p)
+   return real(@fn1(x + @fn2(@a * (x + @fn3(@b * x))) + p))
+  endfunc
+default:
+  title = "Gnarl with Noise"
+  float param a
+    caption = "Frequancy a"
+    default = 3.0
+  endparam
+  float param b
+    caption = "Frequency b"
+    default = 3.0
+  endparam
+  func fn1
+    caption = "Function 1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Function 2"
+    default = sin()
+  endfunc
+  func fn3
+    caption = "Function 3"
+    default = sin()
+  endfunc
+}
+
+class MT_AlternateFunction(mt.ulb:MT_DynamicalFunction){
+; Mark Townsend, October 2018
+; Alternates between two functions
+public:
+  func MT_AlternateFunction()
+    i = -1
+    fnc[0] = new @f1
+    fnc[1] = new @f2
+  endfunc
+  float func f(const float x, const float y, const float p)
+    i = (i + 1) % 2
+    return fnc[i].f(x, y, p)
+  endfunc
+private:
+  int i
+  MT_DynamicalFunction fnc[2]
+default:
+  title = "Alternate"
+  MT_DynamicalFunction param f1
+    caption = "First Function"
+  endparam
+  MT_DynamicalFunction param f2
+    caption = "Second Function"
+  endparam
+}
+
+class MT_CPCB_Figure14.13(mt.ulb:MT_DynamicalFunction) {
+; Mark Townsend, October 2018
+public:
+  float func f(const float x, const float y, const float p)
+    return sin(x^@n1 + sin(@p * x)^@n2)
+  endfunc
+default:
+  title = "CPCB Figure 14.13"
+  float param p
+    caption = "Frequency"
+    default = 3.0
+  endparam
+  float param n1
+    caption = "Power 1"
+    default = 6.0
+  endparam
+  float param n2
+    caption = "Power 2"
+    default = 4.0
+  endparam
+}
+
+class MT_CPCB_Figure14.14(mt.ulb:MT_DynamicalFunction) {
+; Mark Townsend, October 2018
+public:
+  float func f(const float x, const float y, const float p)
+    return sin(x + sin(x) * sin(@p * x))
+  endfunc
+default:
+  title = "CPCB Figure 14.14"
+  float param p
+    caption = "Frequency"
+    default = 3.0
+  endparam
+}
+
+class MT_CPCB_Equation14.4(mt.ulb:MT_DynamicalFunction){
+; Mark Townsend, October 2018
+public:
+  float func f(const float x, const float y, const float p)
+    if (x > -#pi) && (x <= #pi)
+      return sin(x)
+    elseif ((x > -2 * #pi) && (x < -#pi)) || ((x > #pi) && (x < 2* #pi))
+      return sin(x^@b + sin(@a * x))
+    else
+      return sin(x  + sin(@a * x)^@b)
+    endif
+  endfunc
+default:
+  title = "CPCB Equation 14.4"
+  param a
+    caption = "Frequency"
+    default = 3.0
+  endparam
+  param b
+    caption = "Power"
+    default = 2.0
+  endparam
+}
+
+
+

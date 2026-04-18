@@ -1,0 +1,185 @@
+comment {
+
+  These are some coloring algorithms for Ultra Fractal 2.
+  Written by Sylvie Gallet. January 17, 1999.
+}
+
+SG_Gradient { ; Sylvie Gallet
+
+; Use zooming, panning and rotating to get the gradient
+; you want.
+
+final:
+  if @type == 0
+    #index = (1 + atan2(#pixel-@center) / pi) * 0.5
+  else
+    #index = (1 + (atan2(#pixel-@center) \
+             + cabs(#pixel-@center)) / pi) * 0.5
+  endif
+
+default:
+  param type
+    caption = "Gradient type"
+    enum = "Angle" "Spiral"
+    hint = "This defines the shape of the gradient."
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+  endparam
+
+}
+
+comment {
+
+  This file contains a Ultra Fractal-style coloring algorithm that
+  reproduces outside=iter wwith smooth coloring and all of the
+  logmap options of Fractint.
+
+  Written by Sylvie Gallet
+  April 21, 1999
+
+}
+
+sg_iter_smooth(OUTSIDE) {
+
+; Modified Frederik Slijkerman's "Outside" coloring algorithm
+; by Sylvie Gallet, April 21, 1999
+
+final:
+  float lf = 0
+  float mlf = 0
+  float iter = 1 + #numiter
+  float logb10 = log(@bailout)/log(10)
+
+  if @smooth
+    iter = iter + 0.35/logb10^0.3  - 0.43/logb10 * log(|#z|/@bailout)
+  endif
+;  if iter < 0 || iter > #maxiter
+;    iter = 0
+;  endif
+
+ ; logmap options
+   if @logmap > 0
+     if @logmap > 1
+       lf = @logmap
+     else
+       lf = 0
+     endif
+     if lf >= #maxiter
+       lf = #maxiter - 1
+     endif
+     if lf > 0
+       mlf = 254 / log(#maxiter - lf)
+     else
+       mlf = 255 / log(#maxiter)
+     endif
+     if iter <= lf
+       iter = 1
+     elseif (iter - lf) / log(iter - lf) <= mlf
+       if lf > 0
+         iter = iter - lf + 1
+       else
+         iter = iter - lf
+       endif
+     else
+       iter = 1 + mlf * log(iter - lf)
+     endif
+   elseif @logmap == -1
+     if iter == 0
+       iter = 1
+     else
+       iter = 1 + (255 / log(150)) * log(iter)
+     endif
+   elseif @logmap < -1
+     lf = -@logmap
+     if lf >= #maxiter
+       lf = #maxiter - 1
+     endif
+     mlf = 254 / sqrt(#maxiter - lf)
+     if iter <= lf
+       iter = 1
+     elseif (iter - lf) <= mlf*mlf
+       iter = iter - lf + 1
+     else
+       iter = 1 + mlf * sqrt(iter - lf)
+     endif
+   endif
+
+; hack to skip first color (0)...
+  #index = (1 + (iter - 1) % 255) / 256 - 0.001
+
+; #index = (iter % 256) / 256 - 0.001
+
+default:
+  title = "Outside = iter smooth"
+  param logmap
+    caption = "Log Palette"
+    hint = "This is exactly the same as the Log Palette value \
+            in Fractint. 0=no, 1=yes, -1=old, +n=cmprsd, -n=sqrt."
+    default = 0
+  endparam
+  param bailout
+    caption = "Bailout"
+    hint = "This should be equal to the bailout value used by the \
+            fractal formula in the Formula tab. A good value is 100."
+    default = 100.0
+    min = 1
+  endparam
+  param smooth
+    caption = "Smooth coloring"
+    hint = "This defines whether or not the image will be colored \
+            smoothly. Enable it to get smooth true-color images; disable \
+            it to use only 256 possible colors, just like in Fractint."
+    default = true
+  endparam
+}
+
+Triptych { ; Sylvie Gallet, Feb 20, 2000
+
+final:
+  float w = #width/3
+  float xp = real(#screenpixel)
+  float yp = imag(#screenpixel)
+  if trunc(xp/w) != @part
+    #solid = true
+  else
+    float w2 = w/2
+    float h2 = #height/2
+    float bw = #width * @border / 100
+    xp = abs (xp - w * @part - w2) - w2 + bw
+    yp = abs (yp - h2) - h2 + bw
+    if (xp < 0) && (yp < 0)
+      if @usesolid
+        #solid = true
+      else
+        #index = (@color+1) / 400 - 0.0025
+      endif
+    elseif xp > 0 && yp < xp
+      #index = xp/bw - 0.01
+    else
+      #index = yp/bw - 0.01
+    endif
+  endif
+
+default:
+  title = "Triptych"
+param part
+  caption = "Part"
+  enum = "Left" "Middle" "Right"
+endparam
+param border
+  caption = "Border Width"
+  default = 10.0
+endparam
+param @color
+  caption = "Inside color"
+  default = 0
+  min = 0
+  max = 399
+endparam
+param usesolid
+  caption = "Use solid color"
+  default = false
+endparam
+}

@@ -1,0 +1,176 @@
+MandQTwo {; By Robert B. Smith, March 1999. 
+  ; RBS-Preferred Standard Quadratic for Mandelbrot Set. 
+  ; Unwraps traditional M-set cardioid into - Ooops? Whaa?. 
+  ; Ugh!  A programming  error & surprise  results suggested an 
+  ; additional parameter, "QM", a complex multiplier of whole 
+  ; quadratic formula in z.  Leads to some interesting shapes. 
+  ; The quadratic depends on TWO parameters, q and QM.  
+  ; Default image for QM = 2 is TWO complete separated cardioids!. 
+  ; See file MandelTwain.upr for more explanation and examples. 
+  
+init: 
+  z = (0,0)                       ; Mandelbrot z-start, always origin. 
+loop: 
+  q = #pixel                      ; For all image pixels as parameter. 
+  z = @QM*(z*z + 1.0 - q*q)/2     ; RBS preferred quadratic in z, parameter q.
+                                  ; Using additional complex parameter, QM. 
+bailout: 
+  |z| <= @bailout                 ; Iteration bailout-distance Sqd. test. 
+  
+default: 
+  title = "MandQTwo" 
+  center = (0,0) 
+  param QM 
+    caption = "QM Multiplier" 
+    default = (0.74,1.65)      ; No particular default intended. 
+    hint = "No default, should be varied." 
+  endparam 
+  param bailout 
+    caption = "Bailout value" 
+    default = 128.0 
+    min = 36.0 
+    hint = "Bailout Distance, squared z-radius." 
+  endparam 
+}
+
+RMExpiNp-I {;Remapping the Mandelbrot Set. 
+; Robert B. Smith. April, 1999.
+; General Formula for Valley-Corridor to sprout S:/N at infinity. 
+; Unit-circle exponential transform. Formula param N to be specified.
+; BOTTOM of corridor is the image real X-axis, with the sequence 
+;   of 2nd-tier sprouts which converge to base of sprout S:/N. 
+;   These sprouts are located at exact! integer! values of X = M. 
+;   The branching number & periodicity for each one is (N*M-1).
+;   Area below real axis is all "inside" of main Mandelbrot body. 
+; Along TOP of corridor are the sprouts which are attached to the 
+;   main-tier sprout S:/N itself. Integer spacing only at large X. 
+;   Solid color area above top wall is all "inside" of sprout S:/N. 
+;   Hanging from TOP wall near X=0 is tip-sprout and filament of S:/N
+; Both walls extend to +/- infinite X, converging to base of S:/N. 
+; Corridor is not symmetric, somewhat different for pos & neg X and N. 
+;
+init: 				; For each image pixel:
+  z = (0,0)                ; Mandelbrot Set. Start 0, always. 
+  i2pi = (0.0,6.2831853071795865)       ; i2Pi 
+  q = 1 - exp(i2pi/(@N-1/#pixel))       ; Continued-fract. for 2nd tier.
+  ;                                     ; Index N for a main-tier sprout. 
+  qq = q*q 
+loop:
+  z = 0.5*(z*z + 1 - qq)   	; RBS-Pref. quadratic, param q. 
+bailout:
+  |z| <= @bailout            	; Iteration bailout, z-sqd test.  
+;
+default:
+  title =  "RMExpiNp-I"
+  maxiter = 1000 
+  center = (0,0)
+  magn = 1.0
+;  
+param N                             ; Specify N for main-tier sprout.  
+  caption = "1st-Tier Index N" 
+  default = 1
+  hint = "Integer Sprout No." 
+endparam 
+;  
+param bailout
+  caption = "BailOut Value"
+  default = 128.0
+  min = 25.0
+  hint = "Squared |Z|"  
+endparam 
+; --- End Formula --- RMExpiNp-I --------- 
+}
+
+RMExpiLin(YAXIS) {; Maps Mandelbrot Unit Circle to Real Axis.  
+;  Re-Mapping the Mandelbrot set.  Robert B. Smith.   May 1999.
+;  All sprouts upright in a straight line along real axis.  
+;  Real axis corresponds to angle around the unit circle.  
+;  Scale is chosen as one quadrant per unit X. 
+;  S:/1, a main Mandelbrot body, is at the origin;  
+;  	Location Center {Re} = X = 0.0
+;  	Cardioid-Cusp Valley at its base.  
+;  	Main-tier sprouts S:/N are at X = +/- 4.0/N
+;  S:/2 is at  X = +/- 2.0, 
+;  	Seahorse Valley at its base. 
+; 	S:/2/M is at X = 2/(1.0  +/-  1/2M)
+;  S:/4 is at Center {Re} = X = +/- 1.0
+;  Whole Mandelbrot set lies between X = -2 to X = +2,
+;  Repeats every four units;  nothing new outside that interval.
+;  All below the real axis is "inside" main Mandelbrot body. 
+;  All above real axis is the "outside" region of Mandelbrot Set. 
+;  There is no TOP wall or a corridor.  NO inversion at any sprout.  
+;
+init:
+  z = (0,0)          ; Zero start, always, for the M-set.
+  i2pin = (0.0,6.2831853071795865)/4	; i2Pi/4
+  q = 1 - exp(-i2pin*#pixel)            ; Scale: One Quadrant per unit X.
+  qq = q*q
+loop:
+  z = 0.5*(z*z + 1 - qq)           ; RBS-Pref. quadratic in z, param q. 
+bailout:
+  |z| <= @bailout           ; Iteration bailout, radius-sqd.  test.  
+; 
+default:
+  title = "RMExpiLin"
+  maxiter = 1000 
+  center = (0,+1.4) 
+  magn = 1.0
+; 
+param bailout 	
+  caption = "BailOut Value"      ; Radius Sqd. The only param.
+  default = 128.0
+  min = 16.0
+  hint = "Squared |Z|"  
+endparam 
+; +++ End "RMExpiLin" ufm +++
+}
+
+RMExpiNMp-O {; Mapping Any 2nd-Tier Sprout to Origin.  
+; Remapping the Madelbrot Set. Robert B. Smith. June 1999.
+; General Formula for any 2nd-Tier Sprout name "S:/N/M" 
+; mapped to origin of image plane for exploration & zooming. 
+; Unit-circle exponential & continued fraction transform. 
+; Integer parameters N & M to be specified, as in the name.
+; Solid color area below real axis is the inside of the M-Set.  
+; (This is NOT intended as a Valley-Corridor formula.)  
+; 
+init:
+  z = (0,0)           ; Start 0, always, Mandelbrot set.
+  i2pi = (0.0,6.2831853071795865)     ; i2Pi 
+    ;                           ; Continued fraction. 
+  q = 1 - exp(-i2pi/(@N+1.0/(@M+#pixel)))   
+    ;     ; Integers N, M specified for S:/N/M sprout. 
+  qq = q*q 
+;
+loop:                     ; RBS-Preferred quadratic in z, 
+  z = 0.5*(z*z + 1 - qq)   ; parameter q. 
+; 
+bailout:
+  |z| <= @bailout     ; Iteration bailout, radius-sqd test.  
+;
+default:
+  title =  "RMExpiNMp-O"
+  maxiter = 10000
+  center = (0.0,0.850), magn = 2.0
+  ;  
+param  N         ; Specify N for desired main-tier index.  
+  caption = "Main-Tier Index N" 
+  default = 3
+  hint = "Integer Sprout No." 
+endparam 
+  ;  
+param M         ; Specify M for desired 2nd-tier index.  
+  caption = "2nd-Tier Index M" 
+  default = 5
+  hint = "Integer Sprout No." 
+endparam 
+  ;  
+param bailout
+  caption = "BailOut Value"
+  default = 128.0
+  min = 16.0
+  hint = "Squared |Z|" 
+endparam 
+  ;
+; +++ End Formula +++ RMExpiNMp-O +++++++++ +++++++++ +++++++++  
+}

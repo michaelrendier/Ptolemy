@@ -1,0 +1,4164 @@
+Mandelbrot_Mod {
+;
+; z^(@pwr1+ao) + #pixel^(@pwr1) + s/3
+; 
+; I do a lot of formulas.  Most are NOT specific to a single fractal but rather are modifications based on existing formula.  
+; A few are original, though they may be classified as belonging to an existing type.  If I write a formula in which I should 
+; have given credit...I apologize in advance and ask that you email me so I can correct the error.  Unless stated otherwise, 
+; I allow, encourage, and HOPE for suggestions and modifications.  All I ask is that you also give me credit.  I don't suspect
+; this will happen often as I am just starting and am NOT a programmer.  I do occasional scripts and batch files but am completely
+; self-taught.
+; This is a simple mod on the original Mandelbrot.  I have added a variable to the 'Power' that should be (assuming the math is correct)
+; the triangle area.  The triangle has sides 'a' (distance to origin), 'b' (zold distance to origin), and 'c' (distance 'a' to 'b').
+; #pixel is modified by the unaltered function power.
+;
+; Walter Keith (Diddy) Cook; Last Modified 24 July 2013 (Spelling and Aesthetics Only)
+;
+
+init:
+
+	z = #pixel
+	zold = z
+	
+	a = cabs(z)														; side 'a' Calculated distance 'z' to origin
+	b = cabs(zold)													; side 'b' Calculated distance 'zold' to origin
+	c = sqrt((real(z)^2-real(zold)^2) + (imag(z)^2-imag(zold)^2))	; Side 'c' Calculated
+	s = (a+b+c)														; Triangle Perimeter
+	ao = sqrt(s*(s-a)*(s-b)*(s-c))									; Triangle Area
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+	fz = z^(@pwr1+ao) + #pixel^(@pwr1) + s/3
+	
+	zold = (z)
+	z = fz
+
+bailout:
+	|z| <= @bailout
+
+default:
+	title = "Power Mod'ed Mandelbrot"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (-0.1,0.0)
+	magn = 1.4
+	angle = 90
+
+	param bailout
+		caption = "Bailout"
+		default = 1.0E1
+	endparam
+
+	param pwr1
+		caption = "Power 1"
+		default = 1.0
+		hint = "Main function exponent"
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Multi_Mandy_Triangle{
+;
+; I do a lot of formulas.  Most are NOT specific to a single fractal but rather are modifications based on existing formula.  
+; A few are original, though they may be classified as belonging to an existing type.  If I write a formula in which I should 
+; have given credit...I apologize in advance and ask that you email me so I can correct the error.  Unless stated otherwise, I
+; allow, encourage, and HOPE for suggestions and modifications.  All I ask is that you also give me credit.  I don't suspect 
+; this will happen often as I am just starting and am NOT a programmer.  I work occasionally with scripts and batch files but
+; am completely self-taught.  These mods are roughly based the original Mandelbrot.  I have added multiple combinations of 
+; variables based on values of the triangle created by the sides 'a' (distance to origin), 'b' (zold distance to origin),
+; & 'c' (distance 'a'-'b').  Both 'z' and #pixel are modified.
+;
+; Don't look for rhyme or reason as there is none!  I am simply searching for more and interesting fractal formations.
+;
+; Walter Keith (Diddy) Cook; Last Modified 24 July 2013 (Spelling and Aesthetics Only)
+;
+init:
+
+	z = #pixel
+	zold = z
+	fz = sqr(z)
+	
+	a = cabs(z)														; side 'a' Calculated distance 'z' to origin
+	b = cabs(zold)													; side 'b' Calculated distance 'zold' to origin
+	c = sqrt((real(z)^2-real(zold)^2) + (imag(z)^2-imag(zold)^2))	; Side 'c' Calculated
+	s = (a+b+c)														; Triangle Perimeter
+	ao = sqrt(s*(s-a)*(s-b)*(s-c))									; Triangle Area
+  
+	aC = acos((a^2+b^2-c^2)/(2*a*b))								; Using Angle C = acos((a^2+b^2 - c^2)/(2*a*b))
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @Mods == 0
+		zold = z
+		fz = zold*z^(@pwr1) + b*#pixel
+	elseif @Mods == 1
+		zold = z
+		fz = z^(@pwr1*ao) + s*#pixel
+	elseif @Mods == 2
+		zold = z
+		fz = z^(abs(@pwr1-s)) + #pixel^(abs(ao-s))
+	elseif @Mods == 3
+		zold = z
+		aC = acos((a^2+b^2-c^2)/(2*a*b))
+		fz = cos(aC)*z^@pwr1 + sin((360/2)-aC)*#pixel
+	elseif @Mods == 4
+		zold = z
+		fz = s*z^(@pwr1) + #pixel^(s/@pwr1)
+	endif
+
+	z = fz
+
+bailout:
+	|z| <= @bailout
+
+default:
+	title = "Multi-Mandy (Triangle)"
+	maxiter = 250
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 1
+
+	param bailout
+		caption = "Bailout"
+		default = 1.0E2
+	endparam
+
+	param pwr1
+		caption = "Power 1"
+		default = 2.0
+		hint = "Main function exponent"
+	endparam
+
+	param Mods
+		caption = "Formulae"
+		enum =	"zold*z^(pwr) + b*#pixel" "z^(pwr*ao) + s*#pixel" \
+				"z^(abs(pwr-s)) + #pixel^(abs(ao-s)" \
+				"cos(aC)*z^pwr + sin((360/2)-aC)*#pixel" \
+				"s*z^(pwr) + #pixel^(s/pwr)"
+		default = 0
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Multi_Julia_Triangle{
+;
+; I do a lot of formulas.  Most are NOT specific to a single fractal but rather are modifications based on existing formula. 
+; A few are original, though they may be classified as belonging to an existing type.  If I write a formula in which I should 
+; have given credit...I apologize in advance and ask that you email me so I can correct the error.  Unless stated otherwise,
+; I allow, encourage, and HOPE for suggestions and modifications.  All I ask is that you also give me credit.  I don't suspect 
+; this will happen often as I am just starting and am NOT a programmer.  I work occasionally with scripts and batch files but
+; am completely self-taught.  These mods are roughly based the original Julia.  I have added multiple combinations of variables 
+; based on values of the triangle created by the sides 'a' (distance to origin), 'b' (zold distance to origin), 
+;& 'c' (distance 'a'-'b').  Both 'z' and #pixel are modified.
+;
+; Don't look for rhyme or reason as there is none!  I am simply searching for more and interesting fractal formations.
+;
+; Walter Keith (Diddy) Cook; Last Modified 24 July 2013 (Spelling and Aesthetics Only)
+;
+init:
+
+	z = #pixel
+	zold = z
+	fz = z*zold
+	
+	a = cabs(z)														; side 'a' Calculated distance 'z' to origin
+	b = cabs(zold)													; side 'b' Calculated distance 'zold' to origin
+	c = sqrt((real(z)^2-real(zold)^2) + (imag(z)^2-imag(zold)^2))	; Side 'c' Calculated
+	s = (a+b+c)														; Triangle Perimeter
+	ao = sqrt(s*(s-a)*(s-b)*(s-c))									; Triangle Area
+
+	aC = acos((a^2+b^2-c^2)/(2*a*b))								; Using formula Angle C = acos((a^2+b^2 - c^2)/(2*a*b))
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @Mods == 0
+		fz = zold*z^(@pwr1) + b*@seed
+	elseif @Mods == 1
+		fz = z^(@pwr1*sqrt(ao)) + ao^@seed
+	elseif @Mods == 2
+		fz = z^(@pwr1+(a/b)) + (@seed + flip(real(c)))
+	elseif @Mods == 3
+		fz = z^(@pwr1*cos(aC)) + @seed^(s/3)
+	elseif @Mods == 4
+		fz = (s/3)*z^(@pwr1) + @seed^(1+(1/s))
+  endif
+
+  	zold = z
+	z = fz
+
+bailout:
+  |z| <= @bailout
+
+
+default:
+	title = "Multi-Julia (Triangle)"
+	maxiter = 250
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.75
+
+	param bailout
+		caption = "Bailout"
+		default = 0.5E1
+	endparam
+
+	param pwr1
+		caption = "Power 1"
+		default = 2.0
+		hint = "Main function exponent"
+	endparam
+
+	param seed
+		caption = "Seed"
+		default = -0.55555
+		hint = "Seed used in Julia Fractals"
+	endparam
+
+	param Mods
+		caption = "Modification Formulae"
+		enum =  "zold*z^(@pwr) + b*@seed" "z^(@pwr*sqrt(ao)) + ao^@seed" \
+				"z^(@pwr+(a/b)) + (@seed + flip(real(c)))" \
+				"z^(@pwr*cos(aC)) + @seed^(s/3)" \
+				"s*z^(@pwr) + @seed^(1+(1/s))"
+		default = 0
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Twisted_Mandy{
+;
+; The base equation is the standard Mandelbrot.  I just added a value that should range from -1 to 1.  The value is 
+; calculated based on the product of the sine of the angle of 'z' and the cosine of the angle of #pixel.
+; You would never recognize it as a Mandelbrot.
+;
+; Walter Keith (Diddy) Cook; Last Modified 24 July 2013 (Spelling and Aesthetics Only)
+;
+; Modified Param Defaults on 3 August 2013.  Did this to show a better thumbnail.  Also noted that 'Odd'
+; exponents give a symmetrical image while even give the very twisted look.
+;
+init:
+	z = #pixel
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+	z = z^@pwr + #pixel + sin(atan2(z))*cos(atan2(#pixel))
+	
+bailout:
+	|z| <= @bail
+	
+default:
+
+	title = "Twisted Mandy"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	magn = 1
+	center = (0.0,0.0)
+	
+	param pwr
+		caption = "Power"
+		default = 5.0
+		hint = "Main Function Exponent \
+				Use Odd numbers for symmetrical fractal"
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 0.5E2
+	endparam
+  
+}
+
+;------------------------------------------------------------------------
+
+I_Power {
+;
+; I_Power = Imaginary Power (All formula contain modified imag(z))
+; There are six (5) formula.  All use a calculated 'z' (MODZ). 
+; MODZ is (real(z),imag(z)*ZMOD).  ZMOD is user provided float value.  Other values used are: 
+; rz = real(z), iz = imag(z), pmod = (abs(rz)*rz + flip(abs(iz)*iz))
+;
+; As always...Don't look for rhyme or reason as there is none!  
+; I am simply searching for more and interesting fractal formations.
+; 
+; Walter Keith (Diddy) Cook; Completed 30 June 2013
+;
+init:
+	z = #pixel
+	zold = flip(z)
+	int f_I = @f_I
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	rz = real(z)
+	iz = imag(z)
+	izs = iz*@zmod
+	MODZ = (rz + flip(izs))
+	pmod = (abs(rz)*rz + flip(abs(iz)*iz))
+
+	if f_I == 0
+		z = MODZ^@pwr + #pixel
+	elseif f_I == 1
+		z = MODZ^@pwr + z + #pixel
+	elseif f_I == 2
+		z = (rz^2 - iz^2) * z^@pwr + (iz/rz) * #pixel
+	elseif f_I == 3
+		fz = MODZ^@pwr + zold + #pixel
+		z = fz		
+		zold = flip(z)
+	elseif f_I == 4
+		z = MODZ^@pwr + pmod
+	elseif f_I == 5
+		fz = z^@pwr + zold^(@pwr-1) + MODZ^(@pwr-2) + pmod^(@pwr-3) + #pixel
+		z = fz
+		zold = flip(z)
+	endif
+	
+bailout:
+	|z| <= @bail
+	
+default:
+
+	title = "I-Power"
+	maxiter = 150
+	method = multipass
+	periodicity = 0
+	magn = 0.5
+	
+	param f_I
+		caption = "Formulae"
+		enum =  "MODZ^pwr + #pixel" \
+				"MODZ^pwr + z + #pixel" \
+				"(rz^2-iz^2)*z^pwr + (iz/rz)*#pixel" \
+				"MODZ^pwr + zold + #pixel" \
+				"MODZ^@pwr + pmod" \
+				"z^P + zold^(P-1) + MODZ^(P-2) + pmod^(P-3) + #pixel"
+		default = 0
+	endparam
+
+	param pwr
+		caption = "Power"
+		default = 3.0
+		hint = "Main Function Exponent"
+	endparam
+
+	param zmod
+		caption = "Z Modifier"
+		default = 0.56667
+		hint = "Modifies the imaginary component of 'z'.  Just play with it. \
+				Small changes, make big modifications."
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 1.0E2
+	endparam
+  
+}
+
+;------------------------------------------------------------------------
+
+Julia-Mandelbrot-Mix {
+;
+; I look at fractal lovers as explorers...And I explore a lot.
+; It just occurred to me to see what would happen if I just had multiple equations in the loop.  I am certain that some of
+; the programmers out there could tweak this enormously.  I am also certain that I am probably not the 1st to try this. 
+; 
+; Just 'exploring'.  This is a fun formula for that...exploring.  
+; There a lot of new things to find out there!
+;
+; Some of the comments and default values are from the Standard.ufm.  Thanks Guys!
+;
+; Walter Keith (Diddy) Cook; Last Modified 30 June 2013
+;
+init:
+	z = #pixel
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+	if @ord == 0
+		z = z^@pwr1 + #pixel
+		z = z^@pwr2 + @seed
+		
+	elseif @ord == 1
+		z = z^@pwr1 + @seed
+		z = z^@pwr2 + #pixel
+	endif
+bailout:
+	|z| <= @bailout
+	
+default:
+	title = "Julia Mandelbrot Hybrid"
+	center = (-0.25,0)
+	maxiter = 250
+	periodicity = 0
+	
+	param Ord
+		caption = "Function Order"
+		enum = "Mandelbrot 1st" "Julia 1st"
+		default = 0
+	endparam
+
+  param seed
+		caption = "Seed for Julia function"
+		default = (-1.25, 0)
+		hint = "Use this parameter to vary the Julia function. Use the \
+				Explore tool quickly evaluate changes in real values for \
+				the 'Seed'.  Imaginary values work but 'think small';  \
+				The changes are not as smooth with both functions."
+	endparam
+	
+	param pwr1
+		caption = "Power 1"
+		default = (2,0)
+		hint = "This parameter sets the exponent for the 1st function. \
+				Seems better 'Personal Opinion' if you don't exceed \
+				(3,0).  Negative values (larger seem better) work well."
+	endparam
+	
+	param pwr2
+		caption = "Power 2"
+		default = (2,0)
+		hint = "This parameter sets the exponent for the 2nd function.  \
+				This value varies more than the 1st power when the function \
+				order is changed.  Be prepared to zoom a bit and change to \
+				inside coloring in some cases."
+	endparam
+	
+	param bailout
+		caption = "Bailout value"
+		default = 4.0
+		min = 1.0
+		hint = "This parameter defines how soon an orbit bails out while \
+				iterating. Larger values give smoother outlines; values around 4 \
+				give more interesting shapes around the set. Values less than 4 \
+				will distort the fractal.  Larger values are often required to get \
+				more detail.  Especially as you get deep into a fractal."
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Distortion_1 {
+;
+; I am not a mathematician though I do love math.  I am also NOT a programmer.  Any suggestions for ANY of my formulae is
+;  greatly appreciated.  With that said, this is VERY loosely based on the formula a/z^2 + c.
+;
+; There is a Mini-Mandelbrot in this one.  I found and ... LOST IT.  Still learning and didn't save the UPR.
+;
+; I am also NOT a conformist and like messing things up at times.  It is often the only and best way to make discoveries.
+; 
+; Walter Keith (Diddy) Cook; Last Modified 24 July 2013 (Spelling and Aesthetics Only)
+;
+init:
+	z = #pixel
+
+	float b = 0.0
+	float c = 0.0
+	b = @a/2 + sqrt(@a)
+	c = b + @a^(1/3)
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	z = @a/z^@pwr1 + (b/#pixel - c/z*#pixel + 1/(@a*b*c))
+
+bailout:
+	|z| <= @bail
+	
+default:
+
+	title = "Find the Mandelbrot"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	magn = 0.1
+	
+	param pwr1
+		caption = "Power 1"
+		default = 2.0
+		hint = "Main Function Exponent"
+	endparam
+
+	param a
+		caption = "Constant 'A'"
+		min = 0.5
+		default = 1.0
+		hint = "Modifies fractal 'Spread' for lack of a \
+				better term.  Best to change slowly."
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 1.0E2
+	endparam
+  
+}
+
+;------------------------------------------------------------------------
+
+Distortion_2 {
+;
+; I am not a mathematician though I do love math.  I am also NOT a programmer.  Any suggestions for ANY of my formulae is  
+; greatly appreciated.  With that said, this is not really based on any specific formula.
+;
+; I am also NOT a conformist and like messing things up bit.
+; It is often the only and best way to make discoveries.
+; 
+; Walter Keith (Diddy) Cook; Last Modified 29 June 2013
+;
+init:
+	z = #pixel
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	z = z/(z^@pwr1 + #pixel) + tanh(real(z))/@C_Val
+
+bailout:
+	|z| <= @bail
+	
+default:
+
+	title = "Crescents & More"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	magn = 0.8
+	center = (0,0)
+	
+	param pwr1
+		caption = "Power 1"
+		default = 2.5
+		hint = "Main Function Exponent"
+	endparam
+
+	param C_Val
+		caption = "Constant 'C'"
+		default = 3.0
+		hint = "Mostly modifies the fractal by 'spreading' \
+				in the REAL Plane."
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 0.5E1
+	endparam
+  
+}
+
+;------------------------------------------------------------------------
+
+Distortion_3 {
+;
+; I am not a mathematician though I do love math.  I am also NOT a programmer.  Any suggestions for ANY
+; of my formulae is   greatly appreciated.  With that said, this is loosely based on the standard Mandelbrot
+; formula.  Formula is modified with user input constant and the FLIP & CONJ functions.
+; 
+; Walter Keith (Diddy) Cook; Last Modified 30 June 2013
+;
+init:
+	z = #pixel
+	z_old = flip(z)
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	fz = z_old * z^@pwr1 + #pixel
+	z_old = (imag(z) + flip(@C_Val*real(z)))
+	z = flip(conj(fz))
+
+bailout:
+	|z| <= @bail
+	
+default:
+
+	title = "Not so Mandel"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	
+	param pwr1
+		caption = "Power 1"
+		default = -2.0
+		hint = "Main Function Exponent"
+	endparam
+
+	param C_Val
+		caption = "Constant 'C'"
+		default = -1.0
+		hint = "Modifies real(z) and uses results to as imaginary \
+				portion of oldz.  Small changes at first are best."
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 0.5E1
+	endparam
+  
+}
+
+;------------------------------------------------------------------------
+
+L-Julia-Mandel_Mix_2 {
+;
+; I think the Julia and Mandelbrot sets work great together when mixing fractal formulae.
+; In this one I use the Lambda-Julia and the standard Mandelbrot.  The formulae are iterated
+; and then combined by addition or multiplication.  A number of methods are used to morph the
+; resulting Fractal.  The goal is the same as always...Finding the next image that takes your
+; breath when you 1st see it.  I hope you enjoy.
+; 
+; Walter Keith (Diddy) Cook; Last Modified 14 July 2013
+; 
+
+init:
+;
+	z = #pixel
+	complex f1 = 0.01*z
+	complex f2 = -0.01*z
+
+	complex func f1f(const complex x)
+		if @Fn1F == 0
+			return sin(x)
+		elseif @Fn1F == 1
+			return sinh(x)
+		elseif @Fn1F == 2
+			return asin(x)
+		elseif @Fn1F == 3
+			return cos(x)
+		elseif @Fn1F == 4
+			return cosh(x)
+		elseif @Fn1F == 5
+			return tan(x)
+		elseif @Fn1F == 6
+			return tanh(x)
+		elseif @Fn1F == 7
+			return cotan(x)
+		elseif @Fn1F == 8
+			return cotanh(x)
+		elseif @Fn1F == 9
+			return ident(x)
+		elseif @Fn1F == 10
+			return log(x)
+		elseif @Fn1F == 11
+			return exp(x)
+		elseif @Fn1F == 12
+			return abs(x)
+		elseif @Fn1F == 13
+			return cabs(x)
+		elseif @Fn1F == 14
+			return sqr(x)
+		elseif @Fn1F == 15
+			return sqrt(x)
+		elseif @Fn1F == 16
+			return recip(x)
+		elseif @Fn1F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	complex func f2f(const complex x)
+		if @Fn2F == 0
+			return sin(x)
+		elseif @Fn2F == 1
+			return sinh(x)
+		elseif @Fn2F == 2
+			return asin(x)
+		elseif @Fn2F == 3
+			return cos(x)
+		elseif @Fn2F == 4
+			return cosh(x)
+		elseif @Fn2F == 5
+			return tan(x)
+		elseif @Fn2F == 6
+			return tanh(x)
+		elseif @Fn2F == 7
+			return cotan(x)
+		elseif @Fn2F == 8
+			return cotanh(x)
+		elseif @Fn2F == 9
+			return ident(x)
+		elseif @Fn2F == 10
+			return log(x)
+		elseif @Fn2F == 11
+			return exp(x)
+		elseif @Fn2F == 12
+			return abs(x)
+		elseif @Fn2F == 13
+			return cabs(x)
+		elseif @Fn2F == 14
+			return sqr(x)
+		elseif @Fn2F == 15
+			return sqrt(x)
+		elseif @Fn2F == 16
+			return recip(x)
+		elseif @Fn2F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	float pwr = @pwr
+	float f1p = @f1p
+	float f2p = @f2p
+	float f_C = @f_C
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @f_Ord == "Mandelbrot 1st"
+		f1 = z^pwr + #pixel
+		f2 = #pixel*z*(1-z)^(pwr-1)
+	elseif @f_Ord == "Lambda-Julia 1st"
+		f1 = #pixel*z*(1-z)^(pwr-1)
+		f2 = z^pwr + #pixel
+	endif
+
+	if @f_EX == "Yes"
+		z = f1f(z)*f1^f1p + f2f(z)*f2^f2p + f1f(z)*f2f(z)*f_C
+	elseif @f_EX == "No"
+		z = f1f(f1)*f1 + f2f(f2)*f2 + f_C
+	endif
+
+bailout:
+  |z| <= @bail
+  
+default:
+
+	title = "L-Julia/Mandelbrot Mix #2"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.65,0.0)
+	magn = 0.5
+
+	param bail
+		caption = "Bailout "
+		default = 0.5E1
+	endparam
+
+	param pwr
+		caption = "Main f(z) Exponent "
+		default = 2.0
+	endparam
+	
+	param f_Ord
+		caption = "Function Order "
+		enum =	"Mandelbrot 1st" "Lambda-Julia 1st"
+		default = 0
+	endparam
+
+	param f_C
+		caption = "Main Function 'C' "
+		default = -0.142857
+	endparam
+
+	param f_EX
+		caption = "Use Exponentials? "
+		enum =	"Yes" "No"
+		default = 0
+	endparam
+
+	param f1p
+		caption = "f(1) Exponential "
+		default = -0.1111
+		visible = @f_EX == "Yes"
+	endparam
+	
+	param f2p
+		caption = "f(2) Exponential "
+		default = 1.75
+		visible = @f_EX == "Yes"
+	endparam
+	
+	param Fn1F
+		caption = "f(1) Morph "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 9
+	endparam
+
+	param Fn2F
+		caption = "f(2) Morph "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 9
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Mag1_Julia_Newton {
+;
+; As in 'L-Julia/Mandelbrot Mix #2', here I attempt to take to Fractal Formulae and iterate
+; them in sequence and then use the results to compute the final Fractal.  In this case I use
+; the Magnet1Julia and Newton Formula.  A number of methods can be used to 'MORPH' the resulting
+; Fractal.  The goal is the same as always...Finding the next image that takes your breath when
+; you 1st see it.  I hope as much fun playing with this as I did.  And as always I am open to
+; suggestions and/or criticism.  I am not a programmer by nature and need as much help as I can
+; get.  Thank You.
+;
+; Walter Keith (Diddy) Cook; Completed 15 July 2013
+; 
+
+init:
+;
+	z = #pixel
+	complex f1 = 0.01*z
+	complex f2 = -0.01*z
+
+	complex func f1f(const complex x)
+		if @f1_F == 0
+			return sin(x)
+		elseif @f1_F == 1
+			return sinh(x)
+		elseif @f1_F == 2
+			return asin(x)
+		elseif @f1_F == 3
+			return cos(x)
+		elseif @f1_F == 4
+			return cosh(x)
+		elseif @f1_F == 5
+			return tan(x)
+		elseif @f1_F == 6
+			return tanh(x)
+		elseif @f1_F == 7
+			return cotan(x)
+		elseif @f1_F == 8
+			return cotanh(x)
+		elseif @f1_F == 9
+			return ident(x)
+		elseif @f1_F == 10
+			return log(x)
+		elseif @f1_F == 11
+			return exp(x)
+		elseif @f1_F == 12
+			return abs(x)
+		elseif @f1_F == 13
+			return cabs(x)
+		elseif @f1_F == 14
+			return sqr(x)
+		elseif @f1_F == 15
+			return sqrt(x)
+		elseif @f1_F == 16
+			return recip(x)
+		elseif @f1_F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	complex func f2f(const complex x)
+		if @f2_F == 0
+			return sin(x)
+		elseif @f2_F == 1
+			return sinh(x)
+		elseif @f2_F == 2
+			return asin(x)
+		elseif @f2_F == 3
+			return cos(x)
+		elseif @f2_F == 4
+			return cosh(x)
+		elseif @f2_F == 5
+			return tan(x)
+		elseif @f2_F == 6
+			return tanh(x)
+		elseif @f2_F == 7
+			return cotan(x)
+		elseif @f2_F == 8
+			return cotanh(x)
+		elseif @f2_F == 9
+			return ident(x)
+		elseif @f2_F == 10
+			return log(x)
+		elseif @f2_F == 11
+			return exp(x)
+		elseif @f2_F == 12
+			return abs(x)
+		elseif @f2_F == 13
+			return cabs(x)
+		elseif @f2_F == 14
+			return sqr(x)
+		elseif @f2_F == 15
+			return sqrt(x)
+		elseif @f2_F == 16
+			return recip(x)
+		elseif @f2_F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	float	f1p = @f1p
+	complex	f2p = @f2p
+	float	f_C = @f_C
+	complex	f1_C = @f1_C
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zold = z
+	
+	if @f_Ord == "Newton 1st"
+		f1 = ((f1p - 1) * z^f1p + f1_C) / (f1p * z ^ (f1p - 1))
+		f2 = sqr( (z^2 + f2p - 1) / (2*z + f2p - 2) )
+	elseif @f_Ord == "Magnet1Julia 1st"
+		f1 = sqr( (z^2 + f2p - 1) / (2*z + f2p - 2) )
+		f2 = ((f1p - 1) * z^f1p + f1_C) / (f1p * z ^ (f1p - 1))
+	endif
+
+	if @f_EX == "Yes"
+		z = f1f(z)*f1^f1p + f2f(z)*f2^f2p + f_C*(zold/#pixel)
+	elseif @f_EX == "No"
+		z = f1f(f1)*f1 + f2f(f2)*f2 + f_C*(zold/#pixel)
+	endif
+
+bailout:
+  |z| < @bail && |z - zold| > @bail2
+  
+default:
+
+	title = "Magnet1Julia/Newton Mix"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.333
+
+	param bail
+		caption = "Bailout "
+		default = 1.0E2
+	endparam
+
+	param bail2
+		caption = "Lower Bailout "
+		default = 1.0E-4
+	endparam
+
+	param f_C
+		caption = "Main Function 'C' "
+		default = -0.142857
+	endparam
+
+	param f_Ord
+		caption = "Function Order "
+		enum =	"Newton 1st" "Magnet1Julia 1st"
+		default = 0
+	endparam
+
+	param f_EX
+		caption = "Re-Use Exponents? "
+		enum =	"Yes" "No"
+		default = 1
+	endparam
+
+	param f1_C
+		caption = "Newton Root "
+		default = (1.0,0.0)
+		hint = "Root value the Newton Function. \
+				Larger numbers = slower convergence."
+	endparam
+	
+	param f1p
+		caption = "Newton Power "
+		default = 3.0
+		hint = "Only using 'real' numbers for this equation. \
+				This produces only classic Newton fractals."
+	endparam
+	
+	param f2p
+		caption = "Magnet1Julia Perturbation "
+		default = (0.0,0.0)
+		hint = "Starting value for each point of the Magnet1Julia Function. \
+				Used to 'perturb' the fractal. Use (0,0) for the classic set."
+	endparam
+	
+	param f1_F
+		caption = "f(1) Morph "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 9
+	endparam
+
+	param f2_F
+		caption = "f(2) Morph "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 9
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+C-Power {
+;
+; I don't recall if this is a particularly named Fractal but it uses the basic form of: 
+;				z^pwr/#pixel^(pwr-C) + #pixel/(C*z)
+; 
+; This is the actual formula w/C=3 and pwr = 5 as defaults.  There are 4 additional 'MORPHS' 
+; all by modifying the last part of the function.  I will try to get some parameter files 
+; out to show the areas I found most interesting.  At least this one isn't as loaded with 
+; options as some I have made.  Sometimes 'Simpler really IS Better'.
+; 
+; Walter Keith (Diddy) Cook; Completed 16 July 2013
+; 
+init:
+;
+	z = #pixel
+	float	pwr = @pwr
+	float	C = @C
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zold = z
+
+	if @C_Mod == 0
+		z = z^pwr / #pixel^(pwr-C) + #pixel/(C*z)
+	elseif @C_Mod == 1
+		z = z^pwr / #pixel^(pwr-C) + #pixel/(C*flip(z))
+	elseif @C_Mod == 2
+		z = z^pwr / #pixel^(pwr-C) + z/(C*zold)
+	elseif @C_Mod == 3
+		z = z^pwr / #pixel^(pwr-C) + zold/(C+0.00001)
+	elseif @C_Mod == 4
+		z = z^pwr / #pixel^(pwr-C) + #pixel*(pwr-C)/C
+	endif
+
+bailout:
+  |z| < @bail && |z - zold| > @bail2
+  
+default:
+
+	title = "C-Power"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	angle = 90
+	magn = 0.75
+
+	param bail
+		caption = "Bailout "
+		default = 1.0E2
+	endparam
+
+	param bail2
+		caption = "Lower Bailout "
+		default = 1.0E-10
+	endparam
+
+	param pwr
+		caption = "Main f(z) Exponent "
+		default = 5.0
+	endparam
+	
+	param C
+		caption = "Function Strength 'C' "
+		default = 3.0
+	endparam
+
+	param C_Mod
+		caption = "Function Modifiers "
+		enum =	"#pixel/(C*z)" "#pixel/(C*flip(z))" "z/(C*zold)" "zold/C" "#pixel*(pwr-C)/C"
+		default = 0
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Mandelbrot_Mod_v2 {
+;
+; This is an updated version of my 'Power Mod'ed Mandelbrot' formula.  A lot more options but also raised some 
+; questions for me.  I will have to as a programmer.  I start with the original Mandelbrot and iterate it 'n' times.
+; 'n' is a user input integer.  The resultant 'z' is then Modified based on a number of variables including:
+;	--	Values of triangle bounded by sides 'a' (distance to origin), 'b' (zold distance to origin), and 
+;		'c' (distance 'a' to 'b')
+;	--	Old 'z' values
+; 	--	Function Power, Start, and Bailout values
+;	--	Total iterations and the value of 'n'
+; 	--	Lastly there is an option to 'Double-Up' the Standard Mandelbrot Function.  Simply immediately follow 
+;		the Modified Function by another iteration of the original function.
+;
+; I am NOT a programmer by trade so any help I can get is greatly appreciated.  One issue with this formula is 
+; a tendency to take a longer than expected time to render.  Also, if the 'n' value is raised the resulting fractal 
+; is unique in that there is only an outline for 'Outside values and the remainder of the fractal is set as 'Inside'.
+; I am sure there is an issue with my math or programming but I have not yet found it.
+;
+; Please enjoy...Now, Let's go Fractaling!
+;
+; Walter Keith (Diddy) Cook; Completed and Last Modified 24 July 2013
+;
+
+init:
+
+	z = @start
+	pz1 = pz2 = pz3 = pz4 = pz5 = z
+	int n = 0
+	pwr = @pwr
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	while (n < @NI)
+		z = z^pwr + #pixel
+		
+		n = n + 1
+		pz5 = pz4
+		pz4 = pz3
+		pz3 = pz2
+		pz2 = pz1
+		pz1 = z
+		
+	endwhile
+
+	pz_a = (pz1+pz2+pz3+pz4+pz5)/5											; Calculated average of last 5 z's
+	a = sqrt(sqr(real(z)-real(@start)) + sqr(imag(z)-imag(@start)))			; side 'a' Calculated distance 'z' to @start
+	b = sqrt(sqr(real(pz1)-real(@start)) + sqr(imag(pz1)-imag(@start)))		; side 'b' Calculated distance 'pz1' to @start
+	b_a = sqrt(sqr(real(pz_a)-real(@start)) + sqr(imag(pz_a)-imag(@start)))	; side 'b' Calculated from average of last 5 z's
+	c = sqrt(sqr(real(z)-real(pz1)) + sqr(imag(z)-imag(pz1)))				; Side 'c' Calculated
+	c_5 = sqrt(sqr(real(z)-real(pz5)) + sqr(imag(z)-imag(pz5)))				; Side 'c' Calculated using pz5
+	c_a = sqrt(sqr(real(z)-real(pz_a)) + sqr(imag(z)-imag(pz_a)))			; Side 'c' Calculated using average of last 5 z's
+	s = (a+b+c)																; Triangle Perimeter
+	s_a = (a+b+c)															; Triangle Perimeter using 'a', 'b_a', & 'c_a'
+	ao = sqrt(s*(s-a)*(s-b)*(s-c))											; Triangle Area
+	ao_a = sqrt(s_a*(s_a-a)*(s_a-b_a)*(s_a-c_a))							; Triangle Area using 'a', 'b_a', 'c_a', & s_a
+
+	pz5 = pz4
+	pz4 = pz3
+	pz3 = pz2
+	pz2 = pz1
+	pz1 = z
+
+	if @modv2 == 0
+		z = z^pwr + #pixel
+	elseif @modv2 == 1
+		z = ((a+b)/2)*(z^pwr + #pixel)
+	elseif @modv2 == 2
+		z = s*(z^pwr + #pixel)
+	elseif @modv2 == 3
+		z = c_5*(z^pwr + #pixel)
+	elseif @modv2 == 4
+		z = (1+(1/n))*(z^pwr + #pixel)
+	elseif @modv2 == 5
+		z = (cos(n^@NI) + flip(recip(n)))*(z^pwr + #pixel)
+	elseif @modv2 == 6
+		z = ((ao_a)^(1/3))*(z^pwr + #pixel)
+	elseif @modv2 == 7
+		z = ((ao)^(1/3))*(z^pwr + #pixel)
+	elseif @modv2 == 8
+		z = pz_a*z^(pwr - 1) + #pixel
+	elseif @modv2 == 9
+		z = (pz5*pz4*pz3*pz2*pz1)^(0.4) + #pixel
+	endif
+	
+	if @follow == 0
+		z = z^pwr + #pixel
+	endif
+	
+	pz1 = z
+	n = n + 1
+
+	CompilerCatch = ao+ao_a+a+b+b_a+c+c_a+s+s_a+c_5
+	CompilerCatch = CompilerCatch * 1
+bailout:
+	|z| <= @bail
+
+default:
+	title = "Modified Mandelbrots v2"
+	maxiter = 150
+	method = multipass
+	periodicity = 0
+	center = (-0.75,0)
+	magn = 0.8
+	angle = 0
+
+	param bail
+		caption = "Bailout"
+		default = 0.5E2
+	endparam
+
+	param start
+		caption = "Start"
+		default = (0.0,0.0)
+	endparam
+
+	int param NI
+		caption = "'N' Iterations before Modifications"
+		default = 5
+	endparam
+
+	param pwr
+		caption = "Function Power"
+		default = 2.0
+		hint = "Main function exponent"
+	endparam
+	
+	param modv2
+		caption = "Modified Function"
+		enum =	"Just Mandelbrot" "Dist. to Origin 1" "Dist. to Origin 2" \
+				"Avg. Dist. to Z-Old" "Iterations 1" "Iterations 2" "Triangle Area 1" \
+				"Triangle Area 2" "Z-Old" "Last 5 Z-Olds"
+		default = 7
+	endparam
+
+	param follow
+		caption = "Double-Up w/Std. Mandelbrot"
+		enum =	"Yes" "No"
+		default = 1
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Mandel_Julienne {
+;
+; This is more-or-less a made up formula though it tends to be mostly of the Julia form.
+; Just an idea I had.
+;
+; The modifying variables and the "Follow-Up" options make for interesting changes.
+; The "Mandel" name is because the "Follow-Ups" are somewhat Mandelbrot based.
+; Also because of the number of Mandelbrot-like features I found.
+; 
+; Happy Fractal Hunting!
+; 
+; Written by Walter K. Cook, Completed 30 July 2013.
+;
+init:
+
+	z = #pixel
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @FUpwr == 0
+		fz = ((z + @a/@b)*(z - (@b-@a)/@b)) + ( (@a * z) / (#pixel * @b) )
+		z = fz
+	elseif @FUpwr == 1
+		fz = ((z + @a/@b)*(z - (@b-@a)/@b)) + ( (@a * z) / (#pixel * @b) )
+		
+		if @FUm == 0
+			z = fz^@pwr
+		elseif @FUm == 1
+			z = fz^@pwr + ( (@a * z) / (#pixel * @b) )
+		endif
+	endif
+
+bailout:
+  |z| <= @bail
+
+default:
+	title = "Mandel Julienne"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.5,0.0)
+	magn = 0.8
+
+	param bail
+		caption = "Bailout "
+		default = 0.5E2
+	endparam
+
+	float param a
+		caption = "Seed Numerator "
+		default = 4.0
+	endparam
+
+	float param b
+		caption = "Seed Denominator "
+		default = 19
+	endparam
+
+	int param FUpwr
+		caption = "Follow-Up w/Exponent? "
+		enum = "No" "Yes"
+		default = 0
+	endparam
+
+	param pwr
+		caption = "Follow-Up Power "
+		default = 1.0
+		visible = @FUpwr == 1
+	endparam
+
+	int param FUm
+		caption = "Follow-Up Method "
+		enum = "F(z)^pwr" "F(z)^pwr + C"
+		default = 0
+		visible = @FUpwr == 1
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+NovaJulia_Ideas {
+;
+; I started this one with the NovaJulia Formula from the Standard.UFM.  But it turned into much more.  
+; The few parameters and functions I set up, I thought, were minor.  But very small changes go a long way 
+; in most cases.  You really just have to play around.  Be looking for some parameter files to show some 
+; of the more interesting settings I found.  I hope you enjoy.
+;
+; Written by Walter K. Cook, Completed 29 July 2013
+; Modified slightly on 1 Dec 2013.  Added Standard Style Bail.  If you need backward compatibility, drop 
+; me a note on the Fractal Mailing list.
+;
+init:
+
+	z = #pixel
+	zold = z
+
+	complex func op1(const complex &x)
+		if @Oper1 == 0
+			return x^0
+		elseif @Oper1 == 1
+			return atan2(x)
+		elseif @Oper1 == 2
+			return cabs(x)
+		elseif @Oper1 == 3
+			return atan2(flip(x))
+		elseif @Oper1 == 4
+			return abs(real(x)/imag(x))
+		elseif @Oper1 == 5
+			return abs(imag(x)/real(x))
+		else
+			return x^0
+		endif
+	endfunc
+
+	complex func op2(const complex &x)
+		if @Oper2 == 0
+			return x^0
+		elseif @Oper2 == 1
+			return atan2(x)
+		elseif @Oper2 == 2
+			return cabs(x)
+		elseif @Oper2 == 3
+			return atan2(flip(x))
+		elseif @Oper2 == 4
+			return abs(real(x)/imag(x))
+		elseif @Oper2 == 5
+			return abs(imag(x)/real(x))
+		else
+			return x^0
+		endif
+	endfunc
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @Oper1 == "None"
+		if @Oper2 == "None"
+			zold = z
+			z = z - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1)) + @seed
+		else
+			zold = z
+			z = z - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1) + op2(z)) + @seed
+		endif
+	else
+		if @Oper2 == "None"
+			zold = z
+			z = op1(z) - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1)) + @seed
+		else
+			zold = z
+			z = op1(z) - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1) + op2(z)) + @seed
+		endif
+	endif
+
+bailout:
+  |z| <= @bailZ && |z - zold| > @bail
+  
+default:
+
+	title = "NovaJulia Ideas"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.5
+
+	param bail
+		caption = "Newton Style Bail"
+		default = 1.0E-2
+		hint = "In the standard formula, smaller values mean more iterations. \
+				This does not mean smaller is always better.  If the image \
+				disappears when you make a change...Start by raising the iterations \
+				just a bit.  Say to 1E-3.  Trial and error is your friend!"
+	endparam
+
+	param bailZ
+		caption = "Z-Bail"
+		default = 1.0E32
+	endparam
+
+	param pwr
+		caption = "F(z) Power"
+		default = 3.0
+		hint = "Main function exponent"
+	endparam
+
+	param seed
+		caption = "Julia Seed"
+		default = 0.0
+		hint = "Defines the general shape of the Fractal"
+	endparam
+
+	param rlx
+		caption = "Relaxation"
+		default = 1.3333
+		hint = "Affects the convergence of the formula."
+	endparam
+
+	int param Oper1
+		caption = "Modifier for 'Z'"
+		enum =	"None" "Angle" "cabs" "Angle of flip(x)" \
+				"abs(real/imag)" "abs(imag/real)"
+		default = 0
+		hint = "Modifies the 'Z' value in the numerator of the formula."
+	endparam
+
+	int param Oper2
+		caption = "Modifier for 'C'"
+		enum =	"None" "Angle" "cabs" "Angle of flip(x)" \
+				"abs(real/imag)" "abs(imag/real)"
+		default = 0
+		hint = "Modifies the 'Z' value in the denominator of the formula."
+	endparam
+ 
+}
+
+------------------------------------------------------------------------
+
+NovaMandel_Ideas {
+;
+; I started this one with the NovaMandel Formula from the Standard.UFM.  Just like the "NovaMandel Ideas",
+; the few parameters and functions make small changes go a long way in most cases.  And just as before, 
+; you just have to play around.  I have save a few parameter files to upload.  Nothing special...Just to 
+; show some of the settings and areas that I found to be interesting.  Enjoy.
+;
+; Written by Walter K. Cook, Completed 30 July 2013, Modified Param Defaults on 3 August 2013
+;
+; Modified slightly on 1 Dec 2013.  Added Standard Style Bail.  If you need backward compatibility, drop 
+; me a note on the Fractal Mailing list.
+;
+init:
+
+	z = #pixel
+	zold = z
+
+	complex func op1(const complex &x)
+		if @Oper1 == 0
+			return x^0
+		elseif @Oper1 == 1
+			return atan2(x)
+		elseif @Oper1 == 2
+			return cabs(x)
+		elseif @Oper1 == 3
+			return atan2(flip(x))
+		elseif @Oper1 == 4
+			return abs(real(x)/imag(x))
+		elseif @Oper1 == 5
+			return abs(imag(x)/real(x))
+		else
+			return x^0
+		endif
+	endfunc
+
+	complex func op2(const complex &x)
+		if @Oper2 == 0
+			return x^0
+		elseif @Oper2 == 1
+			return atan2(x)
+		elseif @Oper2 == 2
+			return cabs(x)
+		elseif @Oper2 == 3
+			return atan2(flip(x))
+		elseif @Oper2 == 4
+			return abs(real(x)/imag(x))
+		elseif @Oper2 == 5
+			return abs(imag(x)/real(x))
+		else
+			return x^0
+		endif
+	endfunc
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @Oper1 == "None"
+		if @Oper2 == "None"
+			zold = z
+			z = z - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1)) + #pixel
+		else
+			zold = z
+			z = z - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1) + op2(z)) + #pixel
+		endif
+	else
+		if @Oper2 == "None"
+			zold = z
+			z = op1(z) - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1)) + #pixel
+		else
+			zold = z
+			z = op1(z) - @rlx * (z^@pwr - 1) / (@pwr * z^(@pwr-1) + op2(z)) + #pixel
+		endif
+	endif
+
+bailout:
+  |z| <= @bailZ && |z - zold| > @bail
+  
+default:
+
+	title = "NovaMandel Ideas"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.5
+
+	param bailZ
+		caption = "Z-Bail"
+		default = 1.0E32
+	endparam
+
+	param bail
+		caption = "Bailout"
+		default = 1.0E-5
+		hint = "In the standard formula, smaller values mean more iterations. \
+				This does not mean smaller is always better.  If the image \
+				disappears when you make a change...Start by raising the iterations \
+				just a bit.  Say to 1E-3.  Trial and error is your friend!"
+	endparam
+
+	param pwr
+		caption = "F(z) Power"
+		default = 3.0
+		hint = "Main function exponent \
+				For Standard NovaMandel set at 3.0"
+	endparam
+
+	param rlx
+		caption = "Relaxation"
+		default = 1.3
+		hint = "Affects the convergence of the formula. \
+				For Standard NovaMandel set at 1.0"
+	endparam
+
+	int param Oper1
+		caption = "Modifier for 'Z'"
+		enum =	"None" "Angle" "cabs" "Angle of flip(x)" \
+				"abs(real/imag)" "abs(imag/real)"
+		default = 2
+		hint = "Modifies the 'Z' value in the numerator of the formula. \
+				For Standard NovaMandel use 'None'"
+	endparam
+
+	int param Oper2
+		caption = "Modifier for 'C'"
+		enum =	"None" "Angle" "cabs" "Angle of flip(x)" \
+				"abs(real/imag)" "abs(imag/real)"
+		default = 2
+		hint = "Modifies the 'Z' value in the denominator of the formula. \
+				For Standard NovaMandel use 'None'"
+	endparam
+ 
+}
+
+------------------------------------------------------------------------
+
+New_Newton {
+;
+; I started this one with the standard Newton Formula from the Standard.UFM.  Just wondered "What if..." 
+; The few parameters and functions I set up, I thought, were minor.  But very small changes go a long way 
+; again.  Another formula where playing with the parameters is the best way to find something.  I generated 
+; some parameter files to show some of the more interesting settings I found.  I hope you enjoy.
+;
+; Written by Walter K. Cook, Completed 31 July 2013, Modified Param Defaults on 3 August 2013
+;
+init:
+
+	z = #pixel
+	zo1 = z
+	zo2 = zo1
+	zo3 = zo2
+	zo4 = zo3
+	zo5 = zo4
+	Vzo = (zo1+zo2+zo3+zo4+zo5)/5
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zo5 = zo4
+	zo4 = zo3
+	zo3 = zo2
+	zo2 = zo1
+	zo1 = z
+
+	if @zov == 0
+		Vzo = z
+	elseif @zov == 1
+		Vzo = zo1
+	elseif @zov == 2
+		Vzo = zo2
+	elseif @zov == 3
+		Vzo = zo3
+	elseif @zov == 4
+		Vzo = zo4
+	elseif @zov == 5
+		Vzo = zo5
+	endif
+
+	z = ((@pwr - @newp) * z^@pwr + @rlx) / (@pwr * Vzo^(@pwr - @newp))
+
+	CompilerCatch = zo1+zo2+zo3+zo4+zo5
+	CompilerCatch = CompilerCatch*1
+
+bailout:
+  |z - Vzo| > @bail
+  
+default:
+
+	title = "New_Newton"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.5
+
+	param bail
+		caption = "Bailout"
+		default = 1.0E-5
+		hint = "In the standard formula, smaller values mean more iterations. \
+				This does not mean smaller is always better.  If the image \
+				disappears when you make a change...Start by raising the iterations \
+				just a bit.  Say to 1E-3.  Trial and error is your friend!"
+	endparam
+
+	param pwr
+		caption = "F(z) Power"
+		default = 3.0
+		hint = "Main function exponent"
+	endparam
+
+	param zov
+		caption = "Z-Old Options"
+		enum = "Use 'Z'" "1st Zold" "2nd Zold" "3rd Zold" "4th Zold" "5th Zold"
+		default = 0
+		hint = "Just another look.  1st Zold doesn't seem to make much change, \
+				but 2nd - 5th make big changes"
+	endparam
+
+	param newp
+		caption = "Power Offset"
+		default = 2.076
+		hint = "Modifies the Power Value where in the standard Newton formula \
+				contains '(p1 - 1)' this replaces the '1'.  Very surprising changes."
+	endparam
+
+	param rlx
+		caption = "Relaxation"
+		default = 0.5
+		hint = "Affects the convergence of the formula.  This formula allows \
+				for much larger changes in this value."
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Newton_on_Functions {
+;
+; I started this one with the standard Newton Formula from the Standard.UFM.  Just wondered "What if..." 
+; The few parameters and functions I set up, I thought, were minor.  But very small changes go a long way 
+; again.  Another formula where playing with the parameters is the best way to find something.  I generated 
+; some parameter files to show some of the more interesting settings I found.  I hope you enjoy.
+;
+; Written by Walter K. Cook, Completed 31 July 2013, Modified Param Defaults on 3 August 2013
+;
+init:
+
+	z = #pixel
+	zo1 = z
+	zo2 = zo1
+	zo3 = zo2
+	zo4 = zo3
+	zo5 = zo4
+	Vzo = (zo1+zo2+zo3+zo4+zo5)/5
+	rrlx = 1/@rlx
+	
+	
+	complex func f1f(const complex x)
+		if @Fn1F == 0
+			return sin(x)
+		elseif @Fn1F == 1
+			return sinh(x)
+		elseif @Fn1F == 2
+			return asin(x)
+		elseif @Fn1F == 3
+			return cos(x)
+		elseif @Fn1F == 4
+			return cosh(x)
+		elseif @Fn1F == 5
+			return tan(x)
+		elseif @Fn1F == 6
+			return tanh(x)
+		elseif @Fn1F == 7
+			return cotan(x)
+		elseif @Fn1F == 8
+			return cotanh(x)
+		elseif @Fn1F == 9
+			return ident(x)
+		elseif @Fn1F == 10
+			return log(x)
+		elseif @Fn1F == 11
+			return exp(x)
+		elseif @Fn1F == 12
+			return abs(x)
+		elseif @Fn1F == 13
+			return cabs(x)
+		elseif @Fn1F == 14
+			return sqr(x)
+		elseif @Fn1F == 15
+			return sqrt(x)
+		elseif @Fn1F == 16
+			return recip(x)
+		elseif @Fn1F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	complex func f2f(const complex x)
+		if @Fn2F == 0
+			return sin(x)
+		elseif @Fn2F == 1
+			return sinh(x)
+		elseif @Fn2F == 2
+			return asin(x)
+		elseif @Fn2F == 3
+			return cos(x)
+		elseif @Fn2F == 4
+			return cosh(x)
+		elseif @Fn2F == 5
+			return tan(x)
+		elseif @Fn2F == 6
+			return tanh(x)
+		elseif @Fn2F == 7
+			return cotan(x)
+		elseif @Fn2F == 8
+			return cotanh(x)
+		elseif @Fn2F == 9
+			return ident(x)
+		elseif @Fn2F == 10
+			return log(x)
+		elseif @Fn2F == 11
+			return exp(x)
+		elseif @Fn2F == 12
+			return abs(x)
+		elseif @Fn2F == 13
+			return cabs(x)
+		elseif @Fn2F == 14
+			return sqr(x)
+		elseif @Fn2F == 15
+			return sqrt(x)
+		elseif @Fn2F == 16
+			return recip(x)
+		elseif @Fn2F == 17
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zo5 = zo4
+	zo4 = zo3
+	zo3 = zo2
+	zo2 = zo1
+	zo1 = z
+
+	if @zov == 0
+		Vzo = z
+	elseif @zov == 1
+		Vzo = zo1
+	elseif @zov == 2
+		Vzo = zo2
+	elseif @zov == 3
+		Vzo = zo3
+	elseif @zov == 4
+		Vzo = zo4
+	elseif @zov == 5
+		Vzo = zo5
+	endif
+
+	if @Fn1F == 9
+		if @Fn2F == 9
+			z = ((@pwr-@newp) * z^@pwr + @rlx) / \
+			(@pwr * Vzo^(@pwr-@newp))
+		elseif @Fn2F != 9
+			z = ((@pwr-@newp) * z^@pwr + (f2f(z^rrlx)*@rlx)) / \
+			(@pwr * Vzo^(@pwr-@newp))
+		endif
+	elseif @Fn1F != 9
+		if @Fn2F == 9
+			z = (f1f(z))*((@pwr-@newp) * z^@pwr + @rlx) / \
+			(@pwr * Vzo^(@pwr-@newp))
+		elseif @Fn2F != 9
+			z = (f1f(z))*((@pwr-@newp) * z^@pwr + (f2f(z^rrlx)*@rlx)) / \
+			(@pwr * Vzo^(@pwr-@newp))
+		endif
+	endif
+
+	CompilerCatch = zo1+zo2+zo3+zo4+zo5
+	CompilerCatch = CompilerCatch*1
+
+bailout:
+  |z - Vzo| > @bail
+  
+default:
+
+	title = "Newton on Functions"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.5
+
+	param bail
+		caption = "Bailout"
+		default = 1.0E-5
+		hint = "In the standard formula, smaller values mean more iterations. \
+				This does not mean smaller is always better.  If the image \
+				disappears when you make a change...Start by raising the iterations \
+				just a bit.  Say to 1E-3.  Trial and error is your friend!"
+	endparam
+
+	param pwr
+		caption = "F(z) Power"
+		default = 4.0
+		hint = "Main function exponent"
+	endparam
+
+	param zov
+		caption = "Z-Old Options"
+		enum = "Use 'Z'" "1st Zold" "2nd Zold" "3rd Zold" "4th Zold" "5th Zold"
+		default = 0
+		hint = "Just another look.  1st Zold doesn't seem to make much change, \
+				but 2nd - 5th make big changes"
+	endparam
+
+	param newp
+		caption = "Power Offset"
+		default = 1.0
+		hint = "Modifies the Power Value where in the standard Newton formula \
+				contains '(p1 - 1)' this replaces the '1'.  Very surprising changes."
+	endparam
+
+	param rlx
+		caption = "Relaxation"
+		default = 1.0
+		hint = "Affects the convergence of the formula.  This formula allows \
+				for much larger changes in this value."
+	endparam
+
+	param Fn1F
+		caption = "Modify 'Z' "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 9
+	endparam
+
+	param Fn2F
+		caption = "Modify Relax "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "cotan" "cotanh" \
+				"ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 5
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Fractal_Wings {
+;
+; I was playing with an on-line Fractal Generator and came up with the basic formula used here.
+; I don't know if it conforms to any particular Fractal form but it is fun.  Very simple and 
+; iterates quickly.
+;
+; If you have any suggestions to make it better let me know.  Thank You.
+;
+; Written by Walter K. Cook, Completed 4 August 2013
+;
+init:
+
+	complex func f1f(const complex x)
+		if @Fn1F == 0
+			return sin(x)
+		elseif @Fn1F == 1
+			return sinh(x)
+		elseif @Fn1F == 2
+			return asin(x)
+		elseif @Fn1F == 3
+			return cos(x)
+		elseif @Fn1F == 4
+			return cosh(x)
+		elseif @Fn1F == 5
+			return tan(x)
+		elseif @Fn1F == 6
+			return tanh(x)
+		elseif @Fn1F == 7
+			return atan2(x)
+		elseif @Fn1F == 8
+			return cotan(x)
+		elseif @Fn1F == 9
+			return cotanh(x)
+		elseif @Fn1F == 10
+			return ident(x)
+		elseif @Fn1F == 11
+			return log(x)
+		elseif @Fn1F == 12
+			return exp(x)
+		elseif @Fn1F == 13
+			return abs(x)
+		elseif @Fn1F == 14
+			return cabs(x)
+		elseif @Fn1F == 15
+			return sqr(x)
+		elseif @Fn1F == 16
+			return sqrt(x)
+		elseif @Fn1F == 17
+			return recip(x)
+		elseif @Fn1F == 18
+			return flip(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	z = #pixel
+	zo1 = z
+	I = sqrt(-1)
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	A = @C/@P
+	B = @P - A
+
+	zo1 = z
+
+	z = (A*z) + B*( real(z)/(I*imag(z)) ) + (#pixel/(z-@C))
+
+bailout:
+	|z-zo1| >= @bail && |f1f(z/zo1)*z*zo1| <= @bail2
+  
+default:
+
+	title = "Fractal Wings"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.183333333,0.0)
+	angle = 270
+	magn = 0.3333333333333333333333
+
+	param bail
+		caption = "Low Bail"
+		default = 0.5E-16
+		hint = "Has more influence as an actual 'Bailout' value than 'High Bail'."
+	endparam
+
+	param bail2
+		caption = "High Bail"
+		default = 1.0E2
+		hint = "Though it affects the shape of the Fractal, especially with the \
+				'Modifier'.  the main function of this bail is to constrain the \
+				Fractal within a usable area.  The 'Modifier' DOES allow more \
+				shaping of the resulting Fractal."
+	endparam
+
+	param Fn1F
+		caption = "Modify 'High Bail' "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "atan2" "cotan" \
+				"cotanh" "ident" "log" "exp" "abs" "cabs" "sqr" "sqrt" "recip" "flip"
+		default = 10
+		hint = "Modifies the 'High Bail' conditions.  Changes size and shape of the \
+				outer boundary and the Fractal itself."
+	endparam
+
+	param P
+		caption = "P (non-Exponential)"
+		default = 3.0
+		hint = "Spread or Flatness"
+	endparam
+
+	param C
+		caption = "C"
+		default = 2
+		hint = "Magnitude - Acts similar to changing iterations."
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Bails_and_Functions_1 {
+;
+; I just can't leave them alone!  Here I take 3 of the more common Fractals, as well as on 
+; of my own making, and stretch and twist until I get the images I want.  I tried something 
+; a bit new (for me) and added function modification to the Bailout.  It is interesting and 
+; sometimes make big changes, while other times it is not noticeable.  It done correctly, I 
+; can see where this could make for a completely different way to iterate your Fractal.  I am
+; probably not the 1st to do this so if you have some suggestions, mail me in the UF Mailing 
+; List.
+;
+; If you have any suggestions for this formula or my programming in general.  Send me an email
+; in the UF Mailing List.  Thank You.
+;
+; Written by Walter K. Cook, Completed 10 August 2013
+;
+init:
+
+	complex func f1f(const complex x)
+		if @Fn1F == 0
+			return sin(x)
+		elseif @Fn1F == 1
+			return sinh(x)
+		elseif @Fn1F == 2
+			return asin(x)
+		elseif @Fn1F == 3
+			return cos(x)
+		elseif @Fn1F == 4
+			return cosh(x)
+		elseif @Fn1F == 5
+			return tan(x)
+		elseif @Fn1F == 6
+			return tanh(x)
+		elseif @Fn1F == 7
+			return atan2(x)
+		elseif @Fn1F == 8
+			return cotan(x)
+		elseif @Fn1F == 9
+			return cotanh(x)
+		elseif @Fn1F == 10
+			return ident(x)
+		elseif @Fn1F == 11
+			return log(x)
+		elseif @Fn1F == 12
+			return exp(x)
+		elseif @Fn1F == 13
+			return abs(x)
+		elseif @Fn1F == 14
+			return cabs(x)
+		elseif @Fn1F == 15
+			return sqr(x)
+		elseif @Fn1F == 16
+			return sqrt(x)
+		elseif @Fn1F == 17
+			return recip(x)
+		elseif @Fn1F == 18
+			return flip(x)
+		elseif @Fn1F == 19
+			return ceil(x)
+		elseif @Fn1F == 20
+			return floor(x)
+		elseif @Fn1F == 21
+			return trunc(x)
+		elseif @Fn1F == 22
+			return round(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	complex func f2f(const complex x)
+		if @Fn2F == 0
+			return sin(x)
+		elseif @Fn2F == 1
+			return sinh(x)
+		elseif @Fn2F == 2
+			return asin(x)
+		elseif @Fn2F == 3
+			return cos(x)
+		elseif @Fn2F == 4
+			return cosh(x)
+		elseif @Fn2F == 5
+			return tan(x)
+		elseif @Fn2F == 6
+			return tanh(x)
+		elseif @Fn2F == 7
+			return atan2(x)
+		elseif @Fn2F == 8
+			return cotan(x)
+		elseif @Fn2F == 9
+			return cotanh(x)
+		elseif @Fn2F == 10
+			return ident(x)
+		elseif @Fn2F == 11
+			return log(x)
+		elseif @Fn2F == 12
+			return exp(x)
+		elseif @Fn2F == 13
+			return abs(x)
+		elseif @Fn2F == 14
+			return cabs(x)
+		elseif @Fn2F == 15
+			return sqr(x)
+		elseif @Fn2F == 16
+			return sqrt(x)
+		elseif @Fn2F == 17
+			return recip(x)
+		elseif @Fn2F == 18
+			return flip(x)
+		elseif @Fn2F == 19
+			return ceil(x)
+		elseif @Fn2F == 20
+			return floor(x)
+		elseif @Fn2F == 21
+			return trunc(x)
+		elseif @Fn2F == 22
+			return round(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	complex func f3f(const complex x)
+		if @Fn3F == 0
+			return sin(x)
+		elseif @Fn3F == 1
+			return sinh(x)
+		elseif @Fn3F == 2
+			return asin(x)
+		elseif @Fn3F == 3
+			return cos(x)
+		elseif @Fn3F == 4
+			return cosh(x)
+		elseif @Fn3F == 5
+			return tan(x)
+		elseif @Fn3F == 6
+			return tanh(x)
+		elseif @Fn3F == 7
+			return atan2(x)
+		elseif @Fn3F == 8
+			return cotan(x)
+		elseif @Fn3F == 9
+			return cotanh(x)
+		elseif @Fn3F == 10
+			return ident(x)
+		elseif @Fn3F == 11
+			return log(x)
+		elseif @Fn3F == 12
+			return exp(x)
+		elseif @Fn3F == 13
+			return abs(x)
+		elseif @Fn3F == 14
+			return cabs(x)
+		elseif @Fn3F == 15
+			return sqr(x)
+		elseif @Fn3F == 16
+			return sqrt(x)
+		elseif @Fn3F == 17
+			return recip(x)
+		elseif @Fn3F == 18
+			return flip(x)
+		elseif @Fn3F == 19
+			return ceil(x)
+		elseif @Fn3F == 20
+			return floor(x)
+		elseif @Fn3F == 21
+			return trunc(x)
+		elseif @Fn3F == 22
+			return round(x)
+		else
+			return ident(x)
+		endif
+	endfunc
+
+	z = #pixel
+	zo1 = z
+	I = sqrt(-1)
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+;-----------Pre-Function Calculations-----------
+
+	zo_Lmag = abs(abs(real(zo1))-abs(I*imag(zo1)))
+	zo1 = z
+
+;-----------Mandelbrot-----------
+
+	if @B_Func == 0
+		if @Fn2F == 10
+			if @Fn3F == 10
+				z = z^@R1 + #pixel
+			elseif @Fn3F != 10
+				z = ( (z^@R1)/f3f(z) ) + #pixel
+			endif
+		elseif @Fn2F != 10
+			if @Fn3F == 10
+				z = f2f(z)*(z^@R1) + #pixel
+			elseif @Fn3F != 10
+				z = ( (f2f(z)*(z^@R1))/f3f(z) ) + #pixel
+			endif
+		endif
+
+;-----------Julia-----------
+
+	elseif @B_Func == 1
+		if @Fn2F == 10
+			if @Fn3F == 10
+				z = z^@R1 + @R2
+			elseif @Fn3F != 10
+				z = ( (z^@R1)/f3f(z) ) + @R2
+			endif
+		elseif @Fn2F != 10
+			if @Fn3F == 10
+				z = f2f(z)*(z^@R1) + @R2
+			elseif @Fn3F != 10
+				z = ( (f2f(z)*(z^@R1))/f3f(z) ) + @R2
+			endif
+		endif
+
+;-----------Newton-----------
+
+	elseif @B_Func == 2
+		if @Fn2F == 10
+			if @Fn3F == 10
+				z = ((@R1-1) * z^@R1 + @R2) / (@R1 * z^(@R1-1))
+			elseif @Fn3F != 10
+				z = ((@R1-1) * ((z^@R1)/f3f(z)) + @R2) / (@R1 * (z^(@R1-1))/f3f(z))
+			endif
+		elseif @Fn2F != 10
+			if @Fn3F == 10
+				z = ((@R1-1) * f2f(z) * z^@R1 + @R2) / (@R1 * f2f(z) * z^(@R1-1))
+			elseif @Fn3F != 10
+				z = ((((@R1-1) * f2f(z) * z^@R1)/f3f(z)) + @R2) / ((@R1 * f2f(z) * z^(@R1-1))/f3f(z))
+			endif
+		endif
+
+;-----------Z-Old Toy-----------
+
+	elseif @B_Func == 3
+		if @Fn2F == 10
+			if @Fn3F == 10
+				z = ((z+zo_Lmag)*(z-zo_Lmag)) + \
+				abs(abs(real(#pixel))-abs(I*imag(#pixel)))/zo_Lmag
+			elseif @Fn3F != 10
+				z = (((z+zo_Lmag)*(z-zo_Lmag))/f3f(zo1)) + \
+				abs(abs(real(#pixel))-abs(I*imag(#pixel)))/zo_Lmag
+			endif
+		elseif @Fn2F != 10
+			if @Fn3F == 10
+				z = f2f(zo1)*((z+zo_Lmag)*(z-zo_Lmag)) + \
+				abs(abs(real(#pixel))-abs(I*imag(#pixel)))/zo_Lmag
+			elseif @Fn3F != 10
+				z = f2f(zo1)*(((z+zo_Lmag)*(z-zo_Lmag))/f3f(zo1)) + \
+				abs(abs(real(#pixel))-abs(I*imag(#pixel)))/zo_Lmag
+			endif
+		endif
+
+;-----------Z-Old Newt-----------
+
+	elseif @B_Func == 4
+		if @Fn2F == 10
+			if @Fn3F == 10
+				z = ((@R1-1) * zo1^@R1 + (@R2+(cabs(zo1)/cabs(z)))) / \
+				(@R1 * zo1^(@R1-1))
+			elseif @Fn3F != 10
+				z = ((@R1-1) * ((zo1^@R1)/f3f(z)) + (@R2+(cabs(zo1)/cabs(z)))) / \
+				(@R1 * (zo1^(@R1-1))/f3f(z))
+			endif
+		elseif @Fn2F != 10
+			if @Fn3F == 10
+				z = ((@R1-1) * f2f(z) * zo1^@R1 + (@R2+(cabs(zo1)/cabs(z)))) / \
+				(@R1 * f2f(z) * zo1^(@R1-1))
+			elseif @Fn3F != 10
+				z = ((((@R1-1) * f2f(z) * zo1^@R1)/f3f(z)) + (@R2+(cabs(zo1)/cabs(z)))) / \
+				((@R1 * f2f(z) * zo1^(@R1-1))/f3f(z))
+			endif
+		endif
+	endif
+;-----------Bailout Calculations-----------
+
+	if @Fn1F == 10
+		hb2f = z
+		lb1f = 1
+	else
+		if real(zo_Lmag) <= 0
+			lb1f = f1f(zo_Lmag)*zo_Lmag
+			hb2f = (f1f(z)*z)/zo_Lmag
+		else
+			lb1f = f1f(zo_Lmag)/zo_Lmag
+			hb2f = (f1f(z)*z)*zo_Lmag
+		endif
+	endif	
+
+bailout:
+	|(z-zo1)*lb1f| >= @bail && |hb2f| <= @bail2
+  
+default:
+
+	title = "Bailouts & Functions"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (-0.5,0.0)
+	angle = 0
+	magn = 0.5
+
+	param B_Func
+		caption = "Choose Base Function "
+		enum = "Mandelbrot" "Julia" "Newton" "Z-Old Toy" "Z-Old Newt"
+		default = 0
+	endparam
+		
+	param R1
+		caption = "Function Power "
+		default = 2.0
+		hint = "Main Function Power"
+		visible = @B_Func != 3
+	endparam
+
+	param R2
+		caption = "'C' Value "
+		default = 1.111111
+		hint = "Used for the 'Root' value in the 'Newton' and the 'Seed' \
+				in the 'Julia'."
+		visible =  @B_Func != 0 && @B_Func != 3
+	endparam
+
+	param Fn1F
+		caption = "Modify 'High Bail' "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "atan2" \
+				"cotan" "cotanh" "ident" "log" "exp" "abs" "cabs" "sqr" \
+				"sqrt" "recip" "flip" "ceil" "floor" "trunc" "round"
+		default = 10
+		hint = "Modifies the 'High Bail' conditions.  Changes size and shape of the \
+				outer boundary and the Fractal itself."
+	endparam
+
+	param Fn2F
+		caption = "Fractal Mod-1 "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "atan2" \
+				"cotan" "cotanh" "ident" "log" "exp" "abs" "cabs" "sqr" \
+				"sqrt" "recip" "flip" "ceil" "floor" "trunc" "round"
+		default = 10
+		hint = "Function applied to 'Z' and then used as a 'Multiplier' to the Fractal"
+	endparam
+
+	param Fn3F
+		caption = "Fractal Mod-2 "
+		enum =	"sin" "sinh" "asin" "cos" "cosh" "tan" "tanh" "atan2" \
+				"cotan" "cotanh" "ident" "log" "exp" "abs" "cabs" "sqr" \
+				"sqrt" "recip" "flip" "ceil" "floor" "trunc" "round"
+		default = 10
+		hint = "Function applied to 'Z' and then used as a 'Divisor' to the Fractal"
+	endparam
+
+	param bail
+		caption = "Low Bail"
+		default = 1.0E-5
+		hint = "Set negative exponent VERY high when a lower High Bail is used."
+	endparam
+
+	param bail2
+		caption = "High Bail"
+		default = 5.0E2
+		hint = "Though it affects the shape of the Fractal, especially with the \
+				'Modifier'.  the main function of this bail is to constrain the \
+				Fractal.  The 'Modifier' DOES allow more shaping of the Fractal."
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Julia_X_Newton {
+;
+; One more what-if type Fractal.  I used the standard Julia and Newton Formulae.  I equate 
+; the "Seed" & "Root" values to make calculating easier.  I then just algebraically multiply 
+; the functions.  Assuming I did my multiplication correctly, I came up with this formula: 
+; 
+;		z = ( (P-1)*z^(2*P) + Root*(z^P + (P-1)*z^P + Root) ) / (P*z^(P-1))
+; 
+; "P" is the function Power.  I use the Newton style Bailout.  Very interesting Fractals. 
+; 
+; As always...It is about enjoyment.  I did not sit and calculate some reason for this. 
+; There is no special "theory" here...Just an idea that popped in my head while I was at 
+; work.  I hope you find something special in this.  Keep Fractaling!
+;
+; Written by Walter K. Cook, Completed 12 August 2013
+;
+init:
+
+	z = #pixel
+	zo1 = z
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zo1 = z
+
+	z = ( (@pwr-1)*z^(2*@pwr) + @R*(z^@pwr + (@pwr-1)*z^@pwr + @R) ) / (@pwr*z^(@pwr-1))
+
+bailout:
+	|z-zo1| >= @bail
+  
+default:
+
+	title = "Julia -X- Newton"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	angle = 90
+	magn = 0.75
+
+	param pwr
+		caption = "Function Power "
+		default = 3.0
+		hint = "Main Function Power"
+	endparam
+
+	param R
+		caption = "Seed"
+		default = (0.56667,0.0)
+	endparam
+
+	param bail
+		caption = "Newton Style Bailout "
+		default = 1.0E-5
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Bails_and_Functions_2 {
+;
+; This version of Bailouts & Functions uses just the Newton Fractal formula.  But that is  
+; small limitation.  Often the functions on the bailout do not appear to make much 
+; difference.  But apply a function to the function power and all that changes.  This is 
+; just another way to modify a Fractal and find interesting 'formations' to work with.
+; 
+; Have fun and keep Fractaling!
+;
+; If you have any suggestions for this formula or my programming in general.  Send me an email
+; in the UF Mailing List.  Thank You.
+;
+; Written by Walter K. Cook, Completed 15 August 2013
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+init:
+
+	z = #pixel
+	zo1 = z
+	PW = @pwr
+	RUT = @R
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+;--------------------------------Pre-Function Calculations-------------------------------
+
+	if @u_pf == 0
+		PW = @f1(z)*@pwr
+		RUT = @R/@f1(z)
+	else
+		PW = @pwr
+		RUT = @R
+	endif
+	
+;----------------------------------Function Calculations---------------------------------
+
+	zo1 = z
+
+	z = ((PW-1) * z^PW + RUT) / (PW * z^(PW-1))
+
+;----------------------------------Bailout Calculations----------------------------------
+
+	if @u_bf == 0
+		if @f2(z) == 0
+			B_Low = (abs(@f2(zo1))*(z-zo1))+(1E-15)
+			B_Upr = (@f2(zo1)*z)+(2.5E1)
+		else
+			B_Low = (abs(@f2(z)))*(z-zo1)
+			B_Upr = abs(@f2(z))*z
+		endif
+	else
+		B_Low = z-zo1
+		B_Upr = z
+	endif
+	
+bailout:
+	|B_Low| >= @low_bail && |B_Upr| <= @high_bail
+  
+default:
+
+	title = "Bails & Functions v2"
+	maxiter = 250
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	angle = 0
+	magn = 0.25
+
+	param u_pf
+		caption = "Use Power Functions? "
+		enum = " Yes " " No "
+		default = 1
+	endparam
+
+	param u_bf
+		caption = "Use Bailout Functions? "
+		enum = " Yes " " No "
+		default = 1
+	endparam
+
+	func f1
+		caption = "Power Function "
+		default = sin()
+		visible = @u_pf == 0
+	endfunc
+		
+	func f2
+		caption = "Bailout Function "
+		default = sin()
+		visible = @u_bf == 0
+	endfunc
+
+	param pwr
+		caption = "Main Function Power "
+		default = (3.0,0.0)
+	endparam
+
+	param R
+		caption = "Newton 'Root' "
+		default = (1.0,0.0)
+		hint = "Specifies the root of the equation that is solved. \
+				Use larger numbers for slower convergence."
+	endparam
+
+	param low_bail
+		caption = "Low Bail "
+		default = 1.0E-5
+		hint = "Set negative exponent VERY high when a lower High Bail is used."
+	endparam
+
+	param high_bail
+		caption = "High Bail "
+		default = 5.0E25
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Fractal_Machine {
+;
+; THIS...Was a happy accident.  I was playing with functions and also using real & imaginary 
+; values as means of creating Fractals.  I started with just the basic Mandelbrot Fractal 
+; and modified the formula as follows:
+;
+;	z = X^PWR + # pixel ---  where X = ( f1(real(z))*real(z) + flip(f2(imag(z)*imag(z))) )
+;
+; f1 & f2 are any of the functions available in UF.
+;
+; It looked just 'OK' until I got to f1 = f2 = tan()...Then it got INTERESTING.  At least to me.
+;
+; So I made tan() the default so it would be the 1st form you saw.  I also added additional
+; functions...Replacing 'z' with 'X' in each.  I still think the Mandelbrot is best. But the other 
+; combinations are interesting.  And of course, I haven't tried EVERY combination of the functions!.
+;
+; After I was finished I renamed it Fractal Machine.  Mostly because of the interesting way it 
+; subdivides the entire Fractal into separate 'sub-Fractals' for lack of a better term.
+;
+; The alternating tan() functions subdivide the Fractal into grids (You may have to raise High-Bail
+; to see this in some cases).  Each 'grid' contains a separate Fractal all its own!  With defaults 
+; there is a small, but nearly perfect, Mandelbrot in the grid at the lower left corner of the
+; center grid.  Each subsequent grid in that direction is also a Mandelbrot.
+; You will have to see it for a better explanation.
+;
+; I am sure there is a mathematician out there that can explain this phenomenon...I just think it 
+; is really NEAT.
+;
+; Written by Walter K. Cook, Completed 18 August 2013
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+init:
+
+	z = #pixel
+	P = @pwr
+	X = z
+	zo1 = (0.0,0.0)
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+;--------------------------------Modified--------------------------------
+
+	if @use_F == 0
+		rz = real(z)
+		iz = imag(z)
+		rz = @f1(rz)*rz
+		
+		if @syn_F == 0
+			iz = @f1(iz)*iz
+		elseif @syn_F == 1
+			iz = @f2(iz)*iz
+		endif
+
+		X = (rz + flip(iz))
+
+		zo1 = z
+
+		if @Form == 0
+			z = X^P + #pixel
+		elseif @Form == 1
+			z = #pixel*X*(1-X)^(P-1)
+		elseif @Form == 2
+			z = X^P + @seed
+		elseif @Form == 3
+			z = @seed*X*(1-X)^(P-1)
+		elseif @Form == 4
+			z = X - @R * (X^P-1) / (P * X^(P-1)) + @seed
+		elseif @Form == 5
+			z = X - @R * (X^P-1) / (P * X^(P-1)) + #pixel
+		elseif @Form == 6
+			z = ((P-1) * X^P + @R) / (P * X^(P-1))
+		endif
+
+;-------------------------------Unmodified-------------------------------
+
+	elseif @use_F == 1
+
+		zo1 = z
+
+		if @Form == 0
+			z = z^P + #pixel
+		elseif @Form == 1
+			z = #pixel*z*(1-z)^(P-1)
+		elseif @Form == 2
+			z = z^P + @seed
+		elseif @Form == 3
+			z = @seed*z*(1-z)^(P-1)
+		elseif @Form == 4
+			z = z - @R * (z^P-1) / (P * z^(P-1)) + @seed
+		elseif @Form == 5
+			z = z - @R * (z^P-1) / (P * z^(P-1)) + #pixel
+		elseif @Form == 6
+			z = ((P-1) * z^P + @R) / (P * z^(P-1))
+		endif
+	endif
+
+bailout:
+	|z - zo1| >= @bail && ((|z|+|zo1|)/2) <= @bail2
+
+default:
+	title = "Fractal Machine "
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.25
+
+	param Form
+		caption = "Base Formula "
+		enum =  "Mandelbrot" "LambdaMandelbrot" "Julia" \
+				"LambdaJulia" "NovaJulia" "NovaMandel" "Newton" 
+		default = 0
+	endparam
+
+	param use_F
+		caption = "Use Modified 'Z' ? "
+		enum = "Yes" "No"
+		default = 0
+	endparam
+
+	param syn_F
+		caption = "Synchronize Functions ? "
+		enum = "Yes" "No"
+		default = 0
+		visible = @use_F == 0
+	endparam
+
+	param pwr
+		caption = "Power "
+		default = 2.0
+		hint = "Main function exponent"
+	endparam
+
+	param seed
+		caption = "Seed "
+		default = -1.25
+		visible = @Form > 1 && @Form < 5
+		hint = "Seed for Julia related Fractals"
+	endparam
+
+	param R
+		caption = "Root/Relax "
+		default = 1.0
+		visible = @Form > 3
+		hint = "Newton Root or \
+				Relax for NovaJulia and NovaMandelbrot"
+	endparam
+
+	func f1
+		caption = "Real(z) Modifier "
+		default = tan()
+		visible = @use_F == 0
+	endfunc
+		
+	func f2
+		caption = "Imag(z) Modifier "
+		default = tan()
+		visible = @use_F == 0 && @syn_F == 1
+	endfunc
+
+	param bail
+		caption = "Low Bailout "
+		default = 0.0E-16
+		hint =	"For 'Non-Newton/Nova Fractals' you 'MAY' want to \
+				leave this at 0.0E-16 to remove what appears to be \
+				inside coloring for these Fractals. Leaving this in \
+				Exponential form saves typing when changing formula."
+	endparam
+
+	param bail2
+		caption = "High Bailout "
+		default = 1.0E10
+		hint =	"If appears to need changing start w/ 1.0E1 and then \
+				try  1.0E25.  This will give you an idea which direction \
+				to go.  Not unusual to have to go VERY high on some \
+				combinations."
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+Functions_of_Talis {
+;
+; One of the folks on the UF Mailing List asked if anyone had any experience with the 
+; Talis Fractal...I had never used it so I gave it a try.  Pretty cool.  You can get a LOT 
+; of variation with very small changes in parameters.  Of course I couldn't leave well 
+; enough alone and so tweaked it a bit.
+;
+; Written by Walter K. Cook, Completed 26 August 2013, Modified (Notes only) 2 September 2013
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+init:
+	z = (0,0)
+	zo1 = sqrt(#pixel)
+	c = #pixel
+	pwr = @pwr
+	cMod = @cMod
+	c_D = c_N = sin(#pixel)
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+	zo1 = z
+
+;-------------------------------Unmodified-------------------------------
+	if @use_F == 1
+		z = z^pwr + c
+		c = c^pwr/(pwr*c^(pwr-1) + cMod) + z
+
+;----------------------------Functions Defined---------------------------
+	elseif @use_F == 0
+		if @syn_F == 0
+			c_D = c_N = @f3(c)
+		elseif @syn_F == 1
+			c_N = @f1(c)
+			c_D = @f2(c)
+		endif
+
+;--------------------------------Modified--------------------------------
+		z = z^pwr + c
+		c = c_N*c^pwr/(c_D*pwr*c^(pwr-1) + cMod) + z
+	endif
+
+;--------------------------Bailout Calculations--------------------------
+
+	if |z-c| >= |z-zo1| && |z-c| >= |c-zo1|
+		if |z-zo1| >= |c-zo1|
+			LBC = |c-zo1|
+		else
+			LBC = |z-zo1|
+		endif
+	elseif |z-zo1| >= |c-zo1|
+		if |z-c| >= |c-zo1|
+			LBC = |c-zo1|
+		else
+			LBC = |z-c|
+		endif
+	else
+		if |z-c| >= |z-zo1|
+			LBC = |z-zo1|
+		else
+			LBC = |z-c|
+		endif
+	endif
+
+;-------------------------------Bailout(s)-------------------------------
+
+bailout:
+|LBC| >= @bail && |z| < @bail2
+
+default:
+	title = "Functions of TALIS"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (-1.0,0.0)
+	magn = 0.5
+
+	param pwr
+		caption = "Power "
+		default = 2.0
+		hint = "Main function exponent"
+	endparam
+
+	param cMod
+		caption = "'C' Modifier "
+		default = (1.0,0.0)
+		hint = "TBD"
+	endparam
+
+	param use_F
+		caption = "Use f(C)*C ? "
+		enum = "Yes" "No"
+		default = 1
+	endparam
+
+	param syn_F
+		caption = "Synchronize Functions ? "
+		enum = "Yes" "No"
+		default = 0
+		visible = @use_F == 0
+	endparam
+
+	func f1
+		caption = "f(C)*C (Numerator) "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 1
+	endfunc
+		
+	func f2
+		caption = "f(C)*C (Denominator) "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 1
+	endfunc
+
+	func f3
+		caption = "f(C)*C "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 0
+	endfunc
+
+	param bail
+		caption = "Low Bailout "
+		default = 0.0E-16
+		hint =	"TBD"
+	endparam
+
+	param bail2
+		caption = "High Bailout "
+		default = 1.0E5
+		hint =	"TBD"
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+M_n_J_Mix_n_Match {
+;
+; I started out with one idea and ended up with something else entirely.  Nothing real 
+; unique here but fun nonetheless.  When 'merging' multiple function I often choose the 
+; Mandelbrot and Julia sets because they are so similar to begin with.  This formula just 
+; gives a variety of ways to merge the 2.  Enjoy, and Happy Fractaling.
+;
+; Written by Walter K. Cook, Completed 2 September 2013
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+init:
+
+	z = fz1 = fz2 = #pixel
+	zo1 = z^2
+	XY = z^@pwr
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zo2 = z
+
+	if @f_F1 == 0
+		fz1 = z^@pwr + #pixel
+		fz2 = z^@pwr + @seed
+		zo1 = (z^@pwr+(#pixel/@seed))
+	elseif @f_F1 == 1
+		fz1 = z^@pwr + @seed
+		fz2 = z^@pwr + #pixel
+		zo1 = (z^@pwr+(@seed/#pixel))
+	endif
+
+	if @f_F2 == 0
+		XY = fz1/fz2
+	elseif @f_F2 == 1
+		XY = z-(fz1/fz2)
+	elseif @f_F2 == 2
+		XY = sqr(fz1)/sqrt(fz2)
+	elseif @f_F2 == 3
+		XY = (fz1+fz2)/@pwr
+	elseif @f_F2 == 4
+		XY = (fz1+1)/(fz2-1)
+	elseif @f_F2 == 5
+		XY = (fz1+fz2)/|z|
+	elseif @f_F2 == 6
+		XY = (z^@pwr+fz1)/(@pwr*fz2)
+	elseif @f_F2 == 7
+		XY = (z+(fz1*fz2))^(1/(@pwr-1))
+	elseif @f_F2 == 8
+		XY = (fz1*fz2)/(@seed*#pixel)
+	elseif @f_F2 == 9
+		XY = (fz1+fz2)/abs(fz2-fz1)
+	endif
+	
+;-------------------------------Unmodified-------------------------------
+	if @use_F == 1
+		z = XY
+
+;--------------------------------Modified--------------------------------
+	elseif @use_F == 0
+		if @syn_F == 0
+			z = (@f3(fz1)/@f3(fz2))*XY
+		elseif @syn_F == 1
+			z = (@f1(fz1)/@f1(fz2))*XY
+		endif
+	endif
+	
+bailout:
+	|((zo1+z)/2)| <= @bail1  && |z-zo2| >= @bail2
+
+default:
+	title = "Mandy-Julia Mix-n-Match"
+	maxiter = 100
+	periodicity = 0
+	method = multipass
+	center = (-0.25,0.0)
+	magn = 0.4
+	angle = 0
+
+	param pwr
+		caption = "Initial Power "
+		default = 2.0
+	endparam
+
+	param seed
+		caption = "Julia Seed "
+		default = -1.25
+	endparam
+
+	param f_F1
+		caption = "Func Order 'fz1-fz2': "
+		enum =	"Mandelbrot-Julia" "Julia-Mandelbrot"
+		default = 0
+	endparam
+
+	param f_F2
+		caption = "Re_Calc Type: "
+		enum =	"f1/f2" "z-(f1/f2)" "sqr(f1)/sqrt(f2)" \
+				"(f1+f2)/P" "(f1+1)/(f2-1)" "(f1+f2)/|z|" \
+				"(z^P+f1)/(P*f2)" "(z+(f1*f2))^(1/(P-1))" \
+				"(f1*f2)/(seed*pixel)" "(f1+f2)/abs(f2-f1)"
+		default = 0
+	endparam
+
+	param use_F
+		caption = "Use Functions ? "
+		enum = "Yes" "No"
+		default = 1
+	endparam
+
+	param syn_F
+		caption = "Synchronize Functions ? "
+		enum = "Yes" "No"
+		default = 0
+		visible = @use_F == 0
+	endparam
+
+	func f1
+		caption = "f(Mand)*Mand "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 1
+	endfunc
+		
+	func f2
+		caption = "f(Julia)*Julia "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 1
+	endfunc
+
+	func f3
+		caption = "f(M)*M/f(J)*J "
+		default = sin()
+		visible = @use_F == 0 && @syn_F == 0
+	endfunc
+
+	param bail1
+		caption = "High Bail "
+		default = 1.0E2
+	endparam
+
+	param bail2
+		caption = "Low Bail "
+		default = 0.0E-2
+	endparam
+
+}
+
+------------------------------------------------------------------------
+
+KC_Randelbrot {
+;
+; I have not been able to get a clear history on the Randelbrot.  Probably because it 
+; is just a "Randomized Mandelbrot".  Formula is:
+; 
+; 		z = z^power + #pixel + R	(Where R is a random number between -0.5 and 0.5)
+;
+; I calculate the R using the #random symbol and sin() function.  Nothing fancy here.
+; I actually just wanted an easy function to test using 'switch' mode.  Just have never 
+; used it.  But...This Fractal should have some value for shading, noise, texture, etc.
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 6 September 2013
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+
+init:
+
+	z = #pixel
+
+	pwr = @pwr
+	noiseZ = ((#random-(0.5))/@noise)*sin(atan2(z))
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	z = z^pwr + #pixel + noiseZ
+	noiseZ = ((#random-(0.5))/@noise)*sin(atan2(z))
+	
+bailout:
+	|z| < @bail1
+
+default:
+	title = "KC Randelbrot"
+	maxiter = 100
+	periodicity = 0
+	method = multipass
+	center = (-0.5,0.0)
+	magn = 0.75
+	angle = 0
+
+	param pwr
+		caption = "Initial Power "
+		default = 2.0
+	endparam
+
+	param noise
+		caption = "Smaller is Noisier "
+		default = 15.0
+		min = 0.1
+	endparam
+
+	param bail1
+		caption = "Bailout "
+		default = 1.0E2
+	endparam
+
+switch:
+	type = "Rulia"
+	seed = #pixel
+	pwr = @pwr
+	bail1 = @bail1
+	noise = @noise
+
+}
+
+------------------------------------------------------------------------
+
+Rulia {
+;
+; I was playing with the Randelbrot and wanted to use switch.  Julia seemed easiest... 
+; So I invented the Rulia.  Formula is:
+; 
+; 		z = z^power + seed^(1+R)	(Where R is a random number between -0.5 and 0.5)
+;
+; I calculate the R using the #random symbol and sin() function.  Nothing fancy here.
+; And now I understand "Switch Mode" a bit more.
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 6 September 2013
+; Modified 9 September 2013, only minor change to fix "Switch" problem.
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+
+init:
+
+	z = #pixel
+
+	pwr = @pwr
+	noiseZ = ((#random-(0.5))/@noise)*sin(atan2(z))
+	seed = @seed
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	z = z^pwr + seed^(1+noiseZ)
+	noiseZ = ((#random-(0.5))/@noise)*sin(atan2(z))
+	
+bailout:
+	|z| < @bail1
+
+default:
+	title = "Rulia"
+	maxiter = 100
+	periodicity = 0
+	method = multipass
+	center = (-0.5,0.0)
+	magn = 0.75
+	angle = 0
+
+	param pwr
+		caption = "Initial Power "
+		default = 2.0
+	endparam
+
+	param seed
+		caption = "Seed "
+		default = (0.56667,0)
+	endparam
+
+	param noise
+		caption = "Smaller is Noisier "
+		default = 15.0
+		min = 0.1
+	endparam
+
+	param bail1
+		caption = "Bailout "
+		default = 1.0E2
+	endparam
+
+switch:
+	type = "KC_Randelbrot"
+	pwr = pwr
+	bail1 = @bail1
+	noise = @noise
+
+}
+
+;------------------------------------------------------------------------
+
+Re-Constructed_v1{
+;
+; There are a number of formulas where the real and imaginary parts of 'Z' are 'pre-modified'...
+; This is just another.  My approach to writing formulas is not to discover new math but to 
+; discover new, interesting fractal-features and designs.  So I test and tweak until I get 
+; something interesting.  I 'attempt' to set the defaults so you see at least one of these. 
+; Most of these look best without using the functions in the formula...But there are exceptions.
+;
+; This formula has variations of Mandelbrot, Julia, Lambda-Julia, and some combinations of these.  
+; I will attempt to post some of the images I mind more interesting and will share in the mailing 
+; list as well.
+;
+; The best advice I can give is to just start poking around...You will know when you are close 
+; to something worth using.
+;
+; Please post questions and advice (can always use advice/help!) on the UF Mailing List.
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 7 January 2014
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+
+init:
+
+	z = #pixel
+	zn1=z, f1z=z, f2z=z, f2z=z, c=z				; Functions to modify real & imag 'z'
+
+	float fm1 = @fm1, float fm2 = @fm2			; Multipliers to modify real & imag 'z'
+
+	float func logBf(complex x, float b)		; Calculates Log-Base-B-of-X
+		float logBaseB = 0.0
+		
+		if b == 1
+			logBaseB = 1E-5
+		else
+			logBaseB = real(log(x)/log(b))
+		endif
+		
+		return logBaseB
+	endfunc
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	rmZ = real(z)^fm1/(fm1*real(z)^(fm1-1))
+	imZ = imag(z)^fm2/(fm2*imag(z)^(fm2-1))
+	
+	if @useF == 0
+
+		rmZ = rmZ
+		imZ = imZ
+
+	elseif @useF == 1
+
+		if @Synch == 0
+
+			rmZ = rmZ*fn3(logBf(rmZ,@sZ))
+			imZ = imZ*fn3(logBf(imZ,@sZ))
+
+		elseif @Synch == 1
+
+			rmZ = rmZ*fn1(logBf(rmZ,@sZ))
+			imZ = imZ*fn2(logBf(imZ,@sZ))
+
+		endif
+	endif
+
+	rZ = rmZ
+	iZ = imZ
+	zn1 = (rZ + flip(iZ))^((1+@pwr)/@pwr)
+
+	if @fracT == 0
+		z = zn1^@pwr + #pixel
+	elseif @fracT == 1
+		z = zn1^@pwr + @seed
+	elseif @fracT == 2
+		z = @seed*zn1*(2-zn1)^(2*@pwr-1)
+	elseif @fracT == 3
+		f1z = zn1^@pwr + #pixel
+		f2z = zn1^@pwr + @seed
+		f3z = @seed*zn1*(2-zn1)^(2*@pwr-1)
+		z = (@A*f1z+@B*f2z+@C*f3z + #pixel)/((@A+@B+@C-1)*@pwr)
+	elseif @fracT == 4
+		z = zn1^@pwr + c + @seed
+		c = |#pixel| + c - sqr(iZ)
+	endif
+
+bailout:
+	|z^(1/3)| <= @bail1 && |(|z|-|zn1|)| >= @bail2
+
+default:
+	title = "Re-Constructed v1"
+	maxiter = 100
+	method = multipass
+	periodicity = 0
+	center = (-0.0,0.0)
+	magn = 0.8
+
+	param fm1
+		caption = "Real-Z Modifier"
+		default = 1.2
+		hint = "TBD"
+	endparam
+
+	param fm2
+		caption = "Imag-Z Modifier"
+		default = 0.9
+		hint = "TBD"
+	endparam
+
+	param fracT
+		caption = "Base Fractal"
+		enum = "Mandelbrot" "Julia" "Lambda-Julia" "Multiple" "Bonus-Round"
+		default = 1
+	endparam
+
+	param pwr
+		caption = "Power"
+		default = 1.0
+		hint = "Main Formula Exponent"
+	endparam
+
+	param A
+		caption = "Weight-Mandelbrot"
+		default = 1.0
+		hint = "Weighting for Formula 1"
+		visible = @fracT == 3
+	endparam
+
+	param B
+		caption = "Weight-Julia"
+		default = 1.0
+		hint = "Weighting for Formula 2"
+		visible = @fracT == 3
+	endparam
+
+	param C
+		caption = "Weight-L-Julia"
+		default = 1.0
+		hint = "Weighting for Formula 3"
+		visible = @fracT == 3
+	endparam
+
+	param seed
+		caption = "Julia-Like Seed: "
+		default = 0.4111
+		hint = "Julia-Like Seed"
+		visible = @fracT > 0
+	endparam
+
+	param useF
+		caption = "Use Functions? "
+		enum = "No" "Yes"
+		default = 0
+	endparam
+
+	param Synch
+		caption = "Sync Functions? "
+		enum = "Yes: " "No: "
+		default = 0
+		visible = @useF == 1
+	endparam
+
+	param sZ
+		caption = "Smoothing Factor"
+		default = 1.6
+		hint =	"2BD"
+		visible = @useF == 1
+	endparam
+
+	func fn1
+		caption = "F()*Real-Z Mod"
+		default = sin()
+		hint = "TBD"
+		visible = @Synch == 1 && @useF == 1
+	endfunc
+
+	func fn2
+		caption = "F()*Imag-Z Mod"
+		default = sin()
+		hint = "TBD"
+		visible = @Synch == 1 && @useF == 1
+	endfunc
+
+	func fn3
+		caption = "Z-Mod Function"
+		default = sin()
+		hint = "TBD"
+		visible = @Synch == 0 && @useF == 1
+	endfunc
+
+	param bail1
+		caption = "Z-Bail"
+		default = 1.0E5
+		hint =	"TBD"
+	endparam
+
+	param bail2
+		caption = "Newton-Style Bail"
+		default = 1.0E-16
+		hint =	"TBD"
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Using_Factors {
+;
+; Dry-spell over.  I have worked on several formulas but eventually just find myself looking at fractals
+; that...Just look too familiar.  Why make a new formula for the same results?  Here I use Julia & Mandelbrot
+; style equations, but not in a 'standard' way.  I use functions to determine factor properties of a selected 
+; value (i.e. Is 'x' a prime factor of 'y').  I allow user input for both values.
+;
+; Formulas:		Z^P + (C-seed)/seed			&		Z^P + (C-pixel)/pixel
+;
+; 'C' is a user selectable modifier.  Output is additionally varied based on the following:
+;
+;	--	Factorization of other user selectable values
+;	--	'Nearness' to factor-ability (Made-up word ;) )
+;	--	Determination of 'Prime' values using the Euler Primality Test
+;
+; Each time the evaluated value meets conditions a switch is flipped to vary 'C' or 'P'
+;
+; Very simple formula really but provides a LOT of variation and some interesting structure and texture.
+; Please check my math!  If you have questions or suggestions please contact me via the UF Mailing List.
+; Also, when checking these out...Be patient!  There ARE beauties to be found, it just takes time.
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 20 January 2014
+; Corrections to Primality Test function made on 7 February 2014
+; Corrections to my "Factors of X" function made on 2 March 2014
+; I found errors in my function an felt it should be corrected.  I apologize for any inconvenience
+; this may cause to people that may have Fractals already created.  If needed I can make  the other
+; version optional...But this function does make 'correct' calculations.
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+
+init:
+
+;-------------------------------- Initializations -------------------------------
+
+	z = #pixel, int n = 1
+
+	float pixMod = 1.0, float FactVal = |z|
+	float rZ = real(z), float iZ = imag(z)
+	float iZS = sqr(iZ), float rZS = sqr(rZ)
+
+;---------------------------- Function: Factors of X ----------------------------
+;------------- Checks 'y' is within p% of being exact factor of 'x' -------------
+
+	bool func isFact(float x, float y, float p)
+		bool result
+		float x = abs(x)
+		float y = abs(y)
+		float v1 = x/y							; Actual of x/y
+		float v2 = trunc(v1)					; Whole # part of x/y
+		float v3 = (v1-v2)*y					; Division remainder
+		float pct = 100*ABS((y/2)-v3)/(y/2)		; % Closeness to exactness
+
+		if pct <= p
+			result = true
+		else
+			result = false
+		endif
+		return result
+	endfunc
+
+;------------------------ Function: Euler Primality Test ------------------------
+
+	bool func isprime(float n, int k)			;Probability of failure = 2^(-k)
+		bool result = false, int x = trunc(abs(n)), int k1 = 0
+		int rSeed = random(x-1), int sS = trunc(real(rSeed/(abs(rSeed))))
+		rSeed = rSeed*sS, int s = x-1, int sT = trunc(((rSeed%(x-2))^(s/2))%x)
+		
+		if x==2 || x==3 || x==5 || x==7
+			result = true
+			return result
+		elseif x<2
+			result = false
+			return result
+		else
+			repeat
+				rSeed = random(rSeed)
+				rSeed = rSeed*sS
+				sT = trunc((2+(rSeed%(x-4))^(s/2))%x)
+				
+				if (sqr(sT) == 1) || (sT == s)
+				else
+					result = false
+					return result
+				endif
+				
+				k1 = k1+1
+			until k1 == k
+		endif
+		result = true
+		return result
+	endfunc
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	rZ = real(z), iZ = imag(z)
+	iZS = sqr(iZ), rZS = sqr(rZ)
+
+	if @tChk == 0
+		FactVal = cabs(z)
+	elseif @tChk == 1
+		FactVal = |z|^#e
+	elseif @tChk == 2
+		FactVal = rZ^6
+	elseif @tChk == 3
+		FactVal = iZ^6
+	elseif @tChk == 4
+		FactVal = #e^(|z|)
+	elseif @tChk == 5
+		FactVal = |z|+rZS+iZS
+	elseif @tChk == 6
+		FactVal = cabs(z)^(sqr(iZS))
+	elseif @tChk == 7
+		FactVal = |z*#pixel|^(iZS*rZS)
+	elseif @tChk == 8
+		FactVal = iZS^(iZS/cotan(|z|))
+	endif
+
+	if @pixM == 0
+		pixMod = (rZS-iZS)^@pwr
+	elseif @pixM == 1
+		pixMod = abs(rZS-iZS)
+	elseif @pixM == 2
+		pixMod = rZ^(iZS)
+	elseif @pixM == 3
+		pixMod = (iZS*rZS)^(1/@pwr)
+	elseif @pixM == 4
+		pixMod = rZS
+	elseif @pixM == 5
+		pixMod = iZS
+	elseif @pixM == 6
+		pixMod = (|#pixel|)^rZS
+	elseif @pixM == 7
+		pixMod = (|#pixel|)^iZS
+	elseif @pixM == 8
+		pixMod = sqrt(|#pixel|)
+	endif
+
+	if @tPara == 0
+		if isprime(FactVal,@k), n = -1*n, endif
+	elseif @tPara == 1
+		if isFact(FactVal, @fact, @near), n = -1*n, endif
+	endif
+
+	zo1 = z
+
+	if @BuAct == 0
+		if @cType == 0
+			z = z^@pwr + n*(pixMod-@pwr*@seed)/(@pwr*@seed)
+		elseif @cType == 1
+			z = z^@pwr + n*(pixMod-@pwr*#pixel)/(@pwr*#pixel)
+		endif
+	elseif @BuAct == 1
+		if @cType == 0
+			z1 = z^@pwr + (pixMod-@pwr*@seed)/(@pwr*@seed)
+			z = z1^@pwr + n*@seed
+		elseif @cType == 1
+			z1 = z^@pwr + (pixMod-@pwr*#pixel)/(@pwr*#pixel)
+			z = z1^@pwr + n*#pixel
+		endif
+	endif
+
+bailout:
+
+	|z| < @bail1 && |(|z| - |zo1|)| > @bail2
+
+	default:
+		title = "Using Factors"
+		center = (0.0,0.0)
+		method = multipass
+		periodicity = 0
+		magn = 0.6
+		maxiter = 250
+
+	param pwr
+		caption = "Power"
+		default = 2.0
+		hint = "Main Function Exponent"
+	endparam
+	
+	param cType
+		Caption = "Seed vs. Pixel"
+		enum = "Seed" "Pixel"
+		default = 0
+	endparam
+
+	param tPara
+		caption = "Test For? "
+		enum = "Primes" "Any Factor"
+		default = 0
+		hint =	"My test for Primes is not foolproof but false should be so few \
+				as to NOT affect the outcome...And they will be consistent.  The \
+				factor check also has the option to check for 'nearness'.  The \
+				factor dose NOT have to be an integer."
+	endparam
+
+	param k
+		caption = "Prime Test Accuracy"
+		default = 3
+		hint = "Accuracy using the Euler Primality Test is 2^(-k)"
+		min = 2
+		visible = @tPara == 0
+	endparam
+
+	param BuAct
+		caption = "Bool Action"
+		enum = "Switch +/- 'C'" "Modify Exponent"
+		default = 0
+	endparam
+
+	param seed
+		caption = "Seed"
+		default = (3.7,0.0)
+		hint = "Julia Like Seed"
+		visible = @cType == 0
+	endparam
+
+	param pixM
+		caption = "C-Modifier"
+		enum =	"((rZ^2)-(iZ^2))^Pwr" "abs((rZ^2)-(iZ^2))" "rZ^(iZ^2)" "(iZ*rZ)^(2/pwr)" \
+				"rZ^2" "iZ^2" "|#pixel|^|rZ^2|" "|#pixel|^|iZ^2|" "sqrt(|#pixel|)"
+		default = 0
+		hint =	"Not mathematically important...Just 'Trial-and-Error. \
+				I tried to keep the options to a minimum and also provide \
+				variety in output."
+	endparam
+
+	param tChk
+		caption = "Tested Value"
+		enum =	"cabs(z)" "|z|^#e" "rZ^6" "iZ^6" "#e^|z|" "|z|+(rZ^2)+(iZ^2)" \
+				"cabs(z)^iZ" "|z*#pixel|^((iZ*rZ)^2)" "(iZ^2)^((iZ^2)/cotan(|z|))"
+		default = 0
+		hint =	"Not mathematically important...Just 'Trial-and-Error. \
+				I tried to keep the options to a minimum and also provide \
+				variety in output."
+	endparam
+
+	param fact
+		caption = "Factor"
+		default = 0.478
+		min = 0.01
+		hint =	"Higher values here will 'force' fewer instances where \
+				the condition is met.  Smaller values can cause a very \
+				high number of hits.  Finding that sweet-spot is the \
+				fun part.  Very small changes in smaller values can \
+				create big changes in the output."
+		visible = @tPara == 1
+	endparam
+
+	param near
+		caption = "% Fact. Nearness"
+		default = 14.2857
+		min = 1E-5
+		max = 100
+		hint =	"How close 'factor' will be to being an 'exact' factor. \
+				Setting to '100' should force 'exact'.  i.e., 11/7 is 1 with \
+				a remainder 4. Both (7-4)/7 = 0.428571 & 1-0.428571 = 0.571428 \
+				are evaluated for 'nearness' of the remainder (4 here) as a \
+				percentage of the factor (7 here)."
+		visible = @tPara == 1
+	endparam
+
+	param bail1
+		caption = "Z-Bail"
+		default = 1E5
+	endparam
+
+	param bail2
+		caption = "'Z-OldZ' Bail"
+		default = 1E-16
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Henon_Attractor_v1 {
+; 
+; I ran across this on a site showing different fractal types.  This formula (if I did it correctly) 
+; is the Henon Attractor.  According to the literature I read the highest power for this formula is 2.  
+; I did not put limits on the power in the iterating formula.  I did keep it at '2' to form new(x).
+; 
+; The general Henon Map is defined by the equations:
+; 
+; 			new(x) = 1 + y - a*x^2	and		new(y) = b*x
+; 
+; I stayed pretty close and the result is VERY close.  Here I use "x = real(z)"  and  "y = imag(z)"
+; to create the formula:
+; 
+; 			z = (rZ + flip(iZ))^pwr + D
+; 
+; 			Where:	rZ = A + imag(z) + B*real(z)^2  and   iZ = C*real(z)
+; 
+; The Henon Map DOES appear as described on the site (though mine is rotated 90-Deg.) using the 
+; values pwr = 1, A = 1.0, B = -1.4, C = 0.3, and D = 0.  This is just iterating the new 'z' value 
+; as z = (rZ,iZ).  I am sure some mathematicians out there will have a higher appreciation for the 
+; math involved.  I did not find the defaults very interesting from a Fractal Art perspective. 
+; Higher powers get more detail w/o changing the general shape greatly.  Once I zoomed in and started 
+; looking around, I did find some interesting features.
+; 
+; I will leave this 'as is' so others can modify if they like.  I will use some functions, 
+; particularly in the equations to generate the new(z).
+; 
+; Enjoy!  And...Keep Fractaling!
+; 
+; Written by Walter K. Cook, Completed 21 September 2013
+; I delayed putting this in my UFM because it seemed sort of Blah...But I do find it interesting
+; I modified the defaults to show a neat spiral "Everyone likes spirals".  Some other minor changes
+; and I am adding it as of 20140223.
+;
+; Written by Walter K. Cook, Updated and added to UFM on 23 February 2014
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+;
+
+init:
+
+	z = #pixel
+	;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	rZ = @A + imag(z) + @B*(real(z)^2)
+	iZ = @C*real(z)
+	
+	z = (rZ + flip(iZ))^@pwr + @D
+	
+bailout:
+	|z| <= @bail1
+
+default:
+	title = "Henon Attractor v1"
+	method = multipass
+	periodicity = 0 
+	maxiter = 100
+	center = (0.0,0.0)
+	magn = 0.1
+
+	param pwr
+		caption = "Power of 'Z'"
+		default = 1.0
+	endparam
+
+	param A
+		caption = "Variable 'A'"
+		default = -0.25
+	endparam
+
+	param B
+		caption = "Variable 'B'"
+		default = -0.5
+	endparam
+
+	param C
+		caption = "Variable 'C'"
+		default = -1.3
+	endparam
+
+	param D
+		caption = "Variable 'D'"
+		default = -0.1
+	endparam
+
+	param bail1
+		caption = "Bailout "
+		default = 1.0E2
+		min = 1
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Using_Factors_v2 {
+;
+; I am using standard Julia & Mandelbrot style equations.  The function for Primality and 
+; factorization determine how the fractal is drawn.  
+;
+; User input values:
+;
+;	--	Factor
+;	--	'Nearness' to factor-ability "Made-up word ;) "
+;	--	Determination of 'Prime' values using the Euler Primality Test
+;
+; Each time the evaluated value meets conditions a switch is flipped to use the normal function
+; or just set 'z' to 0.  This leaves lines, arcs, circles, etc. that can be filled with inside coloring.
+;
+; Additional options mix the Julia & Mandelbrot...Where one will be drawn in the lines defined by the 
+; 'Prime' or 'Factors' found.
+;
+; Very simple formula really but provides a LOT of variation and some interesting structure and texture.
+;
+; One thing that is interesting is to use 'Factors'.  If you choose 'Julia 1st', you can still get a 
+; near Mandelbrot by setting the %-Nearness to 100%.  Because the % is base on how 'FAR' from being an 
+; exact factor the chosen number is...None are chosen and only Mandelbrot points are drawn.  Now start 
+; backing out 1 or 2% at a time.  This can be very interesting.
+;
+; Another hint is...Don't give up!  Some of these can be VERY busy and if you like to dig for nice 
+; spirals, etc., it takes time and sometimes some slight tweaks to the parameters.  but it will be 
+; worth the search.
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 2 March 2014
+;
+init:
+
+;-------------------------------- Initializations -------------------------------
+
+	z = #pixel, int n = 1
+
+	float FactVal = |z|
+	float rZ = real(z), float iZ = imag(z)
+	float iZS = sqr(iZ), float rZS = sqr(rZ)
+
+;---------------------------- Function: Factors of X ----------------------------
+;------------- Checks 'y' is within p% of being exact factor of 'x' -------------
+
+	bool func isFact(float x, float y, float p)
+		bool result
+		float x = abs(x)
+		float y = abs(y)
+		float v1 = x/y							; Actual of x/y
+		float v2 = trunc(v1)					; Whole # part of x/y
+		float v3 = (v1-v2)*y					; Division remainder
+		float pct = 100*ABS((y/2)-v3)/(y/2)		; % Closeness to exactness
+
+		if pct <= p
+			result = true
+		else
+			result = false
+		endif
+		return result
+	endfunc
+
+;------------------------ Function: Euler Primality Test ------------------------
+;---------------------- Probability of False Prime = 2^(-k) ---------------------
+
+	bool func isprime(float n, int k)
+		bool result = false, int x = trunc(abs(n)), int k1 = 0
+		int rSeed = random(x-1), int sS = trunc(real(rSeed/(abs(rSeed))))
+		rSeed = rSeed*sS, int s = x-1, int sT = trunc(((rSeed%(x-2))^(s/2))%x)
+		
+		if x==2 || x==3 || x==5 || x==7
+			result = true
+			return result
+		elseif x<2
+			result = false
+			return result
+		else
+			repeat
+				rSeed = random(rSeed)
+				rSeed = rSeed*sS
+				sT = trunc((2+(rSeed%(x-4))^(s/2))%x)
+				
+				if (sqr(sT) == 1) || (sT == s)
+				else
+					result = false
+					return result
+				endif
+				
+				k1 = k1+1
+			until k1 == k
+		endif
+		result = true
+		return result
+	endfunc
+
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	rZ = real(z), iZ = imag(z)
+	iZS = sqr(iZ), rZS = sqr(rZ)
+
+	if @tChk == 0
+		FactVal = cabs(z)
+	elseif @tChk == 1
+		FactVal = |z|^#e
+	elseif @tChk == 2
+		FactVal = rZ^6
+	elseif @tChk == 3
+		FactVal = iZ^6
+	elseif @tChk == 4
+		FactVal = #e^(|z|)
+	elseif @tChk == 5
+		FactVal = |z|+rZS+iZS
+	elseif @tChk == 6
+		FactVal = cabs(z)^(sqr(iZS))
+	elseif @tChk == 7
+		FactVal = |z*#pixel|^(iZS*rZS)
+	elseif @tChk == 8
+		FactVal = iZS^(iZS/cotan(|z|))
+	endif
+
+	if @tPara == 0
+		if isprime(FactVal,@k), n = 1, else, n = 0, endif
+	elseif @tPara == 1
+		if isFact(FactVal, @fact, @near), n = 1, else, n = 0, endif
+	endif
+
+	zo1 = z
+
+;-------------------------------- Z' Calculations -------------------------------
+
+	if @BuAct == 0
+		if n == 0, z = z^@pwr + @seed
+		elseif n == 1, z = 0
+		endif
+	elseif @BuAct == 1
+		if n == 0, z = z^@pwr + #pixel
+		elseif n == 1, z = 0
+		endif
+	elseif @BuAct == 2
+		if n == 0
+			z = z^@pwr + @seed
+		elseif n == 1
+			z = z^@pwr + #pixel
+		endif
+	elseif @BuAct == 3
+		if n == 0
+			z = z^@pwr + #pixel
+		elseif n == 1
+			z = z^@pwr + @seed
+		endif
+	endif
+
+;---------------------------- Bailouts and Parameters ---------------------------
+bailout:
+
+	|z| < @bail1 && |(|z| - |zo1|)| >= @bail2
+
+	default:
+		title = "Using Factors v2"
+		center = (0.0,0.0)
+		method = multipass
+		periodicity = 0
+		magn = 0.8
+		maxiter = 250
+
+	param pwr
+		caption = "Power"
+		default = 2.0
+		hint = "Main Function Exponent"
+	endparam
+	
+	param tPara
+		caption = "Test For? "
+		enum = "Primes" "Any Factor"
+		default = 0
+		hint =	"My test for Primes is not foolproof but false should be so few \
+				as to NOT affect the outcome...And they will be consistent.  The \
+				factor check also has the option to check for 'nearness'.  The \
+				factor dose NOT have to be an integer."
+	endparam
+
+	param k
+		caption = "Prime Test Accuracy"
+		default = 25
+		hint = "Accuracy using the Euler Primality Test is 2^(-k)"
+		min = 2
+		visible = @tPara == 0
+	endparam
+
+	param BuAct
+		caption = "Fractal Type"
+		enum = "Julia" "Mandelbrot" "Mix (Julia 1st)" "Mix (Mandelbrot 1st)"
+		default = 0
+	endparam
+
+	param seed
+		caption = "Seed"
+		default = (0.56667,0.0)
+		hint = "Julia Like Seed"
+		visible = @BuAct == 0 || @BuAct == 2 || @BuAct == 3
+	endparam
+
+	param tChk
+		caption = "Tested Value"
+		enum =	"cabs(z)" "|z|^#e" "rZ^6" "iZ^6" "#e^|z|" "|z|+(rZ^2)+(iZ^2)" \
+				"cabs(z)^iZ" "|z*#pixel|^((iZ*rZ)^2)" "(iZ^2)^((iZ^2)/cotan(|z|))"
+		default = 0
+		hint =	"Not mathematically important...Just 'Trial-and-Error. \
+				I tried to keep the options to a minimum and also provide \
+				variety in output."
+	endparam
+
+	param fact
+		caption = "Factor"
+		default = 0.77
+		min = 0.01
+		hint =	"Higher values here will 'force' fewer instances where \
+				the condition is met.  Smaller values can cause a very \
+				high number of hits.  Finding that sweet-spot is the \
+				fun part.  Very small changes in smaller values can \
+				create big changes in the output."
+		visible = @tPara == 1
+	endparam
+
+	param near
+		caption = "Nearness (E-5 to 100%)"
+		default = 25.0
+		min = 1E-5
+		max = 100
+		hint =	"How close 'factor' will be to being an 'exact' factor. \
+				Setting to '100' should force 'exact'.  i.e., 11/7 is 1 with \
+				a remainder 4. Both (7-4)/7 = 0.428571 & 1-0.428571 = 0.571428 \
+				are evaluated for 'nearness' of the remainder (4 here) as a \
+				percentage of the factor (7 here)."
+		visible = @tPara == 1
+	endparam
+
+	param bail1
+		caption = "Z-Bail"
+		default = 0.5E1
+	endparam
+
+	param bail2
+		caption = "'Z-OldZ' Bail"
+		default = 0E-16
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Ikeda_Map {
+;
+; Cool.  I found this on a Wikipedia site.  Yes, I find stuff like this interesting,
+; though it is a bit over my head (More like (a bit)^10.  Anyway, the Ikeda map was, per
+; Wiki:  The original map was proposed first by Ikeda as a model of light going around 
+; across a non-linear optical resonator...  There is a bit more, but the plots looked like
+; they would lend themselves to plotting in UF quite well.  If I understand correctly, it 
+; is actually an "Attractor".  Wonder if someone could make a UCL based on this?  This is 
+; the page where I got started:  http://en.wikipedia.org/wiki/Ikeda_map
+;
+; Enjoy and keep on Fractaling!
+;
+; Written by Walter K. Cook, Completed 5 March 2014
+;
+
+init:
+
+	z = #pixel
+	zR = real(z), zI = imag(z), zX = zR, zY = zI
+	float T = 0.4 - (6/(1 + real(sqr(zR)) + real(sqr(zI))))
+	
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	zR = real(z), zI = imag(z)
+	T = 0.4 - (6/(1 + real(sqr(zR)) + real(sqr(zI))))
+	zX = 1 + @U*(zR*cos(T) - zI*sin(T))
+	zY = @U*(zR*sin(T) + zI*cos(T))
+	
+	z = (zX + flip(zY))^@pwr
+
+bailout:
+	|z| < @bail1
+
+default:
+	title = "Ikeda Map"
+	method = multipass
+	periodicity = 0
+	center = (0.0,0.0)
+	magn = 0.7
+	maxiter = 250
+
+	param pwr
+		caption = "Power"
+		default = 1.0611
+	endparam
+
+	param U
+		caption = "Strength"
+		default = (1.1,-0.2)
+		hint = "Main function exponent"
+	endparam
+
+	param bail1
+		caption = "Normal Z-Bail"
+		default = 4.0E2
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+
+Henon_Attractor_v2 {
+; 
+; The basic formula is the same...I just added some function options to make it more interesting.
+;
+; The general Henon Map is defined by the equations:
+; 
+; 			new(x) = 1 + y - a*x^2	and		new(y) = b*x
+; 
+; The basic formula is:
+; 
+; 			z = (rZ + flip(iZ))^pwr + D
+; 
+; 			Where:	rZ = A + imag(z) + B*real(z)^2  and   iZ = C*real(z)
+;
+;			A, B, C, D, Power, and Functions (see Loop below) are user defined.
+; 
+; Enjoy!  And...Keep Fractaling!
+; 
+; Written by Walter K. Cook, Completed 9 March 2014
+;
+; If you need help of want to contact me...Please send email to wk.cook.pa@gmail.com
+; Especially if you have programming help.  LOL
+;
+
+init:
+
+	z = #pixel
+	
+;---------------------------------- Begin Loop ----------------------------------
+loop:
+
+	if @useF == 0 || @useF == 2
+		rZ = @A + imag(z) + @B*(real(z)^2) + @f1(imag(z))
+		iZ = @C*real(z) + @f1(real(z))
+	else
+		rZ = @A + imag(z) + @B*(real(z)^2)
+		iZ = @C*real(z)
+	endif
+
+	if @useF == 1 || @useF == 2
+		z = @f2(rZ)*(rZ + flip(iZ))^@pwr + @D/@f2(iZ)
+	else
+		z = (rZ + flip(iZ))^@pwr + @D
+	endif
+	
+bailout:
+	|z| <= @bail1
+
+default:
+	title = "Henon Attractor v2"
+	method = multipass
+	periodicity = 0 
+	maxiter = 200
+	center = (-0.25,0.28)
+	magn = 1
+
+	param pwr
+		caption = "Power of 'Z'"
+		default = 1.194
+	endparam
+
+	param A
+		caption = "Variable 'A'"
+		default = -0.25
+	endparam
+
+	param B
+		caption = "Variable 'B'"
+		default = -0.5
+	endparam
+
+	param C
+		caption = "Variable 'C'"
+		default = -1.3
+	endparam
+
+	param D
+		caption = "Variable 'D'"
+		default = -0.1
+	endparam
+
+	param useF
+		caption = "Function Use"
+		enum = "Pre-Function" "Post-Function" "Both" "No Functions"
+		default = 3
+	endparam
+
+	func f1
+		caption = "Pre-Function f()"
+		default = sin()
+		visible = @useF == 0 || @useF == 2
+	endfunc
+
+	func f2
+		caption = "Post-Function f()"
+		default = sin()
+		visible = @useF == 1 || @useF == 2
+	endfunc
+
+	param bail1
+		caption = "Bailout "
+		default = 1.0E2
+		min = 1
+	endparam
+
+}
+
+;------------------------------------------------------------------------
+

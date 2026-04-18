@@ -1,0 +1,302 @@
+sin-mandelbrot { ;Marshall Stoner
+init:
+  #Z = @start * #pixel
+  
+loop:
+  IF (@fn == 0)
+    #z = #pixel*sin(#z)
+  ELSE
+    #z = #pixel*cos(#z)
+  ENDIF
+  
+bailout:
+  |#z| <= @bailout
+  
+default:
+  title = "Sine Mandelbrot"
+  param fn
+    caption = "Function mode"
+    enum = "Sine" "Cosine"
+    default = 0
+  endparam
+  param start
+    caption = "Start value"
+    default = (1,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1E10
+  endparam
+
+switch:
+  type = "sin-julia"
+  fn = @fn
+  factor = #pixel
+  bailout = @bailout
+}
+
+
+sin-julia { ;Marshall Stoner
+init:
+  #z = #pixel
+  
+loop:
+  IF (@fn == 0)
+    #z = @factor*sin(#z)
+  ELSE
+    #z = @factor*cos(#z)
+  ENDIF
+  
+bailout:
+  |#z| <= @bailout
+  
+default:
+  title = "Sine Julia"
+  param fn
+    caption = "Function mode"
+    enum = "Sine" "Cosine"
+    default = 0
+  endparam
+  param factor
+    caption = "Factor"
+    default = (1,1)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1E10
+  endparam
+}
+
+
+sinm-3D { ;Marshall Stoner
+init:
+  bool stopz = false
+  bool stopx = false
+  bool stopy = false
+  int orb_count = 3
+  
+  complex x = 0
+  complex y = 0
+  float dx = 10^(-@precision)
+  complex cz = #pixel
+  complex cx = #pixel + dx
+  complex cy = #pixel + flip(dx)
+  
+  #z = @start * cz
+  x = @start * cx
+  y = @start * cy
+  
+  int iterz = 0
+  int iterx = 0
+  int itery = 0
+  float hz = 0.0
+  float hx = 0.0
+  float hy = 0.0
+  float a = 1/@smooth1
+     
+loop:
+  IF (!stopz)
+    iterz = iterz + 1
+    IF (@fn == 0)
+      #z = cz*sin(#z)
+    ELSE
+      #z = cz*cos(#z)
+    ENDIF
+    IF (|#z| > @bailout)
+      stopz = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  IF (!stopx)
+    iterx = iterx + 1
+    IF (@fn == 0)
+      x = cx*sin(x)
+    ELSE
+      x = cx*cos(x)
+    ENDIF
+    IF (|x| > @bailout)
+      stopx = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  IF (!stopy)
+    itery = itery + 1
+    IF (@fn == 0)
+      y = cy*sin(y)
+    ELSE
+      y = cy*cos(y)
+    ENDIF
+    IF(|y| > @bailout)
+      stopy = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  
+  IF (orb_count == 0)
+    hz = -real(iterz + a*log(log(@smooth2)) - a*log(log(cabs(#z))))
+    hx = -real(iterx + a*log(log(@smooth2)) - a*log(log(cabs(x))))
+    hy = -real(itery + a*log(log(@smooth2)) - a*log(log(cabs(y))))
+    #z = ((hx-hz)/dx + flip((hy-hz)/dx))
+    #z = #z * @scale/100
+  ENDIF
+
+bailout:
+  orb_count > 0
+
+default:
+  title = "3D-SineM"
+  param fn
+    caption = "Function mode"
+    enum = "Sine" "Cosine"
+    default = 0
+  endparam
+  param start
+    caption = "Start value"
+    default = (1,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1E10
+  endparam
+  param smooth1
+    caption = "Smoothing value 1"
+    hint = "Corresponds to the log of 'exponent' in dmj-smooth."
+    default = 1.0
+  endparam
+  param smooth2
+    caption = "Smoothing value 2"
+    hint = "Corresponds to bailout in dmj-smooth."
+    default = 1E10
+  endparam
+  param precision
+    caption = "Slope precision"
+    hint = "The base 10 log of the separation to use when calculating the gradient vector."
+    default = 10.0
+    min = 1.0
+  endparam
+  param scale
+    caption = "Steepness"
+    hint = "You should lower the steepness when you zoom in."
+    default = 1.0
+  endparam
+  
+switch:
+  type = "sinj-3D"
+  fn = @fn
+  factor = #pixel
+  bailout = @bailout
+  smooth1 = @smooth1
+  smooth2 = @smooth2
+  precision = @precision
+  scale = @scale
+}
+
+
+sinj-3D { ;Marshall Stoner
+init:
+  bool stopz = false
+  bool stopx = false
+  bool stopy = false
+  int orb_count = 3
+  
+  float dx = 10^(-@precision)
+    
+  #z = #pixel
+  complex x = #pixel + dx
+  complex y = #pixel + flip(dx)
+  
+  int iterz = 0
+  int iterx = 0
+  int itery = 0
+  float hz = 0.0
+  float hx = 0.0
+  float hy = 0.0
+  float a = 1/@smooth1
+     
+loop:
+  IF (!stopz)
+    iterz = iterz + 1
+    IF (@fn == 0)
+      #z = @factor*sin(#z)
+    ELSE
+      #z = @factor*cos(#z)
+    ENDIF
+    IF (|#z| > @bailout)
+      stopz = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  IF (!stopx)
+    iterx = iterx + 1
+    IF (@fn == 0)
+      x = @factor*sin(x)
+    ELSE
+      x = @factor*cos(x)
+    ENDIF
+    IF (|x| > @bailout)
+      stopx = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  IF (!stopy)
+    itery = itery + 1
+    IF (@fn == 0)
+      y = @factor*sin(y)
+    ELSE
+      y = @factor*cos(y)
+    ENDIF
+    IF(|y| > @bailout)
+      stopy = true
+      orb_count = orb_count - 1
+    ENDIF
+  ENDIF
+  
+  IF (orb_count == 0)
+    hz = -real(iterz + a*log(log(@smooth2)) - a*log(log(cabs(#z))))
+    hx = -real(iterx + a*log(log(@smooth2)) - a*log(log(cabs(x))))
+    hy = -real(itery + a*log(log(@smooth2)) - a*log(log(cabs(y))))
+    #z = ((hx-hz)/dx + flip((hy-hz)/dx))
+    #z = #z * @scale/100
+  ENDIF
+
+bailout:
+  orb_count > 0
+
+default:
+  title = "3D-SineJ"
+  param fn
+    caption = "Function mode"
+    enum = "Sine" "Cosine"
+    default = 0
+  endparam
+  param factor
+    caption = "Factor"
+    default = (1,1)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1E10
+  endparam
+  param smooth1
+    caption = "Smoothing value 1"
+    hint = "Corresponds to the log of 'exponent' in dmj-smooth."
+    default = 1.0
+  endparam
+  param smooth2
+    caption = "Smoothing value 2"
+    hint = "Corresponds to bailout in dmj-smooth."
+    default = 1E10
+  endparam
+  param precision
+    caption = "Slope precision"
+    hint = "The base 10 log of the separation to use when calculating the gradient vector."
+    default = 10.0
+    min = 1
+  endparam
+  param scale
+    caption = "Steepness"
+    hint = "You should lower the steepness when you zoom in."
+    default = 1.0
+  endparam
+}
+

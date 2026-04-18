@@ -1,0 +1,399 @@
+Comment {
+
+Contents: Fractal Formulas
+Author:   Setemkia FallingTree
+Version:  1.00
+Mod Date: 2 August 2001
+Contents:
+  Zero Iteration -- All Inside
+  AvgMandel v1
+
+Formulas by Godwin Vickers:
+  Pi1, Pi2, Pi3
+  Pi4, Pi5, Pi6
+}
+
+ZeroIteration,AllInside(XYAXIS) {
+; Setemkia FallingTree
+; 1 Aug 2001
+;
+; A cheat: this is not a fractal.
+;
+; An empty function for those instances where one
+; needs to use the coloring algorithm to draw some
+; image or gradient rather than to represent a
+; fractal.  What's the point of computing a fractal
+; if you're just going to discard it.
+;
+init:
+loop:
+bailout:
+  true
+default:
+  title = "Zero Iteration -- All Inside"
+}
+
+AvgMandelV1 {
+;
+; Setemkia FallingTree
+; 23 July 2001
+;
+; My first attempt at computing a mandelbrot set with
+; an average of prior values of z, not just the most
+; recent value of z.  There are a few fractals, most
+; notably the Phoenix variants, that use older values
+; of z.  Additionally, curvature coloring algorithms use
+; prior values of z.  However, I think this is the first
+; fractal that uses a weighted average.  Thanks to an
+; article in Britantica.com I have an idea for a much,
+; much more generalized version of this fractal type.
+;
+; z[n+1] = z[n]^p1 * z[n-1]^p0 + c
+;
+; The powers p1 and p2 are both complex and unrestricted,
+; leading to many curious fractal variants.  This iteration
+; formula approximates the Mandelbrot set when p1+p2=2,
+; hence my assertion that this is a type of average.
+;
+init:
+  complex oldZ = @START
+   #z = oldZ^(@pow1+@pow0) + #pixel
+loop:
+  complex Zhold = #z
+  z = #z^@pow1 * oldZ^@pow0 + #pixel
+  oldZ = Zhold
+bailout:
+  |z| <= @bailout
+default:
+  title = "AvgMandel v1"
+  center = (-0.5, 0)
+param start
+  caption = "Starting point"
+  default = (0,0)
+  hint = "Perturbation"
+endparam
+param pow0
+  caption = "Power prev z"
+  default = (1,0)
+endparam
+param pow1
+  caption = "Power curent z"
+  default = (1,0)
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1.0
+  hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+          to the Mandelbrot set anymore."
+endparam
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+comment {
+  Setemkia FallingTree, August 2001
+
+  I found these formulas at Godwin Vickers' site, www.hypercomplex.org.
+  I've reproduced theme here as they don't seem to be in any of the
+  major UF collections, and I've made occasional use of them.
+
+  The formulas are based on ancient Greek methods of approximating #pi.
+  As early as 500 BC they knew that the ratio of a circle's circumfrence
+  to it's diameter was a non-rational constant and that it was the square
+  root of the ratio of a circle's area to it's radius.  Ancient Greeks,
+  Messopotamians, and Egyptians approximated computations of #pi by
+  inscribing or circumscribing a regular polygon around a unit circle.
+
+  These computations could be done with astonishing accuracy as both the
+  inscribed and circumscribed polygons can be constructed with compass
+  and straight-edge -- at least where the number of virtices is of the form
+  2^n or 3*2^n.  It also implies that ancient geometers had a notion of
+  limits and convergence.
+
+  NOTE: I've made the following two tweaks:
+    1. Numeric value for #pi replaced with #pi.
+    2. Corrected the bailout test selection so "and" and "or" refer to
+       the appropriate tests.
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+comment {
+  Godwin Vickers, January 2001
+  http://www.hypercomplex.org
+
+  Pi1: perimeter of a regular polygon inscribed in a circle, Mandelbrot set
+  Pi2: perimeter of a regular polygon circumbscribing a circle, Mandelbrot set
+  Pi3: variation of the above using cosine, Mandelbrot set
+  Pi4: Julia set of Pi1
+  Pi5: Julia set of Pi2
+  Pi6: Julia set of Pi3
+}
+
+pi1 { ;Godwin Vickers
+init:
+  z = @start + #pixel
+
+loop:
+  z = 2*z*#pixel*sin(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi1"
+  maxiter = 149
+  center = (0, 0)
+
+param start
+  caption = "Perturbation"
+  default = (0,0)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi4"
+  seed = pixel
+  bailout = bailout
+  test = test
+}
+
+pi2 { ;Godwin Vickers
+init:
+  z = @start + #pixel
+
+loop:
+  z = 2*z*#pixel*tan(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi2"
+  maxiter = 149
+  center = (0, 0)
+
+param start
+  caption = "Perturbation"
+  default = (0,0)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi5"
+  seed = pixel
+  bailout = bailout
+  test = test
+}
+
+pi3 { ;Godwin Vickers
+init:
+  z = @start + #pixel
+
+loop:
+  z = 2*z*#pixel*cos(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi3"
+  maxiter = 149
+  center = (0, 0)
+
+param start
+  caption = "Perturbation"
+  default = (0,0)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi6"
+  seed = pixel
+  bailout = bailout
+  test = test
+}
+
+Pi4 { ;Godwin Vickers
+init:
+  z = #pixel
+
+loop:
+  z = 2*z * @seed *sin(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi4"
+  maxiter = 149
+
+param seed
+  caption = "Parameter"
+  default = (0.3, 0.6)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi1"
+  bailout = bailout
+  test = test
+}
+
+Pi5 { ;Godwin Vickers
+init:
+  z = #pixel
+
+loop:
+  z = 2*z * @seed *tan(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi5"
+  maxiter = 149
+
+param seed
+  caption = "Parameter"
+  default = (0.3, 0.6)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi2"
+  bailout = bailout
+  test = test
+}
+
+Pi6 { ;Godwin Vickers
+init:
+  z = #pixel
+
+loop:
+  z = 2*z * @seed *cos(#pi/z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout))
+
+default:
+  title = "Pi6"
+  maxiter = 149
+
+param seed
+  caption = "Parameter"
+  default = (0.3, 0.6)
+endparam
+param test
+  caption = "Bailout Test"
+  default = 0
+  enum = "mod" "real" "imag" "and" "or" "manh" "manr"
+endparam
+param bailout
+  caption = "Bailout value"
+  default = 4.0
+  min = 1
+endparam
+
+switch:
+  type = "Pi3"
+  bailout = bailout
+  test = test
+}
+
+OneIteration {
+init:
+  int iter = 0
+loop:
+  iter = iter+1
+bailout:
+  iter == 1
+default:
+  title = "One Iteration"
+}

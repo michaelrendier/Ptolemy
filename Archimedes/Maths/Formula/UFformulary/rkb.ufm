@@ -1,0 +1,108 @@
+;#########################
+;#
+;# Shape
+;#
+;#########################
+
+rkb_shape {
+global:
+  import "common.ulb"
+  import "rkb.ulb"
+  TrapShape Shape = new @shape(0)
+  float fsq2 = sqrt(2)
+init:
+  z = #pixel
+  int i = 1
+loop:
+  float fB = 0
+  float f = Shape.Iterate(z) * @fScale
+
+  if (@enEncode == "Angle into Z")
+    f = f % 2*#pi
+  else
+    if (@fMod != 0)
+      f = f % @fMod
+    endif
+  endif
+  complex z1 = (0,0)
+
+  ; Encode
+  if (@enEncode == "Distance into Real")
+    z1 = f
+  elseif (@enEncode == "Distance into Imag")
+    z1 = flip(f)
+  elseif (@enEncode == "Distance into Z")
+    z1 = (f * fsq2) + flip(f * fsq2)
+  elseif (@enEncode == "Angle into Z")
+    z1 = tan(f) + flip(1)
+  elseif (@enEncode == "Distance II")
+    float t = sqrt(f^2 - imag(z)^2)
+    z1 = t + flip(imag(z))
+  elseif (@enEncode == "Distance III")
+    float t = sqrt(f^2 - imag(z)^2)
+    z1 = z + ((f * fsq2) + flip(f * fsq2))
+  endif
+  
+  ; Operation
+  if (@enOperation == "ident")
+    z = z1
+  elseif (@enOperation == "+")
+    z = z + z1
+  elseif (@enOperation == "-")
+    z = z - z1
+  elseif (@enOperation == "*")
+    z = z * z1
+  elseif (@enOperation == "/")
+    z = z / z1
+  endif
+
+  i = i + 1
+
+  ; Bailout type
+  if (@enBailoutType == "Iteration")
+    fB = i
+  elseif (@enBailoutType == "Value")
+    fB = f
+  endif
+
+bailout:
+   fB <= @fBailout
+
+default:
+  title = "Shape"
+  int param iVersion
+   default = 1
+   visible=false
+  endparam
+  param enBailoutType
+    caption = "Bailout Type"
+    enum    = "Iteration" "Value"
+  endparam
+  float param fBailout
+    caption = "Bailout"
+    default = 2.0
+  endparam
+  param enEncode
+    caption = "Encode"
+    enum    = "Distance into Z" "Distance into Real" "Distance into Imag" "Angle into Z" "Distance II" "Distance III"
+  endparam
+  param enOperation
+    caption = "Operation"
+    enum = "ident" "+" "-" "*" "/"
+  endparam
+  float param fMod
+    caption="Mod"
+    default=0.0
+  endparam
+  float param fScale
+    caption = "Scale"
+    default = 1.0
+  endparam
+  TrapShape param shape
+    caption = "Trap Shape"
+    default = RKB_TrapShapeFlower
+    hint = "Selects the shape to be used."
+  endparam
+
+  }
+

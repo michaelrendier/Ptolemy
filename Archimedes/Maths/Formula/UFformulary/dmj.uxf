@@ -1,0 +1,2746 @@
+comment {
+  dmj-pub.uxf 2.2
+  Transformations for Ultra Fractal 2
+  by Damien M. Jones
+  November 11, 2002
+
+  For more information about this formula collection,
+  please visit its home page:
+  
+      http://www.fractalus.com/ultrafractal/dmj-pub-uf.htm
+
+  Most (all?) of the transformations in this file
+  have little or no redeeming mathematical value,
+  but are great for artistic control over fractal
+  images.
+}
+
+dmj-Blob-Clipping {
+;
+; This transform allows you to define clipping regions
+; using 2D "blobs". A single blob is circular, but blobs
+; "reach out" towards each other. You can add positive
+; blobs (which increase the clipping area) or negative
+; blobs (which "cut away" from the clipping area). Use
+; the eyedropper to choose your blobs, and then tweak
+; the strengths as appropriate. A strength of zero will
+; disable that particular blob. Up to eight blobs may
+; be used.
+;
+transform:
+  float sum = @strength1 / |#pixel-@center1| + \
+              @strength2 / |#pixel-@center2| + \
+              @strength3 / |#pixel-@center3| + \
+              @strength4 / |#pixel-@center4| + \
+              @strength5 / |#pixel-@center5| + \
+              @strength6 / |#pixel-@center6| + \
+              @strength7 / |#pixel-@center7| + \
+              @strength8 / |#pixel-@center8|
+
+  IF (@above == 0)
+    IF (sum > @threshold)
+      #solid = true
+    ENDIF
+  ELSEIF (@above == 1)
+    IF (sum < @threshold)
+      #solid = true
+    ENDIF
+  ENDIF
+;  IF (sum > @threshold && @above == 0)
+;    #solid = true
+;  ELSEIF (sum < @threshold && @above == 1)
+;    #solid = true
+;  ENDIF
+  
+default:
+  title = "Blob Clipping"
+  helpfile = "dmj-pub\dmj-pub-uf-blobclip.htm"
+
+  param threshold
+    caption = "Threshold"
+    default = 0.5
+    hint = "Sets the threshold, above or below which points will \
+            be clipped. Smaller values will increase the size \
+            pf the clipping region."
+  endparam
+  param above
+    caption = "Clipping Region"
+    default = 0
+    enum = "above threshold" "below threshold"
+    hint = "Set whether points above or below the threshold value \
+            will be clipped."
+  endparam
+  
+  param center1
+    caption = "Point 1 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength1
+    caption = "Point 1 Strength"
+    default = 1.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center2
+    caption = "Point 2 Center"
+    default = (-1,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength2
+    caption = "Point 2 Strength"
+    default = 0.5
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center3
+    caption = "Point 3 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength3
+    caption = "Point 3 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center4
+    caption = "Point 4 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength4
+    caption = "Point 4 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center5
+    caption = "Point 5 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength5
+    caption = "Point 5 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center6
+    caption = "Point 6 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength6
+    caption = "Point 6 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center7
+    caption = "Point 7 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength7
+    caption = "Point 7 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+  param center8
+    caption = "Point 8 Center"
+    default = (0,0)
+    hint = "Sets the center point for this blob."
+  endparam
+  param strength8
+    caption = "Point 8 Strength"
+    default = 0.0
+    hint = "Sets how 'strong' this blob is. Negative values will \
+            'cut away' from the blobbed area."
+  endparam
+}
+
+dmj-Clipping {
+;
+; Clipping Transformation
+; This fulfills much the same function as Luke
+; Plant's Scissors transform, but is geared
+; towards being easier to use (i.e. just point
+; and click).
+;
+transform:
+  complex p = (0,0)
+  complex r = (0,0)
+;  complex s = (0,0)
+  float re = 0.0
+  float te = 0.0
+  
+  ; determine pixel location
+  IF (@relative); relative coordinates
+    complex p = real(#screenpixel)/#width + flip(imag(#screenpixel)/#height)
+  ELSE; absolute coordinates
+    complex p = #pixel
+  ENDIF
+
+  ; determine right edge
+  IF (@rotation); rotation is enabled
+    float re = cabs(@sciright-@scicenter)
+    complex r = conj(@sciright-@scicenter) / re
+  ELSEIF (@relative); relative coordinates
+    float re = abs(real(@sciright)-real(@scicenter))
+    complex r = (1,0)
+  ELSE; rotation is disabled
+    complex r = conj(exp(flip(#angle)))
+    float re = abs(real((@sciright-@scicenter)*r))
+  ENDIF
+
+  ; determine top edge
+;  IF (@skewing); skewing is enabled
+;    float te = cabs(@scitop-@scicenter)
+;    complex s = conj(@scitop-@scicenter) / re
+;  ELSE; rotation is disabled
+    float te = abs(imag((@scitop-@scicenter)*r))
+;    complex s = (0,1)
+;  ENDIF
+  
+  ; see if point is inside clipping shape
+  p = (p-@scicenter) * r
+
+  bool in = (@sciinside == 1)
+  IF (@scishape == 0); circle
+    IF (|p| < sqr(re))
+      in = !in
+    ENDIF
+  ELSEIF (@scishape == 1); ellipse
+    IF (sqr(real(p))/sqr(re)+sqr(imag(p))/sqr(te) < 1.0)
+      in = !in
+    ENDIF
+  ELSEIF (@scishape == 2); square
+    IF (abs(real(p)) < re && abs(imag(p)) < re)
+      in = !in
+    ENDIF
+  ELSEIF (@scishape == 3); rectangular
+    IF (abs(real(p)) < re && abs(imag(p)) < te)
+      in = !in
+    ENDIF
+  ENDIF
+  #solid = in
+
+default:
+  title = "Clipping"
+  helpfile = "dmj-pub\dmj-pub-uf-clipping.htm"
+
+  param scicenter
+    caption = "Clipping Center"
+    default = (0,0)
+    hint = "Sets the center of clipping."
+  endparam
+  param sciright
+    caption = "Clipping Right Edge"
+    default = (0,0)
+    hint = "Sets the right edge of the clipping shape. If \
+            rotation is enabled, sets the center of the \
+    right edge."
+  endparam
+  param scitop
+    caption = "Clipping Top Edge"
+    default = (0,0)
+    hint = "Sets the top edge of the clipping shape. Has no \
+            effect for Circle and Square clipping shapes." ; If \
+;            skewing is enabled, sets the center of the \
+;    top edge."
+  endparam
+  param scishape
+    caption = "Clipping Shape"
+    default = 2
+    enum = "circle" "ellipse" "square" "rectangle"
+    hint = "Selects the clipping shape."
+  endparam
+  param rotation
+    caption = "Allow Rotation"
+    default = FALSE
+    hint = "If enabled, you can use the Right Edge setting \
+            to also select a rotation for the clipping shape."
+  endparam
+;  param skewing
+;    caption = "Allow Skewing"
+;    default = FALSE
+;    hint = "If enabled, you can use the Top Edge setting \
+;            to also select a skewing for the clipping shape."
+;  endparam
+  param sciinside
+    caption = "Clipping Region"
+    default = 1
+    enum = "inside" "outside"
+  endparam
+  param relative
+    caption = "Screen-Relative"
+    default = FALSE
+    hint = "If set, all clipping coordinates are relative \
+            to the fractal window. This will leave the clipping \
+    shape intact while zooming, but make it harder \
+    to enter coordinates for clipping."
+  endparam
+}
+
+dmj-EggScissors {
+;
+; Special Egg Scissors Transform
+; This performs much the same function as the
+; general clipping transform, but uses an egg
+; shape.
+;
+transform:
+  complex c = @eggcenter; assume egg center is fixed
+  IF (@centermove); relative egg center requested
+    c = #center; egg center is image center
+  ENDIF
+  complex r = (0,1) ^ (@angle / 90.0); rotation vector
+  complex z = (#pixel-c) * r; apply translation and rotation
+  z = real(z) + flip(imag(z) * @aspect); apply aspect
+  float d = (cabs(z-flip(@diameter)*2) + cabs(z)*@eggorder*0.5) / (@eggorder+1)
+  IF (@egginside); want solid inside
+    IF (d < @threshold); point is inside egg
+      #solid = TRUE; color it solid
+    ENDIF
+  ELSE; want solid outside
+    IF (d > @threshold); point is outside egg
+      #solid = TRUE
+    ENDIF
+  ENDIF
+
+default:
+  title = "Egg Scissors"
+  helpfile = "dmj-pub\dmj-pub-uf-egg.htm"
+  
+  param eggorder
+    caption = "Egginess"
+    default = 3.0
+    hint = "Adjusts how non-circular the curve is."
+  endparam
+  param eggcenter
+    caption = "Egg Center"
+    default = (0,0)
+    hint = "Sets the location of one focus of the egg shape."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the egg focus will be at the center of \
+            the window, regardless of the Egg Center \
+    setting."
+  endparam
+  param egginside
+    caption = "Solid Inside"
+    default = FALSE
+    hint = "If set, the inside of the egg will be solid. Otherwise, \
+            the outside of the egg will be solid."
+  endparam
+  param aspect
+    caption = "Aspect Ratio"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the egg curve is.  You can \
+            distort the curve by using a value other than 1.0."
+  endparam
+  param threshold
+    caption = "Threshold"
+    default = 0.5
+    min = 0
+    hint = "This is the distance to the edge of the egg curve."
+  endparam
+  param diameter
+    caption = "Diameter"
+    default = 0.5
+    hint = "This is the distance between focal points of the egg curve."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the egg \
+            curve should be rotated."
+  endparam
+}
+
+dmj-fBm-Clipping {
+;
+; fBm-based clipping.
+; This performs clipping based on fBm textures.
+;
+transform:
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex r2 = (0,1) ^ (@anglestep / 90.0)
+;  complex r3 = (0,1) ^ (@distangle / 90.0)
+  complex p = #pixel * @scale * r + @offset
+
+  float sum = 0.0
+  float freq = 1.0
+  int i = @octaves
+  WHILE (i > 0)
+    ; determine integer coordinate for corners of square
+    ; surrounding p
+    float bx0 = floor(real(p)) % 256
+    float by0 = floor(imag(p)) % 256
+    IF (bx0 < 0)
+      bx0 = bx0 + 256
+    ENDIF
+    IF (by0 < 0)
+      by0 = by0 + 256
+    ENDIF
+    float bx1 = (bx0 + 1) % 256
+    float by1 = (by0 + 1) % 256
+
+    float rx0 = real(p) - floor(real(p))
+    float ry0 = imag(p) - floor(imag(p))
+    float rx1 = rx0 - 1
+    float ry1 = ry0 - 1
+    
+    ; create a "random" index for each corner
+    ; (this is where Intel's version differs from Perlin's;
+    ; I used Intel's version because it doesn't require a
+    ; pre-computed random table, which is difficult to manage
+    ; in UF.)
+    float b00 = (bx0^@power % 65536 + by0)^@power % 65536
+    float b10 = (bx1^@power % 65536 + by0)^@power % 65536
+    float b01 = (bx0^@power % 65536 + by1)^@power % 65536
+    float b11 = (bx1^@power % 65536 + by1)^@power % 65536
+
+    ; produce a "random" vector for each corner
+    float g_b00_0 = (b00)^@power*0.25 % 512 - 256
+    float g_b10_0 = (b10)^@power*0.25 % 512 - 256
+    float g_b01_0 = (b01)^@power*0.25 % 512 - 256
+    float g_b11_0 = (b11)^@power*0.25 % 512 - 256
+    float g_b00_1 = (b00+1)^@power*0.25 % 512 - 256
+    float g_b10_1 = (b10+1)^@power*0.25 % 512 - 256
+    float g_b01_1 = (b01+1)^@power*0.25 % 512 - 256
+    float g_b11_1 = (b11+1)^@power*0.25 % 512 - 256
+    
+    ; normalize each vector
+    float d = 0.0;
+    d = 1 / sqrt(sqr(g_b00_0) + sqr(g_b00_1))
+    g_b00_0 = g_b00_0 * d
+    g_b00_1 = g_b00_1 * d
+    d = 1 / sqrt(sqr(g_b10_0) + sqr(g_b10_1))
+    g_b10_0 = g_b10_0 * d
+    g_b10_1 = g_b10_1 * d
+    d = 1 / sqrt(sqr(g_b01_0) + sqr(g_b01_1))
+    g_b01_0 = g_b01_0 * d
+    g_b01_1 = g_b01_1 * d
+    d = 1 / sqrt(sqr(g_b11_0) + sqr(g_b11_1))
+    g_b11_0 = g_b11_0 * d
+    g_b11_1 = g_b11_1 * d
+    
+    ; produce colors for each corner
+    float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+    float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+    float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+    float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+    
+    ; interpolate between corners using
+    ; bilinear filtering
+    float sx = sqr(rx0) * (3 - rx0*2)
+    float sy = sqr(ry0) * (3 - ry0*2)
+    float a = u1 + sx*(v1-u1)
+    float b = u2 + sx*(v2-u2)
+    
+    sum = sum + (a + sy*(b-a))*freq
+    freq = freq * @step
+    p = p * r2 / @step
+    i = i - 1
+  ENDWHILE
+
+  IF (@above == 0)
+    IF (sum > @threshold)
+      #solid = true
+    ENDIF
+  ELSEIF (@above == 1)
+    IF (sum < @threshold)
+      #solid = true
+    ENDIF
+  ENDIF
+;  IF (sum > @threshold && @above == 0)
+;    #solid = true
+;  ELSEIF (sum < @threshold && @above == 1)
+;    #solid = true
+;  ENDIF
+  
+default:
+  title = "fBm Clipping"
+  helpfile = "dmj-pub\dmj-pub-uf-fbmclip.htm"
+
+  param threshold
+    caption = "Threshold"
+    default = 0.0
+    hint = "Sets the threshold, above or below which points will \
+            be clipped."
+  endparam
+  param above
+    caption = "Clipping Region"
+    default = 0
+    enum = "above threshold" "below threshold"
+    hint = "Set whether points above or below the threshold value \
+            will be clipped."
+  endparam
+  param offset
+    caption = "Noise Offset"
+    default = (0,0)
+    hint = "This is the offset of the pattern. You can use this to shift \
+            the pattern around on the complex plane."
+  endparam
+  param scale
+    caption = "Noise Scale"
+    default = 1.0
+    hint = "This is the overall scale of the noise."
+  endparam
+  param angle
+    caption = "Noise Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, of the noise."
+  endparam
+  param step
+    caption = "Noise Scale Step"
+    default = 0.5
+    hint = "This is the step in scale between noise iterations."
+  endparam
+  param anglestep
+    caption = "Noise Rotation Step"
+    default = 37.0
+    hint = "This is the angle, in degrees, to rotate between noise \
+            iterations."
+  endparam
+  param octaves
+    caption = "Noise Octaves"
+    default = 7
+    min = 1
+    hint = "This is the number of iterations of the noise formula."
+  endparam
+  param power
+    caption = "Noise Exponent"
+    default = 2.0
+    hint = "This is the exponent used to scramble numbers."
+  endparam
+}
+
+dmj-fBm-Glass1 {
+;
+; fBm-based glass distortion.
+; This provides one-dimensional distortion based
+; on fBm textures.
+;
+transform:
+  complex c = @distcenter
+  IF (@centermove)
+    c = #center
+  ENDIF
+
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex r2 = (0,1) ^ (@anglestep / 90.0)
+  complex r3 = (0,1) ^ (@distangle / 90.0)
+  complex p = #pixel * @scale * r + @offset
+
+  float sum = 0.0
+  float freq = 1.0
+  complex v = (0,0)
+  int i = @octaves
+  WHILE (i > 0)
+    ; determine integer coordinate for corners of square
+    ; surrounding p
+    float bx0 = floor(real(p)) % 256
+    float by0 = floor(imag(p)) % 256
+    IF (bx0 < 0)
+      bx0 = bx0 + 256
+    ENDIF
+    IF (by0 < 0)
+      by0 = by0 + 256
+    ENDIF
+    float bx1 = (bx0 + 1) % 256
+    float by1 = (by0 + 1) % 256
+
+    float rx0 = real(p) - floor(real(p))
+    float ry0 = imag(p) - floor(imag(p))
+    float rx1 = rx0 - 1
+    float ry1 = ry0 - 1
+    
+    ; create a "random" index for each corner
+    ; (this is where Intel's version differs from Perlin's;
+    ; I used Intel's version because it doesn't require a
+    ; pre-computed random table, which is difficult to manage
+    ; in UF.)
+    float b00 = (bx0^@power % 65536 + by0)^@power % 65536
+    float b10 = (bx1^@power % 65536 + by0)^@power % 65536
+    float b01 = (bx0^@power % 65536 + by1)^@power % 65536
+    float b11 = (bx1^@power % 65536 + by1)^@power % 65536
+
+    ; produce a "random" vector for each corner
+    float g_b00_0 = (b00)^@power*0.25 % 512 - 256
+    float g_b10_0 = (b10)^@power*0.25 % 512 - 256
+    float g_b01_0 = (b01)^@power*0.25 % 512 - 256
+    float g_b11_0 = (b11)^@power*0.25 % 512 - 256
+    float g_b00_1 = (b00+1)^@power*0.25 % 512 - 256
+    float g_b10_1 = (b10+1)^@power*0.25 % 512 - 256
+    float g_b01_1 = (b01+1)^@power*0.25 % 512 - 256
+    float g_b11_1 = (b11+1)^@power*0.25 % 512 - 256
+    
+    ; normalize each vector
+    float d = 0.0;
+    d = 1 / sqrt(sqr(g_b00_0) + sqr(g_b00_1))
+    g_b00_0 = g_b00_0 * d
+    g_b00_1 = g_b00_1 * d
+    d = 1 / sqrt(sqr(g_b10_0) + sqr(g_b10_1))
+    g_b10_0 = g_b10_0 * d
+    g_b10_1 = g_b10_1 * d
+    d = 1 / sqrt(sqr(g_b01_0) + sqr(g_b01_1))
+    g_b01_0 = g_b01_0 * d
+    g_b01_1 = g_b01_1 * d
+    d = 1 / sqrt(sqr(g_b11_0) + sqr(g_b11_1))
+    g_b11_0 = g_b11_0 * d
+    g_b11_1 = g_b11_1 * d
+    
+    ; produce colors for each corner
+    float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+    float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+    float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+    float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+    
+    ; interpolate between corners using
+    ; bilinear filtering
+    float sx = sqr(rx0) * (3 - rx0*2)
+    float sy = sqr(ry0) * (3 - ry0*2)
+    float a = u1 + sx*(v1-u1)
+    float b = u2 + sx*(v2-u2)
+    
+    sum = sum + (a + sy*(b-a))*freq
+    freq = freq * @step
+    p = p * r2 / @step
+    i = i - 1
+  ENDWHILE
+
+  IF (@style == 0)      ; radial distortion
+    v = (#pixel-c)/cabs(#pixel-c) * r3 ; use vector based on angle to distortion center
+  ELSEIF (@style == 1)      ; linear distortion
+    v = r3        ; just use rotation vector
+  ENDIF
+  #pixel = #pixel + v * sum*0.5*@distortion
+  
+default:
+  title = "fBm Glass 1"
+  helpfile = "dmj-pub\dmj-pub-uf-fbmg1.htm"
+
+  param distortion
+    caption = "Distortion Strength"
+    default = 1.0
+    hint = "This is the amount the noise distorts the image."
+  endparam
+  param style
+    caption = "Distortion Style"
+    default = 0
+    enum = "radial" "linear"
+    hint = "This selects whether the distortion will be focused \
+            around a single point, or directed along a line."
+  endparam
+  param distangle
+    caption = "Distortion Angle"
+    default = 0.0
+    hint = "This is the angle to rotate the distortion."
+  endparam
+  param distcenter
+    caption = "Distortion Center"
+    default = (0,0)
+    hint = "Sets the center of distortion.  If Use Screen \
+            Center is set, this item is ignored."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, distortion will be around the center of \
+            the window, regardless of the Distortion Center \
+            setting."
+  endparam
+  param offset
+    caption = "Noise Offset"
+    default = (0,0)
+    hint = "This is the offset of the pattern. You can use this to shift \
+            the pattern around on the complex plane."
+  endparam
+  param scale
+    caption = "Noise Scale"
+    default = 1.0
+    hint = "This is the overall scale of the noise."
+  endparam
+  param angle
+    caption = "Noise Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, of the noise."
+  endparam
+  param step
+    caption = "Noise Scale Step"
+    default = 0.5
+    hint = "This is the step in scale between noise iterations."
+  endparam
+  param anglestep
+    caption = "Noise Rotation Step"
+    default = 37.0
+    hint = "This is the angle, in degrees, to rotate between noise \
+            iterations."
+  endparam
+  param octaves
+    caption = "Noise Octaves"
+    default = 7
+    min = 1
+    hint = "This is the number of iterations of the noise formula."
+  endparam
+  param power
+    caption = "Noise Exponent"
+    default = 2.0
+    hint = "This is the exponent used to scramble numbers."
+  endparam
+}
+
+dmj-Forces {
+;
+; This uses the Mosaic algorithm to sprinkle the image
+; with "force points" which attract or repel pixels in
+; the image. For any given pixel, its final location is
+; the sum of all the forces acting on it. You cannot place
+; force points manually; they are placed by the same
+; algorithm which places mosaic tile centers.
+;
+transform:
+  complex center2 = @moscenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  
+  int i = 0
+  float d = 0
+  float random1 = @seed1
+  float random2 = @seed2
+  float random3 = @seed3
+  complex p = 0
+  complex point1 = 0
+  float r1 = 0
+  float range = 1.0 / 2147483648.0
+
+  WHILE (i < @mostiles); still another tile to check
+    random1 = (random1 * 1103515245 + 12345) % 2147483648.0
+    random2 = (random2 * 1103515245 + 12345) % 2147483648.0
+    random3 = (random3 * 1103515245 + 12345) % 2147483648.0
+    p = center2 + ((random1 - 1073741824) + flip(random2 - 1073741824)) * range * @mosscale
+    d = |p - #pixel|
+    r1 = (random3 * range) * (@mosmax-@mosmin) + @mosmin
+
+    point1 = point1 + r1/d*(p-#pixel)
+    i = i + 1
+  ENDWHILE
+
+  #pixel = #pixel + point1
+  
+default:
+  title = "Forces"
+  helpfile = "dmj-pub\dmj-pub-uf-forces.htm"
+  
+  param mostiles
+    caption = "Number of Points"
+    default = 500
+    hint = "Sets the number of force points. More points take \
+            longer to render."
+  endparam
+  param moscenter
+    caption = "Force Area Center"
+    default = (0,0)
+    hint = "Sets the center of the force area. The cluster of \
+            force points will be centered at this point."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the force area center is assumed to be at the center of \
+            the window, regardless of the Force Area Center setting."
+  endparam
+  param mosscale
+    caption = "Point Density"
+    default = 5.0
+    hint = "Specifies the overall scale of the points. Smaller numbers \
+            will pack the points together more closely."
+  endparam
+  param mosmin
+    caption = "Minimum Force"
+    default = -0.1
+    hint = "This is the minimum force (strongest attraction) a point may have."
+  endparam
+  param mosmax
+    caption = "Maximum Force"
+    default = 0.1
+    hint = "This is the maximum force (strongest repulsion) a point may have."
+  endparam
+  param seed1
+    caption = "Random Seed 1"
+    default = 51853571
+    hint = "This is the 'seed' for the random number generator for \
+            horizontal positions."
+  endparam
+  param seed2
+    caption = "Random Seed 2"
+    default = 8072177
+    hint = "This is the 'seed' for the random number generator for \
+            vertical positions."
+  endparam
+  param seed3
+    caption = "Random Seed 3"
+    default = 654187327
+    hint = "This is the 'seed' for the random number generator for \
+            rotations."
+  endparam
+}
+
+dmj-Inversion {
+;
+; This is a generalization of inversion, based on the
+; ideas first presented by Kerry Mitchell in his
+; Inversion fractal formula. This is a general-purpose
+; transform and can be used with any fractal.
+;
+; Thanks to Kerry also for some optimizations on this
+; formula.
+;
+transform:
+  complex c = @invcenter; assume inversion center is fixed
+  IF (@centermove); relative inversion center requested
+    c = #center; inversion center is image center
+  ENDIF
+  complex r = (0,1) ^ (@angle / 90.0); rotation vector
+  complex z = (#pixel-c) * r; apply translation and rotation
+  z = real(z) + flip(imag(z) * @aspect); apply aspect
+  float d = 1.0
+  IF (@invtype == 4); one axis only inversion
+    IF (@invpower == (-1,0)); standard power
+      z = real(z) + @invscale*flip(1/imag(z)); invert just the one axis
+    ELSE; general power
+      z = real(z) + @invscale*flip(imag(z)^@invpower) ; do inversion
+    ENDIF
+    
+  ELSE; any other inversion type
+
+;    IF (@invtype == 0); ellipse
+;; same distance everywhere
+    
+    IF (@invtype == 1); hypercross
+;      d = imag(z) / real(z); slope of line passing through z
+;      d = 1.0 / sqrt(abs(d + 1.0/d)); distance from origin to hypercross
+;    ;   through z
+      d = sqrt(abs(real(z)*imag(z))/|z|) ; Kerry's simplification
+
+    ELSEIF (@invtype == 2); flower
+      d = atan2(z); angle to z
+      d = abs(cos(d*@invorder)+@diameter) ; distance from origin to flower at
+      ;   angle z
+
+    ELSEIF (@invtype == 3); lines
+      d = sqrt(sqr(real(z)/imag(z))+1); distance from origin to horizontal
+    ;   line through z
+
+    ENDIF
+;  z = z*d / sqr(cabs(z)); do inversion (stupid way)
+    IF (@invpower == (-1,0)); standard power
+      z = @invscale*z*d / |z|; do inversion (Kerry-optimized)
+    ELSE; general power
+      z = @invscale*z*d * cabs(z)^(@invpower-1); do inversion
+    ENDIF
+
+  ENDIF
+
+  z = real(z) + flip(imag(z) / @aspect); undo aspect
+  #pixel = z * conj(r) + c; undo rotation and translation
+
+default:
+  title = "General Inversion"
+  helpfile = "dmj-pub\dmj-pub-uf-inversion.htm"
+  
+  param invtype
+    caption = "Inversion Curve"
+    default = 0
+    enum = "ellipse" "hypercross" "flower" "lines" "one axis"
+    hint = "Sets the shape of the curve through which inversion \
+            is done."
+  endparam
+  param invscale
+    caption = "Inversion Scale"
+    default = 1.0
+    hint = "Scale of the inversion. This performs a similar function \
+            to changing the magnitude of the fractal zoom."
+  endparam
+  param invorder
+    caption = "Inversion Order"
+    default = 3.0
+    hint = "Number of leaves for the flower curve."
+  endparam
+  param invcenter
+    caption = "Inversion Center"
+    default = (0,0)
+    hint = "Sets the center of the inversion."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, inversion will be around the center of \
+            the window, regardless of the Inversion Center \
+    setting."
+  endparam
+  param aspect
+    caption = "Aspect Ratio"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the inversion curve is.  You can \
+            distort the curve by using a value other than 1.0."
+  endparam
+  param diameter
+    caption = "Diameter"
+    default = 1.5
+    hint = "This is the diameter of the inversion curve. Note this \
+            only matters for the 'flower' curve type."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the inversion \
+            curve should be rotated."
+  endparam
+  param invpower
+    caption = "Exponent"
+    default = (-1,0)
+    hint = "Gives the inversion exponent. (-1,0) gives the classic \
+            1/z inversion type."
+  endparam
+}
+
+dmj-Julia {
+;
+; This does a few Julia-set iterations to warp
+; the fractal shape. Try using it with a
+; Newton fractal.
+;
+transform:
+  int i = @iters
+  complex z = #pixel/@magnification-@offset
+  WHILE (i > 0 && |z| <= @bailout)
+    z = z^@power + @seed
+    i = i - 1
+  ENDWHILE
+  IF (|z| > @bailout)
+    #solid = true
+  ELSE
+    #pixel = z+@offset
+  ENDIF
+
+default:
+  title = "Julia"
+  helpfile = "dmj-pub\dmj-pub-uf-mjpnx.htm"
+
+  param iters
+    caption = "Iterations"
+    default = 4
+    hint = "Number of iterations to do before calculating the fractal. \
+            Use a small number."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offsets the Julia distortion."
+  endparam
+  param magnification
+    caption = "Magnification"
+    default = 1.0
+    hint = "Sets the magnification on the Julia shape."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Julia set anymore. Bailed-out points will be \
+    solid-colored."
+  endparam
+}
+
+dmj-Kaleidoscope {
+;
+; Kaleidoscope Transformation
+; This can be used to simulate many different
+; kinds of symmetry.
+;
+; Changes:
+; - When using "slice" mode, points not part of
+;   the slice will be colored using the solid
+;   color.  You can use this to assemble several
+;   slices into the same image.
+;
+transform:
+  float r2 = 0.0
+  float d = 0.0
+  complex r = (0,1) ^ (@angle/90); complex rotation vector
+  complex c = @symcenter; assume symmetry center is fixed
+  IF (@centermove); relative symmetry center requested
+    c = #center; symmetry center is image center
+  ENDIF
+  complex z2 = #pixel - c; get coordinate relative to symcenter
+
+  ; convert z2 into angle and distance  
+  r2 = atan2(z2)
+  IF (r2 < 0); negative angle (we want 0 < atan < pi*2)
+    r2 = r2 + #pi * 2; rotate 360 degrees
+  ENDIF
+  d = cabs(z2); distance from symcenter
+
+  IF (@symorder > 0); Zero symmetry disables the transform.
+    ; apply symmetry
+    IF (@symreflect == 0); reflective
+      r2 = r2 - floor(r2*@symorder/#pi/2)*#pi*2/@symorder
+      IF (r2 > #pi/@symorder); upper half of the range
+        r2 = #pi*2/@symorder - r2; reflect angle
+      ENDIF
+    ELSEIF (@symreflect == 1); left symmetry
+      r2 = r2 - floor(r2*@symorder/#pi/2)*#pi*2/@symorder
+    ELSEIF (@symreflect == 2); right symmetry
+      r2 = r2 - floor(r2*@symorder/#pi/2)*#pi*2/@symorder
+      r2 = #pi*2/@symorder - r2; always reflect this
+    ELSEIF (@symreflect == 3); slice-only symmetry
+      IF (r2 > #pi*2/@symorder); outside of slice
+        r2 = 0; reset angle
+#solid = true; this is outside now
+      ENDIF
+    ENDIF
+    #pixel = (cos(r2)*d + flip(sin(r2)*d))/r + c; compute point
+  ENDIF
+  
+default:
+  title = "Kaleidoscope"
+  helpfile = "dmj-pub\dmj-pub-uf-kaleidoscope.htm"
+
+  param symorder
+    caption = "Symmetry Order"
+    default = 8.0
+    hint = "Indicates the number of reflected components. \
+            Use 0 to temporarily disable symmetry."
+  endparam
+  param symreflect
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "reflective" "left" "right" "slice only"
+    hint = "Style of symmetry.  Reflective will always be \
+            seamless; left and right may not be.  If Slice \
+    is selected, only the section that will be \
+    mirrored will be shown."
+  endparam
+  param symcenter
+    caption = "Symmetry Center"
+    default = (0,0)
+    hint = "Sets the center of symmetry.  If Use Screen \
+            Center is set, this item is ignored."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, symmetry will be around the center of \
+            the window, regardless of the Symmetry Center \
+    setting."
+  endparam
+  param angle
+    caption = "Rotation angle"
+    default = 0.0
+    hint = "Sets how much to rotate the fractal (in degrees) \
+            before applying symmetry."
+  endparam
+}
+
+dmj-LowRes {
+;
+; Low Resolution Transformation
+; This deliberately lowers the resolution of
+; the fractal, but it does so by limiting the
+; precision of complex numbers, so it is still
+; usable with other transformations.
+;
+transform:
+  complex r = (0,1) ^ (@angle/90); complex rotation vector
+  #pixel = (round(real(#pixel*r)*@xres)/@xres + flip(round(imag(#pixel*r)*@yres)/@yres)) * conj(r)
+
+default:
+  title = "Low Resolution"
+  helpfile = "dmj-pub\dmj-pub-uf-lowres.htm"
+
+  param xres
+    caption = "Real Resolution"
+    default = 25.0
+    hint = "Number of separate positions per horizontal unit distance."
+  endparam
+  param yres
+    caption = "Imaginary Resolution"
+    default = 25.0
+    hint = "Number of separate positions per vertical unit distance."
+  endparam
+  param angle
+    caption = "Rotation angle"
+    default = 0.0
+    hint = "Sets the angle at which the low-resolution grid is applied."
+  endparam
+}
+
+dmj-Mandelbrot {
+;
+; This does a few M-set iterations to warp
+; the fractal shape. Try using it with a
+; Newton fractal.
+;
+transform:
+  int i = @iters
+  complex z = @start
+  WHILE (i > 0 && |z| <= @bailout)
+    z = z^@power + #pixel-@offset
+    i = i - 1
+  ENDWHILE
+  IF (|z| > @bailout)
+    #solid = true
+  ELSE
+    #pixel = z+@offset
+  ENDIF
+
+default:
+  title = "Mandelbrot"
+  helpfile = "dmj-pub\dmj-pub-uf-mjpnx.htm"
+
+  param iters
+    caption = "Iterations"
+    default = 4
+    hint = "Number of iterations to do before calculating the fractal. \
+            Use a small number."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offsets the Mandelbrot distortion."
+  endparam
+  param start
+    caption = "Start Value"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Mandelbrot type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore. Bailed-out points will be \
+    solid-colored."
+  endparam
+}
+
+dmj-Mirror {
+;
+; This transform can be used to reflect a layer
+; around any arbitrary axis.
+;
+transform:
+  complex center2 = @refcenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  complex r = (0,1) ^ (@angle / 90.0)
+  #pixel = (#pixel-center2) * r
+  #pixel = conj(#pixel)
+  #pixel = #pixel * conj(r) + center2
+  
+default:
+  title = "Mirror"
+  helpfile = "dmj-pub\dmj-pub-uf-mirror.htm"
+  
+  param angle
+    caption = "Reflection Angle"
+    default = 0.0
+    hint = "This is the angle for the axis of reflection."
+  endparam
+  param refcenter
+    caption = "Reflection Center"
+    default = (0,0)
+    hint = "Sets the center of reflection.  Use the eyedropper \
+            to pick it."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, reflection is assumed to be at the center of \
+            the window, regardless of the Reflection Center setting."
+  endparam
+}
+
+dmj-Mosaic {
+;
+; This transform can be used to break an image into
+; many mosaic pieces, and either have those solid-
+; colored or contain pieces of the fractal itself.
+;
+; In general you want to use as few tiles as you can
+; get away with. Fewer tiles allows the algorithm to
+; run much faster. Although speedups have been added
+; to this version, about 500,000 tiles will make this
+; formula run very slowly. (2,500 was the "slow" point
+; for previous versions.)
+;
+; You may also want to re-enable guessing if you've
+; turned it off, especially if you're using a small
+; number of tiles. Mosaic normally produces large
+; areas of solid color, which guessing can speed up.
+;
+; Because of the shortcuts used to speed up rendernig,
+; this transform requires some memory; 1,000,000 tiles
+; will require about 40M of RAM.
+;
+; The original code was much simpler; the algorithm
+; was straightforward in that each pixel was checked
+; against each tile center to find the closest one.
+;
+global:
+  ;
+  ; The general idea is to generate, one time, the
+  ; entire list of center points for each tile. But,
+  ; as the list is generated, it is stored in sorted
+  ; order (by X coordinate). This will allow fast
+  ; finding of nearest center point.
+  ;
+  ; We store centerpoints as an array of float instead
+  ; of an array of complex so we don't have to keep
+  ; cutting our tree node numbers in half.
+  ;
+  float tilecenters[@mostiles*2]; tile center points
+  float tileangles[@mostiles]; tile rotation angles
+  int tiletree[@mostiles*2]; tile tree structure
+  int tileorder[@mostiles*2]; tile ordering
+
+  complex center2 = @moscenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+ 
+  int i = 0
+  int j = 0
+  int k = 0
+  int l = 0
+  int rightbranch = 0
+  float random1 = @seed1
+  float random2 = @seed2
+  float random3 = @seed3
+  complex p = 0
+  float range = 1.0 / 2147483648.0
+
+  tiletree[0] = -1; initialize tree (one leaf node)
+  tiletree[1] = -1
+  tileorder[0] = -1; initialize order (one double-endpoint)
+  tileorder[1] = -1
+  WHILE (i < @mostiles); still another tile to generate
+    ;
+    ; generate random data
+    ;
+    random1 = (random1 * 1103515245 + 12345) % 2147483648.0
+    random2 = (random2 * 1103515245 + 12345) % 2147483648.0
+    p = center2 + ((random1 - 1073741824) + flip(random2 - 1073741824)) * range * @mosscale
+    tilecenters[j] = real(p)
+    tilecenters[j+1] = imag(p)
+    
+    IF (@mosangle != 0.0); want an angle, too
+      random3 = (random3 * 1103515245 + 12345) % 2147483648.0
+      tileangles[i] = random3
+    ENDIF
+
+    ;
+    ; find appropriate insertion point in the tree
+    ;
+    IF (i > 0); have at least one item in the tree
+      k = 0; current node
+      WHILE (k >= 0); not at a leaf node
+        l = k; save current node
+        IF (real(p) < tilecenters[k] ||   \
+            (real(p) == tilecenters[k] && \
+             imag(p) < tilecenters[k+1])) ; less than current node
+          k = tiletree[k]; follow left branch
+          rightbranch = 0
+        ELSE; greater than current node
+          k = tiletree[k+1]; follow right branch
+          rightbranch = 1
+        ENDIF
+      ENDWHILE
+
+      ;
+      ; insert node into tree
+      ;
+      tiletree[j]   = -1; this node is a leaf node
+      tiletree[j+1] = -1
+      tiletree[l+rightbranch] = j; point this item to it
+
+      ;
+      ; insert node into sorted list
+      ;
+      IF (rightbranch == 0); followed the left branch
+        IF (tileorder[l] >= 0); not the leftmost node so far
+          tileorder[tileorder[l]+1] = j; follow it and point it to the new node
+        ENDIF
+        tileorder[j] = tileorder[l]; point new node to nodes it's between
+        tileorder[j+1] = l
+        tileorder[l] = j; point previous tree node's left to this node
+      ELSE
+        IF (tileorder[l+1] >= 0); not the rightmost node so far
+          tileorder[tileorder[l+1]] = j; follow it and point it to the new node
+        ENDIF
+        tileorder[j] = l; point new node to nodes it's between
+        tileorder[j+1] = tileorder[l+1]
+        tileorder[l+1] = j; point previous tree node's right to this node
+      ENDIF
+    ENDIF
+
+    i = i + 1
+    j = j + 2
+  ENDWHILE
+
+transform:
+  ;
+  ; At this point, we already have a list of tile
+  ; centers, with forward and backward order links,
+  ; and a tree structure for finding the closest X
+  ; value. For each pixel, find the tile center with
+  ; the closest X value, then scan outwards until
+  ; the tile centers under examination are too far
+  ; (in the X direction) to beat what we already have.
+  ;
+  int i2 = 0
+  int j2 = 0
+  int k2 = 0
+  int l2 = 0
+
+  int i3 = 0
+  int j3 = 0
+  int k3 = 0
+  int l3 = 0
+
+  BOOL scanleft = TRUE
+  BOOL scanright = TRUE
+  float d = 0
+  float closest1 = 1e20
+  float closest2 = 1e20
+  complex q = 0
+  complex point1 = 0
+  complex point2 = 0
+  float r1 = 0
+
+  ;
+  ; First, find the closest X value.
+  ;
+  k2 = 0; current node
+  WHILE (k2 >= 0); not at a leaf node
+    l2 = k2; save current node
+    IF (real(#pixel) < tilecenters[k2] ||   \
+        (real(#pixel) == tilecenters[k2] && \
+         imag(#pixel) < tilecenters[k2+1])) ; less than current node
+      k2 = tiletree[k2]; follow left branch
+    ELSE; greater than current node
+      k2 = tiletree[k2+1]; follow right branch
+    ENDIF
+  ENDWHILE
+
+  q = tilecenters[l2]+flip(tilecenters[l2+1]) ; tile center (as a complex)
+  closest1 = |q - #pixel|; save distance
+  point1 = q; save center
+  i2 = tileorder[l2]; left node to check
+  j2 = tileorder[l2+1]; right node to check
+
+  WHILE (scanleft || scanright); still scanning in at least one direction
+    IF (i2 < 0); hit the leftmost node
+      scanleft = FALSE; don't scan to the left
+    ENDIF
+    IF (scanleft); scanning to the left...
+      q = tilecenters[i2]+flip(tilecenters[i2+1]) ; tile center (as a complex)
+      d = sqr(real(q) - real(#pixel)); distance on X axis
+      IF (d > closest1); X distance alone is greater than our closest
+        scanleft = FALSE; so nothing else can possibly match
+      ELSE; well maybe it's closer
+        d = |q - #pixel|; distance to this tile
+        IF (d < closest1); new closest value!
+          closest1 = d; save distance
+          l2 = i2; save index
+          point1 = q; save center
+          IF (@mosangle != 0.0); want a random angle, too
+            r1 = tileangles[floor(l2 * 0.5)]; save angle
+          ENDIF
+        ENDIF
+        i2 = tileorder[i2]; follow link to the left
+      ENDIF
+    ENDIF
+    
+    IF (j2 < 0); hit the rightmost node
+      scanright = FALSE; don't scan to the right
+    ENDIF
+    IF (scanright); scanning to the right...
+      q = tilecenters[j2]+flip(tilecenters[j2+1]) ; tile center (as a complex)
+      d = sqr(real(q) - real(#pixel)); distance on X axis
+      IF (d > closest1); X distance alone is greater than our closest
+        scanright = FALSE; so nothing else can possibly match
+      ELSE; well maybe it's closer
+        d = |q - #pixel|; distance to this tile
+        IF (d < closest1); new closest value!
+          closest1 = d; save distance
+          l2 = j2; save index
+          point1 = q; save center
+          IF (@mosangle != 0.0); want a random angle, too
+            r1 = tileangles[floor(l2 * 0.5)]; save angle
+          ENDIF
+        ENDIF
+        j2 = tileorder[j2+1]; follow link to the right
+      ENDIF
+    ENDIF
+  ENDWHILE
+
+  ;
+  ; We now have the location of the closest tile
+  ; (point1) and the index of it (l2). If we're
+  ; doing anything with the seams, we'll need the
+  ; second-closest point, too. We scan left and
+  ; right for it. This time, we don't need the
+  ; angle, we just want to know where the tile is.
+  ;
+  
+  IF (@usesolid > 0 && @tileseams > 0.0)
+    scanleft  = TRUE
+    scanright = TRUE
+    i3 = tileorder[l2]; left node to check
+    j3 = tileorder[l2+1]; right node to check
+
+    WHILE (scanleft || scanright); still scanning in at least one direction
+      IF (i3 < 0); hit the leftmost node
+        scanleft = FALSE; don't scan to the left
+      ENDIF
+      IF (scanleft); scanning to the left...
+        q = tilecenters[i3]+flip(tilecenters[i3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(#pixel)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanleft = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - #pixel|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+            l3 = i3; save index
+            point2 = q; save center
+          ENDIF
+          i3 = tileorder[i3]; follow link to the left
+        ENDIF
+      ENDIF
+      
+      IF (j3 < 0); hit the rightmost node
+        scanright = FALSE; don't scan to the right
+      ENDIF
+      IF (scanright); scanning to the right...
+        q = tilecenters[j3]+flip(tilecenters[j3+1]) ; tile center (as a complex)
+        d = sqr(real(q) - real(#pixel)); distance on X axis
+        IF (d > closest2); X distance alone is greater than our closest
+          scanright = FALSE; so nothing else can possibly match
+        ELSE; well maybe it's closer
+          d = |q - #pixel|; distance to this tile
+          IF (d < closest2); new closest value!
+            closest2 = d; save distance
+            l3 = j3; save index
+            point2 = q; save center
+          ENDIF
+          j3 = tileorder[j3+1]; follow link to the right
+        ENDIF
+      ENDIF
+    ENDWHILE
+
+  ENDIF
+
+  ;
+  ; With the coordinates of the closest and
+  ; second-closest tile, we can transform our
+  ; point (and apply the solid color).
+  ;
+  ; The algorithm for determining whether the
+  ; point is in the "seam" between two tiles
+  ; is not perfect. To be truly right, it would
+  ; need to test against the seam for every
+  ; neighboring tile; we don't have that data
+  ; handy and it's not easy to get. So, we
+  ; fudge it.
+  ;
+
+  IF (@usesolid == 1 && @tileseams > 0.0)
+    d = real((#pixel-(point2+point1)*0.5) * conj(point2-point1)/cabs(point2-point1))
+    IF (abs(d) < @tileseams)
+      #solid = true
+    ENDIF
+  ELSEIF (@usesolid == 2 && @tileseams > 0.0)
+    d = real((#pixel-(point2+point1)*0.5) * conj(point2-point1)/cabs(point2-point1))
+    IF (abs(d) > @tileseams)
+      #solid = true
+    ENDIF
+  ELSEIF (@usesolid == 3 && @tileseams > 0.0)
+    closest1 = sqrt(closest1)
+    closest2 = sqrt(closest2)
+    IF (closest2-closest1 < @tileseams)
+      #solid = true
+    ENDIF
+  ELSEIF (@usesolid == 4 && @tileseams > 0.0)
+    closest1 = sqrt(closest1)
+    closest2 = sqrt(closest2)
+    IF (closest2-closest1 > @tileseams)
+      #solid = true
+    ENDIF
+  ENDIF
+
+  IF (@mosangle != 0.0)
+    r1 = (r1 - 1073741824) * range
+  ENDIF
+  #pixel = point1*(1-@mosforce) + (#pixel-point1)*@tilescale * (0,1)^(r1*@mosangle/90.0)
+    
+default:
+  title = "Mosaic (Fast)"
+  helpfile = "dmj3\dmj3-pub-uf-mosaic.htm"
+  
+  param mostiles
+    caption = "Number of Tiles"
+    default = 500
+    hint = "Sets the number of mosaic tiles. More tiles take \
+            longer to render."
+  endparam
+  param moscenter
+    caption = "Tiled Area Center"
+    default = (0,0)
+    hint = "Sets the center of the tiled area. The cluster of \
+            tiles will be centered at this point."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the tiled area center is assumed to be at the center of \
+            the window, regardless of the Tiled Area Center setting."
+  endparam
+  param mosscale
+    caption = "Tile Density"
+    default = 5.0
+    hint = "Specifies the overall scale of the tiles. Smaller numbers \
+            will pack the tiles together more closely."
+  endparam
+  param tilescale
+    caption = "Tile Magnification"
+    default = 0.0
+    hint = "Specifies the scale of the image within each tile. Use 0 \
+            for solid-color tiles, use 1 for no effect."
+  endparam
+  param tileseams
+    caption = "Seam Width"
+    default = 0.0
+    hint = "Sets the width of seams between tiles. If set to 0, then \
+            no seam will be calculated (faster)."
+  endparam
+  param usesolid
+    caption = "Solid Color Use"
+    default = 0
+    enum = "none" "seams, no gaps" "tiles, no gaps" "seams, with gaps" "tiles, with gaps"
+    hint = "Sets what the solid color will be used for."
+  endparam
+  param mosforce
+    caption = "Force Tiles to Origin"
+    default = 0.0
+    hint = "Forces the center of each tile towards the origin. If zero, \
+            has no effect (tiles are centered normally). If one, tiles \
+            are fully moved towards the origin."
+  endparam
+  param mosangle
+    caption = "Rotation Range"
+    default = 0.0
+    hint = "Sets the range on rotations for each tile."
+  endparam
+  param seed1
+    caption = "Random Seed 1"
+    default = 51853571
+    hint = "This is the 'seed' for the random number generator for \
+            horizontal positions."
+  endparam
+  param seed2
+    caption = "Random Seed 2"
+    default = 8072177
+    hint = "This is the 'seed' for the random number generator for \
+            vertical positions."
+  endparam
+  param seed3
+    caption = "Random Seed 3"
+    default = 654187327
+    hint = "This is the 'seed' for the random number generator for \
+            rotations."
+  endparam
+}
+
+dmj-NovaJulia {
+;
+; This does a few Nova Julia iterations to warp
+; the fractal shape. Try using it with a
+; Newton fractal.
+;
+transform:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  int i = @iters
+  complex z = #pixel-@offset
+  WHILE (i > 0 && |z-zold| > @bailout)
+    IF (@power == (3,0)); special optimized routine for power 3
+      zsquared = sqr(z)
+      zcubed = zsquared * z
+      zold = z
+      z = z - (zcubed-1) / (3*zsquared) + @seed
+    ELSE
+      zold = z
+      z = z - (z^@power-1) / (@power * z^(@power-1)) + @seed
+    ENDIF
+    i = i - 1
+  ENDWHILE
+  IF (|z-zold| <= @bailout)
+    #solid = true
+  ELSE
+    #pixel = z+@offset
+  ENDIF
+
+default:
+  title = "Nova (Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-mjpnx.htm"
+
+  param iters
+    caption = "Iterations"
+    default = 4
+    hint = "Number of iterations to do before calculating the fractal. \
+            Use a small number."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offsets the Nova Julia distortion."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Overall exponent for the equation.  (3,0) gives \
+            the classic Nova type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 0.00001
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Nova Julia set anymore. Bailed-out points will be \
+    solid-colored."
+  endparam
+}
+
+dmj-Offset {
+;
+; This transform offsets the fractal with rectangular
+; displacement. By itself, it accomplishes nothing that
+; cannot be done better by repositioning the fractal.
+; However, combined with other transforms it can produce
+; some interesting distortions, and it can also be a
+; convenience when creating multi-layer fractals.
+;
+transform:
+  complex offset = @offvector * @offscale * ((0,1) ^ (@offangle / 90.0))
+  #pixel = #pixel + offset
+  
+default:
+  title = "Offset"
+  helpfile = "dmj-pub\dmj-pub-uf-offset.htm"
+  
+  param offvector
+    caption = "Offset Amount"
+    default = (0,0)
+    hint = "Specifies the amount of offset."
+  endparam
+  param offangle
+    caption = "Offset Angle"
+    default = 0.0
+    hint = "Angle of offset. You can use this to rotate the offset \
+            without having to calculate the rotated offset yourself."
+  endparam
+  param offscale
+    caption = "Offset Scale"
+    default = 1.0
+    hint = "Scale of offset. You can use this to scale the offset \
+            without having to calculate the scaled offset yourself."
+  endparam
+}
+
+dmj-PhoenixJulia {
+;
+; This does a few Phoenix Julia iterations to warp
+; the fractal shape. Try using it with a
+; Newton fractal.
+;
+transform:
+  complex y = (0,0)
+  complex newz = (0,0)
+
+  int i = @iters
+  complex z = #pixel-@offset
+  WHILE (i > 0 && |z| <= @bailout)
+    newz = z^@power1  +  z^@power2 * @seed  +  @induct * y
+    y = z
+    z = newz
+    i = i - 1
+  ENDWHILE
+  IF (|z| > @bailout)
+    #solid = true
+  ELSE
+    #pixel = z+@offset
+  ENDIF
+
+default:
+  title = "Phoenix (Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-mjpnx.htm"
+
+  param iters
+    caption = "Iterations"
+    default = 4
+    hint = "Number of iterations to do before calculating the fractal. \
+            Use a small number."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offsets the Phoenix Julia distortion."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0.56667,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power1
+    caption = "Primary Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 2."
+  endparam
+  param power2
+    caption = "Secondary Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 0."
+  endparam
+  param induct
+    caption = "Phoenix Distortion"
+    default = (-0.5,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Phoenix set anymore. Bailed-out points will be \
+    solid-colored."
+  endparam
+}
+
+dmj-Polar {
+;
+; This transform takes the current pixel, assumes real(pixel)
+; is the angle, and imag(pixel) is the distance, and converts
+; these back to the rectangular coordinates the UF expects.
+; This can be used to undo the effects of the Rectangular to
+; Polar transform. It can also be used to warp the heck out of
+; your fractal. :)
+;
+transform:
+  #pixel = real(#pixel)*cos(imag(#pixel)) + flip(real(#pixel)*sin(imag(#pixel))) + @polcenter
+
+default:
+  title = "Polar to Rectangular"
+  helpfile = "dmj-pub\dmj-pub-uf-p2r.htm"
+  
+  param polcenter
+    caption = "Polar Center"
+    default = (0,0)
+    hint = "This is the center of the polar coordinate system."
+  endparam
+}
+
+dmj-SelectJulia {
+;
+; This formula "selects" a portion of the image,
+; based on the iteration count for the Julia set at
+; each pixel.
+;
+transform:
+  complex z = #pixel
+  float b = @bailout
+  IF (@strict)
+    b = sqr(1+sqrt(1+4*cabs(@seed)))*0.25
+  ENDIF
+  int i = 0
+
+  WHILE (|z| < b && i < @maxiter)
+    z = z^@power + @seed
+    i = i + 1
+  ENDWHILE
+
+  float r = real(@xfer(flip(flip(i))))
+  r = r - trunc(r / @divisor) * @divisor
+  IF (r < @remainder || r >= @remainder+@width)
+    #solid = TRUE
+  ENDIF
+
+default:
+  title = "Select (Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-select.htm"
+
+  param maxiter
+    caption = "Maximum Iterations"
+    default = 150
+    hint = "Maximum number of iterations that will be performed \
+            for the transform."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Julia type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 128
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param strict
+    caption = "Strict Bailout"
+    default = FALSE
+    hint = "If set, uses 'strict' bailout checking, which varies \
+            the bailout value with each point. This will override \
+    the Bailout parameter."
+  endparam
+  param divisor
+    caption = "Iteration Divisor"
+    default = 2.0
+    hint = "The iteration count will be divided by this value, and \
+            the remainder taken."
+  endparam
+  param remainder
+    caption = "Iteration Remainder"
+    default = 1.0
+    hint = "If the remainder after dividing the iteration count \
+            does not match this value, the pixel will be colored \
+    'solid'."
+  endparam
+  param width
+    caption = "Band Width"
+    default = 1.0
+    hint = "The width of the non-solid band, in iterations."
+  endparam
+  func xfer
+    caption = "Iteration Transfer"
+    default = ident()
+    hint = "This function will be applied to the iteration count \
+            before it is divided."
+  endfunc
+}
+
+dmj-SelectMandel {
+;
+; This formula "selects" a portion of the image,
+; based on the iteration count for the M-set at each
+; pixel.
+;
+transform:
+  complex z = @start
+  float b = @bailout
+  IF (@strict)
+    b = sqr(1+sqrt(1+4*cabs(#pixel)))*0.25
+  ENDIF
+  int i = 0
+
+  WHILE (|z| < b && i < @maxiter)
+    z = z^@power + #pixel
+    i = i + 1
+  ENDWHILE
+
+  float r = real(@xfer(flip(flip(i))))
+  r = r - trunc(r / @divisor) * @divisor
+  IF (r < @remainder || r >= @remainder+@width)
+    #solid = TRUE
+  ENDIF
+  
+default:
+  title = "Select (Mandelbrot)"
+  helpfile = "dmj-pub\dmj-pub-uf-select.htm"
+
+  param maxiter
+    caption = "Maximum Iterations"
+    default = 150
+    hint = "Maximum number of iterations that will be performed \
+            for the transform."
+  endparam
+  param start
+    caption = "Start Value"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Mandelbrot type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 128
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param strict
+    caption = "Strict Bailout"
+    default = FALSE
+    hint = "If set, uses 'strict' bailout checking, which varies \
+            the bailout value with each point. This will override \
+    the Bailout parameter."
+  endparam
+  param divisor
+    caption = "Iteration Divisor"
+    default = 2.0
+    hint = "The iteration count will be divided by this value, and \
+            the remainder taken."
+  endparam
+  param remainder
+    caption = "Iteration Remainder"
+    default = 1.0
+    hint = "If the remainder after dividing the iteration count \
+            does not match this value, the pixel will be colored \
+    'solid'."
+  endparam
+  param width
+    caption = "Band Width"
+    default = 1.0
+    hint = "The width of the non-solid band, in iterations."
+  endparam
+  func xfer
+    caption = "Iteration Transfer"
+    default = ident()
+    hint = "This function will be applied to the iteration count \
+            before it is divided."
+  endfunc
+}
+
+dmj-SelectNovaJulia {
+;
+; This formula "selects" a portion of the image,
+; based on the iteration count for the Nova set at
+; each pixel.
+;
+transform:
+  complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+  complex z = #pixel
+  int i = 0
+
+  WHILE (|z-zold| > @bailout && i < @maxiter)
+    IF (@power == (3,0)); special optimized routine for power 3
+      zsquared = sqr(z)
+      zcubed = zsquared * z
+      zold = z
+      z = z - (zcubed-1) / (3*zsquared) + @seed
+    ELSE
+      zold = z
+      z = z - (z^@power-1) / (@power * z^(@power-1)) + @seed
+    ENDIF
+    i = i + 1
+  ENDWHILE
+
+  float r = real(@xfer(flip(flip(i))))
+  r = r - trunc(r / @divisor) * @divisor
+  IF (r < @remainder || r >= @remainder+@width)
+    #solid = TRUE
+  ENDIF
+  
+default:
+  title = "Select (Nova Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-select.htm"
+
+  param maxiter
+    caption = "Maximum Iterations"
+    default = 150
+    hint = "Maximum number of iterations that will be performed \
+            for the transform."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Overall exponent for the equation.  (3,0) gives \
+            the classic Nova type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 0.00001
+    hint = "Bailout value; smaller values will cause more \
+            iterations to be done for each point."
+  endparam
+  param divisor
+    caption = "Iteration Divisor"
+    default = 2.0
+    hint = "The iteration count will be divided by this value, and \
+            the remainder taken."
+  endparam
+  param remainder
+    caption = "Iteration Remainder"
+    default = 1.0
+    hint = "If the remainder after dividing the iteration count \
+            does not match this value, the pixel will be colored \
+    'solid'."
+  endparam
+  param width
+    caption = "Band Width"
+    default = 1.0
+    hint = "The width of the non-solid band, in iterations."
+  endparam
+  func xfer
+    caption = "Iteration Transfer"
+    default = ident()
+    hint = "This function will be applied to the iteration count \
+            before it is divided."
+  endfunc
+}
+
+dmj-SelectPhoenixJulia {
+;
+; This formula "selects" a portion of the image,
+; based on the iteration count for the Phoenix set
+; at each pixel.
+;
+transform:
+  complex y = (0,0)
+  complex newz = (0,0)
+
+  complex z = #pixel
+  int i = 0
+
+  WHILE (|z| < @bailout && i < @maxiter)
+    newz = z^@power1  +  z^@power2 * @seed  +  @induct * y
+    y = z
+    z = newz
+    i = i + 1
+  ENDWHILE
+
+  float r = real(@xfer(flip(flip(i))))
+  r = r - trunc(r / @divisor) * @divisor
+  IF (r < @remainder || r >= @remainder+@width)
+    #solid = TRUE
+  ENDIF
+  
+default:
+  title = "Select (Phoenix Julia)"
+  helpfile = "dmj-pub\dmj-pub-uf-select.htm"
+
+  param maxiter
+    caption = "Maximum Iterations"
+    default = 150
+    hint = "Maximum number of iterations that will be performed \
+            for the transform."
+  endparam
+  param seed
+    caption = "Julia Seed"
+    default = (0.56667,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal."
+  endparam
+  param power1
+    caption = "Primary Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 2."
+  endparam
+  param power2
+    caption = "Secondary Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal.  The classic \
+            Phoenix curve uses exponent 0."
+  endparam
+  param induct
+    caption = "Phoenix Distortion"
+    default = (-0.5,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Phoenix set anymore."
+  endparam
+  param divisor
+    caption = "Iteration Divisor"
+    default = 2.0
+    hint = "The iteration count will be divided by this value, and \
+            the remainder taken."
+  endparam
+  param remainder
+    caption = "Iteration Remainder"
+    default = 1.0
+    hint = "If the remainder after dividing the iteration count \
+            does not match this value, the pixel will be colored \
+    'solid'."
+  endparam
+  param width
+    caption = "Band Width"
+    default = 1.0
+    hint = "The width of the non-solid band, in iterations."
+  endparam
+  func xfer
+    caption = "Iteration Transfer"
+    default = ident()
+    hint = "This function will be applied to the iteration count \
+            before it is divided."
+  endfunc
+}
+
+dmj-SpiralCut {
+;
+; This transformation cuts your image into several slices,
+; and then inflates the size of each slice independently.
+; I got the idea for this from an old Photoshop plug-in.
+;
+transform:
+  complex center2 = @cutcenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex p0 = (#pixel-center2)*r
+  complex p = p0
+  float a = atan2(p0)
+  float d = cabs(p0)
+
+  IF (@mode == 0)
+    d = round(d*@density)/@density
+  ELSEIF (@mode == 1)
+    a = round(a*@density)/@density
+  ELSEIF (@mode == 2)
+    d = round(d*@density)/@density
+    a = round(a*@density)/@density
+  ELSEIF (@mode == 3)
+    p = round(real(p)*@density)/@density + flip(imag(p))
+  ELSEIF (@mode == 4)
+    p = round(real(p)*@density)/@density + flip(round(imag(p)*@density)/@density)
+  ENDIF
+  IF (@mode < 3)
+    p = d * (cos(a) + flip(sin(a)))
+  ENDIF
+  #pixel = (p + (p0-p)*@boost) * conj(r) + center2
+    
+default:
+  title = "Spiral Cut"
+  helpfile = "dmj-pub\dmj-pub-uf-spiralcut.htm"
+  
+  param mode
+    caption = "Cut Mode"
+    default = 0
+    enum = "rings" "rays" "radial grid" "lines" "grid"
+  endparam
+;  param nodistort
+;    caption = "No Squashing"
+;    default = true
+;  endparam
+  param density
+    caption = "Cut Density"
+    default = 5.0
+  endparam
+  param angle
+    caption = "Cut Angle"
+    default = 0.0
+  endparam
+  param boost
+    caption = "Cut Exaggeration"
+    default = 2.0
+  endparam
+  param cutcenter
+    caption = "Cut Center"
+    default = (0,0)
+    hint = "Sets the center of the cut pattern.  Use the eyedropper \
+            to pick it."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the cut pattern is assumed to be at the center of \
+            the window, regardless of the Cut Center setting."
+  endparam
+}
+
+dmj-Spots {
+;
+; This uses to mosaic tile placement algorithm to choose
+; "spots" to paint the image with. However, once a spot is
+; found to cover a pixel, the remaining spots are not
+; calculated. The overall effect is one of pointillist
+; fractals.
+;
+transform:
+  complex center2 = @moscenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  
+  int i = 0
+  float d = 0
+  float random1 = @seed1
+  float random2 = @seed2
+  float random3 = @seed3
+  complex p = 0
+  complex point1 = 0
+  float r1 = 0
+  float range = 1.0 / 2147483648.0
+
+  WHILE (i < @mostiles); still another tile to check
+    random1 = (random1 * 1103515245 + 12345) % 2147483648.0
+    random2 = (random2 * 1103515245 + 12345) % 2147483648.0
+    random3 = (random3 * 1103515245 + 12345) % 2147483648.0
+    p = center2 + ((random1 - 1073741824) + flip(random2 - 1073741824)) * range * @mosscale
+    d = |p - #pixel|
+    r1 = (random3 * range) * (@mosmax-@mosmin) + @mosmin
+
+    IF (d < r1)
+      point1 = p
+      i = @mostiles
+    ENDIF
+    i = i + 1
+  ENDWHILE
+
+  IF (i == @mostiles)
+    IF (@usesolid)
+      #solid = true
+    ENDIF
+  ELSE
+    #pixel = point1 + (#pixel-point1)*@tilescale
+  ENDIF
+  
+default:
+  title = "Spots"
+  helpfile = "dmj-pub\dmj-pub-uf-spots.htm"
+  
+  param mostiles
+    caption = "Number of Spots"
+    default = 500
+    hint = "Sets the number of spots. More spots take \
+            longer to render."
+  endparam
+  param moscenter
+    caption = "Spotted Area Center"
+    default = (0,0)
+    hint = "Sets the center of the spotted area. The cluster of \
+            spots will be centered at this point."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the spotted area center is assumed to be at the center of \
+            the window, regardless of the Spotted Area Center setting."
+  endparam
+  param mosscale
+    caption = "Spot Density"
+    default = 5.0
+    hint = "Specifies the overall scale of the spots. Smaller numbers \
+            will pack the spots together more closely."
+  endparam
+  param tilescale
+    caption = "Spot Magnification"
+    default = 0.0
+    hint = "Specifies the scale of the image within each spot. Use 0 \
+            for solid-color spots, use 1 for no effect."
+  endparam
+  param mosmin
+    caption = "Minimum Spot Size"
+    default = 0.01
+    hint = "This is the minimum size a spot may be."
+  endparam
+  param mosmax
+    caption = "Maximum Spot Size"
+    default = 0.1
+    hint = "This is the maximum size a spot may be."
+  endparam
+  param usesolid
+    caption = "Use Solid Color"
+    default = true
+    hint = "If set, points outside all spots will use the solid color. \
+            Otherwise, those points are untransformed."
+  endparam
+  param seed1
+    caption = "Random Seed 1"
+    default = 51853571
+    hint = "This is the 'seed' for the random number generator for \
+            horizontal positions."
+  endparam
+  param seed2
+    caption = "Random Seed 2"
+    default = 8072177
+    hint = "This is the 'seed' for the random number generator for \
+            vertical positions."
+  endparam
+  param seed3
+    caption = "Random Seed 3"
+    default = 654187327
+    hint = "This is the 'seed' for the random number generator for \
+            rotations."
+  endparam
+}
+
+dmj-Stretch {
+;
+; Stretch transform that can use screen center.
+; If you have a fractal image that you want to stretch on
+; one axis only, and don't want to work out the (hairy) math
+; to make the Stretch transform that comes with UF work, you
+; can just apply this one. The usual caveats for zooming into
+; an image with a "Use Screen Center" transform do apply,
+; of course.
+;
+transform:
+  complex r = (0,1) ^ (@strangle / 90.0)
+  complex center2 = @strcenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  complex z2 = (#pixel - center2) * r
+  #pixel = (real(z2)*real(@strscale) + flip(imag(z2)*imag(@strscale))) * conj(r) + center2
+
+default:
+  title = "Stretch"
+  helpfile = "dmj-pub\dmj-pub-uf-stretch.htm"
+
+  param strcenter
+    caption = "Stretch Center"
+    default = (0,0)
+    hint = "Sets the center of stretching.  Use the eyedropper \
+            to pick the center of stretching."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, stretching is assumed to be at the center of \
+            the window, regardless of the Stretch Center setting."
+  endparam
+  param strscale
+    caption = "Stretch Scale"
+    default = (1,1)
+    hint = "Sets the amount of stretching on each axis. The default \
+            of (1,1) produces no stretching (normal scale)."
+  endparam
+  param strangle
+    caption = "Stretch Angle"
+    default = 0.0
+    hint = "Sets the angle of stretching. You can use this to rotate \
+            the axes where stretching occurs."
+  endparam
+}
+
+dmj-Symmetry {
+;
+; Symmetry Transformation
+; This is simpler (and faster) to use for basic
+; symmetry than Kaleidoscope.  However, because
+; the symmetry center is ALWAYS the image center,
+; various surprising things may happen if you try
+; to zoom on an image using this transform.
+;
+transform:
+  complex r = (0,1) ^ (#angle * 2/#pi); complex rotation vector
+  complex z2 = (0,0)
+  complex c = #center; symmetry center is screen center
+  
+  IF (@mode == 0); horizontal symmetry
+    IF (#x > #width/2); point is in right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 1); vertical symmetry
+    IF (#y > #height/2); point is in bottom half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ELSEIF (@mode == 2); diagonal symmetry
+    IF (#x+#y > (#width+#height)/2); point is in lower right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-z2) + c
+    ENDIF
+  ELSEIF (@mode == 3); horizontal + vertical symmetry
+    IF (#x > #width/2); point is in right half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (-conj(z2)) + c
+    ENDIF
+    IF (#y > #height/2); point is in bottom half
+      z2 = (#pixel-c) / r; flip it
+      #pixel = r * (conj(z2)) + c
+    ENDIF
+  ENDIF
+
+default:
+  title = "Symmetry"
+  helpfile = "dmj-pub\dmj-pub-uf-symmetry.htm"
+  
+  param mode
+    caption = "Symmetry Mode"
+    default = 0
+    enum = "horizontal" "vertical" "diagonal" "horz + vert" "none"
+    hint = "Style of symmetry."
+  endparam
+}
+
+dmj-Triangle-Glass1 {
+;
+; I think I must be insane.
+;
+; This formula iterates the M-set and uses triangle inequality
+; average coloring as a turbulence value. It is similar to fBm
+; Glass 1, just with a different texture used for the turbulence.
+;
+; Don't try this at home, kids.
+;
+transform:
+  complex z = 0
+  complex c = #pixel
+  complex r3 = (0,1) ^ (@distangle / 90.0)
+  complex v = 0
+
+  ; translate/scale
+  c = c/@mandscale + @mandcenter
+
+  float sum = 0.0
+  float sum2 = 0.0
+  float ac = cabs(c)
+  float il = 1/log(@mandpower)
+  float lp = log(log(@mandbailout)/2.0)
+  float az2 = 0.0
+  float lowbound = 0.0
+  float f = 0.0
+  BOOL first = true
+  float ipower = 1/@apower
+  
+  int i = 0
+  WHILE (i < @manditer && |z| < @mandbailout)
+    z = z^@mandpower + c
+    i = i + 1
+
+    sum2 = sum
+    IF (!first)
+      az2 = cabs(z - c)
+      lowbound = abs(az2 - ac)
+      IF (@aflavor == 0)
+        sum = sum + ((cabs(z) - lowbound) / (az2+ac - lowbound))^@apower
+      ELSEIF (@aflavor == 1)
+        sum = sum + 1-(1-(cabs(z) - lowbound) / (az2+ac - lowbound))^ipower
+      ENDIF
+    ELSE
+      first = false
+    ENDIF
+
+  ENDWHILE
+  
+  sum = sum / i
+  sum2 = sum2 / (i-1)
+  f = il*lp - il*log(log(cabs(z)))
+  f = sum2 + (sum-sum2) * (f+1)
+;  f = f - floor(f)
+
+  c = @distcenter
+  IF (@centermove)
+    c = #center
+  ENDIF
+
+  IF (@style == 0)      ; radial distortion
+    v = (#pixel-c)/cabs(#pixel-c) * r3 ; use vector based on angle to distortion center
+  ELSEIF (@style == 1)      ; linear distortion
+    v = r3        ; just use rotation vector
+  ENDIF
+  #pixel = #pixel + v * f*0.5*@distortion
+
+default:
+  title = "TIA Glass 1"
+  helpfile = "dmj-pub\dmj-pub-uf-tiag1.htm"
+
+  param distortion
+    caption = "Distortion Strength"
+    default = 1.0
+    hint = "This is the amount the noise distorts the image."
+  endparam
+  param style
+    caption = "Distortion Style"
+    default = 0
+    enum = "radial" "linear"
+    hint = "This selects whether the distortion will be focused \
+            around a single point, or directed along a line."
+  endparam
+  param distangle
+    caption = "Distortion Angle"
+    default = 0.0
+    hint = "This is the angle to rotate the distortion."
+  endparam
+  param distcenter
+    caption = "Distortion Center"
+    default = (0,0)
+    hint = "Sets the center of distortion.  If Use Screen \
+            Center is set, this item is ignored."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, distortion will be around the center of \
+            the window, regardless of the Distortion Center \
+            setting."
+  endparam
+
+  param mandpower
+    caption = "Mandelbrot Power"
+    default = 2.0
+    hint = "Overall exponent for the equation.  (2,0) gives \
+            the classic Mandelbrot type."
+  endparam
+  param mandbailout
+    caption = "Mandelbrot Bailout"
+    default = 1.0e10
+    hint = "Bailout value; larger values will cause more \
+            iterations to be done for each point."
+  endparam
+  param mandcenter
+    caption = "Mandelbrot Center"
+    default = (0,0)
+    hint = "Center of Mandelbrot shape; this can be used to offset \
+            the distortion."
+  endparam
+  param mandscale
+    caption = "Mandelbrot Scale"
+    default = 1.0
+    hint = "Scale of Mandelbrot shape; this can be used to change \
+            the size of the Mandelbrot shape relative to the distorted \
+            fractal."
+  endparam
+  param manditer
+    caption = "Mandelbrot Iterations"
+    default = 100
+    hint = "Maximum number of Mandelbrot iterations to do."
+  endparam
+
+  param apower
+    caption = "Average Exponent"
+    default = 1.0
+    hint = "This skews the values averaged by raising them to \
+            this power. Use 1.0 for the classic coloring."
+  endparam
+  param aflavor
+    caption = "Average Flavor"
+    default = 0
+    enum = "normal" "reversed"
+    hint = "Controls whether values are reversed before being \
+            raised to a power. Has no effect if Average Exponent \
+    is 1.0."
+  endparam
+;  param power
+;    caption = "Exponent"
+;    default = 2.0
+;    hint = "This should be set to match the exponent of the \
+;            formula you are using.  For Mandelbrot, this is 2."
+;  endparam
+;  param bailout
+;    caption = "Bailout"
+;    default = 1e20
+;    min = 1
+;    hint = "This should be set to match the bailout value in \
+;            the Formula tab.  Use a very high bailout!"
+;  endparam
+  
+}
+
+dmj-Twirl {
+;
+; Ripple Transformation
+; This transform will add ripples to a fractal.
+; Add multiple transforms for interference effects.
+;
+transform:
+  complex center2 = @twirlcenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  float d = cabs(#pixel-center2)
+  IF (d < @twirlfade)
+    IF (@twirltype == 0); side to side
+      #pixel = (#pixel-center2) * (0,1) ^ (cos(d*@twirlpitch*#pi) * @twirlscale * sqr(1-d/@twirlfade)) + center2
+
+    ELSEIF (@twirltype == 1); forward and back
+      #pixel = (#pixel-center2) * (1 - cos(d*@twirlpitch*#pi) * @twirlscale * sqr(1-d/@twirlfade)) + center2
+
+    ELSEIF (@twirltype == 2); in and out
+      float d2 = atan(imag(#pixel-center2)/real(#pixel-center2))
+      IF (real(d2) < 0); pointing to left
+        d2 = d2 + #pi; rotate 180 degrees
+      ENDIF
+      IF (d2 < 0); negative angle (we want 0 < atan < pi*2)
+        d2 = d2 + #pi * 2; rotate 360 degrees
+      ENDIF
+      #pixel = (#pixel-center2) * (1 - cos(d2*@twirlpitch) * @twirlscale * sqr(1-d/@twirlfade)) + center2
+
+    ELSEIF (@twirltype == 3); back and forth
+      float d2 = atan(imag(#pixel-center2)/real(#pixel-center2))
+      IF (real(d2) < 0); pointing to left
+        d2 = d2 + #pi; rotate 180 degrees
+      ENDIF
+      IF (d2 < 0); negative angle (we want 0 < atan < pi*2)
+        d2 = d2 + #pi * 2; rotate 360 degrees
+      ENDIF
+      #pixel = (#pixel-center2) * (0,1) ^ (cos(d2*@twirlpitch) * @twirlscale * sqr(1-d/@twirlfade)) + center2
+
+    ENDIF
+  ENDIF
+  
+default:
+  title = "Ripples"
+  helpfile = "dmj-pub\dmj-pub-uf-ripples.htm"
+
+  param twirlcenter
+    caption = "Ripple Center"
+    default = (0,0)
+    hint = "Sets the center of the ripples."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, ripples will be around the center of \
+            the window, regardless of the Ripple Center \
+    setting."
+  endparam
+  param twirlscale
+    caption = "Ripple Strength"
+    default = 0.25
+    hint = "Sets the height of the ripples."
+  endparam
+  param twirlpitch
+    caption = "Ripple Frequency"
+    default = 10.0
+    min = 0.0
+    hint = "Frequency of ripples; higher values will give \
+            more densely packed ripples."
+  endparam
+  param twirlfade
+    caption = "Ripple Fade"
+    default = 1.0
+    min = 0.00000001
+    hint = "Distance at which ripples fade."
+  endparam
+  param twirltype
+    caption = "Ripple Type"
+    default = 1
+    enum = "Side to Side" "Forward and Back" "In and Out" "Back and Forth"
+    hint = "Orientation of ripples with respect to the \
+            ripple center."
+  endparam
+}
+
+dmj-Unpolar {
+;
+; This transform converts the normal rectangular coordinates
+; used by UF to polar coordinates, such that real(pixel) is
+; the angle and imag(pixel) is the distance. By itself, this
+; can just warp your fractal quite dramatically, but you can
+; also use this in conjuction with the Polar to Rectangular
+; transform to make any other transform (sandwiched between
+; the two) operate on polar coordinates instead of rectangular
+; coordinates.
+;
+transform:
+  #pixel = cabs(#pixel-@polcenter) + flip(atan2(#pixel-@polcenter))
+
+default:
+  title = "Rectangular to Polar"
+  helpfile = "dmj-pub\dmj-pub-uf-r2p.htm"
+  
+  param polcenter
+    caption = "Polar Center"
+    default = (0,0)
+    hint = "This is the center of the polar coordinate system."
+  endparam
+}
+
+dmj-Unspiral {
+;
+; This undoes a spiral, straightening the arms.
+; You will have to play a bit to get this to
+; exactly match. You can of course also use this
+; to APPLY a spiral transformation. :-)
+;
+transform:
+  complex center2 = @spicenter
+  IF (@centermove)
+    center2 = #center
+  ENDIF
+  complex z2 = #pixel - center2
+  #pixel = (z2)*(0,1)^(log(cabs(z2))*@spipower) + center2
+
+default:
+  title = "Unspiral"
+  helpfile = "dmj-pub\dmj-pub-uf-unspiral.htm"
+
+  param spicenter
+    caption = "Spiral Center"
+    default = (0,0)
+    hint = "Sets the center of the spiral.  Use the eyedropper \
+            to pick the center of the spiral."
+  endparam
+  param centermove
+    caption = "Use Screen Center"
+    default = TRUE
+    hint = "If set, the spiral is assumed to be at the center of \
+            the window, regardless of the Spiral Center setting."
+  endparam
+  param spipower
+    caption = "Spiral Power"
+    default = 1.0
+    hint = "Sets the 'tightness' of the spiral.  Tweak this until \
+            the spiral arms are straight."
+  endparam
+}

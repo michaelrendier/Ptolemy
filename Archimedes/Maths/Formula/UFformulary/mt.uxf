@@ -1,0 +1,3162 @@
+comment { Copyright © 1999-2018 by Mark Townsend.
+
+  Transforms for Ultra Fractal 2.0 and above
+
+  Last update 3 October 2018
+
+; This work is licensed under a Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International License.
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
+
+}
+mt-gravitational { ; Mark Townsend, 17 Oct 1999
+transform:
+  if @screenc
+    center = #center
+  else
+    center = @center
+  endif    
+  w = #pixel - center
+  float r = cabs(w)
+  float theta = atan2(w)
+  if theta < 0
+    theta = theta + 2 * #pi
+  endif
+  r = r - @a * @a / r
+  float x = r * cos(theta)
+  float y = r * sin(theta)
+  #pixel = x + flip(y) + center
+default:
+  title = "Gravitational Lens"
+  param center
+    caption = "Center"
+    default = (-.5,.5)
+  endparam  
+  param a
+    caption = "Einstein radius"
+    default = 1.0
+  endparam  
+  param screenc
+    caption = "Use screen center"
+    default = false
+  endparam    
+}
+
+mt-glass-squares { ; Mark Townsend, 17 Oct 1999
+transform:
+  float x = real(#pixel)
+  float y = imag(#pixel) 
+  x = x + x % @a
+  y = y + y % @a
+  #pixel = x + flip(y)
+default:
+  title = "Glass Squares"
+  param a
+    caption = "Square size"
+    default = 0.1
+  endparam  
+}
+
+mt-waves { ; Mark Townsend, 16 Oct 1999
+transform:
+  float x = 0
+  float y = 0
+  x = @ha * sin(@ht * imag(@fn1(#pixel)))
+  y = @va * sin(@vt * real(@fn2(#pixel))) 
+  #pixel = #pixel + x + flip(y)
+default:
+  title = "Waves"
+  param ht
+    caption = "Horizontal frequency"
+    default = 10.0
+  endparam  
+  param ha
+    caption = "Horizontal amplitude"
+    default = 0.5
+  endparam  
+  param vt
+    caption = "Vertical frequency"
+    default = 10.0
+  endparam  
+  param va
+    caption = "Vertical amplitude"
+    default = 0.5
+  endparam  
+  func fn1
+    caption = "Horizontal function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption = "Vertical function"
+    default = ident()
+  endfunc  
+}
+
+mt-radial-waves { ; Mark Townsend, 17 Oct 1999
+transform:
+  if @screenc
+    center = #center
+  else
+    center = @center
+  endif    
+  float r = cabs(#pixel - center)
+  float theta = atan2(#pixel - center)
+     if theta < 0
+    theta = theta + 2 * #pi
+  endif
+  int iter = 0
+  while iter < @iterations
+    float or = r
+    r = r + @a * sin(@t * theta)
+    theta = theta + @a2 * cos(@t2 * or)
+    iter = iter + 1
+  endwhile
+  float x = r * cos(theta)
+  float y = r * sin(theta)
+  #pixel = x + flip(y) + center
+default:
+  title = "Radial Waves"
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam  
+  param iterations
+    caption = "Iterations"
+    default = 2
+  endparam  
+  param t2
+    caption = "Theta frequency"
+    default = 20.0
+  endparam  
+  param a2
+    caption = "Theta amplitude"
+    default = 0.1
+  endparam  
+  param t
+    caption = "Radius frequency"
+    default = 20.0
+  endparam  
+  param a
+    caption = "Radius amplitude"
+    default = 0.1
+  endparam  
+  param screenc
+    caption = "Use screen center"
+    default = false
+  endparam    
+}
+
+mt-crazy-spiral { ; Mark Townsend, 17 Oct 1999
+transform:
+  if @screenc
+    center = #center
+  else
+    center = @center
+  endif    
+  w = #pixel - center
+  float r = cabs(w)
+  float theta = atan2(w)
+  if theta < 0
+    theta = theta + 2 * #pi
+  endif
+  theta = @a * real(@fn1(r)) + theta + @amp * sin(@b  * theta)
+  float x = r * cos(theta)
+  float y = r * sin(theta)
+  #pixel = x + flip(y) + center
+default:
+  title = "Crazy Spiral"
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam  
+  param a
+    caption = "Tightness"
+    default = 3.0
+  endparam  
+  param b
+    caption = "Wave frequency"
+    default = 20.0
+  endparam  
+  param amp
+    caption = "Wave amplitude"
+    default = 1.0
+  endparam  
+  param screenc
+    caption = "Use screen center"
+    default = false
+  endparam    
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc  
+}
+
+mt-dots { ; Mark Townsend, 8 Nov 1999
+transform:
+  w = round(#pixel / @scale)
+  if cabs(#pixel / @scale - w) < 1 / @n
+    if @round
+      #pixel = w * @scale
+    else
+      #pixel = #pixel
+    endif  
+  else
+    #solid = true
+  endif
+default:
+  title = "Dots"
+  param scale
+    caption = "Scale"
+    default = 0.3
+  endparam
+  param n
+    caption = "Border width"
+    default = 2.0
+  endparam
+  param round
+    caption = "Round pixel"
+    default = true
+  endparam  
+    
+}
+
+mt-wheel { ; Mark Townsend, 8 Nov 1999
+transform:
+  float ratio = 0
+  float  outer = @inner + @width
+  float rnd = @randomness * real(#random)
+  float r = cabs(#pixel - @center)
+  if (r < @inner) || (r > outer)
+    if @solid && !@mask
+      #solid = true
+    endif  
+  else
+    if @mask
+      #solid = true
+    else  
+      ; within the wheel
+      float theta = atan2(#pixel - @center)
+      if theta < 0
+        theta = theta + 2 * #pi
+      endif
+      float outer_dist = abs(outer - r)
+      float inner_dist = abs(@inner - r)
+      if outer_dist < inner_dist
+        ratio = @width / outer_dist
+      else
+        ratio = @width / inner_dist
+      endif
+      theta = theta + real(@fn1(@distort / ratio)) + rnd
+      float x = r * cos(theta)
+      float y = r * sin(theta)
+      #pixel = x + flip(y) + @center
+    endif
+  endif  
+default:
+  title = "Wheel"
+  param inner
+    caption = "Inner rim"
+    default = 0.3
+  endparam
+  param width
+    caption = "Width"
+    default = 0.6
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param distort
+    caption = "Distortion"
+    default = 2.0
+  endparam
+  param randomness
+    caption = "Randomness"
+    default = 0.0
+  endparam
+  param solid
+    caption = "Solid outside"
+    default = false
+  endparam  
+  param mask
+    caption = "Mask"
+    default = false
+  endparam  
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc  
+}
+
+mt-iterated-glass { ; Mark Townsend, 11 Nov 1999
+transform:
+  float x = real(#pixel)
+  float y = imag(#pixel)
+  iter = 0
+  while iter < @max_iter
+    x = x + x % @a
+    y = y + y % @a
+    iter = iter + 1
+  endwhile
+  #pixel = x + flip(y)
+default:
+  title = "Iterated Glass"
+  param a
+    caption = "Square size"
+    default = 0.1
+  endparam  
+  param max_iter
+    caption = "Iterations"
+    default = 4
+  endparam  
+}
+
+mt-sierpinski-glass { ; Mark Townsend, 11 Nov 1999
+transform:
+  w = #pixel
+  int frm_iter = 0
+  while frm_iter < @max_iterations
+    if (imag(w) > 0.5)
+      w = 2 * real(w) + flip(2 * imag(w) -1)
+    elseif (real(w) > 0.5)
+      w = 2 * real(w) -1 + flip(2 * imag(w))
+    else
+      w = 2 * real(w) + flip(2 * imag(w))
+    endif
+    frm_iter = frm_iter + 1
+  endwhile
+  float sx = real(w) * @c
+  float sy = imag(w) *@c
+  float x = real(#pixel)
+  float y = imag(#pixel)
+  x = x + sx % @b 
+  y = y + sy % @b 
+  #pixel = x + flip(y) 
+default:
+  title = "Sierpinski Glass"
+  param  b 
+    caption = "Square size"
+    default = 1.0
+  endparam
+  param  c 
+    caption = "Multilplier"
+    default = 0.1
+  endparam
+  param max_iterations
+    caption = "Iterations"
+    default = 10
+  endparam  
+    
+}
+
+mt-advanced-gnarl {
+; Mark Townsend 26 Nov 1999
+;
+; Last update on 17 December 1999
+;
+transform:
+  bool test = true
+  float m = 590872612825179551336102196593.0 
+  float a = 1322939
+  float c = 7336919
+  float ar1 = trunc(real(@a_seed))
+  float ar2 = trunc(imag(@a_seed))
+  float br1 = trunc(real(@b_seed))
+  float br2 = trunc(imag(@b_seed))
+  float gr1 = trunc(real(@g_seed))
+  float gr2 = trunc(imag(@g_seed))
+  float seqr = @seqseed
+  float acoef1 = real(@a1)
+  float bcoef1 = real(@b1)
+  float gcoef1 = real(@g1)
+  float acoef2 = real(@a2)
+  float bcoef2 = real(@b2)
+  float gcoef2 = real(@g2)
+  float ra1 = imag(@a1)
+  float rb1 = imag(@b1)
+  float rg1 = imag(@g1)
+  float ra2 = imag(@a2)
+  float rb2 = imag(@b2)
+  float rg2 = imag(@g2)
+  complex w = #pixel - @offset
+  float x = real(w) / @scale
+  float y = imag(w) / @scale
+  float xx = 0
+  int iter = 0
+  while (iter < @iters)
+  ; "Random" numbers.
+    if imag(@a1) != 0
+      ar1 = (a * ar1 + c) % m
+      acoef1 = real(@a1) + (ar1 / m) * ra1
+    endif
+    if imag(@b1) != 0
+      br1 = (a * br1 + c) % m
+      bcoef1 = real(@b1) + (br1 / m) * rb1
+    endif
+    if imag(@g1) != 0
+      gr1 = (a * gr1 + c) % m
+      gcoef1 = real(@g1) + (gr1 / m) * rg1
+    endif
+    if imag(@a2) != 0
+      ar2 = (a * ar2 + c) % m
+      acoef2 = real(@a2) + (ar2 / m) * ra2
+    endif
+    if imag(@b2) != 0
+      br2 = (a * br2 + c) % m
+      bcoef2 = real(@b2) + (br2 / m) * rb2
+    endif
+    if imag(@g2) != 0
+      gr2 = (a * gr2 + c) % m
+      gcoef2 = real(@g2) + (gr2 / m) * rg2
+    endif  
+    if @seq == 0 
+    ; Iteration 
+      test = iter % real(@mv) < imag(@mv)
+    elseif @seq == 1
+    ; Random
+      seqr = (a * seqr + c) % m
+      if seqr % 2 == 0
+        test = true
+      else
+        test = false
+      endif
+    elseif @seq == 2
+    ; First formula
+      test = true
+    elseif @seq == 3
+    ; Second formula
+      test = false    
+    endif  
+    xx = x
+    if test
+      x = x - @h * real(@af1(acoef1 * y + \
+          @bf1(bcoef1 * (y + @gf1(gcoef1 * y)))))
+      y = y + @h * real(@af1(acoef1 * xx +\
+          @bf1(bcoef1 * (xx + @gf1(gcoef1 * xx)))))
+    else
+      x = x - @h * real(@af2(acoef2 * y + \
+          @bf2(bcoef2 * (y + @gf2(gcoef2 * y)))))
+      y = y + @h * real(@af2(acoef2 * xx + \
+          @bf2(bcoef2 * (xx + @gf2(gcoef2 * xx)))))
+    endif    
+    iter = iter + 1
+  endwhile
+  if @mode == 0
+    x = (real(#pixel) - (@scale * x + real(@offset))) * @strength 
+    y = (imag(#pixel) - (@scale * y + imag(@offset))) * @strength 
+    #pixel = #pixel + x + flip(y)
+  else
+    #pixel = x * @scale + flip(y * @scale) + @offset
+  endif
+default:
+  title = "Advanced Gnarl"
+  helpfile = "mt.hlp"
+  helptopic = "Advanced Gnarl Transformation"
+  param mode
+    caption = "Mode"
+    enum = "Disturb" "Transform"
+  endparam  
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam
+  param strength
+    caption = "Strength"
+    default = 1.0
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam  
+  param iters
+    caption = "Iterations"
+    default = 20
+  endparam
+  param seq
+    caption = "Sequence"
+    enum = "Modulation" "Random" "First formula" \
+           "Second formula" 
+  endparam  
+  param mv
+    caption = "Modulation"
+    default = (10,5)
+    min = (1,0)
+  endparam  
+  param a1
+    caption = "A 1"
+    default = (1.0,0)
+  endparam  
+  param b1
+    caption = "B 1"
+    default = (3.0,0)
+  endparam  
+  param g1
+    caption = "G 1"
+    default = (2.0,0)
+  endparam  
+  param a2
+    caption = "A 2"
+    default = (1.0,0)
+  endparam  
+  param b2
+    caption = "B 2"
+    default = (3.0,0)
+  endparam  
+  param g2
+    caption = "G 2"
+    default = (2.0,0)
+  endparam  
+  param h
+    caption = "Step size"
+    default = 0.1
+  endparam  
+  param a_seed
+    caption = "A seed"
+    default = (3539,9923)
+  endparam  
+  param b_seed
+    caption = "B seed"
+    default = (6373,8191)
+  endparam  
+  param g_seed
+    caption = "G seed"
+    default = (1277,4583)
+  endparam  
+  param seqseed
+    caption = "Sequence seed"
+    default = 2017
+  endparam  
+  func af1
+    caption = "A 1"
+    default = sin()
+  endfunc  
+  func bf1
+    caption = "B 1"
+    default = sin()
+  endfunc  
+  func gf1
+    caption = "G 1"
+    default = sin()
+  endfunc  
+  func af2
+    caption = "A 2"
+    default = cos()
+  endfunc  
+  func bf2
+    caption = "B 2"
+    default = cos()
+  endfunc  
+  func gf2
+    caption = "G 2"
+    default = cos()
+  endfunc  
+}
+
+mt-gnarly { ; Mark Townsend 24 Sep 1999
+;
+; Last update on 25 Nov 1999
+;
+transform:
+  complex w = 0
+  strength = @strength + flip(@strength)
+  scale = @scale + flip(@scale)
+  if @mode == 2 || @mode == 3
+    complex z = #pixel - @offset
+    float x = real(z) / @scale
+    float y = imag(z) / @scale
+  else
+    complex z = (#pixel / scale) - @offset
+    float x = real(z)
+    float y = imag(z)  
+  endif
+  float xx = 0
+  int i = 0
+  while (i < @iters)
+    xx = x
+    if @formula == 0
+     ; Martin
+      x = y - sin(x)
+      y = @a - xx
+    elseif @formula == 1
+     ; Popcorn
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+    elseif @formula == 2
+      ; Vine
+      if @flavor == 0
+        x = x - @h * sin(y + sin(@a * y ))
+        y = y + @h * sin(xx + sin(@a * xx))
+      elseif @flavor == 1
+        x = x - @h * sin(y^@b + sin(@a * y))
+        y = y + @h * sin(xx^@b + sin(@a * xx))
+      elseif @flavor == 2
+       x = x - @h * sin(y + sin(@a * (y + sin(@a * y))))
+       y = y + @h * sin(xx + sin(@a * (xx + sin(@a * xx))))  
+      else
+        float newx = y
+        float newy = x
+        int j = 0
+        while j < @flavor
+          j = j + 1
+          newx = y + sin(@a * newx)
+          newy = x + sin(@a * newy)
+        endwhile
+        x = x - @h * sin(newx)
+        y = y + @h * sin(newy)
+      endif
+    elseif @formula == 3
+      ; Gnarl  
+      x = x - @h * real(@gn1(y + @gn2(@a * (y + @gn3(@b * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@a * (xx + @gn3(@b * xx)))))
+    endif      
+    i = i + 1
+  endwhile
+  z = x + flip(y)
+  if @mode == 0  
+    w = #pixel + (@fn1(z + @offset) * strength)
+  elseif @mode == 1 
+    w = @fn1(z + @offset) * scale 
+  elseif @mode == 2
+    w = x * @scale + flip(y * @scale) + @offset
+  elseif @mode == 3
+    x = (real(#pixel) - (@scale * x + real(@offset))) * @strength 
+    y = (imag(#pixel) - (@scale * y + imag(@offset))) * @strength 
+    w = #pixel + x + flip(y)
+  endif  
+  if @selection == 0
+    #pixel = w
+  else
+    float tested = 0
+    if @select_by == 0
+      tested = cabs(w)
+    elseif @select_by == 1
+      tested = cabs(#pixel - w)
+    elseif @select_by == 2
+      tested = cabs(@offset - w)
+    endif  
+    bool test = false  
+    if @inverse
+      test = tested <= @threshold
+    else
+      test = tested > @threshold
+    endif  
+    if test
+      if @selection == 1
+        #pixel = w
+      endif  
+    else
+      #solid = true
+    endif  
+  endif    
+default:
+  title = "Gnarly"
+  param formula
+    caption = "Formula"
+    enum = "Martin" "Popcorn" "Vine" "Gnarl" "None"
+    default = 1
+  endparam
+  param mode
+    caption = "Mode"
+    enum = "Original" "Corrected" "Corrected #2" "Disturb"
+    hint = "Suggested modes are Corrected #2 and Disturb. \
+            In the Disturb mode you can change the strength \
+            of the patterns."
+  endparam  
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam  
+  param a
+    caption = "Alpha"
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    default = 2.0
+  endparam
+  param iters
+    caption = "Iterations"
+    default = 20
+  endparam
+  param flavor
+    caption = "Vine flavor"
+    default = 2
+  endparam
+  param h
+    caption = "Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+    hint = "Changes the size of the shapes."
+  endparam
+  param strength
+    caption = "Strength"
+    default = 1.0
+    hint = "This is used in only the Original and Disturb modes. \
+           In the Disturb mode it changes the amount by which a \
+           pixel is moved."
+  endparam
+  param selection
+    caption = "Selection mode"
+    enum = "None" "Normal" "Selectioon only"
+  endparam
+  param select_by
+    caption = "Select by"
+    enum = "Magnitude" "Pixel distance" "Offset distance"
+  endparam  
+  param threshold
+    caption = "Selection threshold"
+    default = 1.0
+  endparam  
+  param inverse
+    caption = "Inverse selection"
+    default = false
+  endparam  
+  func fn1
+    caption = "Effect"
+    default = ident()
+  endfunc    
+  func gn1
+    caption = "Gnarl function #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc  
+  func gn2
+    caption = "Gnarl function #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc  
+  func gn3
+    caption = "Gnarl function #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc  
+}
+
+mt-orbit-traps-mask {; Mark Townsend, 30 Nov 1999
+;
+; Added Import mode 4 December 1999
+; Much of the Import code is due to Robert (Red) Williams
+;
+; In the Import mode you can take the Center, Magnification
+; and Rotation values from the Location tab of a Julia and
+; enter them into the corresponding parameters of this 
+; transformation. The mask then stays fixed in that position
+; regardless of further panning or zooming of the fractal.
+;
+transform:
+ 
+  px = 0.5 + @a
+  py = 0.5 - @a
+  
+  if @import
+   
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center) 
+  
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+    
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+  
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+  
+    w = w * #magn / @tmag 
+    
+  ; Rotate around screen center  
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@tilt * pi / 180)))
+    
+  else
+    w = #pixel
+  endif  
+  
+  int iter = 0
+  bool trapped = false
+
+  repeat
+    w = w^@n + @c
+    
+    float xabs = abs(real(w))
+    float yabs = abs(imag(w))
+    if @mode == 0
+    ; Circle
+      if cabs(w) < @a
+        trapped = true
+      endif    
+    elseif @mode == 1
+    ; Cross
+      if xabs < @a || yabs < @a
+        trapped = true
+      endif    
+    elseif @mode == 2  
+    ; Squares
+      if ((xabs < px) && (xabs > py) && (yabs < px) \
+      && (yabs > py))
+        float awr5 = abs(xabs - 0.5)
+        float awi5 = abs(yabs - 0.5)
+        if (awr5 <= awi5)
+          float temp = awr5
+        else
+          float temp = awi5
+        endif
+        if temp < @a
+          trapped = true
+        endif  
+      endif  
+    elseif @mode == 3
+    ; Cardioid
+      float theta = atan2(w)
+      float radius = @b * (1 - cos(theta))
+      point = radius * sin(theta) + flip(radius * cos(theta)) 
+      if cabs(w - point) < @a
+        trapped = true
+      endif    
+    elseif @mode == 4
+    ; Trifunctional  
+      mod_w = @fn3(@fn1(real(w)) + flip(@fn2(imag(w))))
+      if cabs(mod_w) < @a
+        trapped = true
+      endif    
+    endif  
+
+    iter = iter + 1
+     
+  until (iter == @max_iter) || (|w| > @bailout) || trapped
+
+  if !@inverse
+    if trapped
+      #solid = true
+    endif  
+  else
+    if !trapped
+       #solid = true
+    endif  
+  endif    
+  
+default:
+  title = "Orbit Traps Mask"
+  param c
+    caption = "Juia seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam  
+  param n
+    caption = "Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam  
+  param bailout
+    caption = "Bailout value"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam  
+  param mode
+    caption = "Orbit trap"
+    enum = "Circle" "Cross" "Square" "Cardioid" "Trifunctional"
+    default = 1
+    hint = "Used to select the type of orbit trap."
+  endparam  
+  param b
+    caption = "Trap parameter"
+    default = 0.1
+    hint = "This is used for the Cardioid trap only."
+  endparam  
+  param a
+    caption = "Threshold"
+    default = 0.1
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam  
+  param max_iter
+    caption = "Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam  
+  param inverse
+    caption = "Inverse mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam  
+  param import
+    caption = "Import mode"
+    default = false
+    hint = "Check this when you want to import the position of \
+           a Julia set. In this mode the mask will stay fixed \
+           regardless of further zooming and panning."
+  endparam  
+  param offset
+    caption = "Center"
+    default = (0,0)
+    hint = "When importing a Julia copy the value from \
+           Center on the Location tab of the Julia."
+  endparam
+  param tmag 
+    caption = "Magnification"
+    default = 1.0
+    hint = "When importing a Julia copy the value from \
+           Magnification on the Location tab of the Julia."
+  endparam
+  param tilt
+    caption = "Rotation"
+    default = 0.0
+    hint = "When importing a Julia copy the value from \
+           Rotation on the Location tab of the Julia."
+  endparam    
+  func fn1
+    caption = "Function #1"
+    default = ident()
+    hint = "Used for Trifunctional only"
+  endfunc    
+  func fn2
+    caption = "Function #2"
+    default = ident()
+    hint = "Used for Trifunctional only"
+  endfunc    
+  func fn3
+    caption = "Function #3"
+    default = ident()
+    hint = "Used for Trifunctional only"
+  endfunc    
+}
+
+mt-gnarled-traps {
+; Mark Townsend 6 Decenmber 1999
+;
+; Last update on 15 January 2000
+;
+; Transforms the pixel position in the same manner as the
+; Gnarly transformation before applying the Orbit Traps Mask.
+;
+; Import mode code due to Robert (red) Williams.
+;
+transform:
+  if @import
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center) 
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+    w = w * #magn / @tmag 
+  ; Rotate around screen center  
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@tilt * pi / 180)))
+  else
+    w = #pixel  
+  endif  
+; Gnarly
+  complex g = w - @goffset
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl  
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif      
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform  
+    g = x * @scale + flip(y * @scale) + @goffset
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x + real(@goffset))) * @strength 
+    y = (imag(#pixel) - (@scale * y + imag(@goffset))) * @strength 
+    g = #pixel + x + flip(y)
+  endif  
+  w = g
+  if @mask_mode < 2
+    #pixel = w
+  endif  
+  if @mask_mode > 0
+   ; Orbit trap
+    px = 0.5 + @a
+    py = 0.5 - @a
+    int iter = 0
+    bool trapped = false
+    bool after = false
+    repeat
+      w = w^@n + @c
+      float xabs = abs(real(w))
+      float yabs = abs(imag(w))
+      if @mode == 0
+      ; Disc
+        if cabs(w) < @a
+          if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+          elseif iter < real(@trap_iters)
+            after = true
+          endif  
+        endif    
+      elseif @mode == 1
+      ; Cross
+        if xabs < @a || yabs < @a
+          if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+          elseif iter < real(@trap_iters)
+            after = true
+          endif  
+        endif    
+      elseif @mode == 2  
+     ; Squares
+        if ((xabs < px) && (xabs > py) && (yabs < px) \
+        && (yabs > py))
+          float awr5 = abs(xabs - 0.5)
+          float awi5 = abs(yabs - 0.5)
+          if (awr5 <= awi5)
+            float temp = awr5
+          else
+            float temp = awi5
+          endif
+          if temp < @a
+            if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+              trapped = true
+            elseif iter < real(@trap_iters)
+              after = true
+            endif  
+          endif  
+        endif  
+      elseif @mode == 3
+      ; Cardioid
+        float theta = atan2(w)
+        float radius = @b * (1 - cos(theta))
+        point = radius * sin(theta) + flip(radius * cos(theta)) 
+        if cabs(w - point) < @a
+          if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+          elseif iter < real(@trap_iters)
+            after = true
+          endif  
+        endif    
+      elseif @mode == 4
+      ; Trifunctional  
+        mod_w = @fn3(@fn1(real(w)) + flip(@fn2(imag(w))))
+        if @b >= 0
+          float dist = cabs(mod_w)
+        else
+          float dist = |w - mod_w|
+        endif  
+        if dist < @a
+          if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+          elseif iter < real(@trap_iters)
+            after = true
+          endif  
+        endif    
+      endif  
+     iter = iter + 1
+   until (iter == @max_iter) || (|w| > @bailout) || trapped
+  if @exclusive
+    if !@inverse
+       if !after && trapped
+        #solid = true
+      endif  
+    else
+      if !trapped || after
+         #solid = true
+      endif  
+    endif    
+  else
+    if !@inverse
+       if trapped
+        #solid = true
+      endif  
+    else
+      if !trapped
+         #solid = true
+      endif  
+    endif    
+  endif
+  endif
+default:
+  title = "Gnarled Traps Mask"
+  helpfile = "mt.hlp"
+  helptopic = "Gnarled Traps Mask"
+  param c
+    caption = "Juia Seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam  
+  param n
+    caption = "Julia Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam  
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam  
+  param formula
+    caption = "Distortion Algorithm"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 1
+  endparam
+  param gmode
+    caption = "Distortion Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam  
+  param strength
+    caption = "Distortion Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param goffset
+    caption = "Distortion Offset"
+    default = (0,0)
+  endparam  
+  param scale
+    caption = "Distortion Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param alpha
+    caption = "Gnarl Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarl Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarl Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarl Step size"
+    default = 0.01
+  endparam
+  param import
+    caption = "Fix Location"
+    default = false
+    hint = "Check this when you want to import the position of \
+           a Julia set. In this mode the mask will stay fixed \
+           regardless of further zooming and panning."
+  endparam  
+  param offset
+    caption = "Center"
+    default = (0,0)
+    hint = "When fixing the location copy the value from \
+           Center on the Location tab of the Julia."
+  endparam
+  param tmag 
+    caption = "Magnification"
+    default = 1.0
+    hint = "When fixing the location copy the value from \
+           Magnification on the Location tab of the Julia."
+  endparam
+  param tilt
+    caption = "Rotation"
+    default = 0.0
+    hint = "When fixing the location copy the value from \
+           Rotation on the Location tab of the Julia."
+  endparam    
+  param mode
+    caption = "Trap Type"
+    enum = "Circle" "Cross" "Square" "Cardioid" "Trifunctional"
+    default = 1
+    hint = "Used to select the type of orbit trap."
+  endparam  
+  param b
+    caption = "Trap Parameter"
+    default = 0.1
+    hint = "This is the 'Curve Radius' for the Cardioid trap, and \
+           for Trifunctional positive numbers give Flavor 1 and \
+           negative numbers give Flavor 2."
+  endparam  
+  param trap_iters
+    caption = "Trap Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam  
+  param a
+    caption = "Mask Threshold"
+    default = 0.1
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam  
+  param exclusive
+    caption = "Exclusive Mask"
+    default = false
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam  
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc  
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc  
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc  
+  func fn1
+    caption = "Trifunctional #1"
+    default = sin()
+    hint = "Used for Trifunctional only"
+  endfunc    
+  func fn2
+    caption = "Trifunctional #2"
+    default = log()
+    hint = "Used for Trifunctional only"
+  endfunc    
+  func fn3
+    caption = "Trifunctional #3"
+    default = sqrt()
+    hint = "Used for Trifunctional only"
+  endfunc    
+}
+
+mt-barnsley {
+; Mark Townsend 18 Dec 1999
+;
+; Transformation based on the Barnsley 2 (Julia) formula
+;
+; Last update 20 December 1999
+;
+transform:
+  z = #pixel
+  int iter = 0
+  ; Iterate the Barnsley fractal
+  if @use_bailout
+    ; Easiest to split them up...
+    repeat
+      if real(z) * imag(@start) + real(@start) * imag(z) >= 0
+        z = (z - 1) * @start
+      else
+        z = (z + 1) * @start
+      endif
+      iter = iter + 1
+    until iter > @max_iter || |z| > @bailout
+  else
+    while iter < @max_iter
+    ; Original no bailout version
+      if real(z) * imag(@start) + real(@start) * imag(z) >= 0
+        z = (z - 1) * @start
+      else
+        z = (z + 1) * @start
+      endif
+      iter = iter + 1
+    endwhile
+  endif    
+  ; Scale and position "image" inside Barnsley iteration boundries
+  z = ((z - @offset) / @scale) * ((0,1) ^ (@rot / 90.0))
+  ; if we're not in Mask Only mode we move the pixel
+  if @mask_mode != 2
+    #pixel = z
+  endif  
+  ; Activate the mask in Normal and Mask Only modes
+  if @mask_mode > 0
+    if !@inverse_mask
+    ; Normal masking      
+      if cabs(z-@mask_center) <= @mask_radius
+        #solid = true
+      endif  
+    else
+    ; Inverse masking      
+      if cabs(z-@mask_center) > @mask_radius
+        #solid = true
+      endif  
+    endif  
+  endif
+default:
+  title = "Barnsley"
+  helpfile = "mt.hlp"
+  helptopic = "Barnsley"
+  param start
+    caption = "Julia Seed"
+    hint = "This is the Julia seed for the Barnsley fractal."
+    default = (0.6, 1.1)
+  endparam
+  param max_iter
+    caption = "Iterations"
+    hint = "This is the number of iterations to \
+            calculate the Barnsley fractal."
+    default = 10
+  endparam  
+  param bailout
+    caption = "Bailout Value"
+    hint = "This is the bailout value of the Barnsley \
+           fractal. Only used if 'Use Bailout' is checked." 
+    default = 4.0
+  endparam  
+  param use_bailout
+    caption = "Use Bailout"
+    hint = "If this box is checked orbit can bailout out."
+    default = false
+  endparam  
+  param offset
+    caption = "Image Center"
+    default = (0,0)
+  endparam  
+  param scale
+    caption = "Image Scale"
+    default = 1.0
+  endparam  
+  param rot
+    caption = "Image Rotation"
+    default = 0.0
+  endparam  
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "None" "Normal" "Mask Only"
+  endparam  
+  param mask_center
+    caption = "Mask Center"
+    default = (0,0)
+  endparam
+  param mask_radius
+    caption = "Mask Radius"
+    default = 0.1
+  endparam
+  param inverse_mask
+    caption = "Inverse Mask"
+    default = false
+  endparam  
+}
+
+mt-gnarled-scissors { ; Mark Townsend 30 December 1999
+;
+; Distorts Scissors with the Gnarl or Pocpcorn formula.
+;
+; Last update 1 January 2000
+;
+; The Scissors code is by Like Plant, and the Import code
+; is heavily based on code by Robert Williams.
+;
+transform:
+ scenter = @center
+ if @import
+   
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center) 
+    scenter = (scenter - #center) 
+    
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+    
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+    scenter = scenter - (trans / #magn)
+  
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+    scenter = cabs(scenter) * exp(flip(-#angle + atan2(scenter)))
+  
+    w = w * #magn / @tmag 
+    scenter = scenter * #magn / @tmag 
+    
+  ; Rotate around screen center  
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@stilt * pi / 180)))
+    scenter = @offset + cabs(scenter - @offset) * exp(flip(atan2(scenter - @offset) + \
+        (@stilt * pi / 180)))
+        
+  else
+    w = #pixel  
+  endif  
+
+; Gnarly
+
+  complex g = w - @goffset
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl  
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif      
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform  
+    g = x * @scale + flip(y * @scale) + @goffset
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x + real(@goffset))) * @strength 
+    y = (imag(#pixel) - (@scale * y + imag(@goffset))) * @strength 
+    g = #pixel + x + flip(y)
+  endif  
+  w = g
+  if @mask_mode > 0
+    #pixel = w
+  endif  
+
+; Scissors
+  
+  if @mask_mode != 2
+    bool make_solid = false
+    complex pix2 = (w - scenter) * exp(flip(-@tilt * pi / 180))
+    complex pix3 = real(pix2) / @width + flip(imag(pix2) / @height)
+    if (@shape == 0)
+      if ( |pix3| < 1 )
+        make_solid = true
+      endif
+    elseif (@shape == 1)
+      pix3 = pix3 * exp(flip(pi / 4))
+      if ((abs(real(pix3)) + abs(imag(pix3))) < 1)
+        make_solid = true
+      endif
+    elseif (@shape == 2)
+      if ((abs(real(pix3))^(2 / 3) + abs(imag(pix3))^(2 / 3)) < 1)
+        make_solid = true
+      endif
+       elseif (@shape == 3)
+      if ((abs(real(pix3))^@power + abs(imag(pix3))^@power) < 1)
+        make_solid = true
+      endif
+    endif
+    
+    if @inverse
+      if !make_solid 
+        #solid = true
+      endif
+    else
+      if make_solid 
+        #solid = true
+      endif
+    endif    
+  endif
+  
+default:
+  title = "Gnarled Scissors"
+  helpfile = "mt-help\mt-gnarled-scissors.html"
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+  endparam  
+  param goffset
+    caption = "Gnarly Offset"
+    default = (0,0)
+  endparam  
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step Size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 0.1
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+  endparam
+   param shape
+    caption = "Scissors Shape"
+    default = 0
+    enum = "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center
+    caption = "Scissors Center"
+    default = (0.0,0.0)
+  endparam
+  param width
+    caption = "Scissors Width"
+    default = 1.0
+  endparam
+  param height
+    caption = "Scissors Height"
+    default = 1.0
+  endparam
+  param tilt
+    caption = "Scissors Tilt"
+    default = 0.0
+  endparam
+  param power
+    caption = "Scissors Power"
+    default = 0.666666666666
+  endparam 
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "Mask Only" "Mask & Transform" "No Mask"  
+  endparam  
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+  endparam
+  param import
+    caption = "Screen Import"
+    default = false
+  endparam  
+  param offset
+    caption = "Screen Center"
+    default = (0,0)
+  endparam
+  param tmag 
+    caption = "Screen Magnification"
+    default = 1.0
+  endparam
+  param stilt
+    caption = "Screen Rotation"
+    default = 0.0
+  endparam    
+  func gn1
+    caption = "Gnarl #1"
+  default = sin()
+  endfunc  
+  func gn2
+    caption = "Gnarl #2"
+  endfunc  
+  func gn3
+    caption = "Gnarl #3"
+  endfunc  
+}
+
+mt-location { ; Mark Townsend, 3 January 2000
+;
+; Allows you to change the position of the fractal 
+; without changing the position of other transformations.
+;
+; The code is mainly due to Robert Williams.
+;
+transform:
+   
+  ; Translate image coordinates to zero-centered
+  ; coordinate system
+    w = (#pixel - #center) 
+    
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+    
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+  
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+  
+    w = w * #magn / @tmag 
+    
+  ; Rotate around screen center  
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@stilt * pi / 180)))
+
+    #pixel = w
+default:
+  title = "Location"
+  param offset
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param tmag 
+    caption = "Magnification"
+    default = 1.0
+  endparam
+  param stilt
+    caption = "Rotation angle"
+    default = 0.0
+  endparam    
+}
+
+mt-harlequin-mask { ; Mark Townsend 13 January 2000;
+transform:
+
+  if @import
+   
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center) 
+  
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+    
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+  
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+  
+    w = w * #magn / @tmag 
+    
+  ; Rotate around screen center  
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@tilt * pi / 180)))
+        
+  else
+    w = #pixel  
+  endif  
+
+; Gnarly
+
+  complex g = w
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl  
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif      
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform  
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength 
+    y = (imag(#pixel) - (@scale * y)) * @strength 
+    g = #pixel + x + flip(y)
+  endif  
+  w = g
+  if @mask_mode < 2
+    #pixel = w
+  endif  
+
+  if @mask_mode > 0
+   ; Orbit trap
+   
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+    
+    repeat
+  
+      w = w^@n + @c
+      
+      x = real(w)
+      y = imag(w)
+      complex a = @m * atan(y / x)
+      if @variation == 0
+        a = a * a + @hc
+        a = fn1(1 - a) / a
+      elseif @variation == 1
+        a = a * a + @hc
+        a = fn1(1 - a^2)
+      elseif @variation == 2
+        a = @m * (fn1(a + @hc)^2 + fn2(a + @hc)^2) 
+      endif  
+      if @mode == 0
+        dist = abs(|w| - |a|)
+      else
+        dist = cabs(w - a)
+      endif 
+      if dist < @t
+        trapped = true
+      endif
+      
+      iter = iter + 1
+      
+    until (iter == @max_iter) || (|w| > @bailout) || trapped
+  
+    if !@inverse
+      if trapped
+        #solid = true
+      endif  
+    else
+      if !trapped
+         #solid = true
+      endif  
+    endif    
+    
+  endif
+  
+default:
+  title = "Harlequin Mask"
+    param c
+    caption = "Juia Seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam  
+  param n
+    caption = "Julia Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam  
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam  
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam  
+  param variation
+    caption = "Harlequin Variation"
+    enum = "1" "2" "3"
+    default = 1
+  endparam    
+  param mode
+    caption = "Harlequin Flavor"
+    enum = "1" "2"
+    default = 1
+  endparam  
+  param hc
+    caption = "Harlequin Seed"
+    default = (0,0)
+  endparam  
+  param m
+    caption = "Harlequin Multiplier"
+    default = 2.0
+  endparam  
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam  
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param import
+    caption = "Screen Import"
+    default = false
+    hint = "Check this when you want to import the position of \
+           a Julia set. In this mode the mask will stay fixed \
+           regardless of further zooming and panning."
+  endparam  
+  param offset
+    caption = "Screen Center"
+    default = (0,0)
+    hint = "When importing a Julia copy the value from \
+           Center on the Location tab of the Julia."
+  endparam
+  param tmag 
+    caption = "Screen Magnification"
+    default = 1.0
+    hint = "When importing a Julia copy the value from \
+           Magnification on the Location tab of the Julia."
+  endparam
+  param tilt
+    caption = "Screen Rotation"
+    default = 0.0
+    hint = "When importing a Julia copy the value from \
+           Rotation on the Location tab of the Julia."
+  endparam    
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam  
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam  
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam  
+  func fn1
+    caption = "Harlequin #1"
+    default = exp()
+  endfunc    
+  func fn2
+    caption = "Harlequin #2"
+    default = exp()
+  endfunc    
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc  
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc  
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc  
+}
+
+mt-sine-mask { ; 12 February 2000
+;
+; modified by domenick annuzzi from
+; Mark Townsend's Harlequin Mask and Sine coloring;
+;
+; Last update 6 March 2000
+;
+transform:
+
+  if @import
+
+  ; Translate image coordinates to zero-centered
+  ; Julia coordinate system
+    w = (#pixel - #center)
+
+  ; Adjust offset
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+
+  ; Translate Julia relative to center of main image window and
+  ; make it parallel to window axes
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+
+  ; Make the angular position of the Julia independent of
+  ; the main image
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+
+    w = w * #magn / @tmag
+
+  ; Rotate around screen center
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + \
+        (@tilt * pi / 180)))
+
+  else
+    w = #pixel
+  endif
+
+; Gnarly
+
+  complex g = w
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  w = g
+  if @mask_mode < 2
+    #pixel = w
+  endif
+
+  if @mask_mode > 0
+   ; Orbit trap
+
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+    repeat
+
+      w = w^@n + @c
+
+      if @coord == 0
+        x = @ha * real(@fn3(@ht * imag(@fn1(w))))
+        y = @va * real(@fn3(@vt * real(@fn2(w))) )
+        n = x + flip(y)
+      else
+        float r = cabs(@fn1(w))
+        float theta = atan2(@fn2(w))
+        if theta < 0
+          theta = theta + 2 * #pi
+        endif
+        float or = r
+        r = r + @ha * sin(@ht * theta)
+        theta = theta + @va * cos(@vt * or)
+        x = r * cos(theta)
+        y = r * sin(theta)
+        n = x + flip(y)
+      endif
+      dist = cabs(w-n)
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+
+    until (iter == @max_iter) || (|w| > @bailout) || trapped
+
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+
+  endif
+
+default:
+  title = "Sine Mask"
+    param c
+    caption = "Julia Seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam
+  param n
+    caption = "Julia Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param coord
+    caption = "Sine Mode"
+    enum = "Cartesian" "Polar"
+  endparam
+  param ht
+    caption = "Sine Freq. #1"
+    default = 10.0
+  endparam
+  param ha
+    caption = "Sine Amp. #1"
+    default = 0.5
+  endparam
+  param vt
+    caption = "Sine Freq. #2"
+    default = 10.0
+  endparam
+  param va
+    caption = "Sine Amp. #2"
+    default = 0.5
+  endparam
+  param trap_iters
+    caption = "Sine Iterations"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 1.0
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param import
+    caption = "Screen Import"
+    default = false
+    hint = "Check this when you want to import the position of \
+           a Julia set. In this mode the mask will stay fixed \
+           regardless of further zooming and panning."
+  endparam
+  param offset
+    caption = "Screen Center"
+    default = (0,0)
+    hint = "When importing a Julia copy the value from \
+           Center on the Location tab of the Julia."
+  endparam
+  param tmag
+    caption = "Screen Magnification"
+    default = 1.0
+    hint = "When importing a Julia copy the value from \
+           Magnification on the Location tab of the Julia."
+  endparam
+  param tilt
+    caption = "Screen Rotation"
+    default = 0.0
+    hint = "When importing a Julia copy the value from \
+           Rotation on the Location tab of the Julia."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Sine #1"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Sine #2"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Sine #3"
+    default = sin()
+    hint = "This function is used only for the Cartesian Sine Mode."
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+mt-bezier-curve { ; Mark Townsend 3 February 2000
+
+; Adapted from Kerry Mitchell's Bezier Curve coloring method
+
+  float x0 = real(@z0)
+  float y0 = imag(@z0)
+  float x1 = real(@z1)
+  float y1 = imag(@z1)
+  float x2 = real(@z2)
+  float y2 = imag(@z2)
+  float x3 = real(@z3)
+  float y3 = imag(@z3)
+  float cx = 3 * (x1 - x0)
+  float bx = 3 * (x2 - x1) - cx
+  float ax = x3 - x0 - cx - bx
+  float cy = 3 * (y1 - y0)
+  float by = 3 * (y2 - y1) - cy
+  float ay = y3 - y0 - cy - by
+  float t = 0.0
+  float r = 0.0
+  float x = 0.0
+  float y = 0.0
+  float u = 0.0
+  float v = 0.0
+  u = real(#pixel)
+  v = imag(#pixel)
+  bool trapped = false
+  t=0.0
+  while(t <= 1.0)
+    x = ((ax * t + bx) * t + cx) * t + x0
+    y = ((ay * t + by) * t + cy) * t + y0
+    r = (x - u) * (x - u) + (y - v) * (y - v)
+    if r < @threshold
+      trapped = true
+    endif
+    t = t + @dt
+  endwhile
+  if !@inverse
+    if trapped
+      #solid = true
+    endif  
+  else
+    if !trapped
+      #solid = true
+    endif  
+  endif  
+default:
+  title="Bezier Curve Mask"
+  param z0
+    caption="1st Anchor Point"
+    default=(0.5,0.0)
+    hint="Curve starts at this point."
+  endparam
+  param z1
+    caption="1st Control Point"
+    default=(0.5,0.5)
+  endparam
+  param z2
+    caption="2nd Control Point"
+    default=(0.5,0.5)
+  endparam
+  param z3
+    caption="2nd Anchor Point"
+    default=(0.0,0.5)
+    hint="Curve ends at this point."
+  endparam
+  param dt
+    caption="Step Size"
+    default=0.1
+    hint="Decrease for smoother line, increase \
+      to see dots.  Should be between 0 & 1."
+    min=0.0
+    max=1.0
+  endparam
+  param threshold
+    caption = "Threshold"
+    default = 0.1
+  endparam  
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+  endparam  
+}
+
+mt-crop-scale-adjuster { ; Mark Townsend, 17 March 2000
+;
+; A transformation to adjust the image magnification after
+; changing the changing the shape of the fractal window.
+; 
+; Add to the top of the transformation list, set Original Width
+; and Original Height to the same values as Width and Height, and
+; then change the dimensions of the fractal window.
+;
+transform:
+  float adjust = 1.0
+  float old_scale = 0
+  float new_scale = 0
+  float old_ratio = @old_height / @old_width 
+  float new_ratio = #height / #width 
+  if old_ratio > 3 / 4
+    old_scale = (@old_width * #magn) / 4
+  else
+    old_scale = (@old_height * #magn) / 3
+  endif           
+  if new_ratio > 3 / 4
+    new_scale = (#width * #magn) / 4
+  else
+    new_scale = (#height * #magn) / 3
+  endif
+  adjust = old_scale / (new_scale / @render_scale)
+  #pixel = #pixel / adjust 
+default:
+  title = "Crop Scale Adjuster"
+  param old_width
+    caption = "Original Width"
+    hint = "Enter the original Width of the image."
+    default = 640    
+  endparam
+  param old_height
+    caption = "Original Height"
+    hint = "Enter the original Height of the image."
+    default = 480
+  endparam
+  param render_scale
+    caption = "Render Scale"
+    hint = "If you render to disk at different dimesions to that \
+            of the fractal window you should enter the scale here, eg. \
+            2 if the window is 400x300 and you render at 800x600."
+    default = 1.0
+  endparam
+}
+
+mt-gen-popcorn-mask { ; Mark Townsend, 3 April 2000
+;
+; Masking transformation based on my Generalised Popcorn Trap
+; coloring method.
+;
+transform:
+  w = #pixel
+; Gnarly
+  complex g = w
+  float x = real(g) / @scale
+  float y = imag(g) / @scale
+  float xx = 0
+  int i = 0
+  while (i < @giters)
+    xx = x
+    if @formula == 0
+     ; Popcorn
+      x = x - @h * sin(y + tan(@alpha * y))
+      y = y - @h * sin(xx + tan(@alpha * xx))
+    elseif @formula == 1
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@alpha * (y + @gn3(@beta * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@alpha * (xx + @gn3(@beta * xx)))))
+    endif
+    i = i + 1
+  endwhile
+  if @gmode == 0
+  ; Transform
+    g = x * @scale + flip(y * @scale)
+  elseif @gmode == 1
+  ; Disturb
+    x = (real(#pixel) - (@scale * x)) * @strength
+    y = (imag(#pixel) - (@scale * y)) * @strength
+    g = #pixel + x + flip(y)
+  endif
+  w = g
+  if @mask_mode < 2
+    #pixel = w
+  endif
+
+  if @mask_mode > 0
+   ; Orbit trap
+
+    int iter = 0
+    float dist = 0
+    bool trapped = false
+
+    repeat
+
+      w = w^@n + @c
+
+      p = (w / @tscale) - @toffset
+      ; Iterate the Popcorn formula
+      i = 0
+      x = real(p)
+      y = imag(p)
+      while i < @titers
+        xx = x
+        x = x - @th * real(@fn1(y + @fn2(@ta * y)))
+        y = y - @th * real(@fn3(xx + @fn4(@tb * xx)))
+        i = i + 1
+      endwhile
+      p = (x + flip(y)) + @toffset
+      dist = cabs(w - p)
+
+      if dist < @t
+        if iter >= real(@trap_iters) && iter <= imag(@trap_iters)
+            trapped = true
+        endif
+      endif  
+      iter = iter + 1
+    until (iter == @max_iter) || (|w| > @bailout) || trapped
+    if !@inverse
+      if trapped
+        #solid = true
+      endif
+    else
+      if !trapped
+         #solid = true
+      endif
+    endif
+  endif
+default:
+  title = "Popcorn Trap Mask"
+  param c
+    caption = "Julia Seed"
+    default = (-0.75,0.15)
+    hint = "This is the seed value for the Julia set."
+  endparam
+  param n
+    caption = "Julia Power"
+    default = 2.0
+    hint = "This defines the power of the Julia set."
+  endparam
+  param bailout
+    caption = "Julia Bailout"
+    default = 100.0
+    min = 1.0
+    hint = "Defines how quickly an untrapped orbit bails out."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 100
+    min = 1
+    hint = "The maximum iterations of the Julia set."
+  endparam
+  param ta
+    caption = "Trap Re Alpha"
+    default = 3.0
+  endparam
+  param tb
+    caption = "Trap Im Alpha"
+    default = 3.0
+  endparam
+  param th
+    caption = "Trap Step size"
+    default = 0.05
+  endparam
+  param titers
+    caption = "Trap Iterations"
+    default = 3
+  endparam
+  param tscale
+    caption = "Trap Scale"
+    default = 0.5
+  endparam
+  param toffset
+    caption = "Trap Offset"
+    default = (0, 0)
+  endparam
+  param trap_iters
+    caption = "Iteration Range"
+    default = (0, 99)
+    min = 0
+  endparam
+  param formula
+    caption = "Gnarly Formula"
+    enum = "Popcorn" "Gnarl" "None"
+    default = 2
+  endparam
+  param gmode
+    caption = "Gnarly Mode"
+    enum = "Transform" "Disturb"
+    hint = "In the Disturb mode you can adjust the strength of \
+            the distortion."
+  endparam
+  param alpha
+    caption = "Gnarly Alpha"
+    default = 3.0
+  endparam
+  param beta
+    caption = "Gnarly Beta"
+    default = 2.0
+  endparam
+  param giters
+    caption = "Gnarly Iterations"
+    default = 20
+  endparam
+  param h
+    caption = "Gnarly Step size"
+    default = 0.01
+  endparam
+  param scale
+    caption = "Gnarly Scale"
+    default = 0.1
+    hint = "Changes the size of the gnarly shapes."
+  endparam
+  param strength
+    caption = "Gnarly Strength"
+    default = 1.0
+    hint = "In Disturb mode this changes the amount by which a \
+           pixel is moved."
+  endparam
+  param mask_mode
+    caption = "Mask Mode"
+    enum = "No Mask" "Mask & Transform" "Mask Only"
+    default = 2
+  endparam
+  param t
+    caption = "Mask Threshold"
+    default = 0.5
+    hint = "How close the Julia orbit need to come to the trap \
+           for the pixel to be mapped solid."
+  endparam
+  param inverse
+    caption = "Inverse Mask"
+    default = false
+    hint = "Reverses the areas that are mapped solid."
+  endparam
+  func fn1
+    caption = "Re Popcorn #1"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Re Popcorn #2"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "Im Popcorn #1"
+    default = sin()
+  endfunc
+  func fn4
+    caption = "Im Popcorn #2"
+    default = tan()
+  endfunc
+  func gn1
+    caption = "Gnarl #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+  default = sin()
+  endfunc
+  func gn2
+    caption = "Gnarl #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+  endfunc
+  func gn3
+    caption = "Gnarl #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+  endfunc
+}
+
+mt-barnsley-pop { ; Mark Townsend, 28 May 2000
+;
+; Transformation mask based on the elements of the fBm Popcorn Trap
+; running on several possible fractals. It can also distort the
+; fractal so that it seems to be mapped to the elements.
+;
+transform:
+  z = #pixel
+  int iter = 0
+  trap_z = (0,0)
+  trap_p = (0,0)
+  int trap_iter = 0
+  bool masked = false
+  float min_dist = 1e20
+  bool dist_mask = false
+  bool iter_mask = false
+  bool range_mask = false
+  repeat
+    if @formula == 0
+    ; Barnsley 1
+      if real(z) >= 0
+        z = (z - 1) * @seed
+      else
+        z = (z + 1) * @seed
+      endif
+    elseif @formula == 1
+    ; Barnsley 2
+      if real(z) * imag(@seed) + real(@seed) * imag(z) >= 0
+        z = (z - 1) * @seed
+      else
+        z = (z + 1) * @seed
+      endif
+    elseif @formula == 2
+    ; Standard Julia
+      z = z^2 + @seed
+    endif
+    p = (z / @scale) - @offset
+    ; Iterate the Popcorn formula
+    i = 0
+    x = real(p)
+    y = imag(p)
+    while i < @max_iterations
+      xx = x
+      x = x - @h * real(@fn1(y + @fn2(@a * y)))
+      y = y - @h * real(@fn3(xx + @fn4(@b * xx)))
+      i = i + 1
+    endwhile
+    p = (x + flip(y)) + @offset
+    float dist = cabs(z - p)
+    if dist < min_dist
+      trap_z = z
+      trap_p = p
+      min_dist = dist
+      trap_iter = iter
+    endif
+    iter = iter + 1
+  until (iter == @max_iter) || (|z| > @bailout)
+  if @distortion == 1
+    #pixel = trap_z
+  elseif @distortion == 2
+    #pixel = trap_p
+  endif    
+  if @mask_dist != 0
+    if min_dist > @thresh 
+      dist_mask = true
+    endif  
+    if @mask_dist == 2
+      dist_mask = !dist_mask
+    endif
+  endif      
+  if @mask_iter != 0
+    if trap_iter % trunc(imag(@mask_mod)) < trunc(real(@mask_mod))
+       iter_mask = true
+    endif  
+    if @mask_iter == 2
+      iter_mask = !iter_mask
+    endif
+  endif
+  if @mask_range != 0    
+    if (trap_iter >= real(@range)) && (trap_iter <= imag(@range))
+      range_mask = true
+    endif
+    if @mask_range == 2
+      range_mask = !range_mask
+    endif
+  endif
+  if (@mask_dist != 0) && (@mask_iter != 0) && (@mask_range != 0)
+    if @operator == 0
+      masked = dist_mask || iter_mask || range_mask
+    elseif @operator == 1
+      masked = dist_mask && iter_mask && range_mask
+    endif     
+  elseif (@mask_dist != 0) && (@mask_iter != 0)
+    if @operator == 0
+      masked = dist_mask || iter_mask 
+    elseif @operator == 1
+      masked = dist_mask && iter_mask
+    endif     
+  elseif (@mask_dist != 0) && (@mask_range != 0)
+    if @operator == 0
+      masked = dist_mask || range_mask
+    elseif @operator == 1
+      masked = dist_mask && range_mask
+    endif     
+  elseif (@mask_iter != 0) && (@mask_range != 0)
+    if @operator == 0
+      masked = iter_mask || range_mask
+    elseif @operator == 1
+      masked = iter_mask && range_mask
+    endif     
+  elseif (@mask_dist != 0)
+    masked = dist_mask
+  elseif (@mask_iter != 0)
+    masked = iter_mask
+  elseif (@mask_range != 0)
+    masked = range_mask
+  endif   
+  if @reverse
+    masked = !masked
+  endif
+  if masked 
+    #solid = true
+  endif      
+default:
+  title = "Barnsley Popcorn Mask"
+  param formula
+    caption = "Julia Type"
+    enum = "Barnsley 1" "Barnsley 2" "Standard Julia"
+    hint = "The type of Julia for the built-in fractal."
+  endparam    
+  param seed
+    caption = "Julia Seed"
+    default = (0.6, 1.1)
+    hint = "The Julia coordinates for the built-in fractal."
+  endparam
+  param max_iter
+    caption = "Julia Iterations"
+    default = 149
+    hint = "The number of iterations for the built-in fractal."
+  endparam
+  param bailout
+    caption = "Julia Bailout"
+    default = 4.0
+    hint = "The bailout value for the built-in fractal."
+  endparam   
+  param a
+    caption = "Trap Re Alpha"
+    default = 3.0
+    hint = "Parameter for the orbit trap."
+  endparam  
+  param b
+    caption = "Trap Im Alpha"
+    default = 3.0
+    hint = "Parameter for the orbit trap."
+  endparam  
+  param h
+    caption = "Trap Step Size"
+    default = 0.05
+    hint = "This is step size for the orbit trap's Popcorn formula."
+  endparam  
+  param max_iterations
+    caption = "Trap Iterations"
+    default = 3
+    min = 1
+    hint = "This is the number of iterations for the \
+            orbit trap's Popcorn formula."
+  endparam  
+  param @scale
+    caption = "Trap Scale"
+    default = 0.5
+    hint = "Parameter for the orbit trap."
+  endparam  
+  param offset
+    caption = "Trap Offset"  
+    default = (0,0)
+    hint = "Parameter for the orbit trap."
+  endparam  
+  param mask_dist
+    caption = "Distance Mask"
+    enum = "None" "Normal" "Reverse"
+    hint = "Masking based on the orbit's closest distnace to the trap."
+  endparam  
+  param mask_iter
+    caption = "Iteration Mask"
+    enum = "None" "Normal" "Reverse"
+    default = 1
+    hint = "Masking based on the modulated iteration."
+  endparam  
+  param mask_range
+    caption = "Range Mask"
+    enum = "None" "Normal" "Reverse"
+    hint = "Masking based on a fixed range of iterations."
+  endparam  
+  param operator
+    caption = "Operator"
+    enum = "Or" "And"
+    hint = "How the different mask types are combined."
+  endparam  
+  param thresh
+    caption = "Threshold"
+    default = 0.5
+    hint = "The threshold for the Distance masking."
+  endparam  
+  param mask_mod
+    caption = "Modulation"
+    default = (1,2)
+    hint = "The modulation sequence for the Iteration masking."
+  endparam  
+  param range
+    caption = "Range"
+    default = (1,1)
+    hint = "The range of iterations to mask with the Range masking."
+  endparam    
+  param reverse
+    caption = "Reverse"
+    default = false
+    hint = "Reverses the masked and unmasked areas."
+  endparam  
+  param distortion
+    caption = "Element Mapping"
+    enum =  "None" "Orbit" "Trap"
+    hint = "Determines whether to distort the complex plane to match the \
+           elements of the built-in orbit trap."
+  endparam  
+  func fn1
+    caption = "Re Popcorn #1"
+    default = sin()
+    hint = "Function for the orbit trap's Popcorn formula."
+  endfunc
+  func fn2
+    caption = "Re Popcorn #2"
+    default = tan()
+    hint = "Function for the orbit trap's Popcorn formula."
+  endfunc
+  func fn3
+    caption = "Im Popcorn #1"
+    default = sin()
+    hint = "Function for the orbit trap's Popcorn formula."
+  endfunc
+  func fn4
+    caption = "Im Popcorn #2"
+    default = tan()
+    hint = "Function for the orbit trap's Popcorn formula."
+  endfunc
+}
+
+mt-julia-disk {
+; Mark Townsend, 18 June 2000
+;
+; Based on an idea from Earl Hinrich
+;
+transform:
+  z = 0
+  w = #pixel
+  int iter = 0
+  repeat
+    w = w^2 + @c
+    if cabs(w) < @r  
+      d = @r - cabs(w)
+      z = z + d * w  
+    endif  
+    iter = iter + 1
+  until (iter == @max_iter) || (|w| > 1e20) 
+  #pixel = (z * @mag) - @offset  
+default:
+  title = "Julia Disk"
+  param c
+    caption = "Julia Seed"
+  endparam
+  param r
+    caption = "Disk Radius"
+    default = 4.0
+  endparam
+  param max_iter
+    caption = "Iterations"
+    default = 100
+    min = 1
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam
+  param mag 
+    caption = "Magnification"
+    default = 1.0
+  endparam
+}
+
+mt-turbulence {
+; Mark Townsend, 21 April 2000
+; 2 June 2000
+;
+; Distortion based on fBm. From source code by Intel,
+; and Ken Perlin. Inspiration and guidance from the
+; fBm formulas of Damien M. Jones.
+;
+transform:
+  int i = 0
+  float sum = 0
+  float amplitude = 1.0
+  complex p = #pixel * @scale + @offset
+  while i < @octaves
+    float bx0 = floor(real(p))
+    float bx1 = bx0 + 1
+    float rx0 = real(p) - floor(real(p))
+    float rx1 = rx0 - 1
+    float by0 = floor(imag(p))
+    float by1 = by0 + 1
+    float ry0 = imag(p) - floor(imag(p))  
+    float ry1 = ry0 - 1
+    ; Positive offset to stop reflection
+    if bx0 < 0
+      bx0 = bx0 + 8192
+    endif  
+    if bx1 < 0
+      bx1 = bx1 + 8192
+    endif  
+    if by0 < 0
+      by0 = by0 + 8192
+    endif  
+    if by1 < 0
+      by1 = by1 + 8192
+    endif  
+    float sx = rx0 * rx0 * (3 - 2 * rx0) 
+    float sy = ry0 * ry0 * (3 - 2 * ry0) 
+    float b00 = (bx0^2 * 2473 % 65536 + by0)^2 % 65536
+    float b01 = (bx0^2 * 2473 % 65536 + by1)^2 % 65536
+    float b10 = (bx1^2 * 2473 % 65536 + by0)^2 % 65536
+    float b11 = (bx1^2 * 2473 % 65536 + by1)^2 % 65536
+    float g_b00_0 = b00^2 * 5381 % 65536 / 4 % 16384 - 8192
+    float g_b01_0 = b01^2 * 5381 % 65536 / 4 % 16384 - 8192
+    float g_b10_0 = b10^2 * 5381 % 65536 / 4 % 16384 - 8192
+    float g_b11_0 = b11^2 * 5381 % 65536 / 4 % 16384 - 8192
+    float g_b00_1 = (b00 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+    float g_b01_1 = (b01 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+    float g_b10_1 = (b10 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+    float g_b11_1 = (b11 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+    float s = sqrt(g_b00_0^2 + g_b00_1^2)
+    g_b00_0 = g_b00_0 / s
+    g_b00_1 = g_b00_1 / s
+    s = sqrt(g_b01_0^2 + g_b01_1^2)
+    g_b01_0 = g_b01_0 / s
+    g_b01_1 = g_b01_1 / s
+    s = sqrt(g_b10_0^2 + g_b10_1^2)
+    g_b10_0 = g_b10_0 / s
+    g_b10_1 = g_b10_1 / s
+    s = sqrt(g_b11_0^2 + g_b11_1^2)
+    g_b11_0 = g_b11_0 / s
+    g_b11_1 = g_b11_1 / s
+    float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+    float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+    float a = u1 + sx * (v1 - u1)
+    float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+    float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+    float b = u2 + sx * (v2 - u2)
+    sum = sum + real(@fn1(a + sy * (b - a))) * amplitude
+    amplitude = amplitude * @persistence
+    p = p / 0.5 + (1i * @push * sum)
+    i = i + 1
+  endwhile
+  bool masking = false
+  if @mode == 1 || @mode == 2
+    if (sqrt(2) * sum) < @threshold
+      masking = true
+    endif
+    if @reverse
+      masking = !masking
+    endif
+    if masking  
+      #solid = true
+    endif  
+  endif  
+  if @mode == 0 || @mode == 2
+    #pixel = #pixel + exp(flip(2 * #pi * sqrt(2) * sum)) * @r
+  endif  
+default:
+  title = "Turbulence"
+  param mode
+    caption = "Mode"
+    enum = "Distort" "Mask" "Distort and Mask"
+    default = 0
+  endparam  
+  param r
+    caption = "Strength"
+    default = 0.1
+  endparam  
+  param threshold
+    caption = "Threshold"
+    default = 0.0
+  endparam  
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+  endparam  
+  param persistence
+    caption = "Persistence"
+    default = 0.5
+  endparam  
+  param push
+    caption = "Smear"
+    default = 0.0
+  endparam  
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam  
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam  
+  param reverse
+    caption = "Reverse Mask"
+    default = false
+  endparam  
+  func fn1
+    caption = "Noise Function"
+    default = ident()
+  endfunc  
+}
+
+mt-mandel-mask {
+; Mark Townsend, 22 Aoril 2001
+transform:
+  z = 0
+  int i = 0
+  bool mask = false
+  if @fix
+    w = (#pixel - #center) 
+    offset = real(@offset) * -@tmag + flip(imag(@offset) * -@tmag)
+    trans = cabs(offset) * exp(flip(atan2(offset) + #angle))
+    w = w - (trans / #magn)
+    w = cabs(w) * exp(flip(-#angle + atan2(w)))
+    w = w * #magn / @tmag 
+    w = @offset + cabs(w - @offset) * exp(flip(atan2(w - @offset) + (@tilt * pi / 180)))
+  else
+    w = #pixel  
+  endif  
+  while (i < @iterations) && (|z| < @bailout)
+    z = z^2 + w
+    i = i + 1
+  endwhile  
+  if i == @iterations
+    mask = true
+  endif  
+  if @inverse
+    mask = ! mask
+  endif
+  #solid = mask  
+default:
+  title = "Mandelbrot Mask"
+  param iterations
+    caption = "Iterations"
+    default = 150
+  endparam  
+  param bailout
+    caption = "Bailout Value"
+    default = 100.0
+  endparam  
+  param inverse
+    caption = "Invert"
+    default = false
+  endparam   
+  param fix 
+    caption = "Fix Location"
+    default = false
+  endparam  
+  param offset
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param tmag 
+    caption = "Magnification"
+    default = 1.0
+  endparam
+  param tilt
+    caption = "Rotation"
+    default = 0.0
+  endparam    
+}
+
+mt-3D-perlin-noise {
+; Mark Townsend, 23 October 2000
+; Based on original code by Ken Perlin,
+; with ideas from Damien M. Jones
+global:
+  int p[514]
+  float g3[514, 3]
+  int i = 0
+  int j = 0
+  int k = 0
+  int seed = @seed
+  while i < 256
+    p[i] = i
+    j = 0
+    while j < 3
+      seed = random(seed)
+      g3[i, j] = seed % 256
+      j = j + 1  
+    endwhile
+    float t0 = g3[i, 0]
+    float t1 = g3[i, 1]
+    float t2 = g3[i, 2]
+    float s = sqrt(t0 * t0 + t1 * t1 + t2 * t2)
+    g3[i, 0] = g3[i, 0] / s
+    g3[i, 1] = g3[i, 1] / s
+    g3[i, 2] = g3[i, 2] / s
+    i = i + 1    
+  endwhile
+  i = 0  
+  while i < 256
+    k = p[i]
+    j = abs(seed) % 256
+    seed = random(seed)
+    p[i] = p[j]
+    p[j] = k
+    i = i + 1
+  endwhile  
+  i = 0
+  while i < 256
+    p[256 + i] = p[i]
+    j = 0
+    while j < 3
+      g3[256 + i , j] = g3[i, j];
+      j = j + 1
+    endwhile
+    i = i + 1
+  endwhile    
+transform:
+  int iter = 0, float sum = 0
+  float amplitude = 1.0, r = (0,1) ^ (1/3) 
+  complex w = #pixel * @scale + @offset
+  while iter < @octaves
+    float t = real(w) % 4096 + 4096
+    int bx0 = floor(t) % 256
+    int bx1 = (bx0 + 1) % 256
+    float rx0 = t - floor(t)
+    float rx1 = rx0 - 1
+    t = imag(w) % 4096 + 4096
+    int by0 = floor(t) % 256
+    int by1 = (by0 + 1) % 256
+    float ry0 = t - floor(t)
+    float ry1 = ry0 - 1
+    t = @z % 4096 + 4096
+    int bz0 = floor(t) % 256
+    int bz1 = (bz0 + 1) % 256
+    float rz0 = t - floor(t)
+    float rz1 = rz0 - 1
+    int ii = p[bx0]
+    int jj = p[bx1]
+    int b00 = p[ii + by0]
+    int b10 = p[jj + by0] 
+    int b01 = p[ii + by1]
+    int b11 = p[jj + by1] 
+    float t = (rx0 * rx0 * (3.0 - 2.0 * rx0))
+    float sy = (ry0 * ry0 * (3.0 - 2.0 * ry0))
+    float sz = (rz0 * rz0 * (3.0 - 2.0 * rz0))
+    float u = (rx0 * g3[b00 + bz0, 0] + ry0 * g3[b00 + bz0, 1] + rz0 * g3[b00 + bz0, 2])
+    float v = (rx1 * g3[b10 + bz0, 0] + ry0 * g3[b10 + bz0, 1] + rz0 * g3[b10 + bz0, 2])
+    float a = (u + t * (v - u))
+    u = (rx0 * g3[b01 + bz0, 0] + ry1 * g3[b01 + bz0, 1] + rz0 * g3[b01 + bz0, 2])
+    v = (rx1 * g3[b11 + bz0, 0] + ry1 * g3[b11 + bz0, 1] + rz0 * g3[b11 + bz0, 2])
+    float b = (u + t * (v - u))
+    float c = (a + sy * (b - a))
+    u = (rx0 * g3[b00 + bz1, 0] + ry0 * g3[b00 + bz1, 1] + rz1 * g3[b00 + bz1, 2])
+    v = (rx1 * g3[b10 + bz1, 0] + ry0 * g3[b10 + bz1, 1] + rz1 * g3[b10 + bz1, 2])
+    a = (u + t * (v - u))
+    u = (rx0 * g3[b01 + bz1, 0] + ry1 * g3[b01 + bz1, 1] + rz1 * g3[b01 + bz1, 2])
+    v = (rx1 * g3[b11 + bz1, 0] + ry1 * g3[b11 + bz1, 1] + rz1 * g3[b11 + bz1, 2])
+    b = (u + t * (v - u))
+    float d = (a + sy *(b - a))
+    sum = sum + real(@fn1(c + sz *(d - c))) * amplitude
+    amplitude = amplitude * @persistence
+    w = w * r / 0.5
+    iter = iter + 1
+  endwhile  
+  if @dist_style == "Linear"
+    #pixel = #pixel + (0,1) ^ (@angle / 90.0) * sum * 0.5 * @strength * 10
+  elseif @dist_style == "Turbulence"
+    #pixel = #pixel + exp(flip(2 * #pi * sqrt(2) * sum)) * @strength
+  endif
+default:
+  title = "Perlin Noise 3D"
+    param dist_style
+    caption = "Distortion Style"
+    enum = "Linear" "Turbulence"
+  endparam
+  param strength
+    caption = "Distortion Strength"
+    default = 0.1
+  endparam  
+  param angle
+    caption = "Distortion Angle"
+    default = 30.0
+    visible = @dist_style == "Linear"
+  endparam
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+  endparam  
+  param persistence
+    caption = "Persistence"
+    default = 0.5
+  endparam  
+  func fn1
+    caption = "Noise Function"
+    default = ident()
+  endfunc    
+  param z
+    caption = "Z Coordinate"
+    default = 0.0
+  endparam  
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam  
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam  
+  param @seed
+    caption = "Random Seed"
+    default = 1234567
+  endparam  
+}

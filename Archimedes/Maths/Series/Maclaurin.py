@@ -1,0 +1,13 @@
+i**1 = i
+i**2 = -1   #  Test these TODO
+i**3 = -i
+i**4 = 1
+
+sin(x) = x - (x**3/factorial(3)) + (x**5/factorial(5)) - (x**7/factorial(7)) + (x**9/factorial(9)) - ...
+cos(x) = 1 - (x**2/factorial(2)) + (x**4/factorial(4)) - (x**6/factorial(6)) + (x**8/factorial(8)) - ...
+e**x = 1 + x + (x**2/factorial(2)) + (x**3/factorial(3)) + (x**4/factorial(4)) + (x**5/factorial(5)) + ...
+e**ix = 1 + ix + (ix**2/factorial(2)) + (ix**3/factorial(3)) + (ix**4/factorial(4)) + (ix**5/factorial(5)) + ...
+facctored e**ix = (cos(x) series) + i(sin(x) series)
+e**ix = cos(x) + isin(x) # Euler's Formula
+e**ipi = cos(pi) + isin(pi)
+e**ipi = -1  #   +   0i # Euler's Identity

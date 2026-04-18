@@ -1,0 +1,2629 @@
+comment{
+  July 2019 added SimpleSwitchFormula and marked others as notRecommended
+  July 2020 added SwitchComboFormula as wrapper for new version of SwitchCombo (in jlb.ulb)
+            Removed "Recommended" from SimpleSwitch Formula; SwitchComboFormula is preferred.
+   December 2024 added JLB_Universal
+            Re-arranged to put Recommended first, then neutral, then NotRecommended
+}
+
+JLB_Universal {
+; Same as GenericFormula below except Switch not selectable
+; new 2412xx
+
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "jlb.ulb"
+  Formula f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "Formula"
+  rating = recommended
+  periodicity = 0
+  method = multipass
+
+  Formula param formulaClass
+    ; caption not visible
+    default = JLB_Switch
+    selectable = false
+  endparam
+}
+
+GenericFormula {
+;
+; Same as the one in Standard.ufm except for the periodicty and method setting
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "jlb.ulb"
+  Formula f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "Plug-In Formula"
+  ;rating = recommended
+  periodicity = 0
+  method = multipass
+
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = JLB_Switch
+  endparam
+}
+
+Mandelbar {
+;
+; Generic Mandelbar set. Code adapted from the perturbed
+; version in UF6's standard.ufm.
+;
+; Jim Blue 12 June 2017
+;
+init:
+  z = @start
+loop:
+  z = conj(z)
+  z = z^@power + #pixel
+bailout:
+  |z| <= @bailout
+
+$IFDEF VER60
+perturbinit:
+  #dz = 0
+perturbloop:
+  if @power == (2, 0)
+		complex zb  = conj(#z)
+		complex dzb = conj(#dz)
+    #dz = 2*zb*dzb + sqr(dzb) + #dpixel
+  elseif @power == (3, 0)
+		complex zb  = conj(#z)
+		complex dzb = conj(#dz)
+    #dz = 3*sqr(zb)*dzb + (3*zb+dzb)*sqr(dzb) + #dpixel
+  else ; power 4
+		complex zb  = conj(#z)
+		complex dzb = conj(#dz)
+		complex zb2 = sqr(zb)
+		complex dzb2 = sqr(dzb)
+		#dz = 4*zb*dzb*(zb2+dzb2) + 6*zb2*dzb2 + sqr(dzb2) + #dpixel
+;    complex z2 = sqr(#z)
+;    complex dz2 = sqr(#dz)
+;    complex zdz4 = 4*#z*#dz
+;    #dz = #dpixel + zdz4*z2 + 6*z2*dz2 + zdz4*dz2 + sqr(dz2)
+  endif
+$ENDIF
+
+default:
+  ;rating = Recommended
+  title = "Mandelbar"
+  center = (-0.5, 0)
+  ;helpfile = "Uf*.chm"
+  ;helptopic = "Html\formulas\standard\mandelbar.html"
+$IFDEF VER60
+  perturb = @power == (2, 0) || @power == (3, 0) || @power == (4, 0)
+$ENDIF
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbar \
+            set. Use (0, 0) for the standard Mandelbar set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This parameter sets the exponent for the Mandelbar formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbar figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbar sets. Use (2, 0) \
+            for the standard Mandelbar set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Juliabar"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+pixeljp {
+; copied from jp.ufm for convenience
+; based on Kerry Mitchell's formula
+; When Max Iters = 1, all pixels are "inside"
+; When Max Iters = 2, all pixels are "outside"
+;
+init:
+  z = #pixel
+  int i = 0
+loop:
+  i = i + 1
+bailout:
+  i < 2
+default:
+  title = "Pixel (jp)"
+  maxiter = 2
+  method = multipass
+  periodicity = 0
+ }
+
+SwitchComboFormula {
+;
+; When JLB_SwitchCombo in jlb.ulb is plugged in, it allows construction of formulas by
+; combining "SFormula" type formulas.
+; These combination formulas can be switched from Mandelbrot-type to Julia-type and vice versa.
+;
+global:
+  import "common.ulb"
+  import "jlb.ulb"
+
+  Formula f = new @formulaClass(0)
+
+init:
+  if @formulaClass==JLB_SwitchCombo
+    JLB_SwitchCombo(f).SetParams(true, #pixel)
+  endif
+  #z = f.Init(#pixel)
+
+loop:
+  #z = f.Iterate(#z)
+
+bailout:
+  !f.IsBailedOut(#z)
+
+default:
+  title = "Switch Combo Formula"
+  rating = notrecommended
+  periodicity = 0
+  method = multipass
+   int param v_SwitchComboFormula
+     caption = "Version (JLB_SwitchFormula)"
+     default = 100
+     hint = "This version parameter is used to detect when a change has \
+             been made to the formula that is incompatible with the \
+             previous version. When that happens, this field will reflect \
+             the old version number to alert you to the fact that an \
+             alternate rendering is being used."
+     visible = @v_SwitchComboFormula < 100
+   endparam
+
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = JLB_SwitchCombo
+  endparam
+}
+
+SimpleSwitchFormula {
+;
+; This formula is based on Generic Switch Formula in mmf5.ufm.
+; When JLB_SwitchCombo in jlb.ulb is plugged in, it allows construction of formulas by
+; combining "SFormula" type formulas.
+; These combination formulas can be switched from Mandelbrot-type to Julia-type and vice versa.
+;
+global:
+  import "common.ulb"
+  import "jlb.ulb"
+
+  Formula f = new @formulaClass(0)
+
+  if @formulaClass==JLB_SwitchCombo
+    if @p_mode             ; true for Mandelbrot-like
+      JLB_SwitchCombo(f).SetParams(@p_mode,@p_start)
+    else
+      JLB_SwitchCombo(f).SetParams(@p_mode,@p_seed)
+    endif
+  endif
+
+init:
+  #z = f.Init(#pixel)
+
+loop:
+  #z = f.Iterate(#z)
+
+bailout:
+  !f.IsBailedOut(#z)
+
+default:
+  title = "Simple Switch Formula"
+  rating = notrecommended
+  periodicity = 0
+  method = multipass
+  heading
+    caption = "Switch Parameters"
+    visible = @formulaClass==JLB_SwitchCombo
+  endheading
+  bool param p_mode
+    default = true
+    caption = "Mandelbrot mode?"
+    visible = false       ;@formulaClass != JLB_SwitchCombo
+  endparam
+  bool param p_mode1
+    default = false
+    caption = "Julia mode?"
+    visible = false       ; @formulaClass != JLB_SwitchCombo
+  endparam
+  heading
+    text = "Currently in Mandelbrot mode."
+    visible = @p_mode && @formulaClass==JLB_SwitchCombo
+  endheading
+  heading
+    text = "Currently in Julia mode."
+    visible = @p_mode1 && @formulaClass==JLB_SwitchCombo
+  endheading
+  param p_start
+    caption = "Mandelbrot Mode Start value"
+    default = (0,0)
+    visible = false       ;@p_mode && @formulaClass==JLB_SwitchCombo
+; iteration always starts with px = #pixel
+  endparam
+  param p_seed
+    caption = "Julia Mode Constant"
+    default = (-1.25,0)
+    visible = @p_mode1 && @formulaClass==JLB_SwitchCombo
+  endparam
+
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = JLB_SwitchCombo
+  endparam
+
+switch:
+  type = "SimpleSwitchFormula"
+  p_mode = p_mode1
+  p_mode1 = p_mode
+  p_start = #pixel
+  p_seed = #pixel
+  formulaClass = formulaClass
+}
+
+Julia_N_Step0 {            ;; XX
+;
+; jlb 080125
+;
+; Based on the ideas in dmj's Julia3, but all new code.
+; The formula is similar to REB004AM/J (and probably many others)
+;
+; Starting with Julia_N_Step0, define a succession of Julia seeds, up to 9.
+; The formula cycles among them in a user-defined cycle pattern. The pixel
+; may also be used as a seed.
+;
+; As the largest integer has 10 digits, the cycle can be at most 10 long.
+
+; I'll explain the cycle pattern using an example, 307421. Iteration #1 will
+; use seed 3, #2 will use the pixel value, #3 will use seed 7, etc. After
+; iteration #6 uses seed 1, the next iteration starts over at the beginning.
+;
+; The "If over?" parameter determines which seed to use if the step is less
+; than the seed number. Option are to use the pixel value, cyclically reduce
+; the cycle value, or omit that cycle value and go on to the next one. Thus with
+; a step 5 Julia and the example above, iteration #3 would use the pixel
+; value, seed 4, or seed 2, respectively.
+;
+; NOTE: the UF programming language doesn't allow all these to be implemented
+; in one formula, but requires a separate formula for each step. Sad but true.
+; I've written this formula to be general and usable for all steps, if some
+; obvious changes are made in the lines marked with ";; XX".
+
+global:
+int step = 0  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+; $define DEBUG
+;   print("L ", L, " cc ", cc[0], " ", cc[1], " ", cc[2], " ", cc[3], " ", \
+;    cc[4], " ", cc[5], " ", cc[6], " ",                        \
+;  cc[7], " ", cc[8], " ", cc[9], " ", cc[10])
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step0" ;; XX
+  method = multipass
+  center = (-0.5,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step1"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = #pixel              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4               ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step1 {            ;; XX
+global:
+int step = 1  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+; $define DEBUG
+;   print("L ", L, " cc ", cc[0], " ", cc[1], " ", cc[2], " ", cc[3], " ", \
+;    cc[4], " ", cc[5], " ", cc[6], " ",                        \
+;  cc[7], " ", cc[8], " ", cc[9], " ", cc[10])
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+   if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+    elseif (@overMode == "cyclic")
+      while (ic > step)
+        ic = ic - step
+      endwhile
+    else   ; omit and try next k
+      ic = -1
+      k = 1 + k%L                   ; 1 <= k <= L
+    endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step1" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step2"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = #pixel               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4               ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step2 {            ;; XX
+global:
+int step = 2  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step2" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step3"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = #pixel               ;; XX
+  seed4 = seed4               ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step3 {            ;; XX
+global:
+int step = 3  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step3" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step4"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = #pixel               ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step4 {            ;; XX
+global:
+int step = 4  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+;$define debug
+print(cc[0],cc[1],cc[2],cc[3],cc[4])
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+  i = 1
+  while (i < L)
+    bad = bad && (cc[i] > step)  ; just need one good part of cycle
+    i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+seed[1] = @seed1
+seed[2] = @seed2
+seed[3] = @seed3
+seed[4] = @seed4
+seed[5] = @seed5
+seed[6] = @seed6
+seed[7] = @seed7
+seed[8] = @seed8
+seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+  if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+    elseif (@overMode == "cyclic")
+      while (ic > step)
+        ic = ic - step
+      endwhile
+    else   ; omit and try next k
+      ic = -1
+      k = 1 + k%L                   ; 1 <= k <= L
+    endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+;$define debug
+;if |#pixel-1| < 1e-1
+;print(ic, " ", c)
+;endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step4" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "seed3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step5"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4               ;; XX
+  seed5 = #pixel               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step5 {            ;; XX
+global:
+int step = 5  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step5" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step6"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4               ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = #pixel               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step6 {            ;; XX
+global:
+int step = 6  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step6" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step7"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4           ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = #pixel           ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step7 {            ;; XX
+global:
+int step = 7  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step7" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step8"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4             ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = #pixel               ;; XX
+  seed9 = seed9               ;; XX
+}
+
+Julia_N_Step8 {            ;; XX
+global:
+int step = 8  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step8" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+switch:
+type = "Julia_N_Step9"     ;; XX
+  cycle = cycle
+  overMode = overMode
+  startMode = startMode
+  start = start
+  a = a
+  power = power
+  b1 = b1
+  b2 = b2
+  f = f
+  bailout = bailout
+ ; Only two of the following lines have to be changed to make the formula
+ ; for the next step.
+  seed1 = seed1              ;; XX
+  seed2 = seed2               ;; XX
+  seed3 = seed3               ;; XX
+  seed4 = seed4           ;; XX
+  seed5 = seed5               ;; XX
+  seed6 = seed6               ;; XX
+  seed7 = seed7               ;; XX
+  seed8 = seed8               ;; XX
+  seed9 = #pixel          ;; XX
+}
+
+Julia_N_Step9 {            ;; XX
+global:
+int step = 9  ;; XX marks lines to change for following steps
+int L = 0               ; L is the cycle length, from 1 to 10
+int tmp = @cycle
+int cc[11]              ; holds the cycle index values, in 1 to 10
+int i
+int j
+
+  cc[0] = 0
+while (tmp > 0)         ; Unpack the cycle pattern in reverse order
+  L = L + 1
+  i = tmp % 10
+  cc[L] = i
+  tmp = floor(tmp/10)
+endwhile
+i = 1
+j = L-1 ; reverse order to correspond to cycle pattern
+while (i < j)
+  int cj = cc[j]
+  cc[j] = cc[i]
+  cc[i] = cj
+  i = i + 1
+  j = j - 1
+endwhile
+if (step == 0)  ; step 0 just uses the pixel, not any seeds
+  L = 1
+endif
+
+  if (@overMode == "omit")        ; make sure the pattern has somethng useful
+  bool bad = true
+i = 1
+while (i < L)
+  bad = bad && (cc[i] > step)  ; just need one good part of cycle
+  i = i + 1
+  endwhile
+  if (bad)
+    cc[1] = 1                   ; arbitrary fix-up
+  endif
+endif
+
+complex seed[10]        ; the seeds themselves in 1 through 9
+seed[0] = (0,0)
+  seed[1] = @seed1
+  seed[2] = @seed2
+  seed[3] = @seed3
+  seed[4] = @seed4
+  seed[5] = @seed5
+  seed[6] = @seed6
+  seed[7] = @seed7
+  seed[8] = @seed8
+  seed[9] = @seed9
+
+init:
+int k = 1                            ; index into cc array
+if (@startMode == "z = pixel")
+  z = #pixel
+else
+  z = @zStart
+endif
+
+loop:
+complex c
+  int ic = -1
+
+while (ic < 0)
+  ic = cc[k]
+    if (ic > step)
+    if (step == 0 || @overMode == "pixel")
+      ic = 0
+  elseif (@overMode == "cyclic")
+    while (ic > step)
+      ic = ic - step
+  endwhile
+  else   ; omit and try next k
+    ic = -1
+k = 1 + k%L                   ; 1 <= k <= L
+  endif
+  endif
+endwhile
+if (ic == 0)
+    c = #pixel
+else
+  c = seed[ic]
+endif
+z = @a*z^@power + @b1*@f(@b2*z) + c
+k = 1 + k%L
+
+bailout:
+|z| < @bailout
+
+default:
+  rating = notRecommended
+  title = "Julia_N_Step9" ;; XX
+  method = multipass
+  center = (0,0)
+heading
+  caption = "Seed cycle parameters"
+endheading
+  int param cycle
+  caption = "Cycle pattern"
+  default = 123456789
+  min = 1
+endparam
+param overMode
+  caption = "If over?"
+  default = 0
+  enum = "pixel" "cyclic" "omit"
+  hint = "If seed index is greater than the step, either use the pixel \
+ value, use the seeds cyclically, or omit that step"
+endparam
+heading
+  caption = "Formula parameters"
+endheading
+param startMode
+  caption = "Start mode"
+  enum = "z = pixel" "z = value"
+  default = 0
+endparam
+  complex param zStart
+  caption = "z start value"
+  default = (0,0)
+  visible = (@startMode == 1)
+endparam
+complex param a
+  caption = "a"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+endparam
+complex param power
+  caption = "p"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (2,0)
+endparam
+complex param b1
+  caption = "b1"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (0,0)
+endparam
+complex param b2
+  caption = "b2"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = (1,0)
+  enabled = (@b1 != (0,0))
+endparam
+func f
+  caption = "f"
+  hint = "z = a*z^p + b1*f(b2*z) + c"
+  default = ident()
+  enabled = (@b1 != (0,0)) && (@b2 != (0,0))
+endfunc
+  float param bailout
+  caption = "bailout"
+  default = 4
+  min = 1
+endparam
+heading
+  caption = "Seed list"
+endheading
+  complex param seed1
+  caption = "seed1"
+  default = (0,0)
+  ; visible = (step >= 1)
+endparam
+  complex param seed2
+  caption = "seed2"
+  default = (0,0)
+  ; visible = (step >= 2)
+endparam
+  complex param seed3
+  caption = "3"
+  default = (0,0)
+  ; visible = (step >= 3)
+endparam
+  complex param seed4
+  caption = "seed4"
+  default = (0,0)
+  ; visible = (step >= 4)
+endparam
+  complex param seed5
+  caption = "seed5"
+  default = (0,0)
+  ; visible = (step >= 5)
+endparam
+  complex param seed6
+  caption = "seed6"
+  default = (0,0)
+  ; visible = (step >= 6)
+endparam
+  complex param seed7
+  caption = "seed7"
+  default = (0,0)
+  ; visible = (step >= 7)
+endparam
+  complex param seed8
+  caption = "seed8"
+  default = (0,0)
+  ; visible = (step >= 8)
+endparam
+  complex param seed9
+  caption = "seed9"
+  default = (0,0)
+  ; visible = (step >= 9)
+endparam
+
+
+; Julia {         ; for debugging
+; init:
+;   z = #pixel
+; loop:
+;   zold=z
+;   z = z^2 + @seed
+; ;$define debug
+; if |#pixel+1.5| < 1e-6
+; print("J ", zold, z)
+; endif
+; bailout:
+;   |z| <= @bailout
+; default:
+;   title = "Julia"
+;   param seed
+;     caption = "Julia seed"
+;     default = (-1.25, 0)
+;   endparam
+;   param bailout
+;     caption = "Bailout value"
+;     default = 4.0
+;     min = 1.0
+;   endparam
+; }
+
+

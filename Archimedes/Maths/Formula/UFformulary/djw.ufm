@@ -1,0 +1,518 @@
+Mandelbrot-Cutfix {
+;
+; Generic Mandelbrot set with a fix for the cuts that non-integer powers give.
+;
+
+; reimplement complex pow, and for the log bit, provide an angular offset
+; such that the result can be computed with this offset applied
+;
+;
+
+init:
+  z = @start
+loop:   
+    float r = cabs( z )
+    
+    float t = atan2( z )
+    float tup = t + 2 * pi
+    float tdown = t - 2 * pi
+    
+    float c = real( @power )
+    float d = imag( @power )
+    
+    float logr =  log( r )
+    
+    float alpha =  c * t + d * logr
+    float gamma = r^c * exp( -d * t )
+    
+    if ( t > 0 ) && ( t > pi -  @blendwidth )
+       
+    	float alphadown = c * tdown + d * logr
+    	float gammadown = r^c * exp( -d * tdown )
+    	
+    	float blend = ( t - ( pi - @blendwidth ) ) / @blendwidth * 0.5
+    	
+    	alpha = blend * alphadown + ( 1.0 - blend ) * alpha
+    	gamma = blend * gammadown + ( 1.0 - blend ) * gamma
+    	
+    elseif ( t < 0 ) && ( t < -pi + @blendwidth )
+    
+    	float alphaup = c * tup + d * logr
+    	float gammaup = r^c * exp( -d * tup )
+    	
+    	float blend = ( -t - ( pi - @blendwidth ) ) / @blendwidth * 0.5
+    	
+    	alpha = blend * alphaup + ( 1.0 - blend ) * alpha
+    	gamma = blend * gammaup + ( 1.0 - blend ) * gamma
+    	
+    endif
+    
+    ; define SMOOTHSTEP(x) ((x) * (x) * (3 - 2 * (x)))
+    
+    float realbit = gamma * cos( alpha )
+    float imagbit = gamma * sin( alpha )
+    
+    complex result = realbit + flip ( imagbit )
+    
+    ; regular mandel
+    ; z = z^@power + #pixel
+    
+    z = result + #pixel
+    
+    ;$define DEBUG
+      ;print( "blend:" , blend )
+  
+bailout:
+  |z| <= @bailout
+default:
+  title = "Mandelbrot-Cutfix"
+  center = (-0.5, 0)
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\mandelbrot.html"
+  param blendwidth
+    caption = "Cut Blend Width"
+    default = 0.2
+    hint = "The width of the cut blending region."
+  endparam
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbrot \
+            set. Use (0, 0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2.2,0)
+    hint = "This parameter sets the exponent for the Mandelbrot formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbrot figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbrot sets. Use (2, 0) \
+            for the standard Mandelbrot set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 400000000000000000000000.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Julia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+djw-NovaMandel {
+;
+; This is the Nova fractal (Mandelbrot form), a
+; modified Newtonian-style fractal.  The formula
+; was first shown to me by Paul Derbyshire (who
+; named it Nova).  It has also appeared elsewhere
+; under other names.  Use this formula and the
+; Switch feature to select a NovaJulia.
+; tweak by dan wills
+init:
+  ;complex zsquared = (0,0)
+  ;complex zcubed = (0,0)
+  complex zold = (0,0)
+  z = @start
+loop:
+    zdiff = z - zold
+    rotvec = (0,0)
+    rotvec = rotvec + (0,1) * sin(@rotateiter)
+    rotvec = rotvec + (1,0) * cos(@rotateiter)
+    zdiff = zdiff * rotvec
+    z = zold + zdiff
+    zold = z    
+    diff = z - @relax * (z^@power-1 + @powerinequality) / (@power * z^(@power-1) + @baseboost) + #pixel
+    diffnorm = diff / cabs( diff )
+    diffnormblend = @norm * diffnorm + (1.0 - @norm) * diff
+    z = diffnormblend 
+bailout:
+  |z - zold| > @bailout
+  
+default:
+  title = "Nova (Mandelbrot) tweak"
+  helpfile = "dmj-pub\dmj-pub-uf-nova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+  
+  param start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (3,0)
+    hint = "Overall exponent for the equation.  (3,0) gives \
+            the classic NovaM type."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 0.00000000000000000001
+    hint = "Bailout value; smaller values will cause more \
+            iterations to be done for each point."
+  endparam
+  param relax
+    caption = "Relaxation"
+    default = (2.3,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+  param norm
+    caption = "Normalization"
+    default = 0.0
+    hint = "Amount of normalization."
+  endparam
+  param baseboost
+    caption = "Base Boost"
+    default = (0.0, 0.0)
+    hint = "Amount of base boost."
+  endparam
+  param powerinequality
+    caption = "Power Inequality"
+    default = (0.0, 0.0)
+    hint = "Amount of power inequality."
+  endparam
+  param rotateiter
+    caption = "Iteration Rotation"
+    default = 0.0
+    hint = "Amount of iteration rotation."
+  endparam
+  
+switch:
+  type = "dmj-NovaJulia"
+  seed = #pixel
+  power = @power
+  bailout = @bailout
+  relax = @relax
+}
+
+
+Mandelbrot-BlendIter {
+;
+; Mandelbrot set with multiple samples blended each iteration.
+;
+init:
+  z = @start
+loop:
+ newz = z^@power + #pixel
+  
+;  ep = @epsilonz
+  
+  ;N = ep * (1,0)
+  ;Ea = ep * (0,1)
+  ;S = ep * (-1,0)
+  ;W = ep * (0,-1)
+  
+  ;newzN = (z + N )^@power + #pixel + N
+  ;newzE = (z + Ea )^@power + #pixel + Ea
+  ;newzS = (z + S )^@power + #pixel + S
+  ;newzW = (z + W )^@power + #pixel + W
+  
+  sumz = newz - z
+  sumlen = cabs( sumz )
+  sumnorm = 1/sumlen * sumz
+  
+  ;(newzN + newzE + newzS + newzW)/4
+  
+  z = ep * z + ( @rate*sumnorm + (1.0-@rate ) * sumz )
+  
+bailout:
+  |z| <= @bailout
+default:
+  title = "MandelbrotBlendIter"
+  center = (-0.5, 0)
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\mandelbrot.html"
+  param epsilonz
+    caption = "Epsilon"
+    default = 0.1
+    hint = "The distance away for samples."
+  endparam
+  param rate
+    caption = "Rate"
+    default = 1.0
+    hint = "The rate at which the iterations are blended."
+  endparam
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbrot \
+            set. Use (0, 0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This parameter sets the exponent for the Mandelbrot formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbrot figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbrot sets. Use (2, 0) \
+            for the standard Mandelbrot set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 40000000.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Julia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+Mandelbrot-Rate {
+;
+; Mandelbrot set with fader.
+;
+init:
+  z = @start
+loop:
+  newz = z^@power + #pixel
+  z = @rate*newz + (1.0-@rate ) * z
+bailout:
+  |z| <= @bailout
+default:
+  title = "MandelbrotRate"
+  center = (-0.5, 0)
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\mandelbrot.html"
+  param rate
+    caption = "Rate"
+    default = 1.0
+    hint = "The rate at which the iterations are blended."
+  endparam
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbrot \
+            set. Use (0, 0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This parameter sets the exponent for the Mandelbrot formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbrot figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbrot sets. Use (2, 0) \
+            for the standard Mandelbrot set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 40000000.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Julia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+
+Mandelbrot-advect {
+;
+; Generic Mandelbrot set.
+;
+init:
+  z = #pixel
+loop:
+  vec = z^@power + z + @start
+  z = z + (vec  - z)
+bailout:
+  |z| <= @bailout
+default:
+  title = "MandelbrotAdvect"
+  center = (-0.5, 0)
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\mandelbrot.html"
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbrot \
+            set. Use (0, 0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (3,0)
+    hint = "This parameter sets the exponent for the Mandelbrot formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbrot figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbrot sets. Use (2, 0) \
+            for the standard Mandelbrot set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 40000000000000000.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Julia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+MandelbrotCeltic {
+;
+; Celtic Mandelbrot set with power control, it's just the celtic formula pasted into the default mandelbrot.
+;
+init:
+  complex c = #pixel
+  z = 0
+loop:
+  z = z^@power
+  z = z - real(z) + abs(real(z)) - c
+bailout:
+  |z| <= @bailout
+default:
+  title = "CelticMandelbrot"
+  center = (-0.5, 0)
+  helpfile = "Uf*.chm"
+  helptopic = ""
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "The starting point parameter can be used to distort the Mandelbrot \
+            set. Use (0, 0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This parameter sets the exponent for the Mandelbrot formula. \
+            Increasing the real part to 3, 4, and so on, will add discs to \
+            the Mandelbrot figure. Non-integer real values and non-zero \
+            imaginary values will create distorted Mandelbrot sets. Use (2, 0) \
+            for the standard Mandelbrot set."
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "This parameter defines how soon an orbit bails out while \
+            iterating. Larger values give smoother outlines; values around 4 \
+            give more interesting shapes around the set. Values less than 4 \
+            will distort the fractal."
+  endparam
+switch:
+  type = "Julia"
+  seed = #pixel
+  power = power
+  bailout = bailout
+}
+
+dw-mitch-mandelbrot {
+; A souped-up version of Kerry Mitchell's mandelbrot.
+; Added a few extra controls... to better push the fractal around with ;).
+;
+; Dan Wills 2006     dan@rsp.com.au
+global:
+; nuffin'   yet!
+
+init:
+  bool done=false
+  z = @manparam
+  c = #pixel
+
+loop:
+  z2 = ( z * @preOrbitMul ) ^ @power
+  z = c *( z2 * ( 1 + @sqrFactor * 10 ) + 1 / ( z2 * ( 1 + @inverseFactor * 100 ) + @inverseOffset ) )
+;  z = z
+  z = z + @postOrbitOffs
+  if((@bailtype==0)&&(|z|>@bailout))
+    done=true
+  elseif((@bailtype==1)&&(|z*c|>@bailout))
+    done=true
+  endif
+
+bailout:
+  done==false
+
+default:
+; declare params and defaults
+  title = "Enhanced Mitch's Mandelbrot"
+  periodicity=0
+  magn=2
+  param manparam
+    caption="Mandelbrot start"
+    default=(1,0)
+    hint="use (1,0) for standard set"
+  endparam
+  param inverseOffset
+    caption = "inverseOffset"
+    default = 0.0
+    hint="use 0.0 for standard set"
+  endparam
+  param inverseFactor
+    caption = "inverseFactor"
+    default = 0.0
+    hint="use 0.0 for standard set, this is actually a multiplier however"
+  endparam
+  param sqrFactor
+    caption = "sqrFactor"
+    default = 0.0
+    hint="use 0.0 for standard set, this is actually a multiplier too"
+  endparam
+  param postOrbitOffs
+    caption="postorbit offset"
+    default=(0,0)
+    hint="use (0,0) for standard set"
+  endparam
+  param preOrbitMul
+    caption="preorbit mult"
+    default=(1,0)
+    hint="use (1,1) for standard set"
+  endparam
+  param power
+    caption="fractal power"
+    default=(2,0)
+    hint="use (2,0) for standard set"
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param bailtype
+    caption="bailout type"
+    default=0
+    enum="|z|" "|z*c|"
+  endparam
+switch:
+; julia version not yet implemented
+}
+

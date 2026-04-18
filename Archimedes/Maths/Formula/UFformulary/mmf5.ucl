@@ -1,0 +1,1293 @@
+comment {
+  <p>
+  Colouring Formulas for UF5 and later by David Makin<br><br>
+
+  This version 31/12/2011<br>
+  Added the Image Tiler colouring for simple use of MMF Image Import.
+
+  Version 6th May 2009<br>
+  Added the "Adjustable Colouring" formula.<br>
+
+  Version 19th March 2009<br>
+  Added the Multi Bailout colouring<br><br>
+  
+  Version 11th September 2008<br>
+  Added GenericGradientColoringRenderFalse<br>
+  and GenericDirectColoringRenderFalse<br><br>
+  GenericSmoothGradientColoring started May 2008<br>
+
+ <a href="http://www.fractalgallery.co.uk/">Dave's Website</a><br>
+ makinmagic@tiscali.co.uk<br>
+ </p>
+}
+
+GenericSmoothGradientColoring(OUTSIDE) {
+;
+; Generic Smooth Coloring (Gradient) is a skeleton coloring algorithm that
+; accepts GradientColoring objects and attempts to smooth iteration breaks
+; using iteration smoothing.
+; It has options to smooth both divergent and/or convergent areas.
+;
+; David Makin May 2008
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "mmf.ulb"
+  GradientColoring c[2]
+  Transfer trans
+  Transfer iter
+  Transfer final
+  c[0] = new @coloringClass(0) ; main colouring
+  c[1] = new @coloringClass(0) ; for penultimate iteration
+  trans = new @transferClass(0)
+  iter = new @iterTransfer(0)
+  final = new @finalTransfer(0)
+  float il = real(1/log(@power))       ; for divergent smoothing
+  float lp = log(0.5*log(@bailout))
+  float ilp = il*lp
+  float cil = real(1/log(@cpower))     ; for convergent smoothing
+  float clp = log(-0.5*log(@smallbail))
+  float cilp = cil*clp
+init:
+  complex zvals[#maxiter+1]
+  float r0
+  float r1 = 0.0
+  float f = 0.0
+  float m
+  bool s = false
+  int i = 0
+  int j = 0
+  zvals[0] = #z
+  trans.Init(#z)
+  iter.Init(#z)
+  final.Init(#z)
+loop:
+  zvals[(i=i+1)] = #z
+final:
+  c[0].Init(zvals[0],#pixel); Since the z values are stored and this is an
+  while (j=j+1)<=i          ; outside colouring the main iteration is moved
+    c[0].Iterate(zvals[j])  ; here to avoid unnecessary calculation for any
+  endwhile                  ; inside pixels
+  r0 = c[0].ResultIndex(#z)
+  s = c[0].IsSolid()
+
+  if @smoothing<3 && !s
+
+  if (@smoothing==0 || @smoothing==2) && i>@skip && |#z - zvals[i]|>1 \
+                                      && (m=|#z|)>=@bailout
+    j = 0
+    c[1].Init(zvals[0],#pixel)
+    while (j=j+1)<i
+      c[1].Iterate(zvals[j])
+    endwhile
+    r1 = c[1].ResultIndex(zvals[i])
+    if !c[1].IsSolid() ; If it's solid we can't rely on the colour value
+      m = log(m)
+      if @dauto && i>0
+        f = @fudge*real(lp - log(0.5*m))/log(m/log(|zvals[i]|))
+      else
+        f = @fudge*real(ilp - il*log(0.5*m))
+      endif
+    endif
+  elseif (@smoothing==1 || @smoothing==2) && i>@skipc \
+         && (   (|#z - zvals[i]|<=@smallbail && !@cfixed) \
+             || (|#z - @cfixedval|<=@smallbail && @cfixed) )
+    j = 0
+    c[1].Init(zvals[0],#pixel)
+    while (j=j+1)<i
+      c[1].Iterate(zvals[j])
+    endwhile
+    r1 = c[1].ResultIndex(zvals[i])
+    if !c[1].IsSolid() ; If it's solid we can't rely on the colour value
+      if @cfixed
+        m = log(|#z - @cfixedval|)
+        if @cauto && i>0
+          f = @fudgec*real(clp - log(-0.5*m)) \
+              /log(m/log(|zvals[i]-@cfixedval|))
+        else
+          f = @fudgec*real(cilp - cil*log(-0.5*m))
+        endif
+      elseif @cauto && i>1
+        m = log(|#z - zvals[i]|)
+        f = @fudgec*real(clp - log(-0.5*m)) \
+            /log(m/log(|zvals[i]-zvals[i-1]|))
+      else
+        f = @fudgec*real(cilp - cil*log(-0.5*log(|#z - zvals[i]|)))
+      endif
+    endif
+  endif
+  if f!=0.0
+    r0 = r0 + f*(r0 - r1)
+  endif
+
+  endif ; @smoothing<3 && !s
+
+  if @additer
+    #index = final.Iterate(trans.Iterate(r0)+iter.Iterate(0.05*(1.0+i+f)))
+  else
+    #index = final.Iterate(r0)
+  endif
+  #solid = s
+
+default:
+  title = "Generic Smooth Coloring (Gradient)"
+  rating = recommended
+  heading
+    caption = "Information"
+    text = "This colouring is intended to allow you to smooth object \
+            colourings that need smoothing but don't provide smoothing \
+            options by default. For object colourings that have their \
+            own smoothing built-in such as 'Smooth Orbit Traps' from \
+            mmf.ulb you should use Standard.ulb-Generic Colouring \
+            (Gradient) instead."
+  endheading
+  heading
+    caption = "Smoothing parameters"
+  endheading
+  param smoothing
+    caption = "Smoothing method"
+    enum = "Divergent" "Convergent" "Both" "Neither"
+    default = 0
+  endparam
+  heading
+    text = "Divergent Smoothing parameters"
+    visible = @smoothing==0 || @smoothing==2
+  endheading
+  param skip
+    caption = "Iteration skip"
+    default = 2
+    min = 0
+    hint = "Specifies the number of iterations for which to colour without \
+            applying the smoothing algorithm, this is because smoothing \
+            requires the colouring result from the penultimate iteration \
+            and for some colourings the value for iterations 0 to 2 can \
+            cause incorrect results in areas of low iteration count. The \
+            best value to use depends on the colouring formula used, \
+            typically 0 to 2 will be optimum."
+    visible = @smoothing==0 || @smoothing==2
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 128.0
+    hint = "This should match the bailout in the fractal formula."
+    visible = @smoothing==0 || @smoothing==2
+  endparam
+  param dauto
+    caption = "Auto-power"
+    default = true
+    hint = "When enabled should produce smoothing for any divergent \
+            areas without you needing to set a divergent power value \
+            for the colouring."
+    visible = @smoothing==0 || @smoothing==2
+  endparam
+  param power
+    caption = "Power/exponent/degree"
+    default = (2,0)
+    hint = "This should match the power/degree/exponent in the \
+            fractal formula. If the value to use isn't immediately \
+            obvious from the main formula itself then it's best to \
+            choose 'Default' as the colouring and modify this value \
+            (and maybe the Scaling fudge) until you get completely \
+            smooth colouring, or just enable auto-power."
+    visible = @smoothing==0 || @smoothing==2
+  endparam
+  param fudge
+    caption = "Scaling fudge"
+    default = 1.0
+    hint = "This is a scaling fudge value, it's used to scale \
+            the calculated iteration fraction when the value \
+            doesn't reach 1, it's unlikely to be required for \
+            divergent smoothing but I added it just in case. If \
+            'Auto-power' or the best value you can find for \
+            the power parameter don't produce smooth results then \
+            modifying this value may help."
+    visible = @smoothing==0 || @smoothing==2
+  endparam
+  heading
+    text = "Convergent Smoothing parameters"
+    visible = @smoothing==1 || @smoothing==2
+  endheading
+  param skipc
+    caption = "Iteration skip"
+    default = 1
+    min = 0
+    hint = "Specifies the number of iterations for which to colour without \
+            applying the smoothing algorithm, this is because smoothing \
+            requires the colouring result from the penultimate iteration \
+            and for some colourings the value for iterations 0 to 2 can \
+            cause incorrect results in areas of low iteration count. The \
+            best value to use depends on the colouring formula used, \
+            typically 1 or 2 will be optimum."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param smallbail
+    caption = "Bailout"
+    default = 1e-5
+    hint = "This should match the small bailout in your fractal formula."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param cauto
+    caption = "Auto-power"
+    default = true
+    hint = "When enabled should produce smoothing for any convergent \
+            areas without you needing to set a convergent power value \
+            for the colouring."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param cpower
+    caption = "Power/exponent/degree"
+    default = (2,0)
+    hint = "This should match the power (exponent/degree) for the \
+            convergent areas of your main fractal formula. If the \
+            value to use isn't immediately obvious from the main \
+            formula itself then it's best to choose 'Default' as the \
+            colouring and modify this value (and maybe the \
+            Scaling fudge) until you get completely smooth colouring, \
+            or just try auto-power."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param fudgec
+    caption = "Scaling Fudge"
+    default = 1.0
+    hint = "This is a scaling fudge value, it's used to scale \
+            the calculated iteration fraction when the value \
+            doesn't reach 1. If 'Auto-power' or the best value you can \
+            find for the 'Convergent Power' parameter don't \
+            produce smooth results then modifying this value \
+            should help."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param cfixed
+    caption = "Absolute convergence"
+    default = false
+    hint = "For when using a main formula that tests for convergence by \
+            using (only) |#z-value| rather than |#z-zold|, a typical \
+            example would be a Magnet formula where |#z-1.0| is often \
+            used. When enabled set the value of 'Convergence root' \
+            appropriately."
+    visible = @smoothing==1 || @smoothing==2
+  endparam
+  param cfixedval
+    caption = "Convergence root"
+    default = (1,0)
+    hint = "Use (1.0,0) for some Magnet formulas."
+    visible = (@smoothing==1 || @smoothing==2) && @cfixed
+  endparam
+  heading
+    caption = "Colouring method"
+  endheading
+  GradientColoring param coloringClass
+    caption = "Coloring Algorithm"
+    default = Standard_Default
+    hint = "Selects the coloring algorithm to be used."
+  endparam
+  heading
+    caption = "Extras"
+  endheading
+  param additer
+    caption = "Add Iteration count"
+    default = false
+    hint = "When enabled the smooth iteration count is mixed in with the \
+            main colouring value."
+  endparam
+  Transfer param transferClass
+    caption = "Colour transfer"
+    default = MMF_TrapTransfer
+    hint = "Allows you to manipulate the colouring value before combination \
+            with the iteration value."
+    expanded = false
+    visible = @additer
+  endparam
+  Transfer param iterTransfer
+    caption = "Iteration transfer"
+    default = MMF_TrapTransfer
+    hint = "Allows you to manipulate the iteration value before combination \
+            with the main colouring."
+    expanded = false
+    visible = @additer
+  endparam
+  Transfer param finalTransfer
+    caption = "Final transfer"
+    default = MMF_TrapTransfer
+    hint = "Allows you to manipulate the final (combined) colour value."
+  endparam
+}
+
+GenericGradientColoringRenderFalse {
+;
+; This is a copy of Generic Coloring (Gradient) from Standard.ucl.
+; The only difference is that this has "render=false" included - this is
+; to enable the use of class colourings that require "render=false" to be
+; defined (such as those that use whole screen arrays).
+;
+; Generic Coloring (Gradient) is a skeleton coloring algorithm that accepts
+; GradientColoring objects.
+; For direct coloring algorithms (which directly return a color instead of
+; an index into the gradient), see the Generic Coloring (Direct) algorithm.
+;
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+  GradientColoring c = new @coloringClass(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #index = c.ResultIndex(#z)
+  #solid = c.IsSolid()
+default:
+  title = "*Generic Coloring (Gradient) Render=false"
+  render = false
+  heading
+    text = "This is a copy of Generic Coloring (Gradient) from \
+            Standard.ucl. The only difference is that this has \
+            'render=false' included - this is to enable the use of \
+            class colourings that require 'render=false' to be defined \
+            (such as those that use whole screen arrays)."
+  endheading
+  GradientColoring param coloringClass
+    caption = "Coloring Algorithm"
+    default = MMF_DLA
+    hint = "Selects the coloring algorithm to be used."
+  endparam
+}
+
+
+GenericDirectColoringRenderFalse {
+;
+; This is a copy of Generic Coloring (Direct) from Standard.ucl.
+; The only difference is that this has "render=false" included - this is
+; to enable the use of class colourings that require "render=false" to be
+; defined (such as those that use whole screen arrays).
+;
+; Generic Coloring (Direct) is a skeleton coloring algorithm that accepts
+; Coloring objects. This includes both gradient and direct coloring objects,
+; but gradient coloring objects are usually better used with the Generic
+; Coloring (Gradient) algorithm because in that case, modifying the gradient
+; will not trigger a recalculation.
+;
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+  Coloring c = new @coloringClass(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #color = c.Result(#z)
+  #solid = c.IsSolid()
+default:
+  title = "*Generic Coloring (Direct) Render=false"
+  render = false
+  heading
+    text = "This is a copy of Generic Coloring (Direct) from \
+            Standard.ucl. The only difference is that this has \
+            'render=false' included - this is to enable the use of \
+            class colourings that require 'render=false' to be defined \
+            (such as those that use whole screen arrays)."
+  endheading
+  Coloring param coloringClass
+    caption = "Coloring Algorithm"
+    default = MMF_DLA
+    hint = "Selects the coloring algorithm to be used."
+  endparam
+}
+
+MultiBailoutColoring(OUTSIDE) {
+;
+; Multi Bailout Colouring (Gradient) is a skeleton colouring algorithm that
+; has options for colouring divergent and/or point convergent and/or
+; periodically convergent areas, with different colourings for each type
+; of bailout. It has options specifically designed for use with
+; mmf5.ufm:Multi Bailout formula with which extra information regarding the
+; bailout can be passed to the colouring as part of the initial z value.
+;
+; David Makin March 2009
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "mmf.ulb"
+  GradientColoring divergent = 0
+  GradientColoring convergent = 0
+  GradientColoring periodic = 0
+  Transfer divtrans = 0
+  Transfer confinal = 0
+  Transfer conpoint = 0
+  Transfer contrans = 0
+  Transfer perfinal = 0
+  Transfer perpoint = 0
+  Transfer perperiod = 0
+  Transfer pertrans = 0
+  if @colourdivergent
+    divergent = new @divergent(0)
+    divtrans = new @divtrans(0)
+  endif
+  if @colourconvergent
+    convergent = new @convergent(0)
+    contrans = new @contrans(0)
+    if @useconpoint && @passedtype && @passedpoint
+      conpoint = new @conpoint(0)
+      confinal = new @confinal(0)
+    endif
+  endif
+  if @colourperiodic
+    periodic = new @periodic(0)
+    pertrans = new @pertrans(0)
+    if @useperiod || (@useperpoint && @passedtype && @passedposition)
+      perfinal = new @perfinal(0)
+      if @useperpoint && @passedtype && @passedposition
+        perpoint = new @perpoint(0)
+      endif
+      if @useperiod
+        perperiod = new @perperiod(0)
+      endif
+    endif
+  endif
+init:
+  ComplexArray zvals = 0
+  complex pz = #z
+  complex zold = #z
+  float m = 0.0
+  float n = 0.0
+  int type = -1
+  int i = 0
+  int j = 0
+  int k = 0
+  int p = -1
+  if !@passedtype
+    zvals = new ComplexArray(0)
+    zvals.setArrayLength(#maxiter+1)
+    zvals.m_Elements[0] = #z
+  else
+;; recover the bailout type and original real value of #z
+    m = abs(real(#z))
+    n = 2.0^ceil(log(m)/log(2.0)-9.0)
+    k = floor(m/n)
+    m = 512.0*(m - n*k)
+    type = k - 256
+    if real(#z)<0.0
+      m = -m
+    endif
+    pz = m + flip(imag(#z))
+    if (@passedpoint && type==1) || (@passedposition && type>1)
+;; recover the point or position and original imaginary value of #z
+      m = abs(imag(#z))
+      n = 2.0^ceil(log(m)/log(2.0)-9.0)
+      k = floor(m/n)
+      m = 512.0*(m - n*k)
+      p = k - 257
+      if imag(#z)<0.0
+        m = -m
+      endif
+      pz = real(pz) + flip(m)
+    endif
+    if @colourdivergent && type==0
+      divergent.Init(pz,#pixel)
+      divtrans.Init(pz)
+    elseif @colourconvergent && type==1
+      convergent.Init(pz,#pixel)
+      contrans.Init(pz)
+      if @useconpoint && @passedtype && @passedpoint
+        confinal.Init(pz)
+        conpoint.Init(pz)
+      endif
+    elseif @colourperiodic && type>1
+      periodic.Init(pz,#pixel)
+      pertrans.Init(pz)
+      if @useperiod || (@useperpoint && @passedpoint && @passedposition)
+        perfinal.Init(pz)
+        if @useperpoint && @passedpoint && @passedposition
+          perpoint.Init(pz)
+        endif
+        if @useperiod
+          perperiod.Init(pz)
+        endif
+      endif
+      if !@useall
+        j = type
+      endif
+    endif
+  endif
+loop:
+  i = i + 1
+  if !@passedtype
+    zvals.m_Elements[i] = #z
+  elseif @colourdivergent && type==0
+    divergent.Iterate(#z)
+  elseif @colourconvergent && type==1
+    convergent.Iterate(#z)
+  elseif @colourperiodic && type>1
+    if @useall
+      periodic.Iterate(#z)
+    elseif j==i
+      if j>type
+        periodic.Iterate(pz)
+      endif
+      pz = #z
+      j = j + type
+    endif
+  endif
+  zold = #z
+final:
+  i = i + 1
+  if !@passedtype
+    zvals.m_Elements[i] = #z
+    if |#z|>@bailout
+      type = 0
+    elseif |#z - zold|<@smallbailout
+      type = 1
+    else
+      j = i - 1
+      while (j=j-1)>=0
+        if |#z - zvals.m_Elements[j]|<@periodicbailout
+          type = i - j
+          j = 0
+        endif
+      endwhile
+    endif
+    if @colourdivergent && type==0
+      divergent.Init(pz,#pixel)
+      divtrans.Init(pz)
+      j = 0
+      while (j=j+1)<i
+        divergent.Iterate(zvals.m_Elements[j])
+      endwhile
+    elseif @colourconvergent && type==1
+      convergent.Init(pz,#pixel)
+      contrans.Init(pz)
+      if @useconpoint && @passedtype && @passedpoint
+        confinal.Init(pz)
+        conpoint.Init(pz)
+      endif
+      j = 0
+      while (j=j+1)<i
+        convergent.Iterate(zvals.m_Elements[j])
+      endwhile
+    elseif @colourperiodic && type>1
+      periodic.Init(pz,#pixel)
+      pertrans.Init(pz)
+      if @useperiod
+        perfinal.Init(pz)
+        perperiod.Init(pz)
+      endif
+      if !@useall
+        j = type
+      endif
+      k = 0
+      while (k=k+1)<i
+        if @useall
+          periodic.Iterate(zvals.m_Elements[k])
+        elseif j==k
+          if j>type
+            periodic.Iterate(pz)
+          endif
+          pz = zvals.m_Elements[k]
+          j = j + type
+        endif
+      endwhile
+    endif
+  endif
+  if @colourdivergent && type==0
+    #index = divtrans.Iterate(divergent.ResultIndex(#z))
+    #solid = divergent.IsSolid()
+  elseif @colourconvergent && type==1
+    if @passedtype && @passedpoint && @useconpoint
+      #index = confinal.Iterate(contrans.Iterate(convergent.ResultIndex(#z)) \
+                                + conpoint.Iterate(p/10))
+    else
+      #index = contrans.Iterate(convergent.ResultIndex(#z))
+    endif
+    #solid = convergent.IsSolid()
+  elseif @colourperiodic && type>1
+    if !@useall && i==j
+      periodic.Iterate(pz)
+      pz = #z
+    elseif @useall
+      pz = #z
+    endif
+    if @useperiod && (@passedtype && @passedposition && @useperpoint)
+      #index = perfinal.Iterate(pertrans.Iterate(periodic.ResultIndex(pz)) \
+                                + perpoint.Iterate(p/type) \
+                                + perperiod.Iterate(type))
+    elseif @passedtype && @passedposition && @useperpoint
+      #index = perfinal.Iterate(pertrans.Iterate(periodic.ResultIndex(pz)) \
+                                + perpoint.Iterate(p/type))
+    elseif @useperiod
+      #index = perfinal.Iterate(pertrans.Iterate(periodic.ResultIndex(pz)) \
+                                + perperiod.Iterate(type))
+    else
+      #index = pertrans.Iterate(periodic.ResultIndex(pz))
+    endif
+    #solid = periodic.IsSolid()
+  elseif type==0
+    #index = @divfill/400.0
+    if @divusesolid
+      #solid = true
+    endif
+  elseif type==1
+    #index = @confill/400.0
+    if @conusesolid
+      #solid = true
+    endif
+  elseif type>1
+    #index = @perfill/400.0
+    if @perusesolid
+      #solid = true
+    endif
+  else
+    #index = @fill/400.0
+    if @usesolid
+      #solid = true
+    endif
+  endif
+
+default:
+  title = "Multi Bailout Colouring (Gradient)"
+  rating = recommended
+  heading
+    caption = "Information"
+    text = "This colouring has options for colouring divergent and/or point \
+            convergent and/or periodically convergent areas, with different \
+            colourings for each type of bailout. It has options specifically \
+            designed for use with mmf5.ufm:Multi Bailout formula where extra \
+            information regarding the bailout can be passed to the colouring \
+            as part of the initial z value."
+  endheading
+  heading
+    enabled = false
+  endheading
+  int param version
+    caption = "Version"
+    enum = "1.0"
+    default = 0
+    hint = "Provided to ensure backward compatibility."
+    visible = false
+  endparam
+  bool param passedtype
+    caption = "Bailout type is passed"
+    default = false
+    hint = "Enable this if you are using mmf.ufm:Multi Bailout Formula with \
+            'Pass Bailout Type' enabled (or if using another main formula \
+            with a similar compatible option enabled)."
+  endparam
+  heading
+    caption = "Divergent Colouring"
+    text = "Here you can specify how divergent areas should be coloured."
+  endheading
+  float param bailout
+    caption = "Divergent Bailout"
+    default = 65536.0
+    hint = "The divergent bailout value, should match the divergent bailout \
+            value in the fractal formula, usually >=4 e.g. 128 or 65536 or \
+            1e20. If the fractal formula does not have divergent bailout then \
+            you should set this parameter to a high value e.g. 65536."
+  endparam
+  bool param colourdivergent
+    caption = "Use a Divergent Colouring ?"
+    default = true
+    hint = "When enabled you can choose a class colouring to be used for \
+            colouring divergent areas, otherwise you can specify that \
+            divergent areas are filled in the solid colour or a colour from \
+            the standard UF gradient."
+  endparam
+  bool param divusesolid
+    caption = "Solid colour (divergent) ?"
+    default = true
+    hint = "When not colouring using a divergent colouring if you enable \
+            this parameter then divergent areas will be filled using the \
+            'Outside' solid colour, if disabled then they'll be filled based \
+            on the value you specify for 'Divergent fill value'."
+    visible = !@colourdivergent
+  endparam
+  float param divfill
+    caption = "Divergent fill value"
+    default = 0.0
+    hint = "If you opt not to use a divergent colouring and do not specify \
+            that divergent areas should be filled in the solid colour then \
+            this value is used as the base value for looking up the colour \
+            to use in the standard UF gradient. Note that if the 'Outside' \
+            colour transfer settings are set to the default values then this \
+            value is used directly as the colour index - palette range 0.0 to \
+            399.999 - but any value can be used, though usually negative \
+            values should be avoided."
+    visible = !@colourdivergent
+  endparam
+  GradientColoring param divergent
+    caption = "Divergent Colouring Algorithm"
+    default = Standard_Smooth
+    hint = "The colouring algorithm to use for divergent areas."
+    visible = @colourdivergent
+  endparam
+  Transfer param divtrans
+    caption = "Divergent transfer"
+    default = NullTransfer
+    hint = "Use to modify the colour index used to look-up the colour from \
+            the UF gradient (this gives more options than the standard \
+            'Outside' transfer options)."
+    visible = @colourdivergent
+  endparam
+  heading
+    caption = "Convergent Colouring"
+    text = "Here you can specify how convergent areas should be coloured \
+            i.e. areas that converge to point attractors."
+  endheading
+  bool param passedpoint
+    caption = "Convergent point is passed"
+    default = false
+    hint = "Enable this if you are using mmf.ufm:Multi Bailout Formula with \
+            'Pass Bailout Type' and 'Pass which point' enabled (or if using \
+            another main formula with similar compatible options enabled)."
+    visible = @passedtype
+  endparam
+  float param smallbailout
+    caption = "Convergent bailout"
+    default = 1e-8
+    hint = "The convergent bailout value, should match the convergent \
+            bailout value in the fractal formula, typically values are \
+            <1e-5. If the fractal formula does not have convergent bailout \
+            then it's best to set this to a smaller value e.g. 1e-8."
+  endparam
+  bool param colourconvergent
+    caption = "Use a Convergent Colouring ?"
+    default = false
+    hint = "When enabled you can choose a class colouring to be used for \
+            colouring convergent areas, otherwise you can specify that \
+            convergent areas are filled in the solid colour or a colour from \
+            the standard UF gradient."
+  endparam
+  bool param conusesolid
+    caption = "Solid colour (convergent) ?"
+    default = true
+    hint = "When not colouring using a convergent colouring if you enable \
+            this parameter then convergent areas will be filled using the \
+            'Outside' solid colour, if disabled then they'll be filled based \
+            on the value you specify for 'Convergent fill value'."
+    visible = !@colourconvergent
+  endparam
+  float param confill
+    caption = "Convergent fill value"
+    default = 0.0
+    hint = "If you opt not to use a convergent colouring and do not specify \
+            that convergent areas should be filled in the solid colour then \
+            this value is used as the base value for looking up the colour \
+            to use in the standard UF gradient. Note that if the 'Outside' \
+            colour transfer settings are set to the default values then this \
+            value is used directly as the colour index - palette range 0.0 to \
+            399.999 - but any value can be used, though usually negative \
+            values should be avoided."
+    visible = !@colourconvergent
+  endparam
+  GradientColoring param convergent
+    caption = "Convergent Colouring Algorithm"
+    default = Standard_ExponentialSmoothing
+    hint = "The colouring algorithm to use for convergent areas."
+    visible = @colourconvergent
+  endparam
+  Transfer param contrans
+    caption = "Convergent transfer"
+    default = NullTransfer
+    hint = "Use to manipulate the value from the colouring algorithm \
+            (before it is combined with the value based on the point if used)."
+    visible = @colourconvergent
+  endparam
+  bool param useconpoint
+    caption = "Use point value"
+    default = true
+    hint = "If you are using mmf.ufm:Multi Bailout Formula 'Pass Bailout Type' \
+            and 'Pass which point' enabled (or if using another main formula \
+            with similar compatible options enabled) then enabling this \
+            parameter allows you to mix in the point number of the point \
+            found on bailout."
+    visible = @colourconvergent && @passedtype && @passedpoint
+  endparam
+  Transfer param conpoint
+    caption = "Point transfer"
+    default = NullTransfer
+    hint = "Use to manipulate the value based on the point before it \
+            is combined with the value from the colouring algorithm."
+    visible = @colourconvergent && @passedtype && @passedpoint && @useconpoint
+  endparam
+  Transfer param confinal
+    caption = "Overall transfer (convergent)"
+    default = NullTransfer
+    hint = "Use to modify the final value used to look-up the colour from \
+            the UF gradient (this gives more options than the standard \
+            'Outside' transfer options)."
+    visible = @colourconvergent && @passedtype && @passedpoint && @useconpoint
+  endparam
+  heading
+    caption = "Periodic Colouring"
+    text = "Here you can specify how periodic areas should be coloured \
+            i.e. areas that converge to periodic attractors (with period >1)."
+  endheading
+  bool param passedposition
+    caption = "Position is passed"
+    default = false
+    hint = "Enable this if you are using mmf.ufm:Multi Bailout Formula with \
+            'Pass Bailout Type' and 'Pass period position' enabled (or if \
+            using another main formula with similar compatible options \
+            enabled)."
+    visible = @passedtype
+  endparam
+  float param periodicbailout
+    caption = "Periodic bailout"
+    default = 1e-8
+    hint = "The periodic bailout value, should match the periodic \
+            bailout value in the fractal formula, typically values are \
+            <1e-5. If the fractal formula does not have periodic bailout \
+            then it's best to set this to a smaller value e.g. 1e-8."
+  endparam
+  bool param colourperiodic
+    caption = "Use a Periodic Colouring ?"
+    default = false
+    hint = "When enabled you can choose a class colouring to be used for \
+            colouring periodic areas, otherwise you can specify that \
+            periodic areas are filled in the solid colour or a colour from \
+            the standard UF gradient."
+  endparam
+  bool param useall
+    caption = "Use Entire Orbit ?"
+    default = false
+    hint = "When enabled the entire orbit is passed on to the 'Periodic \
+            Colouring Algorithm', this should only be done if smoothing is \
+            not required or if the colouring algorithm understands periodic \
+            smoothing. If disabled then only every nth value of z is passed \
+            on to the colouring which means that the selected colouring \
+            will treat the periodic area as if ir were an area of standard \
+            point attraction so normal convergent smoothing will work."
+    visible = @colourperiodic
+  endparam
+  bool param perusesolid
+    caption = "Solid colour (periodic) ?"
+    default = true
+    hint = "When not colouring using a periodic colouring if you enable \
+            this parameter then periodic areas will be filled using the \
+            'Outside' solid colour, if disabled then they'll be filled based \
+            on the value you specify for 'Periodic fill value'."
+    visible = !@colourperiodic
+  endparam
+  float param perfill
+    caption = "Periodic fill value"
+    default = 0.0
+    hint = "If you opt not to use a periodic colouring and do not specify \
+            that periodic areas should be filled in the solid colour then \
+            this value is used as the base value for looking up the colour \
+            to use in the standard UF gradient. Note that if the 'Outside' \
+            colour transfer settings are set to the default values then this \
+            value is used directly as the colour index - palette range 0.0 to \
+            399.999 - but any value can be used, though usually negative \
+            values should be avoided."
+    visible = !@colourperiodic
+  endparam
+  GradientColoring param periodic
+    caption = "Periodic Colouring Algorithm"
+    default = Standard_Default
+    hint = "The colouring algorithm to use for periodic areas."
+    visible = @colourperiodic
+  endparam
+  Transfer param pertrans
+    caption = "Periodic transfer"
+    default = NullTransfer
+    hint = "Use to manipulate the value from the colouring algorithm \
+            (before it is combined with the values based on the period \
+            position or actual period if they are used)."
+    visible = @colourperiodic
+  endparam
+  bool param useperiod
+    caption = "Use Period"
+    default = true
+    hint = "When enabled you can mix the period found for the pixel in with \
+            the colouring value. This means that areas of different period \
+            will be coloured differently."
+    visible = @colourperiodic
+  endparam
+  Transfer param perperiod
+    caption = "Period transfer"
+    default = NullTransfer
+    hint = "Use to manipulate the value based on the period before it \
+            is combined with the value from the colouring algorithm."
+    visible = @colourperiodic && @useperiod
+  endparam
+  bool param useperpoint
+    caption = "Use position value"
+    default = true
+    hint = "If you are using mmf.ufm:Multi Bailout Formula 'Pass Bailout Type' \
+            and 'Pass period position' enabled (or if using another main \
+            formula with similar compatible options enabled) then enabling \
+            this parameter allows you to mix in the period position \
+            found on bailout."
+    visible = @colourperiodic && @passedtype && @passedposition
+  endparam
+  Transfer param perpoint
+    caption = "Position transfer"
+    default = NullTransfer
+    hint = "Use to manipulate the value based on the period position before it \
+            is combined with the value from the colouring algorithm."
+    visible = @colourperiodic && @passedtype && @passedposition && @useperpoint
+  endparam
+  Transfer param perfinal
+    caption = "Overall transfer (periodic)"
+    default = NullTransfer
+    hint = "Use to modify the final value used to look-up the colour from \
+            the UF gradient (this gives more options than the standard \
+            'Outside' transfer options)."
+    visible = @colourperiodic && ((@passedtype && @passedposition \
+             && @useperpoint) || @useperiod)
+  endparam
+  heading
+    caption = "Undetected colouring"
+  endheading
+  bool param usesolid
+    caption = "Solid Colour (undetected) ?"
+    default = true
+    hint = "When enabled points not found to have any of the above bailout \
+            types will be filled in the solid colour."
+  endparam
+  float param fill
+    caption = "Fill value (undetected)"
+    default = 0.0
+    hint = "If do not specify that undetected areas should be filled in the \
+            solid colour then this value is used as the base value for \
+            looking up the colour to use in the standard UF gradient. Note \
+            that if the 'Outside' colour transfer settings are set to the \
+            default values then this value is used directly as the colour \
+            index - palette range 0.0 to 399.999 - but any value can be used, \
+            though usually negative values should be avoided."
+  endparam
+}
+
+AdjustableDirectColoring {
+;
+; This is an exact copy of Generic Direct Coloring from standard.ucl except
+; it has an added option to apply a colour adjustment layer which means it's
+; useful for gradient colourings as well as direct ones.
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "mmf.ulb"
+  Coloring c = new @coloringClass(0)
+  AdjustmentLayer a = new @adjustmentlayer(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #color = a.Adjust(c.Result(#z))
+  #solid = c.IsSolid()
+default:
+  title = "*Adjustable Colouring (Direct)"
+  rating = recommended
+  heading
+    text = "This is an exact copy of Generic Direct Coloring from \
+            standard.ucl except it has an added option to apply a colour \
+            adjustment layer which means it's useful for gradient colourings \
+            as well as direct ones."
+  endheading
+  AdjustmentLayer param adjustmentlayer
+    caption = "Colour Adjustment"
+    default = MMF_AdjustmentLayer
+    hint = "Use the colour and the merge mode to adjust the layer colours. \
+            Note that for most merge methods the RGB channels are treated \
+            independantly i.e. they will all use the same merge method but \
+            the RGB channels are treated individually."
+  endparam
+  Coloring param coloringClass
+    caption = "Colouring Algorithm"
+    default = Standard_Smooth
+    hint = "Selects the colouring algorithm to be used."
+  endparam
+}
+
+ImageTiler {
+;
+; Basic Formula to go with MMF Image Import
+;
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+  MMF_ImageImport i = new @imageParam(0)
+
+final:
+  #color = i.getColor(0.5*#pixel)
+
+default:
+  title = "Image Tiler"
+  MMF_ImageImport param imageParam
+    caption = "Image import/s"
+    hint = "The image selected here will fill the entire layer, if combined \
+      with the Pixel fractal formula and if the location is set to the \
+      default. To do this, click the Reset button on the Location tab."
+  endparam
+}
+
+FoldedPatterns {
+global:
+  import "common.ulb"
+  import "jlb.ulb"
+  JLB_Random jr = new JLB_Random(0)
+  float p[2560]
+  int v = floor(cabs(srand(@p_seed)))
+  int gi = 0
+  jr.Init(@p_intseed*2+1)
+  repeat
+    if @p_original
+      p[gi] = abs(v = random(v))/#randomrange
+    else
+      p[gi] = jr.RandomFloat(0)
+    endif
+  until (gi=gi+1)>=2560
+  complex rot = cos(2.0*#pi/@p_angle)+flip(sin(2.0*#pi/@p_angle))
+init:
+final:
+  complex c
+  complex rt = rot
+  float r
+  float x = real(@p_scale)*real(#z)
+  float y = imag(@p_scale)*imag(#z)
+  float sx = (1.0+p[0])*2.0^(@p_xscale-1.0)
+  float sy = (1.0+p[1024])*2.0^(@p_yscale-1.0)
+  float sr = (1.0+p[512])*2.0^(@p_rscale-1.0)
+  float ox = 0.5*@p_fader*(1.0+p[1025])*sx
+  float oy = 0.5*@p_fader*(1.0+p[513])*sy
+  float or = 0.5*@p_rfader*(1.0+p[1])*sr
+  int i = 2
+  while (i<10 || (@p_folding!=1 && (ox>-@p_detail || oy>-@p_detail)) \
+        || (@p_folding>0 && or>-@p_detail)) && i<1024
+    if !@p_sym
+      x = x + p[i+384]
+      y = y + p[i+1408]
+    endif
+    if @p_folding!=1
+      if x<-sx
+        x = -2*sx - x
+      elseif x>sx
+        x = 2*sx - x
+      endif
+      if y<-sy
+        y = -2*sy - y
+      elseif y>sy
+        y = 2*sy - y
+      endif
+      if @p_twofolds
+        if x<-sx
+          x = -2*sx - x
+        elseif x>sx
+          x = 2*sx - x
+        endif
+        if y<-sy
+          y = -2*sy - y
+        elseif y>sy
+          y = 2*sy - y
+        endif
+      endif
+      if ox>=1.0
+        sx = 0.5*@p_fade*sx + ox*p[i]
+        ox = @p_fade2*ox
+      else
+        sx = 0.5*@p_fade + (1.0-0.5*@p_fade)*p[i]
+        ox = ox - 1.0
+      endif
+      if oy>=1.0
+        sy = 0.5*@p_fade*sy + oy*p[i+1024]
+        oy = @p_fade2*oy
+      else
+        sy = 0.5*@p_fade + (1.0-0.5*@p_fade)*p[i+1024]
+        oy = oy - 1.0
+      endif
+    endif
+    if @p_folding>0
+      if @p_folding==1
+        r = cabs((c=x+0.5-p[i+128]+flip(y+0.5-p[i+1152])))
+      else
+        r = cabs((c=x+flip(y)))
+      endif
+      if r>sr
+        c = (2*sr/r - 1.0)*c
+        if @p_tworfolds
+          r = cabs(c)
+          if r>sr
+            c = (2.0*sr/r - 1.0)*c
+          endif
+        endif
+      endif
+      if or>=1.0
+        sr = 0.5*@p_rfade*sr + or*p[i+256]
+        or = @p_rfade2*or
+      else
+        sr = 0.5*@p_rfade + (1.0-0.5*@p_rfade)*p[i+1280]
+        or = or - 1.0
+      endif
+      x = real(c)
+      y = imag(c)
+    endif
+    if @p_universe || @p_angle || @p_self!=0.0
+      if @p_angle>0.0
+        c = (x+flip(y))*rt
+      elseif @p_angle<0.0
+        r = 2.0*#pi*(1.0/@p_angle + p[i+768])
+        c = (x+flip(y))*rt*(cos(r)+flip(sin(r)))
+      else
+        c = x + flip(y)
+      endif
+      if @p_reprot!=0.0
+        rt = rt*rot^@p_reprot
+      endif
+      if @p_universe
+        c = c*c/cabs(c)
+      elseif @p_self!=0.0
+        c = c*(c/(|c|)^(0.5*@p_self))
+      endif
+      x = real(c)
+      y = imag(c)
+    endif
+    i = i + 1
+  endwhile
+  #index = abs(x)+abs(y)
+default:
+  title = "Folded Patterns"
+  int param p_version
+    caption = "Version 1.0"
+    enum = "1.0"
+    default = 0
+    visible = false
+  endparam
+  complex param p_scale
+    caption = "X and Y scale"
+    default = (6,6)
+    hint = "Any values are OK axcept for zeroes."
+  endparam
+  bool param p_original
+    caption = "Use original random"
+    default = false
+  endparam
+  complex param p_seed
+    caption = "Seed"
+    default = (45,89)
+    hint = "Random seed, changing the value changes the pattern but not its \
+            nature"
+    visible = @p_original
+  endparam
+  int param p_intseed
+    caption = "Seed"
+    default = 7654321
+    hint = "Random seed, changing the value changes the pattern but not its \
+            nature"
+    visible = !@p_original
+  endparam
+  bool param p_sym
+    caption = "Symmetrical"
+    default = true
+    hint = "If enabled then there will be rotational symmetry around the \
+            origin, otherwise although some points may appear to have \
+            rotational symmetry it will not be over the whole object."
+  endparam
+  float param p_detail
+    caption = "Detail level"
+    default = 2
+    min = 0
+    max = 32
+    hint = "Controls the level of fine detail, range 0 to 32, typical useful \
+            range around 2 to 20."
+  endparam
+  int param p_folding
+    caption = "Method"
+    enum = "Square" "Round" "Both"
+  endparam
+  float param p_fader
+    caption = "Initial fold scale"
+    default = 0.5
+    visible = @p_folding!=1
+  endparam
+  float param p_fade
+    caption = "Phoenix fold scale"
+    default = 0.5
+    visible = @p_folding!=1
+  endparam
+  float param p_fade2
+    caption = "Flame fold scale"
+    default = 0.5
+    visible = @p_folding!=1
+  endparam
+  bool param p_twofolds
+    caption = "Apply 2 folds"
+    default = false
+    visible = @p_folding!=1
+  endparam
+  float param p_xscale
+    caption = "X fold scale"
+    default = 2.0
+    hint = "The larger the value the larger the area that the useful pattern \
+            covers, useful values generally >=2, max is 16."
+    visible = @p_folding!=1
+  endparam
+  float param p_yscale
+    caption = "Y fold scale"
+    default = 2.0
+    hint = "The larger the value the larger the area that the useful pattern \
+            covers, useful values generally >=2, max is 16."
+    visible = @p_folding!=1
+  endparam
+  float param p_rfader
+    caption = "Initial rotfold scale"
+    default = 0.5
+    visible = @p_folding!=0
+  endparam
+  float param p_rfade
+    caption = "Phoenix rotfold scale"
+    default = 0.5
+    visible = @p_folding!=0
+  endparam
+  float param p_rfade2
+    caption = "Flame rotfold scale"
+    default = 0.5
+    visible = @p_folding!=0
+  endparam
+  bool param p_tworfolds
+    caption = "Apply 2 rotfolds"
+    default = false
+    visible = @p_folding!=0
+  endparam
+  float param p_rscale
+    caption = "Rfold scale"
+    default = 2.0
+    hint = "The larger the value the larger the area that the useful pattern \
+            covers, useful values generally >=2, max is 16."
+    visible = @p_folding!=0
+  endparam
+  float param p_angle
+    caption = "Angle"
+    default = 0.0
+    hint = "Changing the value changes the pattern and its nature. If \
+            negative values are used then a random element is included in the \
+            rotations."
+  endparam
+  float param p_reprot
+    caption = "Compounding rotation"
+    default = 0.0
+    hint = "If zero then the rotation remains fixed, otherwise the angle is \
+            increased/decreased by this multiple of the start value after \
+            each fold."
+    visible = @p_angle!=0
+  endparam
+  bool param p_universe
+    caption = "Universe"
+    default = false
+    hint = "Can produce 'galaxies' with the correct other parameter settings. \
+            When disabled the 'Self rotation multiplier' becomes available \
+            which is an extended alternative."
+    visible = @p_self==0.0
+  endparam
+  float param p_self
+    caption = "Self rotation multiplier"
+    default = 0.0
+    hint = "Use 0.0 to disable (this also makes the 'Universe' parmeter \
+            available). Normal useful range 0 to 2."
+    visible = !@p_universe
+  endparam
+}
+

@@ -1,0 +1,7554 @@
+nuj+sdc+enr-flame-204 {
+;
+;
+; Modified for compatibility with Apophysis 2.04
+; by Nils Jakobsen, April 2006
+;
+; Modified to add Exponential, Power, Cosine and Sawtooth
+; variations, January, 2005
+;
+; Modified to use all apophysis transforms and
+; to allow incorporation of mappings
+; by Susan Chambless, October 2004
+; Special thanks to Bill Smith and Ron Barnett for
+; beta testing.
+;
+; Modified for compatibility with Apophysis 2.0
+; by Mark Townsend, January 2004
+;
+; Flame Fractal Coloring Method by Erik Reckase
+
+global: 
+; Initialization and parameter array initialization
+  int seed = @randomseed
+  float incMult = 1.0 + (@percentInc*.01)
+  int pwid = trunc(#width*incMult)
+  int phgt = trunc(#height*incMult)
+  int pix[(trunc(#width*(1.0+(@percentInc*.01)))*@oversample)+40,\
+          (trunc(#height*(1.0+(@percentInc*.01)))*@oversample)+40,4]
+  int pwid = trunc(#width*incMult)
+  int phgt = trunc(#height*incMult)
+                                  ; rgb storage + extra for entire image - BIG
+  float iterbuf[3]                ; storage for an iterated point
+  int fuse = 15                   ; skip this many iterations when starting to iterate
+  float prefilter_white = 2^10    ; parameterize?
+
+;
+; Variables which is common for all transformations:
+;
+     
+  float xf_p[12]         ; probability of using this xf's coefs when iterating
+  xf_p[0]  = @xf0_p
+  xf_p[1]  = @xf1_p
+  xf_p[2]  = @xf2_p
+  xf_p[3]  = @xf3_p
+  xf_p[4]  = @xf4_p
+  xf_p[5]  = @xf5_p
+  xf_p[6]  = @xf6_p
+  xf_p[7]  = @xf7_p
+  xf_p[8]  = @xf8_p
+  xf_p[9]  = @xf9_p
+  xf_p[10] = @xf10_p
+  xf_p[11] = @xf11_p
+  
+  float xf_color[12]           ; transformation color
+  xf_color[0]  = @xf0_c
+  xf_color[1]  = @xf1_c
+  xf_color[2]  = @xf2_c
+  xf_color[3]  = @xf3_c
+  xf_color[4]  = @xf4_c
+  xf_color[5]  = @xf5_c
+  xf_color[6]  = @xf6_c
+  xf_color[7]  = @xf7_c
+  xf_color[8]  = @xf8_c
+  xf_color[9]  = @xf9_c
+  xf_color[10] = @xf10_c
+  xf_color[11] = @xf11_c
+
+  float xf_symmetry[12]        ; amount of not blending transformation color
+  xf_symmetry[0]  = @xf0_sym
+  xf_symmetry[1]  = @xf1_sym
+  xf_symmetry[2]  = @xf2_sym
+  xf_symmetry[3]  = @xf3_sym
+  xf_symmetry[4]  = @xf4_sym
+  xf_symmetry[5]  = @xf5_sym
+  xf_symmetry[6]  = @xf6_sym
+  xf_symmetry[7]  = @xf7_sym
+  xf_symmetry[8]  = @xf8_sym
+  xf_symmetry[9]  = @xf9_sym
+  xf_symmetry[10] = @xf10_sym
+  xf_symmetry[11] = @xf11_sym
+
+
+;Transformation coefficients:
+;
+; Using the afine transformation:
+;
+;         |x'|    |a b|   |x|   |e|
+;         |  | =  |   | * | | + | |   (x,y) old coordinates (x',y') new coordinates
+;         |y'|    |c d|   |y|   |f|
+;         
+;         
+  float xf_a[12]
+  xf_a[0]  = @xf0_cfa
+  xf_a[1]  = @xf1_cfa
+  xf_a[2]  = @xf2_cfa
+  xf_a[3]  = @xf3_cfa
+  xf_a[4]  = @xf4_cfa
+  xf_a[5]  = @xf5_cfa
+  xf_a[6]  = @xf6_cfa
+  xf_a[7]  = @xf7_cfa
+  xf_a[8]  = @xf8_cfa
+  xf_a[9]  = @xf9_cfa
+  xf_a[10] = @xf10_cfa
+  xf_a[11] = @xf11_cfa
+
+  float xf_b[12]
+  xf_b[0]  = @xf0_cfb
+  xf_b[1]  = @xf1_cfb
+  xf_b[2]  = @xf2_cfb
+  xf_b[3]  = @xf3_cfb
+  xf_b[4]  = @xf4_cfb
+  xf_b[5]  = @xf5_cfb
+  xf_b[6]  = @xf6_cfb
+  xf_b[7]  = @xf7_cfb
+  xf_b[8]  = @xf8_cfb
+  xf_b[9]  = @xf9_cfb
+  xf_b[10] = @xf10_cfb
+  xf_b[11] = @xf11_cfb
+
+  float xf_c[12]
+  xf_c[0]  = @xf0_cfc
+  xf_c[1]  = @xf1_cfc
+  xf_c[2]  = @xf2_cfc
+  xf_c[3]  = @xf3_cfc
+  xf_c[4]  = @xf4_cfc
+  xf_c[5]  = @xf5_cfc
+  xf_c[6]  = @xf6_cfc
+  xf_c[7]  = @xf7_cfc
+  xf_c[8]  = @xf8_cfc
+  xf_c[9]  = @xf9_cfc
+  xf_c[10] = @xf10_cfc
+  xf_c[11] = @xf11_cfc
+
+  float xf_d[12]
+  xf_d[0]  = @xf0_cfd
+  xf_d[1]  = @xf1_cfd
+  xf_d[2]  = @xf2_cfd
+  xf_d[3]  = @xf3_cfd
+  xf_d[4]  = @xf4_cfd
+  xf_d[5]  = @xf5_cfd
+  xf_d[6]  = @xf6_cfd
+  xf_d[7]  = @xf7_cfd
+  xf_d[8]  = @xf8_cfd
+  xf_d[9]  = @xf9_cfd
+  xf_d[10] = @xf10_cfd
+  xf_d[11] = @xf11_cfd
+
+  float xf_e[12]     ; x coordinate of triangle
+  xf_e[0]  = @xf0_cfe
+  xf_e[1]  = @xf1_cfe
+  xf_e[2]  = @xf2_cfe
+  xf_e[3]  = @xf3_cfe
+  xf_e[4]  = @xf4_cfe
+  xf_e[5]  = @xf5_cfe
+  xf_e[6]  = @xf6_cfe
+  xf_e[7]  = @xf7_cfe
+  xf_e[8]  = @xf8_cfe
+  xf_e[9]  = @xf9_cfe
+  xf_e[10] = @xf10_cfe
+  xf_e[11] = @xf11_cfe
+
+  float xf_f[12]    ; y coordinate of triangle
+  xf_f[0]  = @xf0_cff
+  xf_f[1]  = @xf1_cff
+  xf_f[2]  = @xf2_cff
+  xf_f[3]  = @xf3_cff
+  xf_f[4]  = @xf4_cff
+  xf_f[5]  = @xf5_cff
+  xf_f[6]  = @xf6_cff
+  xf_f[7]  = @xf7_cff
+  xf_f[8]  = @xf8_cff
+  xf_f[9]  = @xf9_cff
+  xf_f[10] = @xf10_cff
+  xf_f[11] = @xf11_cff
+
+;
+;   Parameters which defends both of transformation and variations
+; 
+  int   variation = 0         
+  float xf_vars[12,35]
+
+;   int linear=0
+  variation = 0
+  xf_vars[0,variation]  = @xf0_var0
+  xf_vars[1,variation]  = @xf1_var0
+  xf_vars[2,variation]  = @xf2_var0
+  xf_vars[3,variation]  = @xf3_var0
+  xf_vars[4,variation]  = @xf4_var0
+  xf_vars[5,variation]  = @xf5_var0
+  xf_vars[6,variation]  = @xf6_var0
+  xf_vars[7,variation]  = @xf7_var0
+  xf_vars[8,variation]  = @xf8_var0
+  xf_vars[9,variation]  = @xf9_var0
+  xf_vars[10,variation] = @xf10_var0
+  xf_vars[11,variation] = @xf11_var0
+
+;   int sinusoidal=1
+  variation = 1
+  xf_vars[0,variation]  = @xf0_var1
+  xf_vars[1,variation]  = @xf1_var1
+  xf_vars[2,variation]  = @xf2_var1
+  xf_vars[3,variation]  = @xf3_var1
+  xf_vars[4,variation]  = @xf4_var1
+  xf_vars[5,variation]  = @xf5_var1
+  xf_vars[6,variation]  = @xf6_var1
+  xf_vars[7,variation]  = @xf7_var1
+  xf_vars[8,variation]  = @xf8_var1
+  xf_vars[9,variation]  = @xf9_var1
+  xf_vars[10,variation] = @xf10_var1
+  xf_vars[11,variation] = @xf11_var1
+
+;   int spherical=2
+  variation = 2
+  xf_vars[0,variation]  = @xf0_var2
+  xf_vars[1,variation]  = @xf1_var2
+  xf_vars[2,variation]  = @xf2_var2
+  xf_vars[3,variation]  = @xf3_var2
+  xf_vars[4,variation]  = @xf4_var2
+  xf_vars[5,variation]  = @xf5_var2
+  xf_vars[6,variation]  = @xf6_var2
+  xf_vars[7,variation]  = @xf7_var2
+  xf_vars[8,variation]  = @xf8_var2
+  xf_vars[9,variation]  = @xf9_var2
+  xf_vars[10,variation] = @xf10_var2
+  xf_vars[11,variation] = @xf11_var2
+
+;   int swirl=3
+  variation = 3
+  xf_vars[0,variation]  = @xf0_var3
+  xf_vars[1,variation]  = @xf1_var3
+  xf_vars[2,variation]  = @xf2_var3
+  xf_vars[3,variation]  = @xf3_var3
+  xf_vars[4,variation]  = @xf4_var3
+  xf_vars[5,variation]  = @xf5_var3
+  xf_vars[6,variation]  = @xf6_var3
+  xf_vars[7,variation]  = @xf7_var3
+  xf_vars[8,variation]  = @xf8_var3
+  xf_vars[9,variation]  = @xf9_var3
+  xf_vars[10,variation] = @xf10_var3
+  xf_vars[11,variation] = @xf11_var3
+
+;   int horseshoe=4
+  variation = 4
+  xf_vars[0,variation]  = @xf0_var4
+  xf_vars[1,variation]  = @xf1_var4
+  xf_vars[2,variation]  = @xf2_var4
+  xf_vars[3,variation]  = @xf3_var4
+  xf_vars[4,variation]  = @xf4_var4
+  xf_vars[5,variation]  = @xf5_var4
+  xf_vars[6,variation]  = @xf6_var4
+  xf_vars[7,variation]  = @xf7_var4
+  xf_vars[8,variation]  = @xf8_var4
+  xf_vars[9,variation]  = @xf9_var4
+  xf_vars[10,variation] = @xf10_var4
+  xf_vars[11,variation] = @xf11_var4
+
+;   int polar=5
+  variation = 5
+  xf_vars[0,variation]  = @xf0_var5
+  xf_vars[1,variation]  = @xf1_var5
+  xf_vars[2,variation]  = @xf2_var5
+  xf_vars[3,variation]  = @xf3_var5
+  xf_vars[4,variation]  = @xf4_var5
+  xf_vars[5,variation]  = @xf5_var5
+  xf_vars[6,variation]  = @xf6_var5
+  xf_vars[7,variation]  = @xf7_var5
+  xf_vars[8,variation]  = @xf8_var5
+  xf_vars[9,variation]  = @xf9_var5
+  xf_vars[10,variation] = @xf10_var5
+  xf_vars[11,variation] = @xf11_var5
+
+;   int handkerchief=6
+  variation = 6
+  xf_vars[0,variation]  = @xf0_var6
+  xf_vars[1,variation]  = @xf1_var6
+  xf_vars[2,variation]  = @xf2_var6
+  xf_vars[3,variation]  = @xf3_var6
+  xf_vars[4,variation]  = @xf4_var6
+  xf_vars[5,variation]  = @xf5_var6
+  xf_vars[6,variation]  = @xf6_var6
+  xf_vars[7,variation]  = @xf7_var6
+  xf_vars[8,variation]  = @xf8_var6
+  xf_vars[9,variation]  = @xf9_var6
+  xf_vars[10,variation] = @xf10_var6
+  xf_vars[11,variation] = @xf11_var6
+
+;   int heart=7
+  variation = 7
+  xf_vars[0,variation]  = @xf0_var7
+  xf_vars[1,variation]  = @xf1_var7
+  xf_vars[2,variation]  = @xf2_var7
+  xf_vars[3,variation]  = @xf3_var7
+  xf_vars[4,variation]  = @xf4_var7
+  xf_vars[5,variation]  = @xf5_var7
+  xf_vars[6,variation]  = @xf6_var7
+  xf_vars[7,variation]  = @xf7_var7
+  xf_vars[8,variation]  = @xf8_var7
+  xf_vars[9,variation]  = @xf9_var7
+  xf_vars[10,variation] = @xf10_var7
+  xf_vars[11,variation] = @xf11_var7
+
+;   int disc=8
+  variation = 8
+  xf_vars[0,variation]  = @xf0_var8
+  xf_vars[1,variation]  = @xf1_var8
+  xf_vars[2,variation]  = @xf2_var8
+  xf_vars[3,variation]  = @xf3_var8
+  xf_vars[4,variation]  = @xf4_var8
+  xf_vars[5,variation]  = @xf5_var8
+  xf_vars[6,variation]  = @xf6_var8
+  xf_vars[7,variation]  = @xf7_var8
+  xf_vars[8,variation]  = @xf8_var8
+  xf_vars[9,variation]  = @xf9_var8
+  xf_vars[10,variation] = @xf10_var8
+  xf_vars[11,variation] = @xf11_var8
+
+;   int spiral=9
+  variation = 9
+  xf_vars[0,variation]  = @xf0_var9
+  xf_vars[1,variation]  = @xf1_var9
+  xf_vars[2,variation]  = @xf2_var9
+  xf_vars[3,variation]  = @xf3_var9
+  xf_vars[4,variation]  = @xf4_var9
+  xf_vars[5,variation]  = @xf5_var9
+  xf_vars[6,variation]  = @xf6_var9
+  xf_vars[7,variation]  = @xf7_var9
+  xf_vars[8,variation]  = @xf8_var9
+  xf_vars[9,variation]  = @xf9_var9
+  xf_vars[10,variation] = @xf10_var9
+  xf_vars[11,variation] = @xf11_var9
+
+;   int hyperbolic=10
+  variation = 10
+  xf_vars[0,variation]  = @xf0_var10
+  xf_vars[1,variation]  = @xf1_var10
+  xf_vars[2,variation]  = @xf2_var10
+  xf_vars[3,variation]  = @xf3_var10
+  xf_vars[4,variation]  = @xf4_var10
+  xf_vars[5,variation]  = @xf5_var10
+  xf_vars[6,variation]  = @xf6_var10
+  xf_vars[7,variation]  = @xf7_var10
+  xf_vars[8,variation]  = @xf8_var10
+  xf_vars[9,variation]  = @xf9_var10
+  xf_vars[10,variation] = @xf10_var10
+  xf_vars[11,variation] = @xf11_var10
+
+;   int diamond=11
+  variation = 11
+  xf_vars[0,variation]  = @xf0_var11
+  xf_vars[1,variation]  = @xf1_var11
+  xf_vars[2,variation]  = @xf2_var11
+  xf_vars[3,variation]  = @xf3_var11
+  xf_vars[4,variation]  = @xf4_var11
+  xf_vars[5,variation]  = @xf5_var11
+  xf_vars[6,variation]  = @xf6_var11
+  xf_vars[7,variation]  = @xf7_var11
+  xf_vars[8,variation]  = @xf8_var11
+  xf_vars[9,variation]  = @xf9_var11
+  xf_vars[10,variation] = @xf10_var11
+  xf_vars[11,variation] = @xf11_var11
+
+;   int ex=12
+  variation = 12
+  xf_vars[0,variation]  = @xf0_var12
+  xf_vars[1,variation]  = @xf1_var12
+  xf_vars[2,variation]  = @xf2_var12
+  xf_vars[3,variation]  = @xf3_var12
+  xf_vars[4,variation]  = @xf4_var12
+  xf_vars[5,variation]  = @xf5_var12
+  xf_vars[6,variation]  = @xf6_var12
+  xf_vars[7,variation]  = @xf7_var12
+  xf_vars[8,variation]  = @xf8_var12
+  xf_vars[9,variation]  = @xf9_var12
+  xf_vars[10,variation] = @xf10_var12
+  xf_vars[11,variation] = @xf11_var12
+
+;   int julia=13
+  variation = 13
+  xf_vars[0,variation]  = @xf0_var13
+  xf_vars[1,variation]  = @xf1_var13
+  xf_vars[2,variation]  = @xf2_var13
+  xf_vars[3,variation]  = @xf3_var13
+  xf_vars[4,variation]  = @xf4_var13
+  xf_vars[5,variation]  = @xf5_var13
+  xf_vars[6,variation]  = @xf6_var13
+  xf_vars[7,variation]  = @xf7_var13
+  xf_vars[8,variation]  = @xf8_var13
+  xf_vars[9,variation]  = @xf9_var13
+  xf_vars[10,variation] = @xf10_var13
+  xf_vars[11,variation] = @xf11_var13
+
+;   int bent=14
+  variation = 14
+  xf_vars[0,variation]  = @xf0_var14
+  xf_vars[1,variation]  = @xf1_var14
+  xf_vars[2,variation]  = @xf2_var14
+  xf_vars[3,variation]  = @xf3_var14
+  xf_vars[4,variation]  = @xf4_var14
+  xf_vars[5,variation]  = @xf5_var14
+  xf_vars[6,variation]  = @xf6_var14
+  xf_vars[7,variation]  = @xf7_var14
+  xf_vars[8,variation]  = @xf8_var14
+  xf_vars[9,variation]  = @xf9_var14
+  xf_vars[10,variation] = @xf10_var14
+  xf_vars[11,variation] = @xf11_var14
+
+;   int waves=15
+  variation = 15
+  xf_vars[0,variation]  = @xf0_var15
+  xf_vars[1,variation]  = @xf1_var15
+  xf_vars[2,variation]  = @xf2_var15
+  xf_vars[3,variation]  = @xf3_var15
+  xf_vars[4,variation]  = @xf4_var15
+  xf_vars[5,variation]  = @xf5_var15
+  xf_vars[6,variation]  = @xf6_var15
+  xf_vars[7,variation]  = @xf7_var15
+  xf_vars[8,variation]  = @xf8_var15
+  xf_vars[9,variation]  = @xf9_var15
+  xf_vars[10,variation] = @xf10_var15
+  xf_vars[11,variation] = @xf11_var15
+
+;   int fisheye=16
+  variation = 16
+  xf_vars[0,variation]  = @xf0_var16
+  xf_vars[1,variation]  = @xf1_var16
+  xf_vars[2,variation]  = @xf2_var16
+  xf_vars[3,variation]  = @xf3_var16
+  xf_vars[4,variation]  = @xf4_var16
+  xf_vars[5,variation]  = @xf5_var16
+  xf_vars[6,variation]  = @xf6_var16
+  xf_vars[7,variation]  = @xf7_var16
+  xf_vars[8,variation]  = @xf8_var16
+  xf_vars[9,variation]  = @xf9_var16
+  xf_vars[10,variation] = @xf10_var16
+  xf_vars[11,variation] = @xf11_var16
+
+;   int popcorn=17
+  variation = 17
+  xf_vars[0,variation]  = @xf0_var17
+  xf_vars[1,variation]  = @xf1_var17
+  xf_vars[2,variation]  = @xf2_var17
+  xf_vars[3,variation]  = @xf3_var17
+  xf_vars[4,variation]  = @xf4_var17
+  xf_vars[5,variation]  = @xf5_var17
+  xf_vars[6,variation]  = @xf6_var17
+  xf_vars[7,variation]  = @xf7_var17
+  xf_vars[8,variation]  = @xf8_var17
+  xf_vars[9,variation]  = @xf9_var17
+  xf_vars[10,variation] = @xf10_var17
+  xf_vars[11,variation] = @xf11_var17
+
+;   int exponential=18
+  variation = 18
+  xf_vars[0,variation]  = @xf0_var18
+  xf_vars[1,variation]  = @xf1_var18
+  xf_vars[2,variation]  = @xf2_var18
+  xf_vars[3,variation]  = @xf3_var18
+  xf_vars[4,variation]  = @xf4_var18
+  xf_vars[5,variation]  = @xf5_var18
+  xf_vars[6,variation]  = @xf6_var18
+  xf_vars[7,variation]  = @xf7_var18
+  xf_vars[8,variation]  = @xf8_var18
+  xf_vars[9,variation]  = @xf9_var18
+  xf_vars[10,variation] = @xf10_var18
+  xf_vars[11,variation] = @xf11_var18
+
+;   int power=19
+  variation = 19
+  xf_vars[0,variation]  = @xf0_var19
+  xf_vars[1,variation]  = @xf1_var19
+  xf_vars[2,variation]  = @xf2_var19
+  xf_vars[3,variation]  = @xf3_var19
+  xf_vars[4,variation]  = @xf4_var19
+  xf_vars[5,variation]  = @xf5_var19
+  xf_vars[6,variation]  = @xf6_var19
+  xf_vars[7,variation]  = @xf7_var19
+  xf_vars[8,variation]  = @xf8_var19
+  xf_vars[9,variation]  = @xf9_var19
+  xf_vars[10,variation] = @xf10_var19
+  xf_vars[11,variation] = @xf11_var19
+
+;   int cosine=20
+  variation = 20
+  xf_vars[0,variation]  = @xf0_var20
+  xf_vars[1,variation]  = @xf1_var20
+  xf_vars[2,variation]  = @xf2_var20
+  xf_vars[3,variation]  = @xf3_var20
+  xf_vars[4,variation]  = @xf4_var20
+  xf_vars[5,variation]  = @xf5_var20
+  xf_vars[6,variation]  = @xf6_var20
+  xf_vars[7,variation]  = @xf7_var20
+  xf_vars[8,variation]  = @xf8_var20
+  xf_vars[9,variation]  = @xf9_var20
+  xf_vars[10,variation] = @xf10_var20
+  xf_vars[11,variation] = @xf11_var20
+
+;   int rings=21
+  variation = 21
+  xf_vars[0,variation]  = @xf0_var21
+  xf_vars[1,variation]  = @xf1_var21
+  xf_vars[2,variation]  = @xf2_var21
+  xf_vars[3,variation]  = @xf3_var21
+  xf_vars[4,variation]  = @xf4_var21
+  xf_vars[5,variation]  = @xf5_var21
+  xf_vars[6,variation]  = @xf6_var21
+  xf_vars[7,variation]  = @xf7_var21
+  xf_vars[8,variation]  = @xf8_var21
+  xf_vars[9,variation]  = @xf9_var21
+  xf_vars[10,variation] = @xf10_var21
+  xf_vars[11,variation] = @xf11_var21
+
+;   int fan=22
+  variation = 22
+  xf_vars[0,variation]  = @xf0_var22
+  xf_vars[1,variation]  = @xf1_var22
+  xf_vars[2,variation]  = @xf2_var22
+  xf_vars[3,variation]  = @xf3_var22
+  xf_vars[4,variation]  = @xf4_var22
+  xf_vars[5,variation]  = @xf5_var22
+  xf_vars[6,variation]  = @xf6_var22
+  xf_vars[7,variation]  = @xf7_var22
+  xf_vars[8,variation]  = @xf8_var22
+  xf_vars[9,variation]  = @xf9_var22
+  xf_vars[10,variation] = @xf10_var22
+  xf_vars[11,variation] = @xf11_var22
+
+;   int eyfish=23
+  variation = 23
+  xf_vars[0,variation]  = @xf0_var23
+  xf_vars[1,variation]  = @xf1_var23
+  xf_vars[2,variation]  = @xf2_var23
+  xf_vars[3,variation]  = @xf3_var23
+  xf_vars[4,variation]  = @xf4_var23
+  xf_vars[5,variation]  = @xf5_var23
+  xf_vars[6,variation]  = @xf6_var23
+  xf_vars[7,variation]  = @xf7_var23
+  xf_vars[8,variation]  = @xf8_var23
+  xf_vars[9,variation]  = @xf9_var23
+  xf_vars[10,variation] = @xf10_var23
+  xf_vars[11,variation] = @xf11_var23
+
+;   int bubble=24
+  variation = 24
+  xf_vars[0,variation]  = @xf0_var24
+  xf_vars[1,variation]  = @xf1_var24
+  xf_vars[2,variation]  = @xf2_var24
+  xf_vars[3,variation]  = @xf3_var24
+  xf_vars[4,variation]  = @xf4_var24
+  xf_vars[5,variation]  = @xf5_var24
+  xf_vars[6,variation]  = @xf6_var24
+  xf_vars[7,variation]  = @xf7_var24
+  xf_vars[8,variation]  = @xf8_var24
+  xf_vars[9,variation]  = @xf9_var24
+  xf_vars[10,variation] = @xf10_var24
+  xf_vars[11,variation] = @xf11_var24
+
+;   int cylinder=25
+  variation = 25
+  xf_vars[0,variation]  = @xf0_var25
+  xf_vars[1,variation]  = @xf1_var25
+  xf_vars[2,variation]  = @xf2_var25
+  xf_vars[3,variation]  = @xf3_var25
+  xf_vars[4,variation]  = @xf4_var25
+  xf_vars[5,variation]  = @xf5_var25
+  xf_vars[6,variation]  = @xf6_var25
+  xf_vars[7,variation]  = @xf7_var25
+  xf_vars[8,variation]  = @xf8_var25
+  xf_vars[9,variation]  = @xf9_var25
+  xf_vars[10,variation] = @xf10_var25
+  xf_vars[11,variation] = @xf11_var25
+
+;   int noise=26
+  variation = 26
+  xf_vars[0,variation]  = @xf0_var26
+  xf_vars[1,variation]  = @xf1_var26
+  xf_vars[2,variation]  = @xf2_var26
+  xf_vars[3,variation]  = @xf3_var26
+  xf_vars[4,variation]  = @xf4_var26
+  xf_vars[5,variation]  = @xf5_var26
+  xf_vars[6,variation]  = @xf6_var26
+  xf_vars[7,variation]  = @xf7_var26
+  xf_vars[8,variation]  = @xf8_var26
+  xf_vars[9,variation]  = @xf9_var26
+  xf_vars[10,variation] = @xf10_var26
+  xf_vars[11,variation] = @xf11_var26
+  
+    float noise_power[12]
+  noise_power[0]  = @xf0_noise_power
+  noise_power[1]  = @xf1_noise_power
+  noise_power[2]  = @xf2_noise_power
+  noise_power[3]  = @xf3_noise_power
+  noise_power[4]  = @xf4_noise_power
+  noise_power[5]  = @xf5_noise_power
+  noise_power[6]  = @xf6_noise_power
+  noise_power[7]  = @xf7_noise_power
+  noise_power[8]  = @xf8_noise_power
+  noise_power[9]  = @xf9_noise_power
+  noise_power[10] = @xf10_noise_power
+  noise_power[11] = @xf11_noise_power
+
+;   int blur=27
+  variation = 27
+  xf_vars[0,variation]  = @xf0_var27
+  xf_vars[1,variation]  = @xf1_var27
+  xf_vars[2,variation]  = @xf2_var27
+  xf_vars[3,variation]  = @xf3_var27
+  xf_vars[4,variation]  = @xf4_var27
+  xf_vars[5,variation]  = @xf5_var27
+  xf_vars[6,variation]  = @xf6_var27
+  xf_vars[7,variation]  = @xf7_var27
+  xf_vars[8,variation]  = @xf8_var27
+  xf_vars[9,variation]  = @xf9_var27
+  xf_vars[10,variation] = @xf10_var27
+  xf_vars[11,variation] = @xf11_var27
+  
+  float blur_power[12]
+  blur_power[0]  = @xf0_blur_power
+  blur_power[1]  = @xf1_blur_power
+  blur_power[2]  = @xf2_blur_power
+  blur_power[3]  = @xf3_blur_power
+  blur_power[4]  = @xf4_blur_power
+  blur_power[5]  = @xf5_blur_power
+  blur_power[6]  = @xf6_blur_power
+  blur_power[7]  = @xf7_blur_power
+  blur_power[8]  = @xf8_blur_power
+  blur_power[9]  = @xf9_blur_power
+  blur_power[10] = @xf10_blur_power
+  blur_power[11] = @xf11_blur_power
+
+;   int rings2=28       ; rings2_val="1.33559057302773"
+  variation = 28
+  xf_vars[0,variation]  = @xf0_var28
+  xf_vars[1,variation]  = @xf1_var28
+  xf_vars[2,variation]  = @xf2_var28
+  xf_vars[3,variation]  = @xf3_var28
+  xf_vars[4,variation]  = @xf4_var28
+  xf_vars[5,variation]  = @xf5_var28
+  xf_vars[6,variation]  = @xf6_var28
+  xf_vars[7,variation]  = @xf7_var28
+  xf_vars[8,variation]  = @xf8_var28
+  xf_vars[9,variation]  = @xf9_var28
+  xf_vars[10,variation] = @xf10_var28
+  xf_vars[11,variation] = @xf11_var28
+
+  float rings2_val[12]
+  rings2_val[0]  = @xf0_rings2_val
+  rings2_val[1]  = @xf1_rings2_val
+  rings2_val[2]  = @xf2_rings2_val
+  rings2_val[3]  = @xf3_rings2_val
+  rings2_val[4]  = @xf4_rings2_val
+  rings2_val[5]  = @xf5_rings2_val
+  rings2_val[6]  = @xf6_rings2_val
+  rings2_val[7]  = @xf7_rings2_val
+  rings2_val[8]  = @xf8_rings2_val
+  rings2_val[9]  = @xf9_rings2_val
+  rings2_val[10] = @xf10_rings2_val
+  rings2_val[11] = @xf11_rings2_val
+
+;   int fan2=29         ; fan2_x="0.314948181156069"
+                        ; fan2_y="-0.831819514743984"
+  variation = 29
+  xf_vars[0,variation]  = @xf0_var29
+  xf_vars[1,variation]  = @xf1_var29
+  xf_vars[2,variation]  = @xf2_var29
+  xf_vars[3,variation]  = @xf3_var29
+  xf_vars[4,variation]  = @xf4_var29
+  xf_vars[5,variation]  = @xf5_var29
+  xf_vars[6,variation]  = @xf6_var29
+  xf_vars[7,variation]  = @xf7_var29
+  xf_vars[8,variation]  = @xf8_var29
+  xf_vars[9,variation]  = @xf9_var29
+  xf_vars[10,variation] = @xf10_var29
+  xf_vars[11,variation] = @xf11_var29
+
+  float fan2_x[12]
+  fan2_x[0]  = @xf0_fan2_x
+  fan2_x[1]  = @xf1_fan2_x
+  fan2_x[2]  = @xf2_fan2_x
+  fan2_x[3]  = @xf3_fan2_x
+  fan2_x[4]  = @xf4_fan2_x
+  fan2_x[5]  = @xf5_fan2_x
+  fan2_x[6]  = @xf6_fan2_x
+  fan2_x[7]  = @xf7_fan2_x
+  fan2_x[8]  = @xf8_fan2_x
+  fan2_x[9]  = @xf9_fan2_x
+  fan2_x[10] = @xf10_fan2_x
+  fan2_x[11] = @xf11_fan2_x
+
+  float fan2_y[12]
+  fan2_y[0]  = @xf0_fan2_y
+  fan2_y[1]  = @xf1_fan2_y
+  fan2_y[2]  = @xf2_fan2_y
+  fan2_y[3]  = @xf3_fan2_y
+  fan2_y[4]  = @xf4_fan2_y
+  fan2_y[5]  = @xf5_fan2_y
+  fan2_y[6]  = @xf6_fan2_y
+  fan2_y[7]  = @xf7_fan2_y
+  fan2_y[8]  = @xf8_fan2_y
+  fan2_y[9]  = @xf9_fan2_y
+  fan2_y[10] = @xf10_fan2_y
+  fan2_y[11] = @xf11_fan2_y
+ 
+;   int blob=30         ; blob_low="0.575599149614572"
+                        ; blob_high="1.00113011905923"
+                        ; blob_waves="6"
+  variation = 30
+  xf_vars[0,variation]  = @xf0_var30
+  xf_vars[1,variation]  = @xf1_var30
+  xf_vars[2,variation]  = @xf2_var30
+  xf_vars[3,variation]  = @xf3_var30
+  xf_vars[4,variation]  = @xf4_var30
+  xf_vars[5,variation]  = @xf5_var30
+  xf_vars[6,variation]  = @xf6_var30
+  xf_vars[7,variation]  = @xf7_var30
+  xf_vars[8,variation]  = @xf8_var30
+  xf_vars[9,variation]  = @xf9_var30
+  xf_vars[10,variation] = @xf10_var30
+  xf_vars[11,variation] = @xf11_var30
+
+  float blob_low[12]
+  blob_low[0]  = @xf0_blob_low
+  blob_low[1]  = @xf1_blob_low
+  blob_low[2]  = @xf2_blob_low
+  blob_low[3]  = @xf3_blob_low
+  blob_low[4]  = @xf4_blob_low
+  blob_low[5]  = @xf5_blob_low
+  blob_low[6]  = @xf6_blob_low
+  blob_low[7]  = @xf7_blob_low
+  blob_low[8]  = @xf8_blob_low
+  blob_low[9]  = @xf9_blob_low
+  blob_low[10] = @xf10_blob_low
+  blob_low[11] = @xf11_blob_low
+
+  float blob_high[12]
+  blob_high[0]  = @xf0_blob_high
+  blob_high[1]  = @xf1_blob_high
+  blob_high[2]  = @xf2_blob_high
+  blob_high[3]  = @xf3_blob_high
+  blob_high[4]  = @xf4_blob_high
+  blob_high[5]  = @xf5_blob_high
+  blob_high[6]  = @xf6_blob_high
+  blob_high[7]  = @xf7_blob_high
+  blob_high[8]  = @xf8_blob_high
+  blob_high[9]  = @xf9_blob_high
+  blob_high[10] = @xf10_blob_high
+  blob_high[11] = @xf11_blob_high
+
+  float blob_waves[12]
+  blob_waves[0]  = @xf0_blob_waves
+  blob_waves[1]  = @xf1_blob_waves
+  blob_waves[2]  = @xf2_blob_waves
+  blob_waves[3]  = @xf3_blob_waves
+  blob_waves[4]  = @xf4_blob_waves
+  blob_waves[5]  = @xf5_blob_waves
+  blob_waves[6]  = @xf6_blob_waves
+  blob_waves[7]  = @xf7_blob_waves
+  blob_waves[8]  = @xf8_blob_waves
+  blob_waves[9]  = @xf9_blob_waves
+  blob_waves[10] = @xf10_blob_waves
+  blob_waves[11] = @xf11_blob_waves
+
+ 
+;   int pdj=31          ; pdj_a="-1.2750724023208"
+                        ; pdj_b="2.34335079649463"
+                        ; pdj_c="-1.25823829136789" 
+                        ; pdj_d="-0.666838046628982"
+  variation = 31
+  xf_vars[0,variation]  = @xf0_var31
+  xf_vars[1,variation]  = @xf1_var31
+  xf_vars[2,variation]  = @xf2_var31
+  xf_vars[3,variation]  = @xf3_var31
+  xf_vars[4,variation]  = @xf4_var31
+  xf_vars[5,variation]  = @xf5_var31
+  xf_vars[6,variation]  = @xf6_var31
+  xf_vars[7,variation]  = @xf7_var31
+  xf_vars[8,variation]  = @xf8_var31
+  xf_vars[9,variation]  = @xf9_var31
+  xf_vars[10,variation] = @xf10_var31
+  xf_vars[11,variation] = @xf11_var31
+  
+  float pdj_a[12]
+  pdj_a[0]  = @xf0_pdj_a
+  pdj_a[1]  = @xf1_pdj_a
+  pdj_a[2]  = @xf2_pdj_a
+  pdj_a[3]  = @xf3_pdj_a
+  pdj_a[4]  = @xf4_pdj_a
+  pdj_a[5]  = @xf5_pdj_a
+  pdj_a[6]  = @xf6_pdj_a
+  pdj_a[7]  = @xf7_pdj_a
+  pdj_a[8]  = @xf8_pdj_a
+  pdj_a[9]  = @xf9_pdj_a
+  pdj_a[10] = @xf10_pdj_a
+  pdj_a[11] = @xf11_pdj_a
+
+  float pdj_b[12]
+  pdj_b[0]  = @xf0_pdj_b
+  pdj_b[1]  = @xf1_pdj_b
+  pdj_b[2]  = @xf2_pdj_b
+  pdj_b[3]  = @xf3_pdj_b
+  pdj_b[4]  = @xf4_pdj_b
+  pdj_b[5]  = @xf5_pdj_b
+  pdj_b[6]  = @xf6_pdj_b
+  pdj_b[7]  = @xf7_pdj_b
+  pdj_b[8]  = @xf8_pdj_b
+  pdj_b[9]  = @xf9_pdj_b
+  pdj_b[10] = @xf10_pdj_b
+  pdj_b[11] = @xf11_pdj_b
+
+  float pdj_c[12]
+  pdj_c[0]  = @xf0_pdj_c
+  pdj_c[1]  = @xf1_pdj_c
+  pdj_c[2]  = @xf2_pdj_c
+  pdj_c[3]  = @xf3_pdj_c
+  pdj_c[4]  = @xf4_pdj_c
+  pdj_c[5]  = @xf5_pdj_c
+  pdj_c[6]  = @xf6_pdj_c
+  pdj_c[7]  = @xf7_pdj_c
+  pdj_c[8]  = @xf8_pdj_c
+  pdj_c[9]  = @xf9_pdj_c
+  pdj_c[10] = @xf10_pdj_c
+  pdj_c[11] = @xf11_pdj_c
+
+  float pdj_d[12]
+  pdj_d[0]  = @xf0_pdj_d
+  pdj_d[1]  = @xf1_pdj_d
+  pdj_d[2]  = @xf2_pdj_d
+  pdj_d[3]  = @xf3_pdj_d
+  pdj_d[4]  = @xf4_pdj_d
+  pdj_d[5]  = @xf5_pdj_d
+  pdj_d[6]  = @xf6_pdj_d
+  pdj_d[7]  = @xf7_pdj_d
+  pdj_d[8]  = @xf8_pdj_d
+  pdj_d[9]  = @xf9_pdj_d
+  pdj_d[10] = @xf10_pdj_d
+  pdj_d[11] = @xf11_pdj_d
+
+  
+
+;   int perspective=32  ; perspective_angle="0.521041177678853"
+                        ; perspective_dist="1.65628980612382"
+  variation = 32
+  xf_vars[0,variation]  = @xf0_var32
+  xf_vars[1,variation]  = @xf1_var32
+  xf_vars[2,variation]  = @xf2_var32
+  xf_vars[3,variation]  = @xf3_var32
+  xf_vars[4,variation]  = @xf4_var32
+  xf_vars[5,variation]  = @xf5_var32
+  xf_vars[6,variation]  = @xf6_var32
+  xf_vars[7,variation]  = @xf7_var32
+  xf_vars[8,variation]  = @xf8_var32
+  xf_vars[9,variation]  = @xf9_var32
+  xf_vars[10,variation] = @xf10_var32
+  xf_vars[11,variation] = @xf11_var32
+
+  float perspective_angle[12]
+  perspective_angle[0]  = @xf0_perspective_angle
+  perspective_angle[1]  = @xf1_perspective_angle
+  perspective_angle[2]  = @xf2_perspective_angle
+  perspective_angle[3]  = @xf3_perspective_angle
+  perspective_angle[4]  = @xf4_perspective_angle
+  perspective_angle[5]  = @xf5_perspective_angle
+  perspective_angle[6]  = @xf6_perspective_angle
+  perspective_angle[7]  = @xf7_perspective_angle
+  perspective_angle[8]  = @xf8_perspective_angle
+  perspective_angle[9]  = @xf9_perspective_angle
+  perspective_angle[10] = @xf10_perspective_angle
+  perspective_angle[11] = @xf11_perspective_angle
+
+  float perspective_dist[12]
+  perspective_dist[0]  = @xf0_perspective_dist
+  perspective_dist[1]  = @xf1_perspective_dist
+  perspective_dist[2]  = @xf2_perspective_dist
+  perspective_dist[3]  = @xf3_perspective_dist
+  perspective_dist[4]  = @xf4_perspective_dist
+  perspective_dist[5]  = @xf5_perspective_dist
+  perspective_dist[6]  = @xf6_perspective_dist
+  perspective_dist[7]  = @xf7_perspective_dist
+  perspective_dist[8]  = @xf8_perspective_dist
+  perspective_dist[9]  = @xf9_perspective_dist
+  perspective_dist[10] = @xf10_perspective_dist
+  perspective_dist[11] = @xf11_perspective_dist
+ 
+;   int julian=33       ; julian_power="2"
+                        ; julian_dist="1"
+  variation = 33
+  xf_vars[0,variation]  = @xf0_var33
+  xf_vars[1,variation]  = @xf1_var33
+  xf_vars[2,variation]  = @xf2_var33
+  xf_vars[3,variation]  = @xf3_var33
+  xf_vars[4,variation]  = @xf4_var33
+  xf_vars[5,variation]  = @xf5_var33
+  xf_vars[6,variation]  = @xf6_var33
+  xf_vars[7,variation]  = @xf7_var33
+  xf_vars[8,variation]  = @xf8_var33
+  xf_vars[9,variation]  = @xf9_var33
+  xf_vars[10,variation] = @xf10_var33
+  xf_vars[11,variation] = @xf11_var33
+
+  float julian_power[12]
+  julian_power[0]  = @xf0_julian_power
+  julian_power[1]  = @xf1_julian_power
+  julian_power[2]  = @xf2_julian_power
+  julian_power[3]  = @xf3_julian_power
+  julian_power[4]  = @xf4_julian_power
+  julian_power[5]  = @xf5_julian_power
+  julian_power[6]  = @xf6_julian_power
+  julian_power[7]  = @xf7_julian_power
+  julian_power[8]  = @xf8_julian_power
+  julian_power[9]  = @xf9_julian_power
+  julian_power[10] = @xf10_julian_power
+  julian_power[11] = @xf11_julian_power
+
+  float julian_dist[12]
+  julian_dist[0]  = @xf0_julian_dist
+  julian_dist[1]  = @xf1_julian_dist
+  julian_dist[2]  = @xf2_julian_dist
+  julian_dist[3]  = @xf3_julian_dist
+  julian_dist[4]  = @xf4_julian_dist
+  julian_dist[5]  = @xf5_julian_dist
+  julian_dist[6]  = @xf6_julian_dist
+  julian_dist[7]  = @xf7_julian_dist
+  julian_dist[8]  = @xf8_julian_dist
+  julian_dist[9]  = @xf9_julian_dist
+  julian_dist[10] = @xf10_julian_dist
+  julian_dist[11] = @xf11_julian_dist
+ 
+;   int juliascope=34   ; juliascope_power="5"
+                        ; juliascope_dist="1"
+  variation = 34
+  xf_vars[0,variation]  = @xf0_var34
+  xf_vars[1,variation]  = @xf1_var34
+  xf_vars[2,variation]  = @xf2_var34
+  xf_vars[3,variation]  = @xf3_var34
+  xf_vars[4,variation]  = @xf4_var34
+  xf_vars[5,variation]  = @xf5_var34
+  xf_vars[6,variation]  = @xf6_var34
+  xf_vars[7,variation]  = @xf7_var34
+  xf_vars[8,variation]  = @xf8_var34
+  xf_vars[9,variation]  = @xf9_var34
+  xf_vars[10,variation] = @xf10_var34
+  xf_vars[11,variation] = @xf11_var34
+
+  float juliascope_power[12]
+  juliascope_power[0]  = @xf0_juliascope_power
+  juliascope_power[1]  = @xf1_juliascope_power
+  juliascope_power[2]  = @xf2_juliascope_power
+  juliascope_power[3]  = @xf3_juliascope_power
+  juliascope_power[4]  = @xf4_juliascope_power
+  juliascope_power[5]  = @xf5_juliascope_power
+  juliascope_power[6]  = @xf6_juliascope_power
+  juliascope_power[7]  = @xf7_juliascope_power
+  juliascope_power[8]  = @xf8_juliascope_power
+  juliascope_power[9]  = @xf9_juliascope_power
+  juliascope_power[10] = @xf10_juliascope_power
+  juliascope_power[11] = @xf11_juliascope_power
+
+  float juliascope_dist[12]
+  juliascope_dist[0]  = @xf0_juliascope_dist
+  juliascope_dist[1]  = @xf1_juliascope_dist
+  juliascope_dist[2]  = @xf2_juliascope_dist
+  juliascope_dist[3]  = @xf3_juliascope_dist
+  juliascope_dist[4]  = @xf4_juliascope_dist
+  juliascope_dist[5]  = @xf5_juliascope_dist
+  juliascope_dist[6]  = @xf6_juliascope_dist
+  juliascope_dist[7]  = @xf7_juliascope_dist
+  juliascope_dist[8]  = @xf8_juliascope_dist
+  juliascope_dist[9]  = @xf9_juliascope_dist
+  juliascope_dist[10] = @xf10_juliascope_dist
+  juliascope_dist[11] = @xf11_juliascope_dist
+
+
+  float sf_gauss[20,20]           ; contains gaussian spatial filter kernel
+  color newcmap[256]              ; modified colormap from gradient
+  int scl_cmap[256,4]             ; white-balanced colormap
+  float eps = 1E-10               ; small number
+
+  float xc = real(#center)        ; Scaling constants
+  float yc = -imag(#center)
+  
+  int gutter_width = 20          ; assume that a 20x20 gaussian is the max
+
+  int num_xforms = @xforms        ; make a variable for random param generation
+
+  int x = 0, int y = 0, int z = 0 ; counter initialization
+
+  int i = 25
+  while i > 1   ; prime the random number generator
+    i = i - 1
+    seed = random(seed)
+  endwhile
+
+
+; generate the gaussian kernel for spatial filtration
+  int filter_width = round(2*2.5*@oversample*@spat_filt_rad);
+
+; maintain parity with oversample
+  int chk = filter_width + @oversample
+  if (chk % 2 == 1 && filter_width > 0)
+    filter_width = filter_width + 1
+  endif
+
+; limit to gutter width
+  if (filter_width-@oversample)>(2*gutter_width)
+    filter_width = filter_width - 2
+  endif
+  ; print(filter_width)
+
+; calculate gaussian
+  float ii, float jj, float tot=0.0
+  x=0
+  while (x<filter_width)
+    y=0
+    while (y<filter_width)
+      ii = ((2.0*x + 1) / filter_width - 1.0) * 2.5
+      jj = ((2.0*y + 1) / filter_width - 1.0) * 2.5
+      sf_gauss[x,y] = exp(-2.0*(ii*ii + jj*jj))
+      tot = tot + sf_gauss[x,y]
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+; normalize the gaussian  
+  x = 0
+  while (x<filter_width)
+    y = 0
+    while (y<filter_width)
+      sf_gauss[x,y] = sf_gauss[x,y] / tot
+      ; print(sf_gauss[x,y])
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+  
+; create a new colormap based on the current gradient, normalizing to (0-@white_level)
+  int cmidx=0
+  while (cmidx<=255)
+    newcmap[cmidx] = gradient(cmidx/255)
+    ; convert colors to 0-@white_level integer range
+    ; use biggest number you can without overflowing for most accurate color
+    scl_cmap[cmidx,0] = round(red(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,1] = round(green(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,2] = round(blue(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,3] = @white_level
+;    scl_cmap[cmidx,3] = round(alpha(newcmap[cmidx])*@white_level)
+    cmidx = cmidx + 1
+  endwhile
+  
+; adjust scaling for aspect ratio  
+  float scale
+  if 3 * #width < 4 * #height     
+    scale = (#width * #magn) / 4
+   else
+    scale = (#height * #magn) / 3
+  endif
+
+; calculate the image boundaries, not forgetting the gutter
+; (the gutter is used to prevent problems with spatial filtering
+; near the edge of the image)
+  float bounds[4]
+  float t0 = gutter_width / (@oversample*scale)
+  bounds[0] = xc - #width/scale/2 - t0
+  bounds[1] = yc - #height/scale/2 - t0
+  bounds[2] = bounds[0] + #width/scale + 2*t0
+  bounds[3] = bounds[1] + #height/scale + 2*t0
+    
+  int ht = @oversample * #height + 2*gutter_width
+  int wd = @oversample * #width + 2*gutter_width
+  
+  float transx = pwid * 0.5
+  float transy = phgt * 0.5
+  
+  float nuscale = wd / (bounds[2] - bounds[0])
+  
+  ht = @oversample * phgt + 2*gutter_width
+  wd = @oversample * pwid + 2*gutter_width
+
+  float wd2 = wd/2, float ht2 = ht/2
+  
+; initialize array
+  x = 0, y = 0, z = 0
+  while x < wd
+    y = 0
+    while y < ht
+      z = 0
+      while z < 4
+        pix[x, y, z] = 0
+        z = z + 1
+      endwhile
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+; pre-calculate the cos and sin of #angle, so that
+; it is removed from the iterative binning loop
+; (probably already done by the compiler, but...)
+  float cosan = cos(#angle)
+  float sinan = sin(#angle)
+      
+; start the iteration process
+; Draves code divides by the square of the oversample, but that seems too
+; harsh of a divisor unless an agressive gaussian is used.
+  int nsamples = round(#width*#height*@iter_density/(@oversample*@oversample))
+  if (nsamples<0)
+    nsamples=round(#randomrange-1)
+  endif
+  int fn
+  float tx, float ty
+  int it = -fuse, int clr_index
+
+  float xp, float yp
+  
+  ; first, generate the starting point, (-1:1, -1:1, 0:1)
+  seed = random(seed), iterbuf[0] = (seed/#randomrange)
+  seed = random(seed), iterbuf[1] = (seed/#randomrange)
+  seed = random(seed), iterbuf[2] = abs(seed/#randomrange)
+
+; Normalize propabilities (NUJ 1. jan. 2006):
+  if (@Enable_final)
+    xf_p[num_xforms-1] = 0
+  endif
+  
+  if (@normweights)
+     int j=0
+     float w = 0;
+     while (j < num_xforms)
+        w = w + xf_p[j]
+        j = j + 1
+     endwhile
+     j = 0
+     w = 1/w
+     while (j < num_xforms)
+        xf_p[j] = xf_p[j]*w
+        j = j + 1
+     endwhile
+  endif
+
+
+; loop through our iterations
+
+  float itx = 0.0
+  float ity = 0.0
+  float itc = 0.0
+  int finaltx = num_xforms
+  if (@Enable_final)
+    finaltx = num_xforms - 1
+  endif
+
+
+  while(it < nsamples)
+    itx = iterbuf[0]
+    ity = iterbuf[1]
+    itc = iterbuf[2]
+
+    seed = random(seed), float rd = abs(seed / #randomrange)
+    int j=0
+    repeat 
+      ; Pick xform to use based on probability
+      rd = rd - xf_p[j]
+      fn = j, j = j + 1
+    until (rd < 0) || (j == num_xforms)
+
+    int loopcount = num_xforms + 1 - finaltx
+    while loopcount > 0
+      ; compute color of next point
+      float s = xf_symmetry[fn]
+      itc = (itc + xf_color[fn]) * 0.5 * (1 - s) + s * itc
+
+      ; affine transformation
+      tx = xf_a[fn]*itx + xf_b[fn]*ity + xf_e[fn]
+      ty = xf_c[fn]*itx + xf_d[fn]*ity + xf_f[fn]
+
+      ; pre calculate some things
+      float r2 = tx*tx + ty*ty    ; radius squared
+      float r = sqrt(r2)          ; radius
+      float a = 0.0               ; angle to point
+      if ( (tx < -EPS) || (tx > EPS) || (ty < -EPS) || (ty > EPS) )
+        a = atan2(ty + flip(tx))
+        ;a = atan2(tx + flip(ty))
+      endif
+      float cosa = cos(a)
+      float sina = sin(a)
+      float angle = a
+
+      ;working variables
+      float c1, float c2, float nx, float ny
+      float dx, float dy
+
+      ;collector
+      itx = 0.0
+      ity = 0.0
+
+      ; add proportional amounts of each variation
+      if (xf_vars[fn,0]!=0.0); linear
+        itx = itx + xf_vars[fn,0]*tx
+        ity = ity + xf_vars[fn,0]*ty
+      endif
+
+      if (xf_vars[fn,1]!=0.0); sinusoidal
+        itx = itx + xf_vars[fn,1]*sin(tx)
+        ity = ity + xf_vars[fn,1]*sin(ty)
+      endif
+
+      if (xf_vars[fn,2]!=0.0); spherical
+        itx = itx + xf_vars[fn,2]*tx/(r2+EPS)
+        ity = ity + xf_vars[fn,2]*ty/(r2+EPS)
+      endif
+
+      if (xf_vars[fn,3]!=0.0); swirl
+        c1 = sin(r2), c2 = cos(r2)
+        itx = itx + xf_vars[fn,3]*(c1*tx - c2*ty)
+        ity = ity + xf_vars[fn,3]*(c2*tx + c1*ty)
+      endif
+
+      if (xf_vars[fn,4]!=0.0); horseshoe
+        itx = itx + xf_vars[fn,4]*(sina*tx - cosa*ty)
+        ity = ity + xf_vars[fn,4]*(cosa*tx + sina*ty)
+      endif
+
+      if (xf_vars[fn,5]!=0.0); polar
+        itx = itx + xf_vars[fn,5]*a/#pi
+        ity = ity + xf_vars[fn,5]*(r-1.0)
+      endif
+
+      if (xf_vars[fn,6]!=0.0); folded handkerchief
+        itx = itx + xf_vars[fn,6]*sin(a+r)*r
+        ity = ity + xf_vars[fn,6]*cos(a-r)*r
+      endif
+
+      if (xf_vars[fn,7]!=0.0) ; heart
+        float a2 = a * r
+        itx = itx + xf_vars[fn,7]*sin(a2)*r
+        ity = ity - xf_vars[fn,7]*cos(a2)*r
+      endif
+
+      if (xf_vars[fn,8]!=0.0) ; disk
+        float nx = tx * #pi
+        float ny = ty * #pi
+        float rr = sqrt(nx*nx + ny*ny);            rr = #pi*r ?
+        itx = itx + xf_vars[fn,8]*sin(rr)*a/#pi
+        ity = ity + xf_vars[fn,8]*cos(rr)*a/#pi
+      endif
+
+      if (xf_vars[fn,9]!=0.0); spiral
+        itx = itx + xf_vars[fn,9]*(cos(a) + sin(r))/(r+EPS)
+        ity = ity + xf_vars[fn,9]*(sin(a) - cos(r))/(r+EPS)
+      endif
+
+      if (xf_vars[fn,10]!=0.0) ; hyperbolic
+        itx = itx + xf_vars[fn,10]*sin(a)/(r+EPS)
+        ity = ity + xf_vars[fn,10]*cos(a)*(r+EPS)
+      endif
+
+      if (xf_vars[fn,11]!=0.0)     ; Diamond aka square
+        itx = itx + xf_vars[fn,11]*sin(a) * cos(r)
+        ity = ity + xf_vars[fn,11]*cos(a) * sin(r)
+      endif
+
+      if (xf_vars[fn,12]!=0.0) ; Ex
+        float n0 = sin(a+r)
+        float n1 = cos(a-r)
+        float m0 = n0^3 * r
+        float m1 = n1^3 * r
+        itx = itx + xf_vars[fn,12]*(m0+m1)
+        ity = ity + xf_vars[fn,12]*(m0-m1)
+      endif
+
+      if (xf_vars[fn,13]!=0.0) ; julia
+        float aa = a / 2.0
+        seed = random(seed)
+        ; seed seems to retain the same parity!...but jumps
+        ; between positive and negative randomly
+        if seed > 0
+          aa = aa + #pi
+        endif
+        float rr = sqrt(r)*xf_vars[fn,13]
+        itx = itx + rr*cos(aa)
+        ity = ity + rr*sin(aa)
+      endif
+
+      if (xf_vars[fn,14]!=0.0); bent
+        c1 = tx
+        c2 = ty
+        if (c1 < 0.0)
+          c1 = 2*c1
+        endif
+        if (c2 < 0.0)
+          c2 = c2 / 2.0
+        endif
+        itx = itx + xf_vars[fn,14]*c1
+        ity = ity + xf_vars[fn,14]*c2
+      endif
+
+      if (xf_vars[fn,15]!=0.0) ; Waves
+        dx = xf_e[fn]
+        dy = xf_f[fn]
+        nx = tx + xf_b[fn] * sin(ty / ((dx*dx) + EPS))
+        ny = ty + xf_d[fn] * sin(tx / ((dy*dy) + EPS))
+        itx = itx + xf_vars[fn,15]*nx
+        ity = ity + xf_vars[fn,15]*ny
+      endif
+
+      if (xf_vars[fn,16]!=0.0) ; Fisheye
+        float rr = 2.0 * r * xf_vars[fn,16] / ( r + 1.0 )
+        itx = itx + rr*cosa
+        ity = ity + rr*sina
+      endif
+
+      if (xf_vars[fn,17]!=0.0) ; Popcorn
+         dx = tan(3.0 * ty)
+         dy = tan(3.0 * tx)
+         nx = tx + xf_e[fn] * sin(dx)
+         ny = ty + xf_f[fn] * sin(dy)
+         itx = itx + xf_vars[fn,17]*nx
+         ity = ity + xf_vars[fn,17]*ny
+      endif
+
+      if (xf_vars[fn,18]!=0.0) ; Exponential
+         dx = exp(tx) / 2.718281828459045
+         dy = #pi * ty
+         itx = itx + xf_vars[fn,18]*dx*cos(dy)
+         ity = ity + xf_vars[fn,18]*dx*sin(dy)
+      endif
+
+      if (xf_vars[fn,19]!=0.0) ; Power
+         float rr = r^sina
+         nx = rr*cosa
+         ny = rr*sina
+         itx = itx + xf_vars[fn,19]*nx
+         ity = ity + xf_vars[fn,19]*ny
+      endif
+
+      if (xf_vars[fn,20]!=0.0) ; Cosine
+         nx = cos(tx*#pi) * cosh(ty)
+         ny = -sin(tx*#pi) * sinh(ty)
+         itx = itx + xf_vars[fn,20]*nx
+         ity = ity + xf_vars[fn,20]*ny
+      endif
+
+      if (xf_vars[fn,21]!=0.0) ; Rings
+        dx = sqr(xf_e[fn]) + EPS
+        rr = xf_vars[fn,21]*( 2*r + dx*(round(r/(2*dx)) * 2 - r) )
+        itx = itx + rr*cosa
+        ity = ity + rr*sina
+      endif
+
+      if (xf_vars[fn,22]!=0.0) ; fan
+        dx = xf_e[fn]
+        dy = xf_f[fn]
+        dx = #pi * (dx * dx + EPS)
+        float dx2 = dx / 2
+        if ((angle + dy) % dx) > dx2
+          aa = angle - dx2
+        else
+          aa = angle + dx2
+        endif
+        nx = cos(aa) * r
+        ny = sin(aa) * r
+        itx = itx + xf_vars[fn,22]*nx
+        ity = ity + xf_vars[fn,22]*ny
+      endif
+
+      if (xf_vars[fn,23]!=0.0) ; eyefish
+;     r := 2 * vars[23] / (sqrt(sqr(FTx) + sqr(FTy)) + 1);
+;     FPx := FPx + r * FTx;
+;     FPy := FPy + r * FTy;
+        float rr = 2*xf_vars[fn,23]/(r + 1)
+        itx = itx + rr*tx
+        ity = ity + rr*ty
+      endif
+
+
+      if (xf_vars[fn,24]!=0.0) ; bubble
+        ;;   X = x * w / ((x2 + y2)/4 + 1)
+        ;;   Y = y * w / ((x2 + y2)/4 + 1)
+        ;;   or
+        ;   r := vvar / ((sqr(FTx^) + sqr(FTy^))/4 + 1);
+        ;
+        ;   FPx^ := FPx^ + r * FTx^;
+        ;   FPy^ := FPy^ + r * FTy^;
+        rr = xf_vars[fn,24] / ( r2 / 4.0 + 1.0 )
+        itx = itx + rr * tx
+        ity = ity + rr * ty
+      endif
+
+      if (xf_vars[fn,25]!=0.0) ; cylinder
+      
+;        FPx := FPx + vars[25] * sin(FTx);
+;        FPy := FPy + vars[25] * FTy;
+
+        itx = itx + xf_vars[fn,25]*sin(tx)
+        ity = ity + xf_vars[fn,25]*ty
+      endif
+
+      if (xf_vars[fn,26]!=0.0) ; noise
+        seed = random(seed), float rd1 = 2*#pi*seed / #randomrange
+        seed = random(seed), float rd2 = abs(seed / #randomrange)
+        if (noise_power[fn] != 1)
+          rd2 = rd2^noise_power[fn]
+        endif
+        nx = rd2*sin(rd1)*tx
+        ny = rd2*cos(rd1)*ty
+        itx = itx + xf_vars[fn,26]*nx
+        ity = ity + xf_vars[fn,26]*ny
+      endif
+
+      if (xf_vars[fn,27]!=0.0) ; blur
+        seed = random(seed), float rd1 = 2*#pi*seed / #randomrange
+        seed = random(seed), float rd2 = abs(seed / #randomrange)
+        if (blur_power[fn] != 1)
+          rd2 = rd2^blur_power[fn]
+        endif
+        nx = rd2*sin(rd1)
+        ny = rd2*cos(rd1)
+        itx = itx + xf_vars[fn,27]*nx
+        ity = ity + xf_vars[fn,27]*ny
+      endif
+
+      if (xf_vars[fn,28]!=0.0) ; rings2
+        ;   Length := sqrt(FTx^ * FTx^ + FTy^ * FTy^);
+        ;   if (FTx^ < -EPS) or (FTx^ > EPS) or (FTy^ < -EPS) or (FTy^ > EPS) then
+        ;      Angle := arctan2(FTx^, FTy^)
+        ;   else
+        ;     Angle := 0.0;
+        ;
+        ;   dx := sqr(FVal) + EPS;
+        ;   r := Length + dx - System.Int((Length + dx)/(2 * dx)) * 2 * dx - dx + Length * (1-dx);
+        ;
+        ;   FPx^ := FPx^ + vvar * r * sin(Angle);
+        ;   FPy^ := FPy^ + vvar * r * cos(Angle);
+        dx = sqr(rings2_val[fn]) + EPS
+        rr = r - trunc((r + dx) / (2*dx))*2*dx + r*(1-dx)
+        nx = rr * sina
+        ny = rr * cosa
+        itx = itx + xf_vars[fn,28]*nx
+        ity = ity + xf_vars[fn,28]*ny
+      endif
+
+      if (xf_vars[fn,29]!=0.0) ; fan2
+        ;   r := sqrt(FTx^ * FTx^ + FTy^ * FTy^);
+        ;   if (FTx^ < -EPS) or (FTx^ > EPS) or (FTy^ < -EPS) or (FTy^ > EPS) then
+        ;      Angle := arctan2(FTx^, FTy^)
+        ;   else
+        ;     Angle := 0.0;
+        ;
+        ;   dy := FY;
+        ;   dx := PI * (sqr(FX) + EPS);
+        ;   dx2 := dx/2;
+        ;
+        ;   t := Angle+dy - System.Int((Angle + dy)/dx) * dx;
+        ;   if (t > dx2) then
+        ;     a := Angle - dx2
+        ;   else
+        ;     a := Angle + dx2;
+        ;
+        ;   FPx^ := FPx^ + vvar * r * sin(a);
+        ;   FPy^ := FPy^ + vvar * r * cos(a);
+
+        dy = fan2_y[fn]
+        dx = #pi*(fan2_x[fn]*fan2_x[fn] + EPS)
+        float dx2 = dx / 2.0
+        float ta = angle+dy - trunc((angle+dy)/dx) * dx
+        float gamma = angle + dx2
+        if ta > dx2
+           gamma = angle - dx2
+        endif
+        nx = r*sin(gamma)
+        ny = r*cos(gamma)
+        itx = itx + xf_vars[fn,29]*nx
+        ity = ity + xf_vars[fn,29]*ny
+      endif
+
+      if (xf_vars[fn,30]!=0.0) ; blob
+        ;   blob_waves := Round(2 + 5 * Random);
+        ;   blob_low  := 0.2 + 0.5 * random;
+        ;   FH      igh := 0.8 + 0.4 * random;
+        ;   r := sqr      t(FTx^ * FTx^ + FTy^ * FTy^);
+        ;   if (FTx^ < -EP      S) or (FTx^ > EPS) or (FTy^ < -EPS) or (FTy^ > EPS) then
+        ;      Angle := arctan2(FTx^, FTy^)
+        ;   else
+        ;     Angle := 0.0;
+        ;
+        ;   r := r * (FLow + (FHigh - FLow) * (0.5 + 0.5 * sin(blob_waves * Angle)));
+        ;
+        ;   FPx^ := FPx^ + vvar * r * sin(Angle);
+        ;   FPy^ := FPy^ + vvar * r * cos(Angle);
+        ; for blob variation
+        ;       seed = random(seed), float rd = abs(seed / #randomrange)
+        ;       blob_waves = round(2 + 5*rd)
+        ;       seed = random(seed), float rd = abs(seed / #randomrange)
+        ;       flow = 0.2 + 0.5*rd
+        ;       seed = random(seed), float rd = abs(seed / #randomrange)
+        ;       fhigh = 0.8 + 0.4*rd
+
+        float rr = r*(blob_low[fn] + (blob_high[fn]-blob_low[fn])*(0.5 + 0.5*sin(blob_waves[fn]*angle)))
+        itx = itx + xf_vars[fn,30]*rr*sina
+        ity = ity + xf_vars[fn,30]*rr*cosa
+      endif
+
+      if (xf_vars[fn,31]!=0.0) ; pdj
+        ;   FPx^ := FPx^ + vvar * (sin(FA * FTy^) - cos(FB * FTx^));
+        ;   FPy^ := FPy^ + vvar * (sin(FC * FTx^) - cos(FD * FTy^));
+
+        nx = real(sin(pdj_a[fn]*ty) - cos(pdj_b[fn]*tx))
+        ny = real(sin(pdj_c[fn]*tx) - cos(pdj_d[fn]*ty))
+        itx = itx + xf_vars[fn,31]*nx
+        ity = ity + xf_vars[fn,31]*ny
+      endif
+
+      if (xf_vars[fn,32]!=0.0) ; perspective
+;      procedure TVariationPerspective.Prepare;
+;      begin
+;        vsin := sin(angle*pi/2);
+;        vf := vvar * focus;
+;        vfcos := vf * cos(angle*pi/2);
+;      end;
+;
+;      procedure TVariationPerspective.CalcFunction;
+;      {$if false}
+;      var
+;      t: double;
+;      begin
+;        t := (focus - fty^*vsin);
+;        FPx^ := FPx^ + vf * ftx^ / t;
+;        FPy^ := FPy^ + vfcos * fty^ / t;
+
+        float api   = perspective_angle[fn]*#pi/2
+        float vsin  = sin(api)
+        float vf    = xf_vars[fn,32]*perspective_dist[fn]
+        float vfcos = vf*cos(api)
+        float tt    = perspective_dist[fn] - ty*vsin + EPS
+
+        itx = itx + vf*tx/tt
+        ity = ity + vfcos*ty/tt
+      endif
+
+      if (xf_vars[fn,33]!=0.0) ; julian
+      
+;     procedure TVariationJulian.Prepare;
+;     begin
+;       rN := abs(N);
+;       cn := c / N / 2;
+;     end;
+        float cn = julian_dist[fn]/julian_power[fn]
+;     sincos((arctan2(FTy^, FTx^) + 2*pi*random(rn)) / N, sina, cosa);
+;     r := vvar * Math.Power(sqr(FTx^) + sqr(FTy^), cn);
+;
+;     FPx^ := FPx^ + r * cosa;
+;     FPy^ := FPy^ + r * sina;
+        seed = random(seed), float rv = 2*#pi*round(abs(julian_power[fn]*seed/#randomrange))
+        rv = (a + rv)/(julian_power[fn] + EPS)
+        float sinv = sin(rv)
+        float cosv = cos(rv)
+        float rr   = xf_vars[fn,33]*(r^cn)
+        itx = itx + rr*cosv
+        ity = ity + rr*sinv
+      endif
+
+      if (xf_vars[fn,34]!=0.0) ; juliascope
+;     procedure TVariationJuliaScope.Prepare;
+;     begin
+;     rN := abs(N);
+;     cn := c / N / 2;
+;     end;
+        float rN = abs(juliascope_power[fn])
+        float cn = juliascope_dist[fn]/juliascope_power[fn]
+;  rnd := random(rN);
+;  if (rnd and 1) = 0 then
+;    sincos( (2*pi*rnd + arctan2(FTy^, FTx^)) / N, sina, cosa)
+;  else
+;    sincos( (2*pi*rnd - arctan2(FTy^, FTx^)) / N, sina, cosa);
+;  r := vvar * Math.Power(sqr(FTx^) + sqr(FTy^), cn);
+;  FPx^ := FPx^ + r * cosa;
+;  FPy^ := FPy^ + r * sina;
+        seed = random(seed), int rnd = round(rn*abs(seed/#randomrange))
+        float rv = 2*#pi*rnd
+        if ((rnd % 2) == 0)
+          rv = (rv + a)/juliascope_power[fn]
+        else
+          rv = (rv - a)/juliascope_power[fn]
+        endif
+        float sinv = sin(rv)
+        float cosv = cos(rv)
+        float rr   = xf_vars[fn,34]*(r^cn)
+        itx = itx + rr*cosv
+        ity = ity + rr*sinv
+      endif
+      
+      if (fn != finaltx)   ;Must be first iteration
+        iterbuf[0] = itx
+        iterbuf[1] = ity
+        iterbuf[2] = itc
+        fn = finaltx
+      endif
+      loopcount = loopcount - 1
+    endwhile
+
+
+    ; Bin the point if it's inside the image limits and past the fuse
+    if (it>=0)
+      ; generate the x and y location in the image      
+      xp = (itx-xc)
+      yp = (ity-yc)
+      
+      x = floor((xp*cosan - yp*sinan)*nuscale + wd2)
+      y = floor((xp*sinan + yp*cosan)*nuscale + ht2)
+                  
+      ; is this in our image?
+      if (x>=0 && x<wd && y>=0 && y<ht)
+        clr_index = round(itc * 256.0)
+        if (clr_index<0)
+         clr_index = 0
+        elseif (clr_index>255)
+          clr_index = 255
+        endif
+        
+        ; add the *color* to the accumulator
+        ; check for overflow later
+        pix[x,y,0] = pix[x,y,0] + scl_cmap[clr_index,0]
+        pix[x,y,1] = pix[x,y,1] + scl_cmap[clr_index,1]
+        pix[x,y,2] = pix[x,y,2] + scl_cmap[clr_index,2]
+        pix[x,y,3] = pix[x,y,3] + scl_cmap[clr_index,3]
+        
+      endif
+      
+    endif
+      
+    ; iterate some more
+    it = it + 1
+  endwhile
+  ; Now we do some log magic - calculate the 
+  ; "where did these come from" k1 and k2 values
+  float k1 = @contrast * @brightness * prefilter_white * 268.0 / 256.0
+  float area = #height * #width / (scale * scale * @oversample * @oversample)
+  float k2 = @oversample*@oversample / (@contrast * area * @white_level * @iter_density)
+  
+  ; loop through each pixel and perform log calculation
+  x = 0
+  float ls = 0, float lc[4]
+  while (x < wd)
+    y = 0
+    while (y < ht)
+      if (pix[x,y,3]>0)
+        ; we can break up this calculation as follows:
+        ; normalize each pixel's color by the number of iterations in the bucket * white_level
+        ; this puts each component (R,G,B,Accum) in the range (0-1),
+        ; and the last term is ALWAYS 1.0.
+        ; Now, for each pixel, we have (R,G,B,1.0), and we want to scale the 'Y'
+        ; component of this color by the log of the number of iterations.
+        ; 
+        ; contr*bright* prefilter_white * 268                    iters
+        ; ----------------------------------- * log (1.0 + ----------------)
+        ;                256                               contrast * nsamp
+        ;
+        ; the log term will be bounded by (0-.6931) for contrast values >= 1.0.
+        ; standard values for the first terms lead to
+        ;
+        ; 4288*(0-.6931) or 0-2972 values.  The range doesn't really matter, since
+        ; we re-normalize by prefilter white to give (0-2.902) range, then
+        
+        
+        ; brightness is a multiplier for the color.
+        
+        ; scale by the log of the number of occurrences
+        ls = k1 * log(1.0 + pix[x,y,3]*k2) / pix[x,y,3]
+        lc[0] = pix[x,y,0] * ls
+        lc[1] = pix[x,y,1] * ls
+        lc[2] = pix[x,y,2] * ls
+        lc[3] = pix[x,y,3] * ls
+
+        pix[x,y,0] = round(lc[0] + 0.5)
+        pix[x,y,1] = round(lc[1] + 0.5)
+        pix[x,y,2] = round(lc[2] + 0.5)
+        pix[x,y,3] = round(lc[3] + 0.5)
+      endif
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+  
+  ; precalculate a gamma term
+  float g = 1/@gamma
+  
+final:
+  
+  float fr, float fg, float fb, float fo
+  float t[4], float lgs
+  int xid, int yid
+  
+  t[0] = 0, t[1] = 0, t[2] = 0, t[3] = 0
+; apply the spatial filter, if necessary
+  int xadj, int yadj
+  int sfadj = gutter_width - floor((filter_width-1)/2)
+  int xcrd = #x*@oversample
+  int ycrd = #y*@oversample
+  bool inside = true
+  if (@applyMapping == true)
+      ; generate the x and y location in the image      
+      float dxx = (real(#pixel)-real(#center))
+      float dyy = (imag(#pixel)-imag(#center))
+      
+      xcrd = floor((transx + (dxx*cosan + dyy*sinan)*scale)*@oversample)
+      ycrd = floor((transy + (dxx*sinan - dyy*cosan)*scale)*@oversample)                 
+                              
+      ; is this in our image?
+      if (xcrd<0 || xcrd>=wd || ycrd<0 || ycrd>=ht)
+        inside = false
+      endif
+  endif
+  if (inside)
+    if (filter_width>0)
+      xid = 0 
+      while (xid<filter_width)
+        xadj = xid + sfadj
+        yid = 0
+        while (yid<filter_width)
+          yadj = yid + sfadj
+          t[0] = t[0] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,0]
+          t[1] = t[1] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,1]
+          t[2] = t[2] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,2]
+          t[3] = t[3] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,3]
+          yid = yid + 1
+        endwhile
+        xid = xid + 1
+      endwhile
+    else
+      ; average values from each of the @oversample^2 points.
+      xid = 0
+      int ov2 = round(@oversample*@oversample)
+      int myadj = gutter_width - round(@oversample/2)
+      while (xid<@oversample)
+        xadj = xid + myadj
+        yid = 0
+        while (yid<@oversample)
+          yadj = yid + myadj
+          t[0] = t[0] + pix[xcrd+xadj,ycrd+yadj,0]/ov2
+          t[1] = t[1] + pix[xcrd+xadj,ycrd+yadj,1]/ov2
+          t[2] = t[2] + pix[xcrd+xadj,ycrd+yadj,2]/ov2
+          t[3] = t[3] + pix[xcrd+xadj,ycrd+yadj,3]/ov2
+          yid = yid + 1
+        endwhile
+        xid = xid + 1
+      endwhile
+    endif
+    
+    float alpha = t[3]
+    if (alpha > 0.0)
+      lgs = ((alpha/prefilter_white)^(g-1))/prefilter_white
+      alpha = (alpha/prefilter_white)^g
+      if alpha<0.0
+        alpha = 0.0
+      elseif alpha>1.0
+        alpha = 1.0
+      endif
+    else
+      lgs = 0.0
+    endif
+    float invalp = 1.0-alpha
+  
+    ; perhaps we should spatial filter / anti-alias here, in color space,
+    ; instead of doing it in arbitrary space.
+  
+    fr = lgs * t[0]
+    fg = lgs * t[1]
+    fb = lgs * t[2]
+    fo = lgs * t[3]
+
+  
+    #color = rgba(fr,fg,fb,fo) + @bk_color*invalp
+  else
+    #color = @bk_color
+  endif
+  
+default:
+  
+  title = "Apophysis 2.04"
+  
+ ; Pretend this is a normal formula for Ultra Fractal 3, so you can
+ ; attempt to render it -- it will probably not work well!
+ ; May work OK for single flame layer, small image size.
+ ; render = false
+$IFDEF VER40
+ ; Set the render setting to false for Ultra Fractal 4 so it knows that this
+ ; is a flame fractal and has to be treated differently.
+ render = false
+$ENDIF
+
+  helpfile = "flame.chm"
+  
+  float param version
+    default = 2.03
+    visible = false
+  endparam
+
+  bool param normweights
+    caption = "Normalize Weights"
+    default = true
+    visible = true
+  endparam
+  
+  int param randomseed
+    caption = "Random Seed"
+    default = 1234567890
+  endparam
+
+  
+  bool param applyMapping
+    caption = "Apply Mapping"
+    default = true
+    visible = false
+  endparam
+  
+  float param percentInc
+    caption = "Oversize by (%)"
+    default = 0.0
+    visible = @applyMapping == true
+  endparam
+  
+  heading
+    caption = "Render Settings"
+  endheading
+
+  int param iter_density
+    caption = "Sample Density"
+    default = 35
+    min = 1
+    hint = "By default, the number of iterations run by the program \
+            is this value times the total number of pixels in the image. \
+            If the image appears spotty, increase this value."
+  endparam
+  
+  float param spat_filt_rad
+    caption = "Filter Radius"
+    default = 0.7
+    min = 0.0
+    hint = "This radius controls the amount of 'smearing' applied to the \
+            image.  It specifically controls the size of the gaussian \
+            kernel that is convolved with the image. Setting to 0.0 \
+            turns the filter off.  Try values around 0.3, with the \
+            spatial oversample set to 2 or 3 for nice results. "
+  endparam
+  
+  int param oversample
+    caption = "Oversample"
+    default = 3
+    min = 1
+    hint = "Increasing this parameter increases the number of iterations \
+            as well as the number of histogram bins, effectively allowing \
+            anti-aliasing to be performed.  A value of 2 increases the \
+            number of bins by 4x, 3 by 9x, etc."
+  endparam
+   
+  heading
+    caption = "Color Settings"
+  endheading  
+   
+  color param bk_color
+    caption = "Background Color"
+    default = rgba(0.25,0,0,1.0)
+  endparam
+  
+  float param contrast
+    caption = "Contrast"
+    default = 1.0
+    min = 1.0
+   endparam
+   
+  float param brightness
+    caption = "Brightness"
+    default = 4.0
+
+   endparam
+   
+  float param gamma
+    caption = "Gamma"
+    default = 2.0
+    min = 1.0
+  endparam
+   
+  int param white_level
+    caption = "White Level"
+    default = 250
+    min = 0
+    max = 255
+  endparam
+
+  heading
+    caption = "Transform Settings"
+  endheading
+
+  int param xforms
+    caption = "No. of Transforms"
+    default = 2
+    max = 12
+    min = 1
+  endparam
+
+  param visible_xform
+    caption = "Visible Parameters"
+    enum = "Transform 1"  \
+           "Transform 2"  \
+           "Transform 3"  \
+           "Transform 4"  \
+           "Transform 5"  \
+           "Transform 6"  \
+           "Transform 7"  \
+           "Transform 8"  \
+           "Transform 9"  \
+           "Transform 10" \
+           "Transform 11" \
+           "Transform 12"
+    default = 0
+  endparam
+  
+  bool param Enable_final
+    caption = "Enable final Xform"
+    default = false
+    visible = (@xforms > 2)
+  endparam
+
+  heading
+    caption = "Transform 1 Parameters"
+    visible = @visible_xform == 0
+  endheading
+    
+  heading
+    caption = "Transform 2 Parameters"
+    visible = @visible_xform == 1
+  endheading
+    
+  heading
+    caption = "Transform 3 Parameters"
+    visible = @visible_xform == 2
+  endheading
+    
+  heading
+    caption = "Transform 4 Parameters"
+    visible = @visible_xform == 3
+  endheading
+    
+  heading
+    caption = "Transform 5 Parameters"
+    visible = @visible_xform == 4
+  endheading
+    
+  heading
+    caption = "Transform 6 Parameters"
+    visible = @visible_xform == 5
+  endheading
+    
+  heading
+    caption = "Transform 7 Parameters"
+    visible = @visible_xform == 6
+  endheading
+    
+  heading
+    caption = "Transform 8 Parameters"
+    visible = @visible_xform == 7
+  endheading
+    
+  heading
+    caption = "Transform 9 Parameters"
+    visible = @visible_xform == 8
+  endheading
+    
+  heading
+    caption = "Transform 10 Parameters"
+    visible = @visible_xform == 9
+  endheading
+    
+  heading
+    caption = "Transform 11 Parameters"
+    visible = @visible_xform == 10
+  endheading
+    
+  heading
+    caption = "Transform 12 Parameters"
+    visible = @visible_xform == 11
+  endheading
+;
+; Variables which is common for all transformations:
+;
+     
+;  float xf_p[12]         ; probability of using this xf's coefs when iterating
+;  xf_p[0]  = @xf0_p
+;  xf_p[1]  = @xf1_p
+;  xf_p[2]  = @xf2_p
+;  xf_p[3]  = @xf3_p
+;  xf_p[4]  = @xf4_p
+;  xf_p[5]  = @xf5_p
+;  xf_p[6]  = @xf6_p
+;  xf_p[7]  = @xf7_p
+;  xf_p[8]  = @xf8_p
+;  xf_p[9]  = @xf9_p
+;  xf_p[10] = @xf10_p
+;  xf_p[11] = @xf11_p
+
+  float param xf0_p
+    caption = "Probability"
+    default = 0.626
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 0
+  endparam
+
+  float param xf1_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf2_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf3_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf4_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf5_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf6_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf7_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf8_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf9_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf10_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf11_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 11
+  endparam
+  
+;  float xf_color[12]           ; transformation color
+;  xf_color[0]  = @xf0_c
+;  xf_color[1]  = @xf1_c
+;  xf_color[2]  = @xf2_c
+;  xf_color[3]  = @xf3_c
+;  xf_color[4]  = @xf4_c
+;  xf_color[5]  = @xf5_c
+;  xf_color[6]  = @xf6_c
+;  xf_color[7]  = @xf7_c
+;  xf_color[8]  = @xf8_c
+;  xf_color[9]  = @xf9_c
+;  xf_color[10] = @xf10_c
+;  xf_color[11] = @xf11_c
+
+  float param xf0_c
+    caption = "Color"
+    default = 1.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 0
+  endparam  
+
+  float param xf1_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 1
+  endparam  
+
+  float param xf2_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 2
+  endparam  
+
+  float param xf3_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 3
+  endparam  
+
+  float param xf4_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 4
+  endparam  
+
+  float param xf5_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 5
+  endparam  
+
+  float param xf6_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 6
+  endparam  
+
+  float param xf7_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 7
+  endparam  
+
+  float param xf8_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 8
+  endparam  
+
+  float param xf9_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 9
+  endparam  
+
+  float param xf10_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 10
+  endparam  
+
+  float param xf11_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 11
+  endparam  
+
+;  float xf_sym[12]        ; amount of not blending transformation color
+;  xf_symmetry[0]  = @xf0_sym
+;  xf_symmetry[1]  = @xf1_sym
+;  xf_symmetry[2]  = @xf2_sym
+;  xf_symmetry[3]  = @xf3_sym
+;  xf_symmetry[4]  = @xf4_sym
+;  xf_symmetry[5]  = @xf5_sym
+;  xf_symmetry[6]  = @xf6_sym
+;  xf_symmetry[7]  = @xf7_sym
+;  xf_symmetry[8]  = @xf8_sym
+;  xf_symmetry[9]  = @xf9_sym
+;  xf_symmetry[10] = @xf10_sym
+;  xf_symmetry[11] = @xf11_sym
+  
+  float param xf0_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 0
+  endparam
+    
+  float param xf1_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 1
+  endparam
+    
+  float param xf2_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 2
+  endparam
+    
+  float param xf3_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 3
+  endparam
+    
+  float param xf4_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 4
+  endparam
+    
+  float param xf5_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 5
+  endparam
+    
+  float param xf6_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 6
+  endparam
+    
+  float param xf7_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 7
+  endparam 
+   
+  float param xf8_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 8
+  endparam
+    
+  float param xf9_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 9
+  endparam
+    
+  float param xf10_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 10
+  endparam
+    
+  float param xf11_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 11
+  endparam  
+
+;Transformation coefficients:
+;
+; Using the afine transformation:
+;
+;         |x'|    |a b|   |x|   |e|
+;         |  | =  |   | * | | + | |   (x,y) old coordinates (x',y') new coordinates
+;         |y'|    |c d|   |y|   |f|
+;         
+;         
+;  float xf_a[12]
+;  xf_a[0]  = @xf0_cfa
+;  xf_a[1]  = @xf1_cfa
+;  xf_a[2]  = @xf2_cfa
+;  xf_a[3]  = @xf3_cfa
+;  xf_a[4]  = @xf4_cfa
+;  xf_a[5]  = @xf5_cfa
+;  xf_a[6]  = @xf6_cfa
+;  xf_a[7]  = @xf7_cfa
+;  xf_a[8]  = @xf8_cfa
+;  xf_a[9]  = @xf9_cfa
+;  xf_a[10] = @xf10_cfa
+;  xf_a[11] = @xf11_cfa
+
+  float param xf0_cfa
+    caption = "Coeff. A"
+    default = 0.451142
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cfa
+    caption = "Coeff. A"
+    default = 0.494978
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cfa
+    caption = "Coeff. A"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam  
+  
+;  float xf_b[12]
+;  xf_b[0]  = @xf0_cfb
+;  xf_b[1]  = @xf1_cfb
+;  xf_b[2]  = @xf2_cfb
+;  xf_b[3]  = @xf3_cfb
+;  xf_b[4]  = @xf4_cfb
+;  xf_b[5]  = @xf5_cfb
+;  xf_b[6]  = @xf6_cfb
+;  xf_b[7]  = @xf7_cfb
+;  xf_b[8]  = @xf8_cfb
+;  xf_b[9]  = @xf9_cfb
+;  xf_b[10] = @xf10_cfb
+;  xf_b[11] = @xf11_cfb
+   
+  float param xf0_cfb
+    caption = "Coeff. B"
+    default = 0.717987
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cfb
+    caption = "Coeff. B"
+    default = -0.190466
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cfb
+    caption = "Coeff. B"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam  
+  
+;  float xf_c[12]
+;  xf_c[0]  = @xf0_cfc
+;  xf_c[1]  = @xf1_cfc
+;  xf_c[2]  = @xf2_cfc
+;  xf_c[3]  = @xf3_cfc
+;  xf_c[4]  = @xf4_cfc
+;  xf_c[5]  = @xf5_cfc
+;  xf_c[6]  = @xf6_cfc
+;  xf_c[7]  = @xf7_cfc
+;  xf_c[8]  = @xf8_cfc
+;  xf_c[9]  = @xf9_cfc
+;  xf_c[10] = @xf10_cfc
+;  xf_c[11] = @xf11_cfc
+   
+  float param xf0_cfc
+    caption = "Coeff. C"
+    default = 0.717987
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cfc
+    caption = "Coeff. C"
+    default = 0.277824
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cfc
+    caption = "Coeff. C"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam  
+  
+;  float xf_d[12]
+;  xf_d[0]  = @xf0_cfd
+;  xf_d[1]  = @xf1_cfd
+;  xf_d[2]  = @xf2_cfd
+;  xf_d[3]  = @xf3_cfd
+;  xf_d[4]  = @xf4_cfd
+;  xf_d[5]  = @xf5_cfd
+;  xf_d[6]  = @xf6_cfd
+;  xf_d[7]  = @xf7_cfd
+;  xf_d[8]  = @xf8_cfd
+;  xf_d[9]  = @xf9_cfd
+;  xf_d[10] = @xf10_cfd
+;  xf_d[11] = @xf11_cfd
+   
+  float param xf0_cfd
+    caption = "Coeff. D"
+    default = -0.451142
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cfd
+    caption = "Coeff. D"
+    default = 0.431233
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cfd
+    caption = "Coeff. D"
+    default = .0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cfd
+    caption = "Coeff. D"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam  
+  
+;  float xf_e[12]     ; x coordinate of triangle
+;  xf_e[0]  = @xf0_cfe
+;  xf_e[1]  = @xf1_cfe
+;  xf_e[2]  = @xf2_cfe
+;  xf_e[3]  = @xf3_cfe
+;  xf_e[4]  = @xf4_cfe
+;  xf_e[5]  = @xf5_cfe
+;  xf_e[6]  = @xf6_cfe
+;  xf_e[7]  = @xf7_cfe
+;  xf_e[8]  = @xf8_cfe
+;  xf_e[9]  = @xf9_cfe
+;  xf_e[10] = @xf10_cfe
+;  xf_e[11] = @xf11_cfe
+   
+  float param xf0_cfe
+    caption = "Coeff. E"
+    default = 1.3
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cfe
+    caption = "Coeff. E"
+    default = -1.85
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cfe
+    caption = "Coeff. E"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam  
+  
+ ; float xf_f[12]    ; y coordinate of triangle
+ ; xf_f[0]  = @xf0_cff
+ ; xf_f[1]  = @xf1_cff
+ ; xf_f[2]  = @xf2_cff
+ ; xf_f[3]  = @xf3_cff
+ ; xf_f[4]  = @xf4_cff
+ ; xf_f[5]  = @xf5_cff
+ ; xf_f[6]  = @xf6_cff
+ ; xf_f[7]  = @xf7_cff
+ ; xf_f[8]  = @xf8_cff
+ ; xf_f[9]  = @xf9_cff
+ ; xf_f[10] = @xf10_cff
+ ; xf_f[11] = @xf11_cff
+   
+  float param xf0_cff
+    caption = "Coeff. F"
+    default = -0.758876
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_cff
+    caption = "Coeff. F"
+    default = -0.375898
+    visible = @visible_xform == 1
+  endparam  
+   
+  float param xf2_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam  
+   
+  float param xf3_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam  
+   
+  float param xf4_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam  
+   
+  float param xf5_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam  
+   
+  float param xf6_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam  
+   
+  float param xf7_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam  
+   
+  float param xf8_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam  
+   
+  float param xf9_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam  
+   
+  float param xf10_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam  
+   
+  float param xf11_cff
+    caption = "Coeff. F"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam  
+  
+
+;
+;   Parameters which defends both of transformation and variations
+; 
+
+    
+  heading
+    caption = "Transform 1 Variations"
+    visible = @visible_xform == 0
+  endheading
+    
+  heading
+    caption = "Transform 2 Variations"
+    visible = @visible_xform == 1
+  endheading
+    
+  heading
+    caption = "Transform 3 Variations"
+    visible = @visible_xform == 2
+  endheading
+    
+  heading
+    caption = "Transform 4 Variations"
+    visible = @visible_xform == 3
+  endheading
+    
+  heading
+    caption = "Transform 5 Variations"
+    visible = @visible_xform == 4
+  endheading
+    
+  heading
+    caption = "Transform 6 Variations"
+    visible = @visible_xform == 5
+  endheading
+    
+  heading
+    caption = "Transform 7 Variations"
+    visible = @visible_xform == 6
+  endheading
+    
+  heading
+    caption = "Transform 8 Variations"
+    visible = @visible_xform == 7
+  endheading
+    
+  heading
+    caption = "Transform 9 Variations"
+    visible = @visible_xform == 8
+  endheading
+    
+  heading
+    caption = "Transform 10 Variations"
+    visible = @visible_xform == 9
+  endheading
+    
+  heading
+    caption = "Transform 11 Variations"
+    visible = @visible_xform == 10
+  endheading
+    
+  heading
+    caption = "Transform 12 Variations"
+    visible = @visible_xform == 11
+  endheading
+    
+;   int linear=0
+;  variation = 0
+;  xf_vars[0,variation]  = @xf0_var0
+;  xf_vars[1,variation]  = @xf1_var0
+;  xf_vars[2,variation]  = @xf2_var0
+;  xf_vars[3,variation]  = @xf3_var0
+;  xf_vars[4,variation]  = @xf4_var0
+;  xf_vars[5,variation]  = @xf5_var0
+;  xf_vars[6,variation]  = @xf6_var0
+;  xf_vars[7,variation]  = @xf7_var0
+;  xf_vars[8,variation]  = @xf8_var0
+;  xf_vars[9,variation]  = @xf9_var0
+;  xf_vars[10,variation] = @xf10_var0
+;  xf_vars[11,variation] = @xf11_var0
+   
+  float param xf0_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var0
+    caption = "Linear"
+    default = 0.83
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var0
+    caption = "Linear"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int sinusoidal=1
+;  variation = 1
+;  xf_vars[0,variation]  = @xf0_var1
+;  xf_vars[1,variation]  = @xf1_var1
+;  xf_vars[2,variation]  = @xf2_var1
+;  xf_vars[3,variation]  = @xf3_var1
+;  xf_vars[4,variation]  = @xf4_var1
+;  xf_vars[5,variation]  = @xf5_var1
+;  xf_vars[6,variation]  = @xf6_var1
+;  xf_vars[7,variation]  = @xf7_var1
+;  xf_vars[8,variation]  = @xf8_var1
+;  xf_vars[9,variation]  = @xf9_var1
+;  xf_vars[10,variation] = @xf10_var1
+;  xf_vars[11,variation] = @xf11_var1
+   
+  float param xf0_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int spherical=2
+; variation = 2
+;  xf_vars[0,variation]  = @xf0_var2
+;  xf_vars[1,variation]  = @xf1_var2
+;  xf_vars[2,variation]  = @xf2_var2
+;  xf_vars[3,variation]  = @xf3_var2
+;  xf_vars[4,variation]  = @xf4_var2
+;  xf_vars[5,variation]  = @xf5_var2
+;  xf_vars[6,variation]  = @xf6_var2
+;  xf_vars[7,variation]  = @xf7_var2
+;  xf_vars[8,variation]  = @xf8_var2
+;  xf_vars[9,variation]  = @xf9_var2
+;  xf_vars[10,variation] = @xf10_var2
+;  xf_vars[11,variation] = @xf11_var2
+   
+  float param xf0_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var2
+    caption = "Spherical"
+    default = 0.17
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+
+;   int swirl=3
+;  variation = 3
+;  xf_vars[0,variation]  = @xf0_var3
+;  xf_vars[1,variation]  = @xf1_var3
+;  xf_vars[2,variation]  = @xf2_var3
+;  xf_vars[3,variation]  = @xf3_var3
+;  xf_vars[4,variation]  = @xf4_var3
+;  xf_vars[5,variation]  = @xf5_var3
+;  xf_vars[6,variation]  = @xf6_var3
+;  xf_vars[7,variation]  = @xf7_var3
+;  xf_vars[8,variation]  = @xf8_var3
+;  xf_vars[9,variation]  = @xf9_var3
+;  xf_vars[10,variation] = @xf10_var3
+;  xf_vars[11,variation] = @xf11_var3
+   
+  float param xf0_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+
+;   int horseshoe=4
+;  variation = 4
+;  xf_vars[0,variation]  = @xf0_var4
+;  xf_vars[1,variation]  = @xf1_var4
+;  xf_vars[2,variation]  = @xf2_var4
+;  xf_vars[3,variation]  = @xf3_var4
+;  xf_vars[4,variation]  = @xf4_var4
+;  xf_vars[5,variation]  = @xf5_var4
+;  xf_vars[6,variation]  = @xf6_var4
+;  xf_vars[7,variation]  = @xf7_var4
+;  xf_vars[8,variation]  = @xf8_var4
+;  xf_vars[9,variation]  = @xf9_var4
+;  xf_vars[10,variation] = @xf10_var4
+;  xf_vars[11,variation] = @xf11_var4
+   
+  float param xf0_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int polar=5
+;  variation = 5
+;  xf_vars[0,variation]  = @xf0_var5
+;  xf_vars[1,variation]  = @xf1_var5
+;  xf_vars[2,variation]  = @xf2_var5
+;  xf_vars[3,variation]  = @xf3_var5
+;  xf_vars[4,variation]  = @xf4_var5
+;  xf_vars[5,variation]  = @xf5_var5
+;  xf_vars[6,variation]  = @xf6_var5
+;  xf_vars[7,variation]  = @xf7_var5
+;  xf_vars[8,variation]  = @xf8_var5
+;  xf_vars[9,variation]  = @xf9_var5
+;  xf_vars[10,variation] = @xf10_var5
+;  xf_vars[11,variation] = @xf11_var5
+   
+  float param xf0_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int handkerchief=6
+;  variation = 6
+;  xf_vars[0,variation]  = @xf0_var6
+;  xf_vars[1,variation]  = @xf1_var6
+;  xf_vars[2,variation]  = @xf2_var6
+;  xf_vars[3,variation]  = @xf3_var6
+;  xf_vars[4,variation]  = @xf4_var6
+;  xf_vars[5,variation]  = @xf5_var6
+;  xf_vars[6,variation]  = @xf6_var6
+;  xf_vars[7,variation]  = @xf7_var6
+;  xf_vars[8,variation]  = @xf8_var6
+;  xf_vars[9,variation]  = @xf9_var6
+;  xf_vars[10,variation] = @xf10_var6
+;  xf_vars[11,variation] = @xf11_var6
+   
+  float param xf0_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int heart=7
+;  variation = 7
+;  xf_vars[0,variation]  = @xf0_var7
+;  xf_vars[1,variation]  = @xf1_var7
+;  xf_vars[2,variation]  = @xf2_var7
+;  xf_vars[3,variation]  = @xf3_var7
+;  xf_vars[4,variation]  = @xf4_var7
+;  xf_vars[5,variation]  = @xf5_var7
+;  xf_vars[6,variation]  = @xf6_var7
+;  xf_vars[7,variation]  = @xf7_var7
+;  xf_vars[8,variation]  = @xf8_var7
+;  xf_vars[9,variation]  = @xf9_var7
+;  xf_vars[10,variation] = @xf10_var7
+;  xf_vars[11,variation] = @xf11_var7
+   
+  float param xf0_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int disc=8
+;  variation = 8
+;  xf_vars[0,variation]  = @xf0_var8
+;  xf_vars[1,variation]  = @xf1_var8
+;  xf_vars[2,variation]  = @xf2_var8
+;  xf_vars[3,variation]  = @xf3_var8
+;  xf_vars[4,variation]  = @xf4_var8
+;  xf_vars[5,variation]  = @xf5_var8
+;  xf_vars[6,variation]  = @xf6_var8
+;  xf_vars[7,variation]  = @xf7_var8
+;  xf_vars[8,variation]  = @xf8_var8
+;  xf_vars[9,variation]  = @xf9_var8
+;  xf_vars[10,variation] = @xf10_var8
+;  xf_vars[11,variation] = @xf11_var8
+   
+  float param xf0_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int spiral=9
+;  variation = 9
+;  xf_vars[0,variation]  = @xf0_var9
+;  xf_vars[1,variation]  = @xf1_var9
+;  xf_vars[2,variation]  = @xf2_var9
+;  xf_vars[3,variation]  = @xf3_var9
+;  xf_vars[4,variation]  = @xf4_var9
+;  xf_vars[5,variation]  = @xf5_var9
+;  xf_vars[6,variation]  = @xf6_var9
+;  xf_vars[7,variation]  = @xf7_var9
+;  xf_vars[8,variation]  = @xf8_var9
+;  xf_vars[9,variation]  = @xf9_var9
+;  xf_vars[10,variation] = @xf10_var9
+;  xf_vars[11,variation] = @xf11_var9
+   
+  float param xf0_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int hyperbolic=10
+;  variation = 10
+;  xf_vars[0,variation]  = @xf0_var10
+;  xf_vars[1,variation]  = @xf1_var10
+;  xf_vars[2,variation]  = @xf2_var10
+;  xf_vars[3,variation]  = @xf3_var10
+;  xf_vars[4,variation]  = @xf4_var10
+;  xf_vars[5,variation]  = @xf5_var10
+;  xf_vars[6,variation]  = @xf6_var10
+;  xf_vars[7,variation]  = @xf7_var10
+;  xf_vars[8,variation]  = @xf8_var10
+;  xf_vars[9,variation]  = @xf9_var10
+;  xf_vars[10,variation] = @xf10_var10
+;  xf_vars[11,variation] = @xf11_var10
+   
+  float param xf0_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int diamond=11
+;  variation = 11
+;  xf_vars[0,variation]  = @xf0_var11
+;  xf_vars[1,variation]  = @xf1_var11
+;  xf_vars[2,variation]  = @xf2_var11
+;  xf_vars[3,variation]  = @xf3_var11
+;  xf_vars[4,variation]  = @xf4_var11
+;  xf_vars[5,variation]  = @xf5_var11
+;  xf_vars[6,variation]  = @xf6_var11
+;  xf_vars[7,variation]  = @xf7_var11
+;  xf_vars[8,variation]  = @xf8_var11
+;  xf_vars[9,variation]  = @xf9_var11
+;  xf_vars[10,variation] = @xf10_var11
+;  xf_vars[11,variation] = @xf11_var11
+   
+  float param xf0_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+
+;   int ex=12
+;  variation = 12
+;  xf_vars[0,variation]  = @xf0_var12
+;  xf_vars[1,variation]  = @xf1_var12
+;  xf_vars[2,variation]  = @xf2_var12
+;  xf_vars[3,variation]  = @xf3_var12
+;  xf_vars[4,variation]  = @xf4_var12
+;  xf_vars[5,variation]  = @xf5_var12
+;  xf_vars[6,variation]  = @xf6_var12
+;  xf_vars[7,variation]  = @xf7_var12
+;  xf_vars[8,variation]  = @xf8_var12
+;  xf_vars[9,variation]  = @xf9_var12
+;  xf_vars[10,variation] = @xf10_var12
+;  xf_vars[11,variation] = @xf11_var12
+   
+  float param xf0_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int julia=13
+;  variation = 13
+;  xf_vars[0,variation]  = @xf0_var13
+;  xf_vars[1,variation]  = @xf1_var13
+;  xf_vars[2,variation]  = @xf2_var13
+;  xf_vars[3,variation]  = @xf3_var13
+;  xf_vars[4,variation]  = @xf4_var13
+;  xf_vars[5,variation]  = @xf5_var13
+;  xf_vars[6,variation]  = @xf6_var13
+;  xf_vars[7,variation]  = @xf7_var13
+;  xf_vars[8,variation]  = @xf8_var13
+;  xf_vars[9,variation]  = @xf9_var13
+;  xf_vars[10,variation] = @xf10_var13
+;  xf_vars[11,variation] = @xf11_var13
+   
+  float param xf0_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int bent=14
+;  variation = 14
+;  xf_vars[0,variation]  = @xf0_var14
+;  xf_vars[1,variation]  = @xf1_var14
+;  xf_vars[2,variation]  = @xf2_var14
+;  xf_vars[3,variation]  = @xf3_var14
+;  xf_vars[4,variation]  = @xf4_var14
+;  xf_vars[5,variation]  = @xf5_var14
+;  xf_vars[6,variation]  = @xf6_var14
+;  xf_vars[7,variation]  = @xf7_var14
+;  xf_vars[8,variation]  = @xf8_var14
+;  xf_vars[9,variation]  = @xf9_var14
+;  xf_vars[10,variation] = @xf10_var14
+;  xf_vars[11,variation] = @xf11_var14
+   
+  float param xf0_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+
+;   int waves=15
+;  variation = 15
+;  xf_vars[0,variation]  = @xf0_var15
+;  xf_vars[1,variation]  = @xf1_var15
+;  xf_vars[2,variation]  = @xf2_var15
+;  xf_vars[3,variation]  = @xf3_var15
+;  xf_vars[4,variation]  = @xf4_var15
+;  xf_vars[5,variation]  = @xf5_var15
+;  xf_vars[6,variation]  = @xf6_var15
+;  xf_vars[7,variation]  = @xf7_var15
+;  xf_vars[8,variation]  = @xf8_var15
+;  xfo_vars[9,variation]  = @xf9_var15
+;  xf_vars[10,variation] = @xf10_var15
+;  xf_vars[11,variation] = @xf11_var15
+   
+  float param xf0_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int fisheye=16
+;  variation = 16
+;  xf_vars[0,variation]  = @xf0_var16
+;  xf_vars[1,variation]  = @xf1_var16
+;  xf_vars[2,variation]  = @xf2_var16
+;  xf_vars[3,variation]  = @xf3_var16
+;  xf_vars[4,variation]  = @xf4_var16
+;  xf_vars[5,variation]  = @xf5_var16
+;  xf_vars[6,variation]  = @xf6_var16
+;  xf_vars[7,variation]  = @xf7_var16
+;  xf_vars[8,variation]  = @xf8_var16
+;  xf_vars[9,variation]  = @xf9_var16
+;  xf_vars[10,variation] = @xf10_var16
+;  xf_vars[11,variation] = @xf11_var16
+   
+  float param xf0_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int popcorn=17
+;  variation = 17
+;  xf_vars[0,variation]  = @xf0_var17
+;  xf_vars[1,variation]  = @xf1_var17
+;  xf_vars[2,variation]  = @xf2_var17
+;  xf_vars[3,variation]  = @xf3_var17
+;  xf_vars[4,variation]  = @xf4_var17
+;  xf_vars[5,variation]  = @xf5_var17
+;  xf_vars[6,variation]  = @xf6_var17
+;  xf_vars[7,variation]  = @xf7_var17
+;  xf_vars[8,variation]  = @xf8_var17
+;  xf_vars[9,variation]  = @xf9_var17
+;  xf_vars[10,variation] = @xf10_var17
+;  xf_vars[11,variation] = @xf11_var17
+   
+  float param xf0_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int exponential=18
+;  variation = 18
+;  xf_vars[0,variation]  = @xf0_var18
+;  xf_vars[1,variation]  = @xf1_var18
+;  xf_vars[2,variation]  = @xf2_var18
+;  xf_vars[3,variation]  = @xf3_var18
+;  xf_vars[4,variation]  = @xf4_var18
+;  xf_vars[5,variation]  = @xf5_var18
+;  xf_vars[6,variation]  = @xf6_var18
+;  xf_vars[7,variation]  = @xf7_var18
+;  xf_vars[8,variation]  = @xf8_var18
+;  xf_vars[9,variation]  = @xf9_var18
+;  xf_vars[10,variation] = @xf10_var18
+;  xf_vars[11,variation] = @xf11_var18
+   
+  float param xf0_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int power=19
+;  variation = 19
+;  xf_vars[0,variation]  = @xf0_var19
+;  xf_vars[1,variation]  = @xf1_var19
+;  xf_vars[2,variation]  = @xf2_var19
+;  xf_vars[3,variation]  = @xf3_var19
+;  xf_vars[4,variation]  = @xf4_var19
+;  xf_vars[5,variation]  = @xf5_var19
+;  xf_vars[6,variation]  = @xf6_var19
+;  xf_vars[7,variation]  = @xf7_var19
+;  xf_vars[8,variation]  = @xf8_var19
+;  xf_vars[9,variation]  = @xf9_var19
+;  xf_vars[10,variation] = @xf10_var19
+;  xf_vars[11,variation] = @xf11_var19
+   
+  float param xf0_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var19
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var19
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var19
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int cosine=20
+;  variation = 20
+;  xf_vars[0,variation]  = @xf0_var20
+;  xf_vars[1,variation]  = @xf1_var20
+;  xf_vars[2,variation]  = @xf2_var20
+;  xf_vars[3,variation]  = @xf3_var20
+;  xf_vars[4,variation]  = @xf4_var20
+;  xf_vars[5,variation]  = @xf5_var20
+;  xf_vars[6,variation]  = @xf6_var20
+;  xf_vars[7,variation]  = @xf7_var20
+;  xf_vars[8,variation]  = @xf8_var20
+;  xf_vars[9,variation]  = @xf9_var20
+;  xf_vars[10,variation] = @xf10_var20
+;  xf_vars[11,variation] = @xf11_var20
+   
+  float param xf0_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int rings=21
+;  variation = 21
+;  xf_vars[0,variation]  = @xf0_var21
+;  xf_vars[1,variation]  = @xf1_var21
+;  xf_vars[2,variation]  = @xf2_var21
+;  xf_vars[3,variation]  = @xf3_var21
+;  xf_vars[4,variation]  = @xf4_var21
+;  xf_vars[5,variation]  = @xf5_var21
+;  xf_vars[6,variation]  = @xf6_var21
+;  xf_vars[7,variation]  = @xf7_var21
+;  xf_vars[8,variation]  = @xf8_var21
+;  xf_vars[9,variation]  = @xf9_var21
+;  xf_vars[10,variation] = @xf10_var21
+;  xf_vars[11,variation] = @xf11_var21
+   
+  float param xf0_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int fan=22
+;  variation = 22
+;  xf_vars[0,variation]  = @xf0_var22
+;  xf_vars[1,variation]  = @xf1_var22
+;  xf_vars[2,variation]  = @xf2_var22
+;  xf_vars[3,variation]  = @xf3_var22
+;  xf_vars[4,variation]  = @xf4_var22
+;  xf_vars[5,variation]  = @xf5_var22
+;  xf_vars[6,variation]  = @xf6_var22
+;  xf_vars[7,variation]  = @xf7_var22
+;  xf_vars[8,variation]  = @xf8_var22
+;  xf_vars[9,variation]  = @xf9_var22
+;  xf_vars[10,variation] = @xf10_var22
+;  xf_vars[11,variation] = @xf11_var22
+  
+  float param xf0_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int eyfish=23
+;  variation = 23
+;  xf_vars[0,variation]  = @xf0_var23
+;  xf_vars[1,variation]  = @xf1_var23
+;  xf_vars[2,variation]  = @xf2_var23
+;  xf_vars[3,variation]  = @xf3_var23
+;  xf_vars[4,variation]  = @xf4_var23
+;  xf_vars[5,variation]  = @xf5_var23
+;  xf_vars[6,variation]  = @xf6_var23
+;  xf_vars[7,variation]  = @xf7_var23
+;  xf_vars[8,variation]  = @xf8_var23
+;  xf_vars[9,variation]  = @xf9_var23
+;  xf_vars[10,variation] = @xf10_var23
+;  xf_vars[11,variation] = @xf11_var23
+  
+  float param xf0_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var23
+    caption = "Eyfish"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int bubble=24
+;  variation = 24
+;  xf_vars[0,variation]  = @xf0_var24
+;  xf_vars[1,variation]  = @xf1_var24
+;  xf_vars[2,variation]  = @xf2_var24
+;  xf_vars[3,variation]  = @xf3_var24
+;  xf_vars[4,variation]  = @xf4_var24
+;  xf_vars[5,variation]  = @xf5_var24
+;  xf_vars[6,variation]  = @xf6_var24
+;  xf_vars[7,variation]  = @xf7_var24
+;  xf_vars[8,variation]  = @xf8_var24
+;  xf_vars[9,variation]  = @xf9_var24
+;  xf_vars[10,variation] = @xf10_var24
+;  xf_vars[11,variation] = @xf11_var24
+  
+  float param xf0_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var24
+    caption = "Bubble"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int cylinder=25
+;  variation = 25
+;  xf_vars[0,variation]  = @xf0_var25
+;  xf_vars[1,variation]  = @xf1_var25
+;  xf_vars[2,variation]  = @xf2_var25
+;  xf_vars[3,variation]  = @xf3_var25
+;  xf_vars[4,variation]  = @xf4_var25
+;  xf_vars[5,variation]  = @xf5_var25
+;  xf_vars[6,variation]  = @xf6_var25
+;  xf_vars[7,variation]  = @xf7_var25
+;  xf_vars[8,variation]  = @xf8_var25
+;  xf_vars[9,variation]  = @xf9_var25
+;  xf_vars[10,variation] = @xf10_var25
+;  xf_vars[11,variation] = @xf11_var25
+  
+  float param xf0_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var25
+    caption = "Cylinder"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int noise=26
+;  variation = 26
+;  xf_vars[0,variation]  = @xf0_var26
+;  xf_vars[1,variation]  = @xf1_var26
+;  xf_vars[2,variation]  = @xf2_var26
+;  xf_vars[3,variation]  = @xf3_var26
+;  xf_vars[4,variation]  = @xf4_var26
+;  xf_vars[5,variation]  = @xf5_var26
+;  xf_vars[6,variation]  = @xf6_var26
+;  xf_vars[7,variation]  = @xf7_var26
+;  xf_vars[8,variation]  = @xf8_var26
+;  xf_vars[9,variation]  = @xf9_var26
+;  xf_vars[10,variation] = @xf10_var26
+;  xf_vars[11,variation] = @xf11_var26
+  
+  float param xf0_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var26
+    caption = "Noise"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf0_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 0
+  endparam
+
+  float param xf1_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf2_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf3_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf4_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf5_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf6_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf7_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf8_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf9_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf10_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf11_noise_power
+    caption = "     Noise_power"
+    default = 1
+    visible = @visible_xform == 11
+  endparam
+  
+;   int blur=27
+;  variation = 27
+;  xf_vars[0,variation]  = @xf0_var27
+;  xf_vars[1,variation]  = @xf1_var27
+;  xf_vars[2,variation]  = @xf2_var27
+;  xf_vars[3,variation]  = @xf3_var27
+;  xf_vars[4,variation]  = @xf4_var27
+;  xf_vars[5,variation]  = @xf5_var27
+;  xf_vars[6,variation]  = @xf6_var27
+;  xf_vars[7,variation]  = @xf7_var27
+;  xf_vars[8,variation]  = @xf8_var27
+;  xf_vars[9,variation]  = @xf9_var27
+;  xf_vars[10,variation] = @xf10_var27
+;  xf_vars[11,variation] = @xf11_var27
+  
+  float param xf0_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var27
+    caption = "Blur"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  
+
+
+
+  float param xf0_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 0
+  endparam
+
+  float param xf1_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf2_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf3_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf4_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf5_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf6_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf7_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf8_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf9_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf10_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf11_blur_power
+    caption = "     Blur_power"
+    default = 1
+    visible = @visible_xform == 11
+  endparam
+
+
+;   int rings2=28       ; rings2_val="1.33559057302773"
+;  variation = 28
+;  xf_vars[0,variation]  = @xf0_var28
+;  xf_vars[1,variation]  = @xf1_var28
+;  xf_vars[2,variation]  = @xf2_var28
+;  xf_vars[3,variation]  = @xf3_var28
+;  xf_vars[4,variation]  = @xf4_var28
+;  xf_vars[5,variation]  = @xf5_var28
+;  xf_vars[6,variation]  = @xf6_var28
+;  xf_vars[7,variation]  = @xf7_var28
+;  xf_vars[8,variation]  = @xf8_var28
+;  xf_vars[9,variation]  = @xf9_var28
+;  xf_vars[10,variation] = @xf10_var28
+;  xf_vars[11,variation] = @xf11_var28
+  
+  float param xf0_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var28
+    caption = "Rings2"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+ ; float rings2_val[12]
+ ; rings2_val[0]  = @xf0_rings2_val
+ ; rings2_val[1]  = @xf1_rings2_val
+ ; rings2_val[2]  = @xf2_rings2_val
+ ; rings2_val[3]  = @xf3_rings2_val
+ ; rings2_val[4]  = @xf4_rings2_val
+ ; rings2_val[5]  = @xf5_rings2_val
+ ; rings2_val[6]  = @xf6_rings2_val
+ ; rings2_val[7]  = @xf7_rings2_val
+ ; rings2_val[8]  = @xf8_rings2_val
+ ; rings2_val[9]  = @xf9_rings2_val
+ ; rings2_val[10] = @xf10_rings2_val
+ ; rings2_val[11] = @xf11_rings2_val
+  
+  float param xf0_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_rings2_val
+    caption = "     Rings2_val"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;   int fan2=29         ; fan2_x="0.314948181156069"
+                        ; fan2_y="-0.831819514743984"
+;  variation = 29
+;  xf_vars[0,variation]  = @xf0_var29
+;  xf_vars[1,variation]  = @xf1_var29
+;  xf_vars[2,variation]  = @xf2_var29
+;  xf_vars[3,variation]  = @xf3_var29
+;  xf_vars[4,variation]  = @xf4_var29
+;  xf_vars[5,variation]  = @xf5_var29
+;  xf_vars[6,variation]  = @xf6_var29
+;  xf_vars[7,variation]  = @xf7_var29
+;  xf_vars[8,variation]  = @xf8_var29
+;  xf_vars[9,variation]  = @xf9_var29
+;  xf_vars[10,variation] = @xf10_var29
+;  xf_vars[11,variation] = @xf11_var29
+ 
+  float param xf0_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var29
+    caption = "Fan2"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;  float fan2_x[12]
+;  fan2_x[0]  = @xf0_fan2_x
+;  fan2_x[1]  = @xf1_fan2_x
+;  fan2_x[2]  = @xf2_fan2_x
+;  fan2_x[3]  = @xf3_fan2_x
+;  fan2_x[4]  = @xf4_fan2_x
+;  fan2_x[5]  = @xf5_fan2_x
+;  fan2_x[6]  = @xf6_fan2_x
+;  fan2_x[7]  = @xf7_fan2_x
+;  fan2_x[8]  = @xf8_fan2_x
+;  fan2_x[9]  = @xf9_fan2_x
+;  fan2_x[10] = @xf10_fan2_x
+;  fan2_x[11] = @xf11_fan2_x
+ 
+  float param xf0_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_fan2_x
+    caption = "     Fan2_x"
+    default = 0.314948181156069
+    visible = @visible_xform == 11
+  endparam
+
+;  float fan2_y[12]
+;  fan2_y[0]  = @xf0_fan2_y
+;  fan2_y[1]  = @xf1_fan2_y
+;  fan2_y[2]  = @xf2_fan2_y
+;  fan2_y[3]  = @xf3_fan2_y
+;  fan2_y[4]  = @xf4_fan2_y
+;  fan2_y[5]  = @xf5_fan2_y
+;  fan2_y[6]  = @xf6_fan2_y
+;  fan2_y[7]  = @xf7_fan2_y
+;  fan2_y[8]  = @xf8_fan2_y
+;  fan2_y[9]  = @xf9_fan2_y
+;  fan2_y[10] = @xf10_fan2_y
+;  fan2_y[11] = @xf11_fan2_y
+ 
+  float param xf0_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_fan2_y
+    caption = "     Fan2_y"
+    default = -0.831819514743984
+    visible = @visible_xform == 11
+  endparam
+ 
+;   int blob=30         ; blob_low="0.575599149614572"
+                        ; blob_high="1.00113011905923"
+                        ; blob_waves="6"
+;  variation = 30
+;  xf_vars[0,variation]  = @xf0_var30
+;  xf_vars[1,variation]  = @xf1_var30
+;  xf_vars[2,variation]  = @xf2_var30
+;  xf_vars[3,variation]  = @xf3_var30
+;  xf_vars[4,variation]  = @xf4_var30
+;  xf_vars[5,variation]  = @xf5_var30
+;  xf_vars[6,variation]  = @xf6_var30
+;  xf_vars[7,variation]  = @xf7_var30
+;  xf_vars[8,variation]  = @xf8_var30
+;  xf_vars[9,variation]  = @xf9_var30
+;  xf_vars[10,variation] = @xf10_var30
+;  xf_vars[11,variation] = @xf11_var30
+ 
+  float param xf0_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var30
+    caption = "Blob"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;  float blob_low[12]
+;  blob_low[0]  = @xf0_blob_low
+;  blob_low[1]  = @xf1_blob_low
+;  blob_low[2]  = @xf2_blob_low
+;  blob_low[3]  = @xf3_blob_low
+;  blob_low[4]  = @xf4_blob_low
+;  blob_low[5]  = @xf5_blob_low
+;  blob_low[6]  = @xf6_blob_low
+;  blob_low[7]  = @xf7_blob_low
+;  blob_low[8]  = @xf8_blob_low
+;  blob_low[9]  = @xf9_blob_low
+;  blob_low[10] = @xf10_blob_low
+;  blob_low[11] = @xf11_blob_low
+ 
+  float param xf0_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_blob_low
+    caption = "     Blob_low"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+;  float blob_high[12]
+;  blob_high[0]  = @xf0_blob_high
+;  blob_high[1]  = @xf1_blob_high
+;  blob_high[2]  = @xf2_blob_high
+;  blob_high[3]  = @xf3_blob_high
+;  blob_high[4]  = @xf4_blob_high
+;  blob_high[5]  = @xf5_blob_high
+;  blob_high[6]  = @xf6_blob_high
+;  blob_high[7]  = @xf7_blob_high
+;  blob_high[8]  = @xf8_blob_high
+;  blob_high[9]  = @xf9_blob_high
+;  blob_high[10] = @xf10_blob_high
+;  blob_high[11] = @xf11_blob_high
+
+  float param xf0_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_blob_high
+    caption = "     Blob_high"
+    default = 1.1
+    visible = @visible_xform == 11
+  endparam
+
+ ; float blob_waves[12]
+ ; blob_waves[0]  = @xf0_blob_waves
+ ; blob_waves[1]  = @xf1_blob_waves
+ ; blob_waves[2]  = @xf2_blob_waves
+ ; blob_waves[3]  = @xf3_blob_waves
+ ; blob_waves[4]  = @xf4_blob_waves
+ ; blob_waves[5]  = @xf5_blob_waves
+ ; blob_waves[6]  = @xf6_blob_waves
+ ; blob_waves[7]  = @xf7_blob_waves
+ ; blob_waves[8]  = @xf8_blob_waves
+ ; blob_waves[9]  = @xf9_blob_waves
+ ; blob_waves[10] = @xf10_blob_waves
+ ; blob_waves[11] = @xf11_blob_waves
+
+  float param xf0_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_blob_waves
+    caption = "     Blob_waves"
+    default = 5
+    visible = @visible_xform == 11
+  endparam
+
+ 
+;   int pdj=31          ; pdj_a="-1.2750724023208"
+                        ; pdj_b="2.34335079649463"
+                        ; pdj_c="-1.25823829136789" 
+                        ; pdj_d="-0.666838046628982"
+;  variation = 31
+;  xf_vars[0,variation]  = @xf0_var31
+;  xf_vars[1,variation]  = @xf1_var31
+;  xf_vars[2,variation]  = @xf2_var31
+;  xf_vars[3,variation]  = @xf3_var31
+;  xf_vars[4,variation]  = @xf4_var31
+;  xf_vars[5,variation]  = @xf5_var31
+;  xf_vars[6,variation]  = @xf6_var31
+;  xf_vars[7,variation]  = @xf7_var31
+;  xf_vars[8,variation]  = @xf8_var31
+;  xf_vars[9,variation]  = @xf9_var31
+;  xf_vars[10,variation] = @xf10_var31
+;  xf_vars[11,variation] = @xf11_var31
+ 
+  float param xf0_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var31
+    caption = "Pdj"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  
+;  float pdj_a[12]
+;  pdj_a[0]  = @xf0_pdj_a
+;  pdj_a[1]  = @xf1_pdj_a
+;  pdj_a[2]  = @xf2_pdj_a
+;  pdj_a[3]  = @xf3_pdj_a
+;  pdj_a[4]  = @xf4_pdj_a
+;  pdj_a[5]  = @xf5_pdj_a
+;  pdj_a[6]  = @xf6_pdj_a
+;  pdj_a[7]  = @xf7_pdj_a
+;  pdj_a[8]  = @xf8_pdj_a
+;  pdj_a[9]  = @xf9_pdj_a
+;  pdj_a[10] = @xf10_pdj_a
+;  pdj_a[11] = @xf11_pdj_a
+ 
+  float param xf0_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_pdj_a
+    caption = "     Pdj_a"
+    default = -1.2750724023208
+    visible = @visible_xform == 11
+  endparam
+
+;  float pdj_b[12]
+;  pdj_b[0]  = @xf0_pdj_b
+;  pdj_b[1]  = @xf1_pdj_b
+;  pdj_b[2]  = @xf2_pdj_b
+;  pdj_b[3]  = @xf3_pdj_b
+;  pdj_b[4]  = @xf4_pdj_b
+;  pdj_b[5]  = @xf5_pdj_b
+;  pdj_b[6]  = @xf6_pdj_b
+;  pdj_b[7]  = @xf7_pdj_b
+;  pdj_b[8]  = @xf8_pdj_b
+;  pdj_b[9]  = @xf9_pdj_b
+;  pdj_b[10] = @xf10_pdj_b
+;  pdj_b[11] = @xf11_pdj_b
+ 
+  float param xf0_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_pdj_b
+    caption = "     Pdj_b"
+    default = 2.34335079649463
+    visible = @visible_xform == 11
+  endparam
+
+
+;  float pdj_c[12]
+;  pdj_c[0]  = @xf0_pdj_c
+;  pdj_c[1]  = @xf1_pdj_c
+;  pdj_c[2]  = @xf2_pdj_c
+;  pdj_c[3]  = @xf3_pdj_c
+;  pdj_c[4]  = @xf4_pdj_c
+;  pdj_c[5]  = @xf5_pdj_c
+;  pdj_c[6]  = @xf6_pdj_c
+;  pdj_c[7]  = @xf7_pdj_c
+;  pdj_c[8]  = @xf8_pdj_c
+;  pdj_c[9]  = @xf9_pdj_c
+;  pdj_c[10] = @xf10_pdj_c
+;  pdj_c[11] = @xf11_pdj_c
+ 
+  float param xf0_pdj_c
+    caption = "     Pdj_c"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_pdj_c
+    caption = "     Pdj_c"
+    default = -1.25823829136789
+    visible = @visible_xform == 11
+  endparam
+
+
+;  float pdj_d[12]
+;  pdj_d[0]  = @xf0_pdj_d
+;  pdj_d[1]  = @xf1_pdj_d
+;  pdj_d[2]  = @xf2_pdj_d
+;  pdj_d[3]  = @xf3_pdj_d
+;  pdj_d[4]  = @xf4_pdj_d
+;  pdj_d[5]  = @xf5_pdj_d
+;  pdj_d[6]  = @xf6_pdj_d
+;  pdj_d[7]  = @xf7_pdj_d
+;  pdj_d[8]  = @xf8_pdj_d
+;  pdj_d[9]  = @xf9_pdj_d
+;  pdj_d[10] = @xf10_pdj_d
+;  pdj_d[11] = @xf11_pdj_d
+ 
+  float param xf0_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_pdj_d
+    caption = "     Pdj_d"
+    default = -0.666838046628982
+    visible = @visible_xform == 11
+  endparam
+
+
+  
+
+;   int perspective=32  ; perspective_angle="0.521041177678853"
+                        ; perspective_dist="1.65628980612382"
+;  variation = 32
+;  xf_vars[0,variation]  = @xf0_var32
+;  xf_vars[1,variation]  = @xf1_var32
+;  xf_vars[2,variation]  = @xf2_var32
+;  xf_vars[3,variation]  = @xf3_var32
+;  xf_vars[4,variation]  = @xf4_var32
+;  xf_vars[5,variation]  = @xf5_var32
+;  xf_vars[6,variation]  = @xf6_var32
+;  xf_vars[7,variation]  = @xf7_var32
+;  xf_vars[8,variation]  = @xf8_var32
+;  xf_vars[9,variation]  = @xf9_var32
+;  xf_vars[10,variation] = @xf10_var32
+;  xf_vars[11,variation] = @xf11_var32
+ 
+  float param xf0_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var32
+    caption = "Perspective"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;  float perspective_angle[12]
+;  perspective_angle[0]  = @xf0­_perspective_angle
+;  perspective_angle[1]  = @xf1­_perspective_angle
+;  perspective_angle[2]  = @xf2­_perspective_angle
+;  perspective_angle[3]  = @xf3­_perspective_angle
+;  perspective_angle[4]  = @xf4­_perspective_angle
+;  perspective_angle[5]  = @xf5­_perspective_angle
+;  perspective_angle[6]  = @xf6­_perspective_angle
+;  perspective_angle[7]  = @xf7­_perspective_angle
+;  perspective_angle[8]  = @xf8­_perspective_angle
+;  perspective_angle[9]  = @xf9­_perspective_angle
+;  perspective_angle[10  = @xf10­_perspective_angle
+;  perspective_angle[11] = @xf011_perspective_angle
+ 
+  float param xf0_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_perspective_angle
+    caption = "     Perspective_angle"
+    default = 0.521041177678853
+    visible = @visible_xform == 11
+  endparam
+
+;  float perspective_dist[12]
+;  perspective_dist[0]  = @xf0­_perspective_dist
+;  perspective_dist[1]  = @xf1­_perspective_dist
+;  perspective_dist[2]  = @xf2­_perspective_dist
+;  perspective_dist[3]  = @xf3­_perspective_dist
+;  perspective_dist[4]  = @xf4­_perspective_dist
+;  perspective_dist[5]  = @xf5­_perspective_dist
+;  perspective_dist[6]  = @xf6­_perspective_dist
+;  perspective_dist[7]  = @xf7­_perspective_dist
+;  perspective_dist[8]  = @xf8­_perspective_dist
+;  perspective_dist[9]  = @xf9­_perspective_dist
+;  perspective_dist[10  = @xf10­_perspective_dist
+;  perspective_dist[11] = @xf011_perspective_dist
+  
+  float param xf0_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_perspective_dist
+    caption = "     Perspective_dist"
+    default = 1.65628980612382
+    visible = @visible_xform == 11
+  endparam
+
+;   int julian=33       ; julian_power="2"
+                        ; julian_dist="1"
+;  variation = 33
+
+;  xf_vars[0,variation]  = @xf0_var33
+;  xf_vars[1,variation]  = @xf1_var33
+;  xf_vars[2,variation]  = @xf2_var33
+;  xf_vars[3,variation]  = @xf3_var33
+;  xf_vars[4,variation]  = @xf4_var33
+;  xf_vars[5,variation]  = @xf5_var33
+;  xf_vars[6,variation]  = @xf6_var33
+;  xf_vars[7,variation]  = @xf7_var33
+;  xf_vars[8,variation]  = @xf8_var33
+;  xf_vars[9,variation]  = @xf9_var33
+;  xf_vars[10,variation] = @xf10_var33
+;  xf_vars[11,variation] = @xf11_var33
+ 
+  float param xf0_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var33
+    caption = "Julian"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;  float julian_power[12]
+;  julian_power[0]  = @xf0_julian_power
+;  julian_power[1]  = @xf1_julian_power
+;  julian_power[2]  = @xf2_julian_power
+;  julian_power[3]  = @xf3_julian_power
+;  julian_power[4]  = @xf4_julian_power
+;  julian_power[5]  = @xf5_julian_power
+;  julian_power[6]  = @xf6_julian_power
+;  julian_power[7]  = @xf7_julian_power
+;  julian_power[8]  = @xf8_julian_power
+;  julian_power[9]  = @xf9_julian_power
+;  julian_power[10  = @xf10_julian_power
+;  julian_power[11] = @xf11_julian_power
+ 
+  int param xf0_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 0
+  endparam
+   
+  int param xf1_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 1
+  endparam
+   
+  int param xf2_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 2
+  endparam
+   
+  int param xf3_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 3
+  endparam
+   
+  int param xf4_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 4
+  endparam
+   
+  int param xf5_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 5
+  endparam
+   
+  int param xf6_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 6
+  endparam
+   
+  int param xf7_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 7
+  endparam
+   
+  int param xf8_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 8
+  endparam
+   
+  int param xf9_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 9
+  endparam
+   
+  int param xf10_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 10
+  endparam
+   
+  int param xf11_julian_power
+    caption = "     Julian_power"
+    default = 4
+    visible = @visible_xform == 11
+  endparam
+
+;  float julian_dist[12]
+;  julian_dist[0]  = @xf0_julian_dist
+;  julian_dist[1]  = @xf1_julian_dist
+;  julian_dist[2]  = @xf2_julian_dist
+;  julian_dist[3]  = @xf3_julian_dist
+;  julian_dist[4]  = @xf4_julian_dist
+;  julian_dist[5]  = @xf5_julian_dist
+;  julian_dist[6]  = @xf6_julian_dist
+;  julian_dist[7]  = @xf7_julian_dist
+;  julian_dist[8]  = @xf8_julian_dist
+;  julian_dist[9]  = @xf9_julian_dist
+;  julian_dist[10  = @xf10_julian_dist
+;  julian_dist[11] = @xf11_julian_dist
+ 
+  float param xf0_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_julian_dist
+    caption = "     Julian_dist"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam
+ 
+;   int juliascope=34   ; juliascope_power="5"
+                        ; juliascope_dist="1"
+;  variation = 34
+;  xf_vars[0,variation]  = @xf0_var34
+;  xf_vars[1,variation]  = @xf1_var34
+;  xf_vars[2,variation]  = @xf2_var34
+;  xf_vars[3,variation]  = @xf3_var34
+;  xf_vars[4,variation]  = @xf4_var34
+;  xf_vars[5,variation]  = @xf5_var34
+;  xf_vars[6,variation]  = @xf6_var34
+;  xf_vars[7,variation]  = @xf7_var34
+;  xf_vars[8,variation]  = @xf8_var34
+;  xf_vars[9,variation]  = @xf9_var34
+;  xf_vars[10,variation] = @xf10_var34
+;  xf_vars[11,variation] = @xf11_var34
+ 
+  float param xf0_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_var34
+    caption = "Juliascope"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+;  float juliascope_power[12]
+;  juliascope_power[0]  = @xf0_juliascope_power
+;  juliascope_power[1]  = @xf1_juliascope_power
+;  juliascope_power[2]  = @xf2_juliascope_power
+;  juliascope_power[3]  = @xf3_juliascope_power
+;  juliascope_power[4]  = @xf4_juliascope_power
+;  juliascope_power[5]  = @xf5_juliascope_power
+;  juliascope_power[6]  = @xf6_juliascope_power
+;  juliascope_power[7]  = @xf7_juliascope_power
+;  juliascope_power[8]  = @xf8_juliascope_power
+;  juliascope_power[9]  = @xf9_juliascope_power
+;  juliascope_power[10  = @xf10_juliascope_power
+;  juliascope_power[11] = @xf11_juliascope_power
+ 
+  int param xf0_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 0
+  endparam
+   
+  int param xf1_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 1
+  endparam
+   
+  int param xf2_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 2
+  endparam
+   
+  int param xf3_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 3
+  endparam
+   
+  int param xf4_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 4
+  endparam
+   
+  int param xf5_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 5
+  endparam
+   
+  int param xf6_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 6
+  endparam
+   
+  int param xf7_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 7
+  endparam
+   
+  int param xf8_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 8
+  endparam
+   
+  int param xf9_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 9
+  endparam
+   
+  int param xf10_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 10
+  endparam
+   
+  int param xf11_juliascope_power
+    caption = "     Juliascope_power"
+    default = 5
+    visible = @visible_xform == 11
+  endparam
+
+;  float juliascope_dist[12]
+;  juliascope_dist[0]  = @xf0_juliascope_dist
+;  juliascope_dist[1]  = @xf1_juliascope_dist
+;  juliascope_dist[2]  = @xf2_juliascope_dist
+;  juliascope_dist[3]  = @xf3_juliascope_dist
+;  juliascope_dist[4]  = @xf4_juliascope_dist
+;  juliascope_dist[5]  = @xf5_juliascope_dist
+;  juliascope_dist[6]  = @xf6_juliascope_dist
+;  juliascope_dist[7]  = @xf7_juliascope_dist
+;  juliascope_dist[8]  = @xf8_juliascope_dist
+;  juliascope_dist[9]  = @xf9_juliascope_dist
+;  juliascope_dist[10  = @xf10_juliascope_dist
+;  juliascope_dist[11] = @xf11_juliascope_dist
+ 
+  float param xf0_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 0
+  endparam
+   
+  float param xf1_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 1
+  endparam
+   
+  float param xf2_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 2
+  endparam
+   
+  float param xf3_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam
+   
+  float param xf4_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam
+   
+  float param xf5_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam
+   
+  float param xf6_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam
+   
+  float param xf7_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam
+   
+  float param xf8_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam
+   
+  float param xf9_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 9
+  endparam
+   
+  float param xf10_juliascope_dist
+    caption = "     Juliascope_dist"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam
+   
+  float param xf11_juliascope_dist
+    caption = "     Juliascope_dist)"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam
+}

@@ -1,0 +1,2622 @@
+mjd_Julia { ; 20000401
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; This is not exactly what i like to call "inventive" ...
+init:
+  z = pixel
+  if @dis == 0
+    d = @seed
+  else
+    d = #pixel
+  endif
+loop:
+  z = @fnz2(#z^@power) * @fnc2(d^@power2) + @fnc(@seed)
+bailout:
+  |z| <= @bailout
+default:
+  title="fn(z^p)*fn(d^p)+fn(c) Julia"
+  maxiter=400
+
+  param seed    
+    caption="Julia seed"
+    default=(.6,.5)
+  endparam
+  param dis      
+    caption="d=?"
+    default=0,enum="Seed""Pixel"
+  endparam
+  param power    
+    caption="Power (z)"
+    default=(3,0)
+  endparam
+  param power2
+    caption="Power (pixel)"
+    default=(-1,0)
+  endparam
+  param bailout  
+    caption="Bailout"
+    default=64.0
+  endparam
+  func fnz2
+    caption="Function of z^p1"
+    default=sin()
+  endfunc
+  func fnc2
+    caption="Function of c^p2"
+    default=cos()
+  endfunc
+  func fnc
+    caption="Function of c"
+    default=sin()
+  endfunc
+switch:
+  type="mjd_Mandel"
+  start=#pixel
+  dis=@dis
+  power=@power
+  power2=@power2
+  bailout=@bailout
+  fnz2=@fnz2
+  fnc2=@fnc2
+  fnc=@fnc
+}
+
+;##################################################################
+
+mjd_Mandel { ; 20000401
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; It's of no use to have these, but anyway ...
+init:
+  z = @start + #pixel
+  if @dis == 0
+    d = #pixel
+  else
+    d = @start
+  endif
+loop:
+  z = @fnz2(#z^@power) * @fnc2(d^@power2) + @fnc(#pixel)
+bailout:
+  |z| <= @bailout
+default:
+  title="fn(z^p)*fn(d^p)+fn(c) Mandel"
+  maxiter=400
+
+  param start  
+    caption="Perturbation"    
+    default=(0,0)  
+  endparam
+  param dis    
+    caption="d=?"             
+    default=0
+    enum="Pixel""Perturbation"
+  endparam
+  param power  
+    caption="Power (z)"       
+    default=(3,0)  
+  endparam
+  param power2 
+    caption="Power (pixel)"   
+    default=(-1,0) 
+  endparam
+  param bailout
+    caption="Bailout"         
+    default=64.0   
+  endparam
+  func fnz2    
+    caption="Function of z^p1"
+    default=sin()  
+  endfunc
+  func fnc2    
+    caption="Function of c^p2"
+    default=cos()  
+  endfunc
+  func fnc     
+    caption="Function of c"   
+    default=sin()  
+  endfunc
+switch:
+  type="mjd_Julia"
+  seed=#pixel
+  dis=@dis
+  power=@power
+  power2=@power2
+  bailout=@bailout
+  fnz2=@fnz2
+  fnc2=@fnc2
+  fnc=@fnc
+}
+
+;##################################################################
+
+mjd_Lambda { ; 20000401
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; So boring to have these formulas in my database ...
+init:
+  z = #pixel
+loop:
+  z = @fnz(#z)*(1-#z)*@fnc(@seed)
+bailout:
+  |z| <= @bailout
+default:
+  title="fn(z)*(1-z)*fn(c) Julia"
+  center=(.5,0)
+  maxiter=400
+
+  param seed   
+    caption="Lambda Seed"  
+    default=(.85,.6)
+  endparam
+  param bailout
+    caption="Bailout"      
+    default=64.0    
+  endparam
+  func  fnz    
+    caption="Function of Z"
+    default=sin()   
+  endfunc
+  func  fnc    
+    caption="Function of C"
+    default=sin()   
+  endfunc
+switch:
+  type="mjd_LambdaMan"
+  start=#pixel
+  bailout=@bailout
+  fnz=@fnz
+  fnc=@fnc  
+}
+
+;##################################################################
+
+mjd_LambdaMan { ; 20000401
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; I wonder if anyone even uses these formulas ...
+init:
+  z = @start+.5
+loop:
+  z = @fnz(#z)*(1-#z)*@fnc(#pixel)
+bailout:
+  |z| <= @bailout
+default:
+  title="fn(z)*(1-z)*fn(c) Mandel"
+  center=(1,0)
+  magn=0.5
+  maxiter=400
+
+  param start  
+    caption="Perturbation" 
+    default=(0,0)
+  endparam
+  param bailout
+    caption="Bailout"      
+    default=64.0 
+  endparam
+  func  fnz    
+    caption="Function of Z"
+    default=sin()
+  endfunc
+  func  fnc    
+    caption="Function of C"
+    default=sin()
+  endfunc
+switch:
+  type="mjd_Lambda"
+  seed=#pixel
+  bailout=@bailout
+  fnz=@fnz
+  fnc=@fnc  
+}
+
+;##############################################################################
+
+mjd-julia-mandel { ;20000416
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Last modification 20000418
+; Optimized for speed 20010121
+init:
+  complex oc=(0,0) ;orbit center
+  float or=0       ;orbit cabs
+  float oang=0     ;orbut atan2
+
+  complex c = #pixel
+  int i=0
+  while (i<@juliter)
+    c=@julfn(c)^@jpower+@seed
+    if @jrecip
+      c=recip(c)
+    endif
+    i=i+1
+  endwhile
+
+  c=(c-@center)/@size
+  if @invers>0
+    c=@invers/c
+  endif
+  c=c+c*@random*(#random-(.5,.5))
+
+  #z=@start
+loop:
+  #z=#z^@mpower + c
+  if @otype=="Twist" ;=change angle
+    oc=#z-@ocenter
+    or=cabs(oc)
+    oang=atan2(oc)+@oamount*exp(-or/@osize)
+    #z=or*exp(flip(oang))+@ocenter
+  elseif @otype=="Scare" ;=change distance
+    oc=#z-@ocenter
+    or=cabs(oc)/@oamount
+    oang=atan2(oc)
+    or=or+@osize/(1/or+or)
+    #z=@oamount*or*exp(flip(oang))+@ocenter
+  endif
+bailout:
+  |#z| <= @bailout
+default:
+  title = "Mjd-Julia-Mandel"
+  precision=30
+  center=(0,0)
+  param juliter
+    caption="Julia iterations"
+    default=3
+    min=0
+    hint="Number of julia iterations before mandel is being calculated"
+  endparam
+
+  heading
+    caption="Julia parameters"
+  endheading
+  param seed
+    caption="Seed"
+    default=(.3,.6)
+    hint="Switch to browse this param"
+  endparam
+  param jpower
+    caption="Power"
+    default=(2,0)
+    hint="Power of the julia iterations"
+  endparam
+  param jrecip
+    caption="Julia inverse"
+    default=false
+    hint="Inverse every iteration of julia set (try this! with mandel inversion)"
+  endparam
+  func julfn
+    caption="Julia function"
+    default=ident()
+    hint="Function applied to every mandel iteration (Try Sin or Tan)"
+  endfunc
+
+  heading
+    caption="Mandel parameters"
+  endheading
+  param start
+    caption="Perturbation"
+    default=(0,0)
+    hint="Mandel start value (perturbation)"
+  endparam
+  param center
+    caption="Center"
+    default=(0,0)
+    hint="Center of mandel set after julia iterations"
+  endparam
+  param size
+    caption="Magnitude"
+    default=(1,0)
+    min=1e-20
+    hint="Magnify mandel set after julia iterations"
+  endparam
+  param invers
+    caption="Inversion"
+    default=0.0
+    min=0
+    hint="Inversion radius of mandelbrot set (0=off)"
+  endparam
+  param mpower
+    caption="Power"
+    default=(2,0)
+    hint="Power of the mandel iterations"
+  endparam
+  param bailout
+    caption="Bailout"
+    default=1e+20
+    min=1
+    hint="Bailout value for mandel iterations"
+  endparam
+
+  heading
+    caption="Orbit fool parameters"
+  endheading
+  param otype
+    caption="Orbit fool type"
+    enum="none" "Twist" "Scare"
+    default=0
+  endparam
+  heading
+    caption="Twist parameters"
+    visible=@otype=="Twist"
+  endheading
+  heading
+    caption="Scare parameters"
+    visible=@otype=="Scare"
+  endheading
+  param ocenter
+    caption="Orbit fool center"
+    default=(0,0)
+    hint="Center of the orbit fool origin"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+  param osize
+    caption="Orbit fool size"
+    default=0.2
+    min=0
+    hint="Size or decay of orbit fool"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+  param oamount
+    caption="Orbit fool threshold"
+    default=1.0
+    hint="Amount of orbit fooling -- try negative values for inverse results"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+
+  heading
+    caption="Other parameters"
+  endheading
+  param random
+    caption="Randomness"
+    default=0.0
+    hint="Randomness of start value of mandelbrot set"
+  endparam
+switch:
+  type="mjd-mandel-julia"
+  @seed=#pixel
+  @maniter=@juliter
+  @mpower=@jpower
+  @mrecip=@jrecip
+
+  @start=@start
+  @center=@center
+  @size=@size
+  @invers=@invers
+  @jpower=@mpower
+
+  @otype=@otype
+  @ocenter=@ocenter
+  @osize=@osize
+  @oamount=@oamount
+
+  @bailout=@bailout
+  @random=@random
+  @julfn=@manfn
+}
+
+;##############################################################################
+
+mjd-mandel-julia { ;20000416
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Last modofication 20000418
+; Optimized for speed 20010121
+init:
+  complex oc=(0,0) ;orbit center
+  float or=0       ;orbit cabs
+  float oang=0     ;orbut atan2
+
+  #z = @start
+  int p=-1
+  while p<@maniter
+    #z=@manfn(#z)^@mpower+#pixel
+    if @mrecip
+      #z=recip(#z)
+    endif
+    p=p+1
+  endwhile
+
+  #z=(#z-@center)/@size
+
+  if @invers>0
+    #z=@invers/#z
+  endif
+
+  complex c=@seed+@seed*@random*(#random-(.5,.5))
+loop:
+  #z=#z^@jpower + c
+  if @otype==1     ;Orbit fool: Twist (=change angle)
+    oc=#z-@ocenter
+    or=cabs(oc)
+    oang=atan2(oc)+@oamount*exp(-or/@osize)
+    #z=or*exp(flip(oang))+@ocenter
+  elseif @otype==2 ;Orbit fool: Scare (=change distance)
+    oc=#z-@ocenter
+    or=cabs(oc)/@oamount
+    oang=atan2(oc)
+    or=or+@osize/(1/or+or)
+    #z=@oamount*or*exp(flip(oang))+@ocenter
+  endif
+bailout:
+  |#z|<=@bailout
+default:
+  title = "Mjd-Mandel-Julia"
+  center=(-.5,0)
+  
+  param maniter
+    caption="Mandel iterations"
+    default=3
+    min=0
+    hint="Number of mandel iterations before Julia is being calculated"
+  endparam
+
+  heading
+    caption="Mandel parameters"
+  endheading
+  param start
+    caption="Perturbation"
+    default=(0,0)
+    hint="Mandel start value (perturbation)"
+  endparam
+  param mpower
+    caption="Power"
+    default=(2,0)
+    hint="Power of the mandel iterations"
+  endparam
+  param mrecip
+    caption="Inverse"
+    default=false
+    hint="Inverse every iteration of mandel set (try this! with julia inversion)"
+  endparam
+  func manfn
+    caption="Mandel function"
+    default=ident()
+    hint="Function applied to every mandel iteration (Try Sin or Tan. Try Cabs with maniter>=5 for an egg)"
+  endfunc
+  
+  heading
+    caption="Julia parameters"
+  endheading
+  param seed
+    caption="Seed"
+    default=(.3,.6)
+    hint="Switch to browse this param"
+  endparam
+  param center
+    caption="Center"
+    default=(0,0)
+    hint="Center julia set after mandel iterations"
+  endparam
+  param size
+    caption="Magnitude"
+    default=(1,0)
+    min=1e-20
+    hint="Magnify julia set after mandel iterations"
+  endparam
+  param invers
+    caption="Inversion"
+    default=0.0
+    min=0
+    hint="Inversion radius of julia set (0=off)"
+  endparam
+  param jpower
+    caption="Power"
+    default=(2,0)
+    hint="Power of the julia iterations"
+  endparam
+  param bailout
+    caption="Bailout"
+    default=1e+20
+    min=1.0
+    hint="Bailout value for julia iterations"
+
+
+  endparam
+
+  heading
+    caption="Orbit fool parameters"
+  endheading
+  param otype
+    caption="Orbit fool type"
+    enum="none" "Twist" "Scare"
+    default=0
+  endparam
+  heading
+    caption="Twist parameters"
+    visible=@otype=="Twist"
+  endheading
+  heading
+    caption="Scare parameters"
+    visible=@otype=="Scare"
+  endheading
+  param ocenter
+    caption="Orbit fool center"
+    default=(0,0)
+    hint="Center of the orbit fool origin"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+  param osize
+    caption="Orbit fool size"
+    default=.2
+    min=0
+    hint="Size or decay of orbit fool"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+  param oamount
+    caption="Orbit fool threshold"
+    default=1.0
+    hint="Amount of orbit fooling -- try negative values for inverse results"
+    visible=@otype=="Twist" || @otype=="Scare"
+  endparam
+
+  heading
+    caption="Other parameters"
+  endheading
+  param random
+    caption="Randomness"
+    default=0.0
+    hint="Randomness of seed value of julia set"
+  endparam
+switch:
+  type="mjd-julia-mandel"
+  @start=@start
+  @juliter=@maniter
+  @jpower=@mpower
+  @jrecip=@mrecip
+
+  @seed=#pixel
+  @center=@center
+  @size=@size
+  @invers=@invers
+  @jpower=@mpower
+
+  @otype=@otype
+  @ocenter=@ocenter
+  @osize=@osize
+  @oamount=@oamount
+
+  @bailout=@bailout
+  @random=@random
+  @julfn=@manfn
+}
+
+;##############################################################################
+
+3FunctionsJulia { ;20000424
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Optimized for speed 20010122
+init:
+  #z = #pixel
+loop:
+  #z=@fn1(#z*@f1)*@w1+#z*(1-@w1)
+  #z=@fn2(#z*@f2)*@w2+#z*(1-@w2)
+  #z=@fn3(#z*@f3)*@w3+#z*(1-@w3)+@seed
+bailout:
+  |#z| <= @bailout
+default:
+  title = "3 functions (julia)"
+  
+  param f1
+    caption="Function 1 factor"
+    default=1.0
+  endparam
+  param f2
+    caption="Function 2 factor"
+    default=1.0
+  endparam
+  param f3
+    caption="Function 3 factor"
+    default=1.0
+  endparam
+  param w1
+    caption="Function 1 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+  param w2
+    caption="Function 2 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+  param w3
+    caption="Function 3 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+
+  param seed
+    caption="Julia seed"
+    default=(.5,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=4.0
+  endparam
+
+  func fn1
+    caption="Function A"
+    default=sinh()
+  endfunc
+  func fn2
+    caption="Function B"
+    default=log()
+  endfunc
+  func fn3
+    caption="Function C"
+    default=atan()
+  endfunc
+switch:
+  type="3FunctionsMandel"
+  start=#pixel
+  bailout=@bailout
+  f1=@f1
+  f2=@f2
+  f3=@f3
+  w1=@w1
+  w2=@w2
+  w3=@w3
+  fn1=@fn1
+  fn2=@fn2
+  fn3=@fn3
+}
+
+;##############################################################################
+
+3FunctionsMandel { ;20000424
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Optimized for speed 20010122
+init:
+  #z = @start
+loop:
+  #z=@fn1(#z*@f1)*@w1+#z*(1-@w1)
+  #z=@fn2(#z*@f2)*@w2+#z*(1-@w2)
+  #z=@fn3(#z*@f3)*@w3+#z*(1-@w3)+#pixel
+bailout:
+  |#z| <= @bailout
+default:
+  title = "3 functions (mandel)"
+
+  param f1
+    caption="Function 1 factor"
+    default=1.0
+  endparam
+  param f2
+    caption="Function 2 factor"
+    default=1.0
+  endparam
+  param f3
+    caption="Function 3 factor"
+    default=1.0
+  endparam
+  param w1
+    caption="Function 1 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+  param w2
+    caption="Function 2 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+  param w3
+    caption="Function 3 weight"
+    default=1.0
+    min=0
+    max=1
+  endparam
+
+  param start
+    caption="Perturbation"
+    default=(.5,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=4.0
+  endparam
+
+  func fn1
+    caption="Function A"
+    default=sinh()
+  endfunc
+  func fn2
+    caption="Function B"
+    default=log()
+  endfunc
+  func fn3
+    caption="Function C"
+    default=atan()
+  endfunc
+switch:
+  type="3FunctionsJulia"
+  seed=#pixel
+  bailout=@bailout
+  f1=@f1
+  f2=@f2
+  f3=@f3
+  w1=@w1
+  w2=@w2
+  w3=@w3
+  fn1=@fn1
+  fn2=@fn2
+  fn3=@fn3
+}
+
+;##################################################################
+
+RandomPrimeMethod { ;20010113
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+init:
+  float x=0
+  float y=0
+  int u=@prime1
+  int v=@prime2
+  int r=0
+  bool noprime=true
+  
+  #z=@fnc(#pixel)
+loop:
+  x=(real(#z)%1)*u
+  y=(imag(#z)%1)*v
+  
+  u=trunc(x)
+  v=trunc(y)
+  x=x-u
+  y=y-v
+
+  ;be sure u and v are odd numbers
+  if u%2==0
+    u=u+1
+  endif
+  if v%2==0
+    v=v+1
+  endif
+
+  noprime=true
+  while noprime ;search the first larger prime number (59.92% chance for success, else it's odd enough)
+    r=u%30
+    if r==1 || r==7 || r==11 || r==13 || r==17 || r==19 || r==27 || r==29
+      u=u-2
+      noprime=false
+    endif
+    u=u+2
+  endwhile
+
+  noprime=true
+  while noprime ;search the first larger prime number (59.92% chance for success, else it's odd enough)
+    r=v%30
+    if r==1 || r==7 || r==11 || r==13 || r==17 || r==19 || r==27 || r==29
+      v=v-2
+      noprime=false
+    endif
+
+
+    v=v+2
+  endwhile
+
+  #z=abs(fn1(x+flip(y))^2*(0,1)^(@rot/90))
+bailout:
+  |u+v| >@bailout
+default:
+  title = "Random (prime method)"
+  center=(2,1.5)
+
+  param rot
+    caption="Rotation step"
+    default=20.0
+  endparam
+  param prime1
+    caption="Initial prime 1"
+    default=12347
+  endparam
+  param prime2
+    caption="Initial prime 2"
+    default=13577
+  endparam
+  param bailout
+    caption="Bailout"
+    default=8.0
+    min=4
+  endparam
+  
+  func fn1
+    caption="Standard function"
+    default=cotan()
+  endfunc
+  func fnc
+    caption="pixel function (pre)"
+    default=abs()
+  endfunc
+}
+
+;##############################################################################
+
+WeirdFormula(XAXIS) { ;20000428
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Optimized for speed 20010122
+init:
+  complex efk=0
+  complex efg=0
+  complex dg=0
+  complex fdg=0
+  complex dgj=0
+  complex dgf=0
+  complex fgh=0
+  complex fh=0
+  complex gfh=0
+  complex bfh=0
+  complex bh=0
+  #z=#pixel*4
+loop:
+  float gh=real(#z)
+  float ek=imag(#z)
+  efk=#pi/2-acos((sqr(@ef)+sqr(@fk)-sqr(ek))/2/@ef/@fk)
+  efg=#pi-efk
+  dg=sqrt(sqr(@df)+sqr(@fg)-2*@df*@fg*cos(efg))
+  fdg=#pi/2-acos((sqr(@df)+sqr(dg)-sqr(@fg))/2/@df/dg)
+  dgj=#pi/2-acos((sqr(dg)+sqr(@gj)-sqr(@dj))/2/dg/@gj)
+  dgf=#pi-efg-fdg
+  fgh=dgf+dgj
+  fh=sqrt(sqr(@fg)+sqr(gh)-2*@fg*gh*cos(fgh))
+  gfh=#pi/2-acos((sqr(@fg)+sqr(fh)-sqr(gh))/2/@fg/fh)
+  bfh=efg-gfh
+  bh=sqrt(sqr(@bf)+sqr(fh)-2*@bf*fh*cos(bfh))
+  #z=fh+flip(bh)
+bailout:
+  |#z|>=@bailout
+default:
+  title = "Weird formula"
+  center=(0,0)
+
+  param ef
+    default=3.0
+  endparam
+  param fk
+    default=3.0
+  endparam
+  param fg
+    default=3.0
+  endparam
+  param df
+    default=13.0
+  endparam
+  param dj
+    default=3.0
+  endparam
+  param gj
+    default=14.0
+  endparam
+  param bf
+    default=14.0
+  endparam
+  param bailout
+    caption="Bailout"
+    default=8.0
+  endparam
+}
+
+Pixel--F { ;20010123
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Combination of Mark Townsend's Pixel formula
+
+; with "inside" option, and Samuel Monnier's
+; "Pixel (2 iterations) formula.
+;
+; This formula is expanded with basic figures.
+; This means, if a pixel falls within the figure, it
+; is inside, and other pixels are outside.
+init:
+  bool done=false
+  int i=0
+  #z = #pixel
+  
+  if @mode!="All Outside"
+    if @figure=="Circle"
+      if @mode=="Figure negative"
+        if cabs(#z)>@size, i=-#maxiter, endif
+      else
+        if cabs(#z)<@size, i=-#maxiter, endif
+      endif
+    elseif @figure=="Square"
+      complex zz=abs(#z)
+      if @mode=="Figure negative"
+        if real(zz)>@size || imag(zz)>@size, i=-#maxiter, endif
+      else
+        if real(zz)<@size && imag(zz)<@size, i=-#maxiter, endif
+      endif
+    elseif @figure=="Diamond"
+      complex zz=abs(#z)
+      if @mode=="Figure negative"
+        if real(zz)+imag(zz)>@size, i=-#maxiter, endif
+      else
+        if real(zz)+imag(zz)<@size, i=-#maxiter, endif
+      endif
+    elseif @figure=="Cardioid"
+      complex zz=#z/@size/(4/3)
+      float u=2*real(zz)
+      float v=sqr(u)+sqr(2*imag(zz))
+      float w=v-u+0.25
+      if @mode=="Figure negative"
+        if w-sqrt(w)+u-.5>0, i=-#maxiter, endif
+      else
+        if w-sqrt(w)+u-.5<0, i=-#maxiter, endif
+      endif
+    endif
+  endif
+loop:  
+  if @mode!=1
+    i=i+1
+    if i==@outiter
+      done=true
+    endif
+  endif  
+bailout:
+  done==false
+default:
+  title = "Pixel--F"
+  maxiter=2
+  param mode
+    caption="Mode"
+    enum="All Outside" "All Inside" "Figure" "Figure negative"
+    default=0
+  endparam
+  param outiter
+    caption="Outside iterations"
+    default=2
+  endparam
+  param figure
+    caption="Figure"
+    enum="Circle" "Square" "Diamond" "Cardioid"
+    default=0
+  endparam
+  param size
+    caption="Size of figure"
+    default=1.0
+    min=1e-30
+  endparam
+}
+
+Squaref{
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  float x=real(#pixel)
+  float y=imag(#pixel)
+  float xx=0
+  
+  int i=0
+
+  float a1=0
+  float a2=0
+  float a3=0
+  float b1=0
+  float b2=0
+  float b3=0
+  float c1=0
+  float c2=0
+  float c3=0
+  float d1=0
+  float d2=0
+  float d3=0
+
+  float e1=1
+  float f1=0
+  float e2=-1
+  float f2=0
+  float e3=0
+  float f3=-1
+
+  if @t1==0
+    a1=.5
+    d1=.5
+  elseif @t1==1
+    b1=-.5
+    c1=.5
+  elseif @t1==2
+    a1=-.5
+    d1=-.5
+  elseif @t1==3
+    b1=.5
+    c1=-.5
+  elseif @t1==4
+    a1=-.5
+    d1=.5
+  elseif @t1==5
+    b1=.5
+    c1=.5
+  elseif @t1==6
+    a1=.5
+    d1=-.5
+  elseif @t1==7
+    b1=-.5
+    c1=-.5
+  endif
+
+  if @t2==0
+    a2=.5
+    d2=.5
+  elseif @t2==1
+    b2=-.5
+    c2=.5
+  elseif @t2==2
+    a2=-.5
+    d2=-.5
+  elseif @t2==3
+    b2=.5
+    c2=-.5
+  elseif @t2==4
+    a2=-.5
+    d2=.5
+  elseif @t2==5
+    b2=.5
+    c2=.5
+  elseif @t2==6
+    a2=.5
+    d2=-.5
+  elseif @t2==7
+    b2=-.5
+    c2=-.5
+  endif
+
+  if @t3==0
+    a3=.5
+    d3=.5
+  elseif @t3==1
+    b3=-.5
+    c3=.5
+  elseif @t3==2
+    a3=-.5
+    d3=-.5
+  elseif @t3==3
+    b3=.5
+    c3=-.5
+  elseif @t3==4
+    a3=-.5
+    d3=.5
+  elseif @t3==5
+    b3=.5
+    c3=.5
+  elseif @t3==6
+    a3=.5
+    d3=-.5
+  elseif @t3==7
+    b3=-.5
+    c3=-.5
+  endif
+loop:
+  xx=x
+  if x>=abs(y)
+    if b1==0
+      x=(x-e1)/a1
+      y=(y-f1)/d1
+    else
+      x=(y-f1)/c1
+      y=(xx-e1)/b1
+    endif
+  elseif -x>=abs(y)
+    if b2==0
+      x=(x-e2)/a2
+      y=(y-f2)/d2
+    else
+      x=(y-f2)/c2
+      y=(xx-e2)/b2
+    endif
+  elseif y<0
+    if b3==0
+      x=(x-e3)/a3
+      y=(y-f3)/d3
+    else
+      x=(y-f3)/c3
+      y=(xx-e3)/b3
+    endif
+  endif  
+  z=x+flip(y)
+  i=i+1
+bailout:
+  (@mode==0 && cabs(z)/i>@bailout) || \
+  (@mode==1 && |z|/i>@bailout) || \
+  (@mode==2 && (abs(real(z))+abs(imag(z)))/i>@bailout) || \
+  (@mode==3 && abs(real(z))/(100/3)+abs(imag(z))/i>@bailout)
+default:
+  title="Squaref"
+  method=multipass
+  periodicity=0
+  magn=.75
+  
+  param bailout
+    caption="Bailout"
+    default=.02
+  endparam
+  param mode
+    caption="Bailout mode"
+    enum="Cabs""Cabs^2""Abs""Spike"
+    default=2
+  endparam
+  param t1
+    caption="T1: Right square"
+    enum="mirror=0 rot=0"\
+         "mirror=0 rot=90"\
+         "mirror=0 rot=180"\
+         "mirror=0 rot=270"\
+         "mirror=1 rot=0"\
+         "mirror=1 rot=90"\
+         "mirror=1 rot=180"\
+         "mirror=1 rot=270"
+    default=1
+  endparam
+  param t2
+    caption="T2: Left square"
+    enum="mirror=0 rot=0"\
+         "mirror=0 rot=90"\
+
+         "mirror=0 rot=180"\
+         "mirror=0 rot=270"\
+         "mirror=1 rot=0"\
+         "mirror=1 rot=90"\
+         "mirror=1 rot=180"\
+         "mirror=1 rot=270"
+    default=4
+  endparam
+  param t3
+    caption="T3: Lower square"
+    enum="mirror=0 rot=0"\
+         "mirror=0 rot=90"\
+         "mirror=0 rot=180"\
+         "mirror=0 rot=270"\
+         "mirror=1 rot=0"\
+         "mirror=1 rot=90"\
+         "mirror=1 rot=180"\
+         "mirror=1 rot=270"
+    default=0
+  endparam
+switch:
+  type="®FormulaMaker"
+  @start=#pixel
+  @bailout=bailout
+  @fn1=fn1
+  @fn2=fn2
+}
+
+Attractors{ ;20010211
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; ® 2000 Mark Jeronimus
+;
+;#####################################################################
+;
+;I made this formula because I saw Ron Barnett's "Strange Attractors"
+;formula, and I was a bit puzzled by the bailout method he used. And
+;I was also irritated by the fact you have to enter the standard
+;values for each formula seperately. So I grabbed a lot of strange
+;attractor formulas together, and normal attractor formulas too, and
+;started creating a formula which uses a real orbit trap and a *lot*
+;additional coloring methods. Later, I added an inside coloring, which
+;colors according to the last orbit's position. Then I added iteration
+;skip, bailout, 3d color modes, pixel start modes and 3d rotation
+;modes. And ofcourse all kinds of attractor default's.
+;
+;#####################################################################
+;
+;This formula knows 2 modes of coloring:
+;
+;<O: Outside coloring mode>
+;* Outside coloring, which is triggered when the orbit traps into an
+;  orbit trap or if the orbit bails out. If the orbit traps into the
+;  orbit trap, the color accumulator becomes filled with the color
+;  produced by the current "Inside coloring mode". If the maxiter is
+;  reached AND the pixel has hit the trap, the pixel automatically
+;  bails out and the content from the color accumulator is stored into
+;  the real part of #z. -- One exception: If the coloring mode "Orbit
+;  position" is selected, #z becomes the last position of the orbit.
+;  This is the only case in which imag(#z) becomes filled.
+;
+;  If the trap radius is 0.0 and bailout is 0.0, the pixel will never
+;  become 'outside'.
+;
+;<I: Inside coloring mode>
+;* Inside coloring, which is active when the maxiter is reached and
+;  there are no orbits cached in the orbit trap. This mode stores the
+;  color produced by the "Outside coloring mode" into the real part
+;  if #z. --Also the same exception here: If the coloring mode "Orbit
+;  position" is selected, #z becomes the last position of the orbit.
+;
+;The 3D coloring modes (except 3D Orbit distance) can only be used
+;  with true 3D formulas. These are listed in the table. If 3D orbit
+;  distance is selected on a 2D formula, the Z depth which also
+;  includes the calculation, is constant and equal to the entered
+;  "Manual Z start" parameter.
+;
+;<Param presets>
+;Each formula knows at least one set of predefenied parameters, which
+;  are stored in the formula, so every attractor comes as it is meant
+;  to look like. These definitions can include A, B, C, D and dt. If
+;  the "Manual" setting is selected, the parameters can be entered in
+;  the parameter entries "Param A".."Param dt".
+;
+;<O: Limit hits (0=off)>
+;If the Outside coloring mode "Number of hits" is selected, the color
+;  accumulator keeps track of the number of hits. If this number
+;  exceeds this entered number, it is set equal to this number, and
+;  the pixel bails out. If this mode is 0, the pixel color is not
+;  limited, and can wrap around the gradient.
+;
+;<O: Bailout>
+;If bailout > 0.0, the and the orbit radius exceeds the this value, it
+;  immediately becomes outside, and the color accumulator is used for
+;  coloring. If the color accumulator was not written to, the outside
+;  color is 0.
+;  If the bailout <0.0, the pixel bails out on a bsis of orbit speed
+;  (like oldz-#z) and if the speed is smaller than the entered value,
+;  the pixel immediately bails out. (same rules here too)
+;
+;<O: Iteration skip>
+;The number of iterations to wait before applying any kind of outside
+;  coloring.
+;
+;<S: Orbit start>
+;This determines the start of the orbit AFTER rotating and BEFORE
+;  iterating the formula.
+;* It knows "Attractor default" as standard setting. See
+;  the table for the standard settings.
+;* "Zero  means that the start is (0,0,0)
+;* "One" means that the start is (1,1,1)
+;* "Manual" means that every x/y/z is entered manually.
+;* "Manual (relative)" means that the entered x/y/z values are added
+;  to the attractor's default values.
+;* "Manual (scaling)" means that the entered x/y/z values are
+;  multiplied to the attractor's default values.
+;
+;<R: 3D orbit view>
+;This parameter determines the rotation of 3D formulas. Rotation of
+;  the initial orbit always occures before the mutating orbit start
+;  options and before any 'default start' options other than 'pixel'
+;  (see table) i.e. if the default start is different from pixel then
+;  the initial orbit is not rotated.
+;  If the option "Manual rotation" is selected, the rotations along
+;  the X, Y and Z axis are entered manually (in degrees).
+;
+;Mark Jeronimus
+;
+;Thanks to the Beta-testers:
+;  Pat Goltz
+;  Bob margolis
+;  David Makin
+;  Faye Williams
+;  Kenneth Childress
+;
+;#####################################################################
+;                            | Parameters| Presets| default start*|3D
+;--------------------------------------------------------------------
+;Chip                        | A,B,C     | 1      | pixel         |
+;Dynamic system              | A,B,dt    | 1      | pixel         |
+;Gingerbreadman              | A,B,C     | 1      | pixel         |
+;Gnarl                       | A,B,C,dt  | 4      | pixel         |
+;Henon                       | A,B,C     | 1      | pixel         |
+;Hopalong                    | A,B,C     | 1      | pixel         |
+;Implicit Euler approximation| A,B,dt    | 1      | pixel         |
+;Kamtorus                    | A,dt      | 2      | pixel         |
+;Latoocarfian                | A,B,C,D   | 2      | pixel         |
+;Latoocarfian InvX           | A,B,C,D   | 1      | pixel         |
+;Lorenz3d                    | A,B,C,dt  | 1      | (.5,20,1)**   | *
+;Lorenz3d1                   | A,B,C,dt  | 1      | (1,1,1)**     | *
+;Lorenz3d3                   | A,B,C,dt  | 1      | (1,1,1)**     | *
+;Lorenz3d4                   | A,B,C,dt  | 1      | (1,1,1)**     | *
+;Martin                      | A         | 1      | pixel         |
+;Mira                        | A,B       | 10     | pixel         |
+;Peitgen                     | A,B       | 1      | pixel         |
+;Pickover                    | A,B,C,D   | 1      | pixel *       | *
+;Popcorn                     | A,dt      | 1      | pixel         |
+;Quadruptwo                  | A,B,C     | 2      | pixel         |
+;Rossler3d (front)           | A,B,C,dt  | 1      | (1,1,1)**     | *
+;Threeply                    | A,B,C     | 1      | pixel+c***    |
+;Unity                       | A         | 3      | pixel         |
+;Verhulst                    | A         | 3      | pixel         |
+;Vine                        | A,dt      | 1      | pixel         |
+;Vine2                       | A,B,dt    | 1      | pixel         |
+;VineX                       | A,B,dt    | 1      | pixel         |
+;VinePwr                     | A,B,dt    | 1      | pixel         |
+;Volterra-Lotka              | A,B       | 1      | pixel         |
+;
+;*) If the formula is 2D, or if the start is pixel, then Z is always
+;   equal to the entered "Manual Z start"
+;**) Only if "Orbit trap radius" > 0, else pixel
+;***) c=0+0i If "Inside coloring" = "off", else c=9.125+3,875i
+;
+;#####################################################################
+;
+;Last update: 2000/02/11
+;  Repaired and optimized the Volterra-Lotka formula, which i totally
+;  forgot to implement. The formula was there, but was not working
+;  right.
+;
+;Release date: 2000/02/11
+;
+;#####################################################################
+;
+init:
+  ;source
+  float x = real(#pixel)
+  float y = imag(#pixel)
+  float zz = @zstart
+
+  ;previous-iteration vars
+  complex oldz=#pixel
+  complex oldz2=(0,0)
+  float oldrad=0
+
+  ;temporary vars
+  int i=0
+  float xx=0
+  float yy=0
+  float rad=0
+  float temp=0
+  float temp2=0
+  complex tempz=(0,0)
+  complex tempc=(0,0)
+
+
+  ;result buffers
+  float lasthit=0
+  complex lastz=(0,0)
+
+  ;per-pixel vars
+  int iter=0
+  int pixelhits=0
+  bool done=false
+
+  ;per-fractal vars
+  float a=@pa
+  float b=@pb
+  float c=@pc
+  float d=@pd
+  float dt=@pdt
+
+  ;Rotate start position if nessecary
+  if @type>=10 && @type<=13 || @type==17 || @type==20
+    if @view==1     ;xz top
+      temp=zz
+      zz=y
+      y=temp
+    elseif @view==2 ;zy right
+      temp=zz
+      zz=x
+      x=temp
+    elseif @view==3 ;yz right flip
+      temp=zz
+      zz=y
+      y=x
+      x=temp
+    elseif @view==4 ;rotation
+      #z=(x+flip(y)) * 1i^(-@rotz/90)                  ;(x,y)
+      y=imag(z)
+      #z=(real(#z)+flip(zz)) * 1i^(-imag(@rotxy)/90)  ;(x,z)
+      x=real(x)
+      #z=(imag(#z)+flip(y)) * 1i^(-real(@rotxy)/90)    ;(z,y)
+      zz=real(#z)
+      y=imag(#z)
+    endif
+  endif
+
+  ;select start
+  if @start==1      ;zero
+    x=y=zz=0
+  elseif @start==2  ;one
+    x=y=zz=1
+  elseif @start==3  ;manual
+    x=real(@xystart)
+    y=imag(@xystart)
+    zz=@zstart
+  elseif @start==4  ;manual relative
+    x=x+real(@xystart)
+    y=y+imag(@xystart)
+    zz=@zstart
+  elseif @start==5  ;manual scaling
+    x=x*real(@xystart)
+    y=y*imag(@xystart)
+    zz=@zstart
+  elseif @start>5    ;attractor defaults
+    if @type==10
+      if @dist>0
+        x=.5
+        y=20
+        zz=1
+      endif
+    elseif @type==11
+      if @dist>0
+        x=y=zz=1
+      endif
+    elseif @type==12
+      if @dist>0
+        x=y=zz=1
+      endif
+    elseif @type==13
+      if @dist>0
+        x=y=zz=1
+      endif
+    elseif @type==20
+      if @dist>0
+        x=y=zz=1
+      endif
+    elseif @type==21
+      if @incol>0
+        x=x+9.125
+        y=y-3.875
+      endif
+    endif
+  endif
+
+  if @preset>0
+    if @type==0
+      a=-15
+      b=-19
+      c=1
+    elseif @type==1  ;Dynamic system
+      a=1
+      b=3
+      dt=.1
+    elseif @type==2  ;Gingerbreadman
+      a=1
+      b=1
+      c=1
+    elseif @type==3  ;Gnarl
+      if @preset==1
+        a=8
+        b=5
+        c=0
+        dt=0.1
+      elseif @preset==2
+        a=1
+        b=2.7
+        c=2.7
+        dt=0.1
+      elseif @preset==3
+        a=1
+        b=3
+        c=2
+        dt=0.1
+      else
+        a=1
+        b=3
+        c=6
+        dt=0.1
+      endif
+    elseif @type==4  ;Henon
+      a=1
+      b=1.4
+      c=.3
+    elseif @type==5  ;Hopalong
+      a=.4
+      b=1
+      c=0
+    elseif @type==6  ;Implicit euler approximation
+      a=1
+      b=3
+      dt=.1
+    elseif @type==7  ;Kamtorus
+      if @preset==1
+        a=1.3
+        dt=.05
+      else
+        a=acos(.24)
+        dt=.05
+      endif
+    elseif @type==8  ;Latoocarfian
+      if @preset==1
+        a=-2.5
+        b=1
+        c=.75
+        d=.75
+      else
+        a=-.966918
+        b=2.879879
+        c=.765145
+        d=.744728
+      endif
+    elseif @type==9  ;Latoocarfian2
+      a=-1.25
+      b=1
+      c=1.5
+      d=1.5
+    elseif @type==10  ;Lorenz3d
+      a=5
+      b=15
+      c=1
+      dt=.02
+    elseif @type==11 ;Lorenz3d1
+      a=5
+      b=15
+      c=1
+      dt=.02
+    elseif @type==12 ;Lorenz3d3
+      a=10
+      b=28
+      c=2.66
+      dt=.02
+    elseif @type==13 ;Lorenz3d4
+      a=10
+      b=28
+      c=2.66
+      dt=.02
+    elseif @type==14 ;Martin
+      a=3.14
+    elseif @type==15 ;Mira
+      if @preset==1
+        a=.3
+        b=1
+      elseif @preset==2
+        a=-.05
+        b=1
+      elseif @preset==3
+        a=.18
+        b=1
+      elseif @preset==4
+        a=-.48
+        b=.93
+      elseif @preset==5
+        a=.31
+        b=1
+      elseif @preset==6
+        a=.32
+        b=1
+      elseif @preset==7
+        a=-.4
+        b=1
+      elseif @preset==8
+        a=-.4
+        b=.99
+      elseif @preset==9
+        a=-.2
+        b=1
+      elseif @preset==10
+        a=.3
+        b=.999
+      endif
+    elseif @type==16 ;Peitgen
+      a=.37
+      b=.4
+    elseif @type==17 ;Pickover
+      a=2.24
+      b=.43
+      c=-.65
+      d=-2.43
+    elseif @type==18 ;Popcorn
+      a=3
+      dt=.05
+    elseif @type==19 ;Quadrupto
+      if @preset==1
+        a=34
+        b=1
+        c=5
+      else
+        a=35
+        b=1
+        c=7
+      endif
+    elseif @type==20 ;Rossler3d
+      a=.2
+      b=.2
+      c=5.7
+      dt=.04
+    elseif @type==21 ;Threeply
+      a=-55
+      b=-1
+      c=-42
+    elseif @type==22 ;Unity
+      if @preset==1
+        a=2
+      elseif @preset==2
+        a=1.71
+      else
+        a=1.75
+      endif
+    elseif @type==23 ;Verhulst
+      if @preset==1
+        a=1.95
+      elseif @preset==2
+        a=1.7
+      else
+        a=1.6
+      endif
+    elseif @type==24 ;Vine
+      a=2.7
+      dt=.1
+    elseif @type==25 ;Vine2
+      a=2.7
+      b=2.7
+      dt=.1
+    elseif @type==26 ;VineX
+      a=2.7
+      b=3
+      dt=.1
+    elseif @type==27 ;VinePwr
+      a=2.7
+      b=2
+      dt=.1
+    elseif @type==28 ;Volterra-Lotka
+      a=.3695
+      b=.739
+    endif
+  endif
+
+  if @type==7      ;Kantorus
+    c=cos(a)
+    d=sin(a)
+  elseif @type==15 ;Mira
+    c=2-2*a
+    temp=x*x
+    d=a*x+c*temp/(1+temp)
+  elseif @type==16 ;Peitgen
+    c=#pi/b-1
+    d=a*b
+  elseif @type==21 ;Threeply
+    d=cos(b)
+    b=sin(a+b+c)
+  endif
+loop:
+  if @type==0      ;Chip
+    if x==0
+      x=1e-50
+    endif
+    xx=x
+    x=y-x/abs(x)*cos(sqr(log(abs(b*x-c)))) \
+               *atan(sqr(log(abs(c*x-b))))
+    y=a-xx
+  elseif @type==1  ;Dynamic system
+    yy=y
+    y=y+dt*sin(x +a*sin(b*x))
+    x=x-dt*sin(yy+a*sin(b*yy))
+  elseif @type==2  ;Gingerbreadman
+    xx=x
+    x=a-y+b*sin(x)
+    y=c*xx
+  elseif @type==3  ;Gnarl
+    xx=x
+    x=x-dt*sin(a*y +sin(b*(y +sin(c*y ))))
+    y=y+dt*sin(a*xx+sin(b*(xx+sin(c*xx))))
+  elseif @type==4  ;Henon
+    xx=x
+    x=a+y-b*x*x
+    y=c*xx
+  elseif @type==5  ;Hopalong
+    if x==0
+      x=1e-50
+    endif
+    xx=x
+    x=y-x/abs(x)*sqrt(abs(b*x-c))
+    y=a-xx
+  elseif @type==6  ;Implicit euler approximation
+    y=y+dt*sin(x+a*sin(b*x))
+    x=x-dt*sin(y+a*sin(b*y))
+  elseif @type==7  ;Kamtorus
+    xx=x
+    x = c*x - d*(y-x*x)
+    y = d*xx+ c*(y-xx*xx)
+  elseif @type==8  ;Latoocarfian
+    xx=x
+    x=c*sin(b*x)+sin(b*y)
+    y=d*sin(a*y)+sin(a*xx)
+  elseif @type==9  ;Latoocarfian invx
+    xx=x
+    x=c*sin(b*x)-sin(b*y)
+    y=d*sin(a*y)+sin(a*xx)
+  elseif @type==10 ;Lorenz3d
+    xx=x
+    yy=y
+    x =x +dt*a*(y-x)
+    y =y +dt*(xx*(b-zz)-y)
+    zz=zz+dt*(xx*yy-c*zz)
+  elseif @type==11 ;Lorenz3d1
+
+    ;Original formula:
+    ;  norm = sqrt(x(n)^2 + y(n)^2)
+    ;  x(n+1) = x(n) + (-a*dt-dt)*x(n)
+    ;               + (a*dt-b*dt)*y(n)
+    ;               + (dt-a*dt)*norm
+    ;               + y(n)*dt*z(n)
+    ;  y(n+1) = y(n) + (b*dt-a*dt)*x(n)
+    ;               - (a*dt+dt)*y(n)
+    ;               + (b*dt+a*dt)*norm
+    ;               - x(n)*dt*z(n)
+    ;               - norm*z(n)*dt
+    ;  z(n+1) = z(n) +(y(n)*dt/2)
+    ;               - c*dt*z(n)
+    ;
+    ;Optimized one:
+
+    #z=x+flip(y)
+    tempc=(a+b-zz+flip(1-a))*cabs(#z)
+    tempz=flip(#z)*zz
+    #z=#z*(b-a+flip(1+a))
+
+    zz=zz+dt*(y/2 - c*zz)
+    x =x +dt*(imag(tempc) + real(tempz) - imag(#z))
+    y =y +dt*(real(tempc) - imag(tempz) + real(#z))
+
+  elseif @type==12 ;Lorenz3d3
+
+    ;original formula:
+    ;  norm = sqrt(x(n)^2 + y(n)^2)
+    ;  x(n+1) = x(n) + (-(a*dt+dt)*x(n)
+    ;               + (a*dt-b*dt+z(n)*dt)*y(n))/3
+    ;               + ((dt-a*dt)*(x(n)^2-y(n)^2)
+    ;               + 2*(b*dt+a*dt-z(n)*dt)*x(n)*y(n))/(3*norm)
+    ;  y(n+1) = y(n) +((b*dt-a*dt-z(n)*dt)*x(n)
+    ;               - (a*dt+dt)*y(n))/3
+    ;               + (2*(a*dt-dt)*x(n)*y(n)
+    ;               + (b*dt+a*dt-z(n)*dt)*(x(n)^2-y(n)^2))/(3*norm)
+    ;  z(n+1) = z(n) +(3*x(n)*dt*x(n)*y(n)
+    ;               -y(n)*dt*y(n)^2)/2
+    ;               - c*dt*z(n)
+    ;
+    ;Optimized one:
+
+    #z=x+flip(y)
+    tempz=flip(#z^2)*(b+a-zz+flip(a-1))/3/cabs(#z)
+    #z=#z*(b-a-zz+flip(a+1))/3
+
+    zz=zz+dt*((3*x^2-y^2)*y/2 - c*zz)
+    x =x +dt*(real(tempz) - imag(#z))
+    y =y +dt*(imag(tempz) + real(#z))
+
+  elseif @type==13 ;Lorenz3d4
+
+    ;Original formula:
+    ;  x(n+1) = x(n) +(-a*dt*x(n)^3
+    ;   + (2*a*dt+b*dt-z(n)*dt)*x(n)^2*y(n)
+    ;   + (a*dt-2*dt)*x(n)*y(n)^2
+    ;   + (z(n)*dt-b*dt)*y(n)^3) / (2 * (x(n)^2+y(n)^2))
+    ;  y(n+1) = y(n) +((b*dt-z(n)*dt)*x(n)^3
+    ;   + (a*dt-2*dt)*x(n)^2*y(n)
+    ;    + (-2*a*dt-b*dt+z(n)*dt)*x(n)*y(n)^2
+    ;    - a*dt*y(n)^3) / (2 * (x(n)^2+y(n)^2))
+    ;  z(n+1) = z(n) +(2*x(n)*dt*x(n)^2*y(n)
+    ;   - 2*x(n)*dt*y(n)^3
+    ;   - c*dt*z(n))
+    ;
+    ;Optimized one:
+
+    #z=x+flip(y)
+    xx=x^3
+    yy=y^3
+    temp2=zz-b
+    tempz=dt*.5/|#z|*(flip(#z*(a-2+flip(a+a-temp2))*x*y) \
+      -(xx+flip(yy))*(a+flip(temp2)))
+
+    zz=zz+dt*(2*(xx*y-x*yy) - c*zz)
+    x=x+real(tempz)
+    y=y+imag(tempz)
+
+  elseif @type==14 ;Martin
+    xx=x
+    x=y-sin(x)
+    y=a-xx
+  elseif @type==15 ;Mira
+    xx=x
+    x=b*y+d
+    temp=x*x
+    d=a*x+c*temp/(1+temp)
+    y=d-xx
+
+
+
+  elseif @type==16 ;Peitgen
+    xx=x
+    if x<=0
+      x=(2-a)*x - y
+    elseif x>=b
+      x=(2-a)*x - y - d
+    else
+      x=(2-a*c)*x - y
+    endif
+    y=xx
+  elseif @type==17 ;Pickover
+    xx=x
+    x=sin(a*y)-zz*cos(b*x)
+    y=zz*sin(c*xx)-cos(d*y)
+    zz=sin(xx)
+  elseif @type==18 ;Popcorn
+    xx=x
+    x=x-dt*sin(y+tan(a*y))
+    y=y-dt*sin(xx+tan(a*xx))
+  elseif @type==19 ;Quadrupto
+    if x==0
+      x=1e-50
+    endif
+    xx=x
+    x=y-x/abs(x)*sin(log(abs(b*x-c))) \
+           *atan(sqr(log(abs(c*x-b))))
+    y=a-xx
+  elseif @type==20 ;Rossler3d
+    xx=x
+    x=x-dt*(y+zz)
+    y=y+dt*(xx+a*y)
+    zz=zz+dt*(b+(xx-c)*zz)
+  elseif @type==21 ;Threeply
+    if x==0
+      x=1e-50
+    endif
+    xx=x
+    x=y-x/abs(x)*(abs(sin(x)*d+c-x*b))
+    y=a-xx
+  elseif @type==22 ;Unity
+    temp=a-|x+flip(y)|
+    y=temp*x
+    x=temp*y
+  elseif @type==23 ;Verhulst
+    xx=x
+    x=y
+    y=a*y*(1-xx^2)
+  elseif @type==24 ;Vine
+    xx=x
+    x=x-dt*sin(y+sin(a*y))
+    y=y+dt*sin(xx+sin(a*xx))
+  elseif @type==25 ;Vine2
+    xx=x
+    x=x-dt*sin(y+sin(b*(y+sin(a*y))))
+    y=y+dt*sin(xx+sin(b*(xx+sin(a*xx))))
+  elseif @type==26 ;VineX
+    xx=y
+    yy=x
+    int i=0
+    while i<round(b)
+      xx=y+sin(a*xx)
+      yy=x+sin(a*yy)
+      i=i+1
+    endwhile
+    x=x-dt*sin(xx)
+    y=y+dt*sin(yy)
+  elseif @type==27 ;VinePwr
+    xx=x
+    x=x-dt*sin(y^b+sin(a*y))
+    y=y+dt*sin(xx^b+sin(a*xx))
+  elseif @type==28 ;Volterra-Lotka
+    ;Original formula:
+    ; x = x+a * (x-xy + ((x+b*(x-xy))-(x+b*(x-xy))*(y+b*(xy-y))) )
+    ; y = y+a * (xy-y + ((x+b*(x-xy))*(y+b*(xy-y))-(y+b*(xy-y))) )
+    ;
+    ;Optimized one:
+
+    rad=x*y
+    xx=x-rad
+    yy=rad-y
+    temp=(x+b*xx)
+    temp2=(y+b*yy)
+    rad=temp*temp2
+    x=x+a*(xx+(temp-rad))
+    y=y+a*(yy+(rad-temp2))
+  endif
+
+  ;is lorenz3d or pickover or rossler3d ?
+  if @type>=10 && @type<=13 || @type==17 || @type==20
+
+    if @view==1     ;xz top
+      #z=x+flip(zz)
+    elseif @view==2 ;zy right
+      #z=zz+flip(y)
+    elseif @view==3 ;yz right flip
+      #z=y+flip(zz)
+    elseif @view==4 ;manual rotation
+      #z=(zz+flip(y)) * 1i^(real(@rotxy)/90)          ;(z,y)
+      temp=imag(#z)
+      #z=(x+flip(real(#z))) * 1i^(imag(@rotxy)/90)    ;(x,z)
+      #z=(real(#z)+flip(temp)) * 1i^(@rotz/90) ;(x,y)
+    else            ;xy front
+      #z=x+flip(y)
+    endif
+
+  else
+    #z=x+flip(y)
+  endif
+
+  iter=iter+1
+
+  ;is Orad or Test ?
+  if @outcol==2 || @incol==2
+    rad=cabs(#z)
+  endif
+
+  if iter>@skip
+    if @bailout>0
+      if |#z|>@bailout
+        done=true
+      endif
+    elseif @bailout<0
+      if |#z-oldz|<-@bailout
+        done=true
+      endif
+    endif
+
+    if cabs(#pixel-#z)<@dist
+
+      pixelhits=pixelhits+1
+
+      if @outcol==0      ;Hits
+        if @limit>0
+          lasthit=pixelhits/@limit
+          if lasthit>.99
+            lasthit=.99
+            done=true
+          endif
+        else
+          lasthit=pixelhits/20
+        endif
+      elseif @outcol==1  ;Ospeed
+        lasthit=cabs(oldz-#z)
+      elseif @outcol==2  ;Orad
+        lasthit=abs(oldrad-rad)
+      elseif @outcol==3  ;Oang
+        lasthit=abs(atan2(-#z/oldz)+#pi)*(0.9975/#pi/2)
+      elseif @outcol==4  ;Odir
+        lasthit=abs(atan2(-(#z-oldz)/(oldz-oldz2))+#pi)*(0.9975/#pi/2)
+      elseif @outcol==5  ;Odist
+        lasthit=cabs(#z-#pixel)*100
+      elseif @outcol==6  ;Ang
+        lastz=abs(atan2(-#z)+#pi)*(0.9975/#pi/2)
+      elseif @outcol==7  ;Dir
+        lastz=abs(atan2(-#z+oldz)+#pi)*(0.9975/#pi/2)
+      elseif @outcol==8  ;Opos
+        lastz=#z
+      elseif @outcol==9  ;Depth
+        lasthit=10+zz
+      elseif @outcol==10 ;3Dist
+        lasthit=sqrt(|#z|+zz^2)*100
+      elseif @outcol==11 ;XZpos
+        lastz=x+flip(zz)
+      elseif @outcol==12 ;YZpos
+        lastz=y+flip(zz)
+      endif
+
+    endif
+
+  endif
+
+  ;if last iter is reached and there are
+  ;no pixel hits, the pixel becomes 'inside'
+  if iter==#maxiter || done
+
+    if pixelhits>0 || done
+      ;is Ang or Dir or Opos or XZpos or YZpos ?
+      if @outcol>=6 && @outcol<=8 || @outcol==11 || @outcol==12
+        #z=lastz
+      else
+        #z=lasthit
+      endif
+      done=true
+    else
+      if @incol==0      ;Off
+        #z=(0,0)
+      elseif @incol==1  ;Ospeed
+        #z=cabs(oldz-#z)
+      elseif @incol==2  ;Orad
+        #z=abs(oldrad-rad)
+      elseif @incol==3  ;Oang
+        #z=abs(atan2(-#z/oldz)+#pi)*(0.9975/#pi/2)
+      elseif @incol==4  ;Odir
+        #z=abs(atan2(-(#z-oldz)/(oldz-oldz2))+#pi)*(0.9975/#pi/2)
+      elseif @incol==5  ;Odist
+        #z=cabs(#z-#pixel)
+      elseif @incol==6  ;Ang
+        #z=abs(atan2(-#z)+#pi)*(0.9975/#pi/2)
+      elseif @incol==7  ;Dir
+        #z=abs(atan2(-#z+oldz)+#pi)*(0.9975/#pi/2)
+;      elseif @incol==8  ;Opos
+;        #z=#z
+      elseif @incol==9  ;Depth
+        #z=10+zz
+      elseif @incol==10 ;3Dist
+        #z=sqrt(|#z|+zz^2)
+      elseif @incol==11 ;XZpos
+        #z=real(#z)+flip(zz)
+      elseif @incol==12 ;YZpos
+        #z=imag(#z)+flip(zz)
+      endif
+    endif
+
+  endif
+
+  ;is Odir ?
+  if @outcol==4 || @incol==4
+    oldz2=oldz
+  endif
+
+  ;is Orad or Rad?
+  if @outcol==2 || @incol==2
+    oldrad=rad
+  endif
+
+  ;is Ospeed or Oang or Odir or bailout<0
+  if @outcol==1 || @outcol==3 || @outcol==4 || @outcol==7 || \
+    @incol==1  || @incol==3 ||  @incol==4 || @incol==7 || \
+    @bailout<0
+    oldz=#z
+  endif
+bailout:
+  done==false
+default:
+  title = "Attractors"
+  center = (0.0, 0.0)
+  magn=0.75
+  maxiter = 100
+  periodicity = 0
+  method = multipass
+
+  param type
+    caption="Attractor type"
+    enum="Chip" \
+         "Dynamic system" \
+         "Gingerbreadman" \
+         "Gnarl" \
+         "Hénon" \
+         "Hopalong" \
+         "Implicit Euler approximation" \
+         "Kamtorus" \
+         "Latööcarfian" \
+         "Latööcarfian InvX" \
+         "Lorenz3d" \
+         "Lorenz3d (1 lobe)" \
+         "Lorenz3d (3 lobes)" \
+         "Lorenz3d (4 lobes)" \
+         "Martin" \
+         "Mira" \
+         "Peitgen" \
+         "Pickover" \
+         "Popcorn" \
+         "Quadruptwo" \
+         "Rossler3d" \
+         "Threeply" \
+         "Unity" \
+         "Verhulst" \
+         "Vine" \
+         "Vine2" \
+         "VineX" \
+         "VinePwr" \
+         "Volterra-Lotka"
+    hint="See ''mjd.txt'' for a table of what every attractor uses \
+      (defaults, parameters, functions etc.)"
+    default=0
+  endparam
+
+  param preset
+    caption="Param preset"
+    enum="Manual" \
+         "Default 1" \
+
+         "Default 2" \
+         "Default 3" \
+         "Default 4" \
+         "Default 5" \
+         "Default 6" \
+         "Default 7" \
+         "Default 8" \
+         "Default 9" \
+         "Default 10"
+    hint="Not all attractors use all the default options. In fact, \
+      the only attractor that uses more than 3 defaults is ''Mira'', \
+      which uses all."
+    default=1
+  endparam
+
+  param incol
+    caption="I: Inside coloring"
+    enum="Off" \
+         "Last orbit speed" \
+         "Last orbit rad. speed" \
+         "Last orbit ang. speed" \
+         "Last orbit dir. speed" \
+         "Last orbit distance" \
+         "Last orbit angle" \
+         "Last orbit direction" \
+         "Last orbit position" \
+         "Last 3D orbit depth" \
+         "Last 3D orbit distance" \
+         "Last 3D orbit XZ pos" \
+         "Last 3D orbit YZ pos"
+    hint="The 3D options except for 'distance' will only wirk with \
+      Pickover, Lorenz3D and Rossler3D attractors."
+    default=5
+  endparam
+  param outcol
+    caption="O: Outside coloring"
+    enum="Number of hits" \
+         "Orbit speed" \
+         "Orbit radial speed" \
+         "Orbit angular speed" \
+         "Orbit directional speed" \
+         "Orbit distance" \
+         "Orbit angle" \
+         "Orbit direction" \
+         "Orbit position" \
+         "3D orbit depth" \
+         "3D orbit distance" \
+         "3D orbit XZ position" \
+         "3D orbit YZ position"
+    default=0
+    hint="In order to turn off outside coloring, set Pixel trap \
+      radius and Bailout to zero"
+  endparam
+
+  param limit
+    caption="O: Limit hits (0=off)"
+    default=20
+    hint="When the Outside coloring mode ''Number of hits'' is \
+      selected, the pixel is colored in relation to the number of \
+      times the orbit is trapped. To prevent colors from wrapping, \
+      this number of hits and above become color index 399."
+  endparam
+
+  param dist
+    caption="O: Pixel trap radius"
+    default=0.0
+    hint="If the orbit comes this close to the pixel, the outside \
+      coloring value is calculated. Then, when bailed out or when \
+      maxiter is reached, the pixel becomes ''outside'' and the value \
+      is passed to the outside coloring."
+  endparam
+
+  param bailout
+    caption="O: Bailout"
+    default=0.0
+    hint="Use negative values to bailout on a |z-oldz| basis."
+  endparam
+
+  param skip
+    caption="O: Iteration skip"
+    default=0
+    hint="The number of iterations to skip before checking any kind \
+      of outside"
+  endparam
+
+  param pa
+    caption="Param A"
+    default=1.0
+  endparam
+  param pb
+    caption="Param B"
+    default=1.0
+  endparam
+  param pc
+    caption="Param C"
+    default=1.0
+  endparam
+  param pd
+    caption="Param D"
+    default=1.0
+  endparam
+  param pdt
+    caption="Param dt"
+    default=0.1
+  endparam
+
+  param start
+    caption="S: Orbit start"
+    enum="Pixel (except Z)" \
+         "Zero" \
+         "One" \
+         "Manual" \
+         "Manual (relative)" \
+         "Manual (scaling)" \
+         "Attractor Default"
+    default=6
+  endparam
+  param xystart
+    caption="S: Manual XY start"
+    default=(0,0)
+  endparam
+  param zstart
+    caption="S: Manual Z start"
+    default=0.0
+  endparam
+
+  param view
+    caption="R: 3D orbit view"
+    enum="(X,Y) Front" \
+         "(X,Z) Top" \
+         "(Z,Y) Right" \
+         "(Y,Z) Right, flipped" \
+         "Manual rotation"
+    default=0
+    hint="Only available for Pickover, Lorenz3D and Rossler3D \
+      attractors."
+  endparam
+
+  param rotxy
+    caption="R: Manual XY rotation"
+    default=(60,30)
+    hint="Only active when 3D orbit view is set to Manual"
+  endparam
+  param rotz
+    caption="R: Manual Z rotation"
+    default=0.0
+    hint="Only active when 3D orbit view is set to Manual"
+  endparam
+}
+
+c[z²+1/z²]J { ;20010118
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  #z=#pixel
+loop:
+  complex z2=#z^2
+  #z=@seed*(z2 + 1/z2)
+bailout:
+  |#z|<@bailout
+default:
+  title="c(z²+1/z²) Julia"
+  magn=.5
+  param seed
+    caption="Julia seed"
+    default=(.58,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=4.0
+  endparam
+switch:
+  type="c[z²+1/z²]M"
+  @start=#pixel
+  @bailout=bailout
+  @fnz=fnz
+}
+
+c[z²+1/z²]M { ;20010109
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Last modification: 20010118 added julia type and switch
+init:
+  #z=@start
+  complex c=#pixel
+loop:
+  complex z2=#z^2
+  #z=c*(z2 + 1/z2)
+bailout:
+  |#z|<@bailout
+default:
+  title="c(z²+1/z²) Mandel"
+  magn=2
+  param start
+    caption="Perturbation"
+    default=(1,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=4.0
+  endparam
+switch:
+  type="c[z²+1/z²]J"
+  @seed=#pixel
+  @bailout=bailout
+  @fnz=fnz
+}
+
+c+pi*sinzJ{ ;20010118
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  #z=#pixel
+loop:
+  #z=@seed+#pi*@fnz(#z)
+bailout:
+  |imag(#z)|<@bailout
+default:
+  title="c+pi*fnz Julia"
+  magn=0.666666666666666666666666666666667
+  param seed
+    caption="Julia seed"
+    default=(1,.2)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=15.0
+  endparam
+  func fnz
+    caption="z function"
+    default=sin()
+  endfunc
+switch:
+  type="c+pi*sinzM"
+  @start=#pixel
+  @bailout=bailout
+  @fnz=fnz
+}
+
+c+pi*sinzM{ ;20010109
+;Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+;© 2000 Mark Jeronimus
+;Last modification: 20010118 added julia type and switch
+init:
+  #z=@start
+loop:
+  #z=#pixel+#pi*@fnz(#z)
+bailout:
+  |imag(#z)|<@bailout
+default:
+  title="c+pi*fnz Mandel"
+  magn=0.666666666666666666666666666666667
+  param start
+    caption="Perturbation"
+    default=(1.57079632679489661923132169163975,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=15.0
+  endparam
+  func fnz
+    caption="z function"
+    default=sin()
+  endfunc
+switch:
+  type="c+pi*sinzJ"
+  @seed=#pixel
+  @bailout=bailout
+  @fnz=fnz
+}
+
+Octageo1Map{ ;
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  bool x=false
+  bool y=false
+  bool xy=false
+  bool yx=false
+  float rot=0
+
+  #z=@start
+loop:
+  x=real(#z)>0
+  y=imag(#z)>0
+  xy=imag(#z)+real(#z)>0
+  yx=imag(#z)-real(#z)>0
+  
+  if x && yx
+    rot=.75
+  elseif y && !yx
+    rot=.25
+  elseif !y && xy
+    rot=3.75
+  elseif x && !xy
+    rot=3.25
+  elseif !x && !yx
+    rot=2.75
+  elseif !y && yx
+    rot=2.25
+  elseif y && !xy
+    rot=1.75
+  else
+    rot=1.25
+  endif
+  #z=#z+#pixel*1i^rot
+  #z=sqr(#z)+@seed
+bailout:
+  |#z|<@bailout
+default:
+  title="Octageo1 Map"
+  method=multipass
+  param start
+    caption="Mandel Map"
+    default=(0,0)
+  endparam
+  param seed
+    caption="Julia seed"
+    default=(0,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=65536.0
+  endparam
+switch:
+  type="Octageo2Mandel"
+  start=start
+  shift=#pixel
+  bailout=bailout  
+}
+
+Octageo2Mandel{ ;
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  bool x=false
+  bool y=false
+  bool xy=false
+  bool yx=false
+  float rot=0
+
+  #z=@start
+loop:
+  x=real(#z)>0
+  y=imag(#z)>0
+  xy=imag(#z)+real(#z)>0
+  yx=imag(#z)-real(#z)>0
+  
+  if x && yx
+    rot=.75
+  elseif y && !yx
+    rot=.25
+  elseif !y && xy
+    rot=3.75
+  elseif x && !xy
+    rot=3.25
+  elseif !x && !yx
+    rot=2.75
+  elseif !y && yx
+    rot=2.25
+  elseif y && !xy
+    rot=1.75
+  else
+    rot=1.25
+  endif
+  #z=#z+@shift*1i^rot
+  #z=sqr(#z)+#pixel
+bailout:
+  |#z|<@bailout
+default:
+  title="Octageo2 Mandel"
+  method=multipass
+  param start
+    caption="Mandel Map"
+    default=(0,0)
+  endparam
+  param shift
+    caption="Orbit shift"
+    default=(0,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=65536.0
+  endparam
+switch:
+  type="Octageo3Julia"
+  seed=#pixel
+  shift=shift
+  bailout=bailout  
+}
+
+Octageo3Julia{ ;
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  bool x=false
+  bool y=false
+  bool xy=false
+  bool yx=false
+  float rot=0
+
+  #z=#pixel
+loop:
+  x=real(#z)>0
+  y=imag(#z)>0
+  xy=imag(#z)+real(#z)>0
+  yx=imag(#z)-real(#z)>0
+  
+  if x && yx
+    rot=.75
+  elseif y && !yx
+    rot=.25
+  elseif !y && xy
+    rot=3.75
+  elseif x && !xy
+    rot=3.25
+  elseif !x && !yx
+    rot=2.75
+  elseif !y && yx
+    rot=2.25
+  elseif y && !xy
+    rot=1.75
+  else
+    rot=1.25
+  endif
+  #z=#z+@shift*1i^rot
+  #z=sqr(#z)+@seed
+bailout:
+  |#z|<@bailout
+default:
+  title="Octageo3 Julia"
+  method=multipass
+  param seed
+    caption="Julia seed"
+    default=(0,0)
+  endparam
+  param shift
+    caption="Orbit shift"
+    default=(0,0)
+  endparam
+  param bailout
+    caption="Bailout"
+    default=65536.0
+  endparam
+switch:
+  type="Octageo1Map"
+  start=#pixel
+  seed=seed
+  bailout=bailout  
+}
+
+fn(z-p)fn(z+p)+cJ {; 20040119
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  z=#pixel
+loop:
+  z=fn1(z+@p)*fn2(z-@p)+@start
+bailout:
+  |z|<@bailout
+default:
+  title = "fn(z-p)fn(z+p)+c Julia"
+  param start
+    caption="Seed"
+    default=(0,0)
+  endparam
+  param p
+    caption="Parameter"
+    default=(0.3,0.6)
+  endparam
+  param bailout
+    default=4
+  endparam
+  func fn1
+    default=sin()
+  endfunc
+  func fn2
+    default=sin()
+  endfunc
+switch:
+  type="fn(z-p)fn(z+p)+cM"
+  p=@p
+  bailout=@bailout
+}
+
+fn(z-p)fn(z+p)+cM {; 20040119
+; Made by Mark Jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+init:
+  z=#pixel+@start
+  c=#pixel
+loop:
+  z=fn1(z+@p)*fn2(z-@p)+c
+bailout:
+  |z|<@bailout
+default:
+  title = "fn(z-p)fn(z+p)+c Mandel"
+  param start
+    default=(0,0)
+  endparam
+  param p
+    caption="Parameter"
+    default=(.3,.6)
+  endparam
+  param bailout
+    default=4
+  endparam
+  func fn1
+    default=sin()
+  endfunc
+  func fn2
+    default=sin()
+  endfunc
+switch:
+  type="fn(z-p)fn(z+p)+cJ"
+  start=#pixel
+  p=@p
+  bailout=@bailout
+}

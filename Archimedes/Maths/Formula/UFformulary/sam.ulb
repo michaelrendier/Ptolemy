@@ -1,0 +1,469 @@
+class TS_WallpaperGroups(common.ulb:TrapShape) {
+  ; Samuel Monnier, 2008
+ 	; Generates tilings with symmetries given by the 17 wallpaper groups.
+
+public:
+  import "common.ulb"
+  import "standard.ulb"
+  
+  func TS_WallpaperGroups(Generic pparent)
+    TrapShape(pparent)
+    TS = new @TrpSh(0)
+  endfunc
+
+  ; Initialization
+  func Init(complex pz)
+    TS.Init(pz)
+  endfunc
+
+ 	float func Iterate(complex pz)
+ 	  z = pz
+
+   if @group == 0
+      grord = 1
+      modpar = @modpar
+    elseif @group == 1
+      grord = 2
+      modpar = @modpar
+    elseif @group == 2 || @group == 3
+      grord = 2
+      modpar = 1i*@modpar1
+    elseif @group == 4
+      grord = 2
+      modpar = exp(1i*pi/180*@modangle)
+    elseif @group == 5 || @group == 6 || @group == 7
+      grord = 4
+      modpar = 1i*@modpar1
+    elseif @group == 8
+      grord = 4
+      modpar = exp(1i*pi/180*@modangle)
+    elseif @group == 9
+      grord = 4
+      modpar = 1i
+    elseif @group == 10 || @group == 11
+      grord = 8
+      modpar = 1i
+    elseif @group == 12
+      grord = 5
+      modpar = .5 + 1i*sqrt(3)/2
+    elseif @group == 13
+      grord = 10
+      modpar = .5 + 1i*sqrt(3)/2
+    elseif @group == 14
+      grord = 6
+      modpar = .5 + 1i*sqrt(3)/2
+    elseif @group == 15
+      grord = 10
+      modpar = .5 + 1i*sqrt(3)/2
+    elseif @group == 16
+      grord = 20
+      modpar = .5 + 1i*sqrt(3)/2
+    endif
+
+    zc = real(z) - real(modpar)*imag(z)/imag(modpar) + 1i*imag(z)/imag(modpar)
+    zc = floor(zc)
+    zc = real(zc) + real(modpar)*imag(zc) + 1i*imag(modpar)*imag(zc)
+    zz = (z - zc)
+
+    indfin = 1e20
+    indtemp = 1e20
+    i = -1
+    j = -1
+    k = 0
+
+    while i <= 1
+      while j <= 1
+        zt1 = zz - i - j*modpar
+
+        while k < grord
+
+          ;p1
+          if @group == 0 && k == 0
+            zt2 = zt1
+          endif
+
+          ;p2
+          if @group == 1 && k == 0
+            zt2 = zt1
+          elseif @group == 1 && k == 1
+            zt2 = -zt1 + 1 + modpar
+          endif
+
+          ;pm
+          if @group == 2 && k == 0
+            zt2 = zt1
+          elseif @group == 2 && k == 1
+            zt2 = flip(conj(flip(zt1))) + 1
+          endif
+
+          ;pg
+          if @group == 3 && k == 0
+            zt2 = zt1
+          elseif @group == 3 && k == 1
+            zt2 = flip(conj(flip(zt1))) + 1 + modpar/2
+          endif
+
+          ;cm
+          if @group == 4 && k == 0
+            zt2 = zt1
+          elseif @group == 4 && k == 1
+            zt2 = exp(1i*atan2(modpar)/2)*conj(exp(-1i*atan2(modpar)/2)*zt1)
+          endif
+
+          ;pmm
+          if @group == 5 && k == 0
+            zt2 = zt1
+          elseif @group == 5 && k == 1
+            zt2 = flip(conj(flip(zt1))) + 1
+          elseif @group == 5 && k == 2
+            zt2 = conj(zt1) + modpar
+          elseif @group == 5 && k == 3
+            zt2 = -zt1 + 1 + modpar
+          endif
+
+          ;pmg
+          if @group == 6 && k == 0
+            zt2 = zt1
+          elseif @group == 6 && k == 1
+            zt2 = flip(conj(flip(zt1))) + 1
+          elseif @group == 6 && k == 2
+            zt2 = conj(zt1) + .5 + modpar
+          elseif @group == 6 && k == 3
+            zt2 = -zt1 + 1.5 + modpar
+          endif
+
+          ;pgg
+          if @group == 7 && k == 0
+            zt2 = zt1
+          elseif @group == 7 && k == 1
+            zt2 = -zt1 + 1 + modpar
+          elseif @group == 7 && k == 2
+            zt2 = flip(conj(flip(zt1))) + .5 + .5*modpar
+          elseif @group == 7 && k == 3
+            zt2 = conj(zt1) + .5 + .5*modpar
+          endif
+
+          ;cmm
+          if @group == 8 && k == 0
+            zt2 = zt1
+          elseif @group == 8 && k == 1
+            zt2 = exp(1i*atan2(modpar)/2)*conj(exp(-1i*atan2(modpar)/2)*zt1)
+          elseif @group == 8 && k == 2
+            zt2 = -zt1 + 1 + modpar
+          elseif @group == 8 && k == 3
+            zt2 = exp(1i*atan2(modpar)/2)*flip(conj(flip(exp(-1i*atan2(modpar)/2)))*(zt1-.5-modpar/2))+.5+modpar/2
+          endif
+
+          ;p4
+          if @group == 9 && k == 0
+            zt2 = zt1
+          elseif @group == 9 && k == 1
+            zt2 = 1i*(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 9 && k == 2
+            zt2 = -(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 9 && k == 3
+            zt2 = -1i*(zt1-(.5,.5))+(.5,.5)
+          endif
+
+          ;p4m
+          if @group == 10 && k == 0
+            zt2 = zt1
+          elseif @group == 10 && k == 1
+            zt2 = 1i*(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 10 && k == 2
+            zt2 = -(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 10 && k == 3
+            zt2 = -1i*(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 10 && k == 4
+            zt2 = conj(zt1*exp(-1i*pi/4))*exp(1i*pi/4)
+          elseif @group == 10 && k == 5
+            zt2 = 1i*(conj(zt1*exp(-1i*pi/4))*exp(1i*pi/4)-(.5,.5))+(.5,.5)
+          elseif @group == 10 && k == 6
+            zt2 = -(conj(zt1*exp(-1i*pi/4))*exp(1i*pi/4)-(.5,.5))+(.5,.5)
+          elseif @group == 10 && k == 7
+            zt2 = -1i*(conj(zt1*exp(-1i*pi/4))*exp(1i*pi/4)-(.5,.5))+(.5,.5)
+          endif
+
+          ;p4g
+          if @group == 11 && k == 0
+            zt2 = zt1
+          elseif @group == 11 && k == 1
+            zt2 = 1i*(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 11 && k == 2
+            zt2 = -(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 11 && k == 3
+            zt2 = -1i*(zt1-(.5,.5))+(.5,.5)
+          elseif @group == 11 && k == 4
+            zt2 = conj((zt1-.5)*exp(1i*pi/4))*exp(-1i*pi/4) + .5
+          elseif @group == 11 && k == 5
+            zt2 = conj((zt1-.5)*exp(1i*pi/4))*exp(-1i*pi/4) + .5
+            zt2 = 1i*(zt2-(.5,.5))+(.5,.5)
+          elseif @group == 11 && k == 6
+            zt2 = conj((zt1-.5)*exp(1i*pi/4))*exp(-1i*pi/4) + .5
+            zt2 = -(zt2-(.5,.5))+(.5,.5)
+          elseif @group == 11 && k == 7
+            zt2 = conj((zt1-.5)*exp(1i*pi/4))*exp(-1i*pi/4) + .5
+            zt2 = -1i*(zt2-(.5,.5))+(.5,.5)
+          endif
+
+          ;p3
+          if @group == 12 && k == 0
+            zt2 = zt1
+          elseif @group == 12 && k == 1
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 12 && k == 2
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 12 && k == 3
+            zt2 = exp(2*pi*1i/3)*(zt1-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          elseif @group == 12 && k == 4
+            zt2 = exp(4*pi*1i/3)*(zt1-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          endif
+
+          ;p3m1
+          if @group == 13 && k == 0
+            zt2 = zt1
+          elseif @group == 13 && k == 1
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 13 && k == 2
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 13 && k == 3
+            zt2 = exp(2*pi*1i/3)*(zt1-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          elseif @group == 13 && k == 4
+            zt2 = exp(4*pi*1i/3)*(zt1-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          elseif @group == 13 && k == 5
+            zt2 = exp(1i*pi/6)*conj(exp(-1i*pi/6)*zt1)
+          elseif @group == 13 && k == 6
+            zt2 = exp(1i*pi/6)*conj(exp(-1i*pi/6)*zt1)
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 13 && k == 7
+            zt2 = exp(1i*pi/6)*conj(exp(-1i*pi/6)*zt1)
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 13 && k == 8
+            zt2 = exp(1i*pi/6)*conj(exp(-1i*pi/6)*zt1)
+            zt2 = exp(2*pi*1i/3)*(zt2-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          elseif @group == 13 && k == 9
+            zt2 = exp(1i*pi/6)*conj(exp(-1i*pi/6)*zt1)
+            zt2 = exp(4*pi*1i/3)*(zt2-1-1i*sqrt(3)/3)+1+1i*sqrt(3)/3
+          endif
+
+          ;p31m
+          if @group == 14 && k == 0
+            zt2 = zt1
+          elseif @group == 14 && k == 1
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 14 && k == 2
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 14 && k == 3
+            zt2 = exp(-1i*pi/3)*conj(exp(1i*pi/3)*(zt1-1))+1
+          elseif @group == 14 && k == 4
+            zt2 = exp(-1i*pi/3)*conj(exp(1i*pi/3)*(zt1-1))+1
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 14 && k == 5
+            zt2 = exp(-1i*pi/3)*conj(exp(1i*pi/3)*(zt1-1))+1
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          endif
+
+          ;p6
+          if @group == 15 && k == 0
+            zt2 = zt1
+          elseif @group == 15 && k == 1  ;
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 15 && k == 2  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 15 && k == 3
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 15 && k == 4
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 15 && k == 5  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 15 && k == 6  ;
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 15 && k == 7  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          elseif @group == 15 && k == 8
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 15 && k == 9  ;
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          endif
+
+          ;p6m
+          if @group == 16 && k == 0
+            zt2 = zt1
+          elseif @group == 16 && k == 1  ;
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 16 && k == 2  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 16 && k == 3
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 4
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 5  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 6  ;
+            zt2 = exp(2*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 16 && k == 7  ;
+            zt2 = exp(4*pi*1i/3)*(zt1-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          elseif @group == 16 && k == 8
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 16 && k == 9  ;
+            zt2 = -(zt1-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          elseif @group == 16 && k == 10
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+          elseif @group == 16 && k == 11  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 16 && k == 12  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+          elseif @group == 16 && k == 13
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 14
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 15  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+          elseif @group == 16 && k == 16  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 16 && k == 17  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          elseif @group == 16 && k == 18
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(2*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + 1
+          elseif @group == 16 && k == 19  ;
+            zt2 = conj(zt1*exp(-1i*pi/6))*exp(1i*pi/6)
+            zt2 = -(zt2-exp(pi*1i/6)*sqrt(3)/2) + exp(pi*1i/6)*sqrt(3)/2
+            zt2 = exp(4*pi*1i/3)*(zt2-.5-1i*sqrt(3)/6)+.5+1i*sqrt(3)/6
+            zt2 = zt2 + .5 + 1i*sqrt(3)/2
+          endif
+
+          ztnorm = real(zt2) - real(modpar)*imag(zt2)/imag(modpar) + 1i*imag(zt2)/imag(modpar)
+
+          TS.Init(zt2)
+          indtemp = TS.Iterate(zt2)
+
+          if real(ztnorm) < 0
+           indtemp = indtemp + (-real(ztnorm))^@decpow
+          elseif real(ztnorm) > 1
+           indtemp = indtemp + (real(ztnorm) - 1)^@decpow
+          endif
+          if imag(ztnorm) < 0
+           indtemp = indtemp + (-imag(ztnorm))^@decpow
+          elseif imag(ztnorm) > 1
+           indtemp = indtemp + (imag(ztnorm) - 1)^@decpow
+          endif
+
+          if abs(indtemp) < abs(indfin)
+            indfin = indtemp
+          endif
+
+          k = k + 1
+        endwhile
+
+        k = 0
+        j = j + 1
+      endwhile
+      j = -1
+      i = i + 1
+    endwhile
+
+    return indfin
+ 	endfunc
+ 	
+protected:
+  TrapShape TS
+
+  complex zz
+  complex zt1
+  complex zt2
+  complex ztnorm
+  complex modpar
+
+  float indfin
+  float indtemp
+  float indtemp2
+
+  int i
+  int j
+  int k
+  int grord
+
+default:
+  title = "Wallpaper group trap"
+
+  int param v_PG_WallpaperGroups
+  	caption = "Version (Wallpaper groups)"
+	  default = 100
+ 		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_PG_WallpaperGroups < 100
+  endparam
+
+  heading
+    caption = "Tiling properties"
+    expanded = false
+  endheading
+
+  param group
+    caption = "Group"
+    default = 0
+    enum = "p1" "p2" "pm" "pg" "cm" "pmm" "pmg" "pgg" "cmm" "p4" "p4m" "p4g" "p3" "p3m1" "p31m" "p6" "p6m"
+  endparam
+
+  param modpar
+    caption = "Modular parameter"
+    default = (0,1)
+    visible = @group == 0 || @group == 1
+  endparam
+
+  param modpar1
+    caption = "Modular parameter"
+    default = 1.0
+    visible = @group == 2 || @group == 3 || @group == 5 || @group == 6 || @group == 7
+  endparam
+
+  param modangle
+    caption = "Modular angle"
+    default = 90.0
+    visible =  @group == 4  || @group == 8
+  endparam
+
+  param decpow
+    caption = "Decay power"
+    default = 2.0
+  endparam
+
+  heading
+    caption = "Trap"
+    expanded = false
+  endheading
+
+  TrapShape param TrpSh
+    caption = "Trap"
+    default = TrapShapeBlock
+  endparam
+}

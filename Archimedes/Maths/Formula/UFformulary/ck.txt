@@ -1,0 +1,533 @@
+
+class TrapShapeSuperShape(common.ulb:TrapShape) {
+
+; Super Shape UF5 Implementation
+; c.kleinhuis 2008
+;
+; Formula Taken from Paul Bourke's Website:
+; http://local.wasp.uwa.edu.au/~pbourke/surfaces_curves/supershape/
+;
+; visit fractalforums.com or fractalmovies.com
+; for example usage of this formula
+;
+public:
+	func TrapShapeSuperShape(Generic pparent)
+		TrapShape.TrapShape(pparent)
+	endfunc
+	
+  float func Iterate(complex pz)
+        TrapShape.Iterate(pz)
+        float  theta = atan2(pz);
+		    float  res = TrapShapeSuperShape.super(theta, @a, @b, @n1, @n2, @n3, @m);
+		    float   r = cabs(pz);
+        float real=res*cos(theta)*r
+        float imag=res*sin(theta)*r
+  	    return  sqrt(real*real+imag*imag)
+   endfunc	
+	float func super(float theta, float a, float b, float n1, float n2, float n3, float m)
+	      float one = abs(cabs(cos(m * theta / 4.0) / a)^ n2)
+		    float two = abs(cabs(sin(m * theta / 4.0) / b)^ n3)
+        return ((one + two)^ -1.0 / n1);
+	endfunc
+	
+default:
+	title = "Super Shape"
+ param n1 ; Overrides p_power from Formula
+    caption = "n1"
+    default = 3.0
+    hint = "n1 Variable from the SuperShape Formula."
+  endparam
+   param n2 ; Overrides p_power from Formula
+    caption = "n2"
+    default = 2.0
+    hint = "n1 Variable from the SuperShape Formula."
+  endparam
+   param n3 ; Overrides p_power from Formula
+    caption = "n3"
+    default = 0.1
+    hint = "n1 Variable from the SuperShape Formula."
+  endparam
+param a ; Overrides p_power from Formula
+    caption = "a"
+    default = 1.0
+    hint = "a Variable from the SuperShape Formula."
+    visible = false
+    endparam
+param b ; Overrides p_power from Formula
+    caption = "b"
+    default = 1.0
+    hint = "b Variable from the SuperShape Formula."
+    visible = false
+    		
+endparam
+param m ; Overrides p_power from Formula
+    caption = "Number of Turns"
+    default = 6.0
+    hint = "Number of Turns \n Even Numbers generate Closed Shapes\n "
+endparam
+
+}
+
+class ckFormulaObject(common.ulb:Formula) {
+public:
+default:
+	complex param p_power
+		caption = "Exponent"
+		default = (2,0)
+		hint = "Defines the primary exponent for the fractal."
+		visible=false
+	endparam
+}
+
+class AlternatingFormulaObject(ckFormulaObject) {
+;
+; Object version of the 2 Alternating Formula
+; now everything is possible :D
+; the 3 alternating formula is no longer needed.
+; christian kleinhuis 2008
+; visit:
+; fractalforums.com
+; fractalmovies.com
+;
+; 2 Alternations is all you need !
+;
+public:
+  import "Common.ulb"
+  import "Standard.ulb"
+
+  complex func Init(complex pz)
+    count=0
+    fPixel = pz
+    f[0]=new @formulaClass1(0)
+    f[1]=new @formulaClass2(0)
+    f[1].Init(pz);
+    return f[0].Init(pz);
+  endfunc
+
+  complex func Iterate(complex pz)
+    count=count+1
+    return  f[count%2].Iterate(#z)
+  endfunc
+
+  complex  func lerp(float t,complex a,complex b)
+           return  a + t * (b - a)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+		return f[count%2].IsBailedOut(#z)
+	endfunc
+	
+  complex func GetPrimaryExponent()
+		if cabs(f[0].GetPrimaryExponent())>cabs(f[1].GetPrimaryExponent())
+		   return f[0].GetPrimaryExponent()
+    else
+		    return f[1].GetPrimaryExponent()
+    endif
+  endfunc
+private:
+  complex fPixel
+  int count;
+  Formula f[2];
+default:
+  title = "Alternating Formula"
+  rating = recommended
+  helpfile = "Uf*.chm"
+  helptopic = "Html/formulas/standard/mandelbrot.html"
+  Formula param formulaClass1
+    caption = "Formula #1"
+    default = Standard_Mandelbrot
+  endparam
+Formula param formulaClass2
+    caption = "Formula #2"
+    default = Standard_Mandelbrot
+  endparam
+}
+
+class ChangeFormula_AfterNIterations(ckFormulaObject) {
+;
+; This Formula allows you to choose a second formula to be taken at a certain iteration deepness
+; christian kleinhuis 2008
+; visit:
+; fractalforums.com
+; fractalmovies.com
+;
+public:
+  import "Common.ulb"
+  import "Standard.ulb"
+  complex func Init(complex pz)
+    count=0
+    f[0]=new @formulaClass1(0)
+    f[1]=new @formulaClass2(0)
+    f[1].Init(pz);
+    atIteration=@atIteration;
+    return f[0].Init(pz);
+  endfunc
+
+  complex func Iterate(complex pz)
+      count=count+1
+      return  getCurrentFormula().Iterate(#z)
+  endfunc
+
+  complex func GetPrimaryExponent()
+		if cabs(f[0].GetPrimaryExponent())>cabs(f[1].GetPrimaryExponent())
+		   return f[0].GetPrimaryExponent()
+    else
+		    return f[1].GetPrimaryExponent()
+    endif
+	endfunc       	
+	
+  bool func IsBailedOut(complex pz)
+		return f[count%2].IsBailedOut(#z)
+	endfunc
+
+private:
+  int count;
+  Formula f[2];
+  
+  Formula func getCurrentFormula()
+          if(count<  @atIteration)
+                     return f[0];
+          endif
+
+          return f[1];
+  endfunc
+
+default:
+  title = "Change Formula"
+  rating = recommended
+  Formula param formulaClass1
+    caption = "First Formula"
+    default = Standard_Mandelbrot
+  endparam
+Formula param formulaClass2
+    caption = "Second Formula"
+    default = Standard_Mandelbrot
+  endparam
+
+int param atIteration
+    caption = "At Iteration"
+    default = 0
+  endparam
+
+}
+
+class BlendFormula(ckFormulaObject) {
+;
+
+; This Formula let you choose 2 Fractal Formulas,
+; and blend them with this formula you can transform any fractal into any other
+; the only thing you should be aware is that mixing Divergent and Convergent
+; can lead to problems ...
+; christian kleinhuis 2008
+; visit:
+; fractalforums.com
+; fractalmovies.com
+;
+public:
+  import "Common.ulb"
+  import "Standard.ulb"
+  complex func Init(complex pz)
+    count=0
+    interpolator=new @Interpolator(this);
+    f[0]=new @formulaClass1(0)
+    f[1]=new @formulaClass2(0)
+    z1=f[1].Init(pz);
+    z0= f[0].Init(pz);
+    return interpolator.Interpolate(@blend,z0,z1)
+  endfunc
+
+; @return the primary exponent parameter
+	complex func GetPrimaryExponent()
+		if cabs(f[0].GetPrimaryExponent())>cabs(f[1].GetPrimaryExponent())
+		   return f[0].GetPrimaryExponent()
+    else
+    		return f[1].GetPrimaryExponent()
+    endif
+	endfunc
+  complex func Iterate(complex pz)
+          count=count+1
+          return interpolator.Interpolate(@blend,f[0].Iterate(#z),f[1].Iterate(#z))
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+	return f[0].IsBailedOut(#z) ||f[1].IsBailedOut(#z)
+	endfunc
+private:
+  int count;
+  Formula f[2];
+  ComplexInterpolator interpolator;
+default:
+  title = "Blend Formula"
+  rating = recommended
+  Formula param formulaClass1
+    caption = "First Formula"
+    default = Standard_Mandelbrot
+  endparam
+  Formula param formulaClass2
+    caption = "Second Formula"
+    default = Standard_Mandelbrot
+  endparam
+
+  ComplexInterpolator param interpolator
+      caption="Interpolator"
+      default= ComplexInterpolator
+  endparam
+
+float param blend
+    caption = "Blend"
+    default = 0.5
+  endparam
+}
+
+class InterpolateBase(common.ulb:Generic) {
+; This is the base class for interpolation of Complex Numbers
+public:
+
+       import "Common.ulb"
+
+       func InterpolateBase(Generic pparent)
+	          	Generic.Generic(pparent)
+       endfunc
+
+       complex func Interpolate(float t,complex a,complex b)
+
+          return this.doInterpolate(t,a,b)
+       endfunc
+
+protected:
+
+          complex func doInterpolate(float t,complex a,complex b)
+                 ; Template function doing the work...
+                 ; should be overriden from sub classes
+                 return 0;
+          endfunc
+
+}
+
+class Linear(InterpolateBase) {
+; Plain Linear Interpolation between two complex numbers
+public:
+       import "Common.ulb"
+
+       func Linear(Generic pparent)
+	          	InterpolateBase.InterpolateBase(pparent)
+       endfunc
+
+protected:
+
+          complex func doInterpolate(float t,complex a,complex b)
+                 return  a + t * (b - a)
+          endfunc
+
+default:
+        title = "Linear"
+        rating = recommended
+
+}
+
+c
+
+class SphericalLinear(InterpolateBase) {
+; Spherical Linear Interpolation between two Complex numbers
+public:
+         import "Common.ulb"
+         func SphericalLinear (Generic pparent)
+	          	InterpolateBase.InterpolateBase(pparent)
+         endfunc
+
+protected:
+          complex func doInterpolate(float t,complex a,complex b)
+                  complex _a=(0,0)
+                  complex _b=(0,0);
+                  float absa=cabs(a);
+                  float absb=cabs(b);
+
+                  if(absa>0)
+                          _a=a/absa
+                  endif
+                  
+                  if(absb>0)
+                            _b=b/absb
+                  endif
+
+                 float omega=(real(_a)*real(_b)+imag(_a)*imag(_b));
+                 float sinomega=sin(omega)
+                 if(sinomega==0)
+                                sinomega=0.00000000001
+                 endif
+                 
+                 complex res=lerp(t,absa,absb)* ((sin((1-t)*omega)*_a+sin(t*omega)*_b)/sinomega)
+
+                 return res;
+endfunc
+
+private:
+     
+      float func lerp(float t,float a,float b)
+                 return  a + t * (b - a)
+          endfunc
+
+       
+default:
+        title = "SphericalLinear"
+        rating = recommended
+
+}
+
+
+class Image(common.ulb:UserTransform) {
+
+
+public:
+	; @param pparent a reference to the object creating the new object; typically, 'this'
+	func Image(Generic pparent)
+		UserTransform.UserTransform(pparent)
+
+
+       i=new @imageParam();
+endfunc
+
+
+
+
+  complex func Iterate(complex pz)
+  
+  ;ratio=1;
+  complex pix = (real(#screenpixel)/#width,imag(#screenpixel)/#height)
+
+    color col=i.getColor(pix)
+       float l=sqrt(red(col)*red(col)+green(col)*green(col)+blue(col)*blue(col))
+   return pz+ l*@scale
+  endfunc
+private:
+
+  Image i
+
+default:
+  title = "Image"
+
+  Image param imageParam
+    caption = "Image"
+  endparam
+  float param scale
+    caption = "Scale"
+    default=1
+  endparam
+}
+
+
+
+class ComplexInterpolator(common.ulb:Generic) {
+; This is the base class for interpolation of Complex Numbers
+public:
+
+       import "Common.ulb"
+       func ComplexInterpolator(Generic pparent)
+	          	Generic.Generic(pparent)
+	          	interpol=new @interpolation(this)
+	          	easing=new @easing(this)
+       endfunc
+       
+       complex func Interpolate(float t,complex a,complex b)
+               return interpol.Interpolate(easing.Ease(t),a,b)
+       endfunc
+private:
+         InterpolateBase interpol;
+         Easing easing;
+default:
+        title="ComplexInterpolator"
+    InterpolateBase param interpolation
+       default= Linear
+    endparam
+    Easing param easing
+       default= Easing
+    endparam
+}
+
+class Easing (common.ulb:Generic){
+; This class defines an easing function,
+; This Class Has only one function
+; Ease(x) where x is in the range of 0..1
+; The return value is the eased version of the input value
+
+
+public:
+       func Easing(Generic pparent)
+	          	Generic.Generic(pparent)
+       endfunc
+
+
+
+       float func Ease(float x)
+
+             return doEase(x);
+
+       endfunc
+
+
+protected:
+       float func doEase(float t)
+
+             return t;
+
+       endfunc
+
+
+       default:
+
+  title = "Ease None"
+
+
+
+
+}
+class EasingSineInOut (Easing){
+protected:
+       float func doEase(float t)
+             float _t=t*#PI-(#PI/2)
+             return sin(_t)*0.5+0.5;
+       endfunc
+
+default:
+  title = "Sine In Out"
+}
+
+
+class EasingSineOut (Easing){
+protected:
+       float func doEase(float t)
+             float _t=t*(#PI/2)
+             return sin(_t);
+       endfunc
+default:
+  title = "Sine Out"
+}
+
+
+class EasingSineIn (Easing){
+protected:
+       float func doEase(float t)
+             float _t=t*(#PI/2) -#PI/2
+             return sin(_t)+1;
+       endfunc
+default:
+        title = "Sine In"
+}
+
+class EasingBounceOut (Easing){
+protected:
+       float func doEase(float t)
+             float x=t*(#PI*@turns+#PI/2);
+             int segment=round(x/#PI);
+             return 1-exp(-segment/2)*abs(cos(x));
+      endfunc
+default:
+        title = "Bounce Out"
+        float param turns
+        caption = "# Bounces"
+        default=2
+  endparam
+
+}
+
+

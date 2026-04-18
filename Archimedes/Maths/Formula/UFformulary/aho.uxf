@@ -1,0 +1,282 @@
+3d_cylinder {
+;
+; 3D perspective mapping. This transformations wraps a
+; fractal on a cylinder.
+;
+; Most of the 3D code was shamelessly stolen from Frederik Slijkerman's 3D-mapping formula
+;
+; The 3D transformations/formulas use the left-handed coordinate
+; system, where X points to the left, Y points up, and Z points
+; into the screen. To determine the direction of a rotation, 
+; hold your left hand such that your thumb points into the direction
+; of the axis around which the rotation takes place, and then your
+; curled fingers point into the direction of positive rotation.
+;
+; Rotation is performed first around the X axis, then around the
+; Y axis, and finally around the Z axis. Scaling must be done using
+; UF's zooming feature. Translation is performed after the rotation.
+;
+; The only shapes supported now are plane, sphere, and egg.
+
+global:
+  float h2 = @height * 0.5
+  
+transform:
+  float tt = 0
+  float lambda = 0
+  float u = 0
+  float v = 0
+  float x = 0
+  float y = 0
+  float z = 0
+
+  ; Construct a line from the current pixel on the screen through 3D space.
+  ; The line is defined by (sx, sy, sz) + lambda * (dx, dy, dz) where
+  ; lambda can be any real value > 0. So the line does not extend behind
+  ; the screen.
+  
+  float sx = -@transx
+  float sy = -@transy
+  float sz = -@transz
+  float dx = real(#pixel)
+  float dy = imag(#pixel)
+  float dz = 4
+  
+  ; Convert angles from degrees to radians.
+  float angx = (@rotx * #pi) / 180
+  float angy = (@roty * #pi) / 180
+  float angz = (@rotz * #pi) / 180
+  
+  ; Rotate the line according to the (rotx, roty, rotz) angle.
+
+  ; Apply rotation around Z axis
+  tt = cos(angz) * sy - sin(angz) * sx
+  sx = cos(angz) * sx + sin(angz) * sy
+  sy = tt  
+  tt = cos(angz) * dy - sin(angz) * dx
+  dx = cos(angz) * dx + sin(angz) * dy
+  dy = tt
+  
+  ; Apply rotation around Y axis
+  tt = cos(angy) * sx - sin(angy) * sz
+  sz = cos(angy) * sz + sin(angy) * sx
+  sx = tt
+  tt = cos(angy) * dx - sin(angy) * dz
+  dz = cos(angy) * dz + sin(angy) * dx
+  dx = tt
+  
+  ; Apply rotation around X axis
+  tt = cos(angx) * sz - sin(angx) * sy
+  sy = cos(angx) * sy + sin(angx) * sz
+  sz = tt
+  tt = cos(angx) * dz - sin(angx) * dy
+  dy = cos(angx) * dy + sin(angx) * dz
+  dz = tt
+  
+  ; Now compute the intersection of the line with the shape, and return
+  ; the intersection point in #pixel (texture coordinates).
+  ; This is the only shape-dependent part.
+  
+; ############## Begin my code ###############
+; Cylinder shape (radius = 0.5),
+; 
+    ; This must be solved:
+    ; [ sx ]          [ dx ]   [ x ]
+    ; [ sy ] + lambda [ dy ] = [ y ]
+    ; [ sz ]          [ dz ]   [ z ]
+    ; and one of the following three eqn
+    ;   (1)   x^2 + z^2 = rad^2      ( cylinder wall )
+    ;   (2)   y=height/2             ( upper cap )
+    ;   (3)   y=-height/2            ( lower cap )
+    
+    int hit_what = 0
+    float lambda2
+    float a = sqr(dx) + sqr(dz)
+    float b = 2 * sx * dx + 2 * sz * dz
+    float c = sqr(sx) + sqr(sz) - 0.25
+    
+    float d = sqr(b) - 4 * a * c
+    
+    if d < 0
+      ; No roots exist.
+      #solid = true
+    else
+      ; One or two roots: select smallest.
+      float tmp_d = sqrt(d)
+      lambda  = (-b - tmp_d) / (2 * a)
+      lambda2 = (-b + tmp_d) / (2 * a)
+      if a < 0
+        float lambda_tmp = lambda2
+        lambda2 = lambda
+        lambda = lambda_tmp
+      endif
+      
+      if lambda <= 0
+        ; Intersection point is behind the screen.
+        #solid = true
+      else
+        x = sx + lambda * dx
+        y = sy + lambda * dy
+        z = sz + lambda * dz
+        hit_what = 1
+      endif ; behind screen
+      
+      ; check for ends of cylinder
+      float y2 = sy + lambda2 * dy
+      if y > h2
+        if y2 < h2
+          ; hit end
+          hit_what = 2
+          y = h2
+        else
+          ; outside
+          #solid = true
+          hit_what = 0
+        endif
+      elseif y < -h2
+        if y2 > -h2
+          ; hit the other end
+          hit_what = 3
+          y = -h2
+        else
+          ; outside
+          #solid = true
+          hit_what = 0
+        endif
+      endif
+      if hit_what >= 2
+        if dy == 0
+          #solid = true
+          hit_what = 0
+        else
+          lambda = (y - sy) / dy
+          x = sx + lambda * dx
+          z = sz + lambda * dz
+        endif
+      endif
+      if hit_what > 0
+        u = 0.5 *atan2( flip(x) - z )
+        if hit_what == 1 
+          v = y
+        elseif hit_what == 2 
+          v = y + 0.5 - sqrt( x^2 + z^2 )
+        elseif hit_what == 3
+          v = y - 0.5 + sqrt( x^2 + z^2 )
+        endif 
+      endif
+    endif ; miss
+    
+; ############## End my code #################
+  
+  #pixel = u + flip(v)  
+  #pixel = @fraccenter + #pixel * exp(flip((@fracangle * #pi) / 180)) / @fracmagn
+
+default:
+  title = "3D cylinder"
+  precision = round(log(@fracmagn) / log(10))
+  
+  float param height
+    default = 1.0
+    hint = "height of the cylinder. (Note: radius is 1.0)"
+  endparam
+  
+  param rotx
+    caption = "X Rotation"
+    default = 0.0
+    hint = "Rotation around the x-axis, in degrees. The x-axis points to \
+            the right. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing to \
+            the right. Your (curled) fingers now indicate the direction of \
+            positive X rotation."
+  endparam
+  
+  param roty
+    caption = "Y Rotation"
+    default = 0.0
+    hint = "Rotation around the y-axis, in degrees. The y-axis points \
+            upwards. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing \
+            upwards. Your (curled) fingers now indicate the direction of \
+            positive Y rotation."
+  endparam
+  
+  param rotz
+    caption = "Z Rotation"
+    default = 0.0
+    hint = "Rotation around the z-axis, in degrees. The z-axis points into \
+            the screen. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing into \
+            the screen. Your (curled) fingers now indicate the direction of \
+            positive Z rotation."
+  endparam
+  
+  param transx
+    caption = "X Translation"
+    default = 0.0
+    hint = "Translation along the x-axis. The x-axis points to the right, \
+            so increasing this value will move the fractal to the right, too."
+  endparam
+  
+  param transy
+    caption = "Y Translation"
+    default = -0.5
+    hint = "Translation along the y-axis. The y-axis points upwards, \
+            so increasing this value will move the fractal upwards, too."
+  endparam
+  
+  param transz
+    caption = "Z Translation"
+    default = 2.0
+    hint = "Translation along the z-axis. The z-axis points into the screen, \
+            so increasing this value will move the fractal away."
+  endparam  
+  
+  complex param fraccenter
+    caption = "Fractal Center"
+    default = #center
+    hint = "Center of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+  
+  float param fracmagn
+    caption = "Fractal Magnification"
+    default = #magn
+    hint = "Magnification of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  float param fracangle
+    caption = "Fractal Rotation"
+    default = #angle
+    hint = "Rotation angle (in degrees) of the fractal image. Use here \
+            what you would normally enter in the Location tab."
+  endparam
+}
+
+Shutter {
+;
+transform:
+  
+	complex p = #pixel
+	if @p_shutter == "left"
+		#solid = real(p) < real(@p_center)
+	elseif @p_shutter == "right" 
+		#solid = real(p) > real(@p_center)
+	elseif @p_shutter == "top" 
+		#solid = imag(p) > imag(@p_center)
+	elseif @p_shutter == "bottom"
+		#solid = imag(p) < imag(@p_center)
+	endif
+
+default:
+  title = "Shutter"
+  param p_center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  
+  param p_shutter
+	caption = "Part to shutter"
+	enum = "left" "top" "right" "bottom" "none"
+  endparam
+}

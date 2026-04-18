@@ -1,0 +1,4957 @@
+comment {
+
+ Helpfiles / Fichiers d'aide:
+ http://www.pruniermei.ca/mde-help.zip
+ Pour me contacter / To contact me:
+ http://www.pruniermei.ca
+
+ -Idées de bailout des formules Barnsley
+  et de Andreas Lober. Merci pour sa permission d'utiliser.
+ -Bailout ideas coming from the Barnsley formulas
+  and from Andreas Lober. Thanks to let me use them.
+
+ -Une partie du code vient des formules Barnsley de Fractint
+  telles que traduites en UF par F. Slijkerman
+ -Part of the code comes from the Fractint Barnsley formulas
+  as translated to UF by F. Slijkerman
+
+ -Le paramètre 'Epsilon Range' est inspirée de la formule
+  Epsilon_Rot de Wayne Kiely
+ -The 'Epsilon_Rot' parameter is inspired from Wayne Kiely's
+  Epsilon_rot.
+
+ -Merci à ces nombreuses personnes qui ont essayé ces formules avant 
+  publication
+ -Thanks to those numerous people who tried these formulas before 
+  their releasing
+}
+
+md-autresinus{
+;
+; Michèle Dessureault, juin/june 2001; 
+; Formule dérivée de ma méthode de coloration du même nom
+; Formula derived from the colouring method having the same name
+;
+; Merci à Mark Townsend pour sa permission de la publier
+; Thank you to Mark Townsend for his permission to publish it
+; 
+init:
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  float ro = 0.0
+  float teta = 0.0
+  temp3 = (0.0,0.0)
+  x=real(z)
+  y=imag(z)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+    if @var == 0
+      x = @ha * real(@fn3(@ht * imag(@fn1(#z))+0i)) +real(@pert)
+      y = @va * real(@fn3(@vt * real(@fn2(#z))+0i)) +imag(@pert)
+    elseif @var == 1
+      x = @ha * real(@fn1(@ht * imag(@fn3(#z))+0i))+real(@pert)
+      y = @va * real(@fn2(@vt * real(@fn3(#z))+0i))+imag(@pert)
+    elseif @var == 2
+      x = @ha * real(@fn1(@ht * imag(@fn3(#z))+0i))+real(@pert)
+      y = @va * real(@fn3(@vt * real(@fn2(#z))+0i))+imag(@pert)
+    elseif @var == 3
+      x = @ha * real(@fn3(@ht * imag(@fn2(#z))+0i))+real(@pert)
+      y = @va * real(@fn1(@vt * real(@fn3(#z))+0i))+imag(@pert)
+    elseif @var == 4
+      x = cabs(@fn1(#z))+real(@pert)
+      y = atan2(@fn2(#z))+imag(@pert)
+    elseif @var == 5
+      ro = cabs(@fn1(#z))
+      teta = atan2(@fn2(#z))
+      if teta < 0
+        teta = teta + 2 * #pi
+      endif
+      float or = ro
+      ro = ro + @ha * sin(@ht * teta)
+      teta = teta + @va * cos(@vt * or)
+      x = ro * cos(teta)+real(@pert)
+      y = ro * sin(teta)+imag(@pert)
+    endif
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+  endif
+  z= z^@power + @fnx(x) + @fny(y * 1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                    
+default:
+  title="Autre sinus"
+  helpfile="mde-help\mde-autre-sinus-ufm.htm"
+  method = multipass
+  periodicity = 0
+  magn = 0.75
+  param var
+    caption = "Flavour"
+    enum = "1st" "2nd" "3rd" "4th" "5th" "6th"
+  endparam
+  param ht
+    caption = "Horizontal Frequency"
+    default = 10.0
+  endparam  
+  param ha
+    caption = "Horizontal Amplitude" 
+    default = 0.5
+  endparam  
+  param vt
+    caption = "Vertical Frequency"
+    default = 10.0
+  endparam  
+  param va
+    caption = "Vertical Amplitude"
+    default = 0.5
+  endparam
+  param power
+    caption = "Power"
+    default = (2.0,0.0)
+  endparam
+  param pert
+    caption = "Offset"
+    default = (0.0,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  func fn1
+    caption = "First Function"
+    default = cos()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc  
+  func fn3
+    caption = "Third Function"
+    default = tan()
+  endfunc 
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+}
+
+md-barnsley-imj {
+; 
+; Modification par Michèle Dessureault juillet 2000
+; de la conversion Fractint->UF faite par Frederik Slijkerman
+; de la formule Barnsley 1 & 3
+; Modification by Michèle Dessureault in july 2000
+; of the Barnsley 1 & 3 Fractint formula as converted to UF 
+; by Frederik Slijkerman
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel
+loop:
+  if  @barn_type == 0
+    IF imag(z) >= @barn_offset
+      z = (z - 1) * @start
+    ELSE
+      z = (z + 1) * @start
+    endif
+  endif
+  IF @barn_type == 1
+    IF imag(z) >= @barn_offset
+      z = sqr(z) - 1
+    ELSE
+      z = sqr(z) - 1 + @start * imag(z)
+    ENDIF
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                  
+default:
+  title = "Barnsley imaginaire (Julia)"
+  helpfile="mde-help\mde-barnsley-imaginaire.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param start
+    caption = "Seed"
+    default = (0.6, 1.1)
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "First" "Third"
+    default = 0
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam 
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-barnsley-imm"
+  bailout = bailout
+  test = test
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  bornes = bornes
+}
+
+md-barnsley-imm {
+; 
+; Modification par Michèle Dessureault juillet 2000
+; de la conversion Fractint->UF faite par Frederik Slijkerman
+; de la formule Barnsley 1 & 3
+; Modification by Michèle Dessureault in july 2000
+; of the Barnsley 1 & 3 Fractint formula as converted to UF 
+; by Frederik Slijkerman
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel + @start
+loop:
+  if @barn_type == 0
+    IF imag(z) >= @barn_offset 
+      z = (z - 1) * #pixel
+    ELSE
+      z = (z + 1) * #pixel
+    endif
+  endif
+  if @barn_type == 1
+    IF imag(z) >= @barn_offset
+      z = sqr(z) - 1
+    ELSE
+      z = sqr(z) - 1 + #pixel * imag(z)
+    ENDIF
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                   
+default:
+  title = "Barnsley imaginaire (Mandelbrot)"
+  helpfile="mde-help\mde-barnsley-imaginaire.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param start
+    caption = "Starting Point"
+    default = (0, 0)
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "First" "Third"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam 
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc  
+switch:
+  type = "md-barnsley-imj"
+  start = pixel
+  bailout = bailout
+  test = test
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  bornes = bornes
+}
+
+md-courbes-fn-ea{
+;
+; Michèle Dessureault, juillet/july 2000; 
+; d'après les pages 390 des Standard Mathematical Tables
+; 22ème édition
+; from p390 and following of Standard Mathematical Tables
+; 22nd edition 
+; 
+init:
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  x=real(z)
+  y=imag(z)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @courbe == 0    ;épicycloïde
+    x = real((@a+@b)*@fn1(x)- @b*@fn1(((@a+@b)/@b)*x)+@pert)
+    y = imag((@a+@b)*@fn2(y)- @b*@fn2(((@a+@b)/@b)*y)+@pert)
+  elseif @courbe == 1    ;lissajou
+    x = real(@fn1(@a*x)+@pert)
+    y = imag(@fn2(@b*y)+@pert)
+  elseif @courbe == 2    ;compagnon du cycloïde
+    x = real(@a*x+@pert)
+    y = imag(@a*(1-@fn1(y))+@pert)
+  elseif @courbe == 3    ;cycloïde
+    x = real(@a*x - @b*@fn2(x)+@pert)
+    y = imag(@a*-@b*@fn1(y)+@pert)
+  elseif @courbe == 4
+    x = real(@a*@fn1(x)+@pert)  ;ellipse
+    y = imag(@b*@fn2(y)+@pert)
+  elseif @courbe == 5
+    x = real(@a*@fn1(x)*@fn1(x)*@fn1(x)+@pert)  ;évolute de l'ellipse
+    y = imag(@b*@fn2(y)*@fn2(y)*@fn2(y)+@pert)
+  elseif @courbe == 6
+    x = real(@b*@a*x / (1+x^3)+@pert)    ;folium de Descartes
+    y = imag(@b*@a+y^2 / (1+y^3)+@pert)
+  elseif @courbe == 7        ;involute du cercle
+    x = real(@a*@fn1(x) + @a*x*@fn2(x)+@pert)
+    y = imag(@a*@fn2(y) - @a*y*@fn1(y)+@pert)
+  elseif @courbe == 8        ;nephroïde
+    x = real(@a*.5*(@b*@fn1(x) - @fn1(@b*x))+@pert)
+    y = imag(@a*.5*(@b*@fn2(y) - @fn2(@b*y))+@pert)
+  elseif @courbe == 9        ;courbe serpentine
+    x = real(@a*@fn1(x)/@fn2(x)+@pert)
+    y = imag(@b*@fn2(y)*@fn1(y)+@pert)
+  elseif @courbe == 10        ;sorcière d'Agnesi
+    x = real(@a*@fn1(x)/@fn2(x)+@pert)
+    y = imag(@b*@fn2(y)*@fn2(y)+@pert)
+  elseif @courbe == 11        ;tractrice
+    x = real(x-@a*@fn2(x/@a)/@fn1(x/@a)+@pert)
+    y = imag(@a/@fn2(y/@a)+@pert)
+  elseif @courbe == 12    ;épicycloïde 2
+    x = (@a+@b)*@fn1(x)- @b*@fn1(((@a+@b)/@b)*x)+@pert
+    y = (@a+@b)*@fn2(y)- @b*@fn2(((@a+@b)/@b)*y)+@pert
+  elseif @courbe == 13    ;lissajou 2
+    x = @fn1(@a*x)+@pert
+    y = @fn2(@b*y)+@pert
+  elseif @courbe == 14    ;compagnon du cycloïde 2
+    x = @a*x+@pert
+    y = @a*(1-@fn1(y))+@pert
+  elseif @courbe == 15    ;cycloïde 2
+    x = @a*x - @b*@fn2(x)+@pert
+    y = @a*-@b*@fn1(y)+@pert
+  elseif @courbe == 16
+    x = @a*@fn1(x)+@pert  ;ellipse 2
+    y = @b*@fn2(y)+@pert
+  elseif @courbe == 17
+    x = @a*@fn1(x)*@fn1(x)*@fn1(x)+@pert  ;évolute de l'ellipse 2
+    y = @b*@fn2(y)*@fn2(y)*@fn2(y)+@pert
+  elseif @courbe == 18
+    x = @b*@a*x / (1+x^3)+@pert   ;folium de Descartes 2
+    y = @b*@a+y^2 / (1+y^3)+@pert
+  elseif @courbe == 19        ;involute du cercle 2
+    x = @a*@fn1(x) + @a*x*@fn2(x)+@pert
+    y = @a*@fn2(y) - @a*y*@fn1(y)+@pert
+  elseif @courbe == 20        ;nephroïde 2
+    x = @a*.5*(@b*@fn1(x) - @fn1(@b*x))+@pert
+    y = @a*.5*(@b*@fn2(y) - @fn2(@b*y))+@pert
+  elseif @courbe == 21        ;courbe serpentine 2
+    x = @a*@fn1(x)/@fn2(x)+@pert
+    y = @b*@fn2(y)*@fn1(y)+@pert
+  elseif @courbe == 22        ;sorcière d'Agnesi 2
+    x = @a*@fn1(x)/@fn2(x) +@pert
+    y = @b*@fn2(y)*@fn2(y)+@pert
+  elseif @courbe == 23        ;tractrice 2
+    x = x-@a*@fn2(x/@a)/@fn1(x/@a)+@pert
+    y = @a/@fn2(y/@a)+@pert
+  endif
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+  endif
+  z= z^@power + @fnx(x) + @fny(y * 1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                    
+default:
+  title="Courbes"
+  helpfile="mde-help\mde-courbes-formula.htm"
+  method = multipass
+  periodicity = 0
+  magn = 0.75
+  param courbe
+    caption = "Curve"
+    enum="Epicycloid" "Lissajou" "Companion" "Cycloid" \
+      "Ellipse" "Evolute" "Folium" "Involute" \
+      "Nephroid" "Serpentine" "Agnesi" "Tractrix" \
+      "Epicycloid 2" "Lissajou 2" "Companion 2" "Cycloid 2" \
+      "Ellipse 2" "Evolute 2" "Folium 2" "Involute 2" \
+      "Nephroid 2" "Serpentine 2" "Agnesi 2" "Tractrix 2"
+  endparam
+  param a
+    caption = "a"
+    default = 1.0
+  endparam
+  param b
+    caption = "b"
+    default = 1.0
+  endparam
+  param power
+    caption = "Power"
+    default = (2.0,0.0)
+  endparam
+  param pert
+    caption = "Offset"
+    default = (0.0,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  func fn1
+    caption = "First Function"
+    default = cos()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc  
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+}
+
+md-courbespol-fn-ea{
+;
+; Michèle Dessureault, juillet/july 2000; 
+; d'après les pages 390 des Standard Mathematical Tables
+; 22ème édition
+; from p390 and following of Standard Mathematical Tables
+; 22nd edition
+;
+init:
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  x=real(z)
+  y=imag(z)
+  rho=(0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop: 
+  if @courbe == 0    ;bifolium
+    rho = @a*@fn2(z)*@fn1(z)*@fn1(z) +@pert
+  elseif @courbe == 1    ;limaçon de Pascal
+  ; si a=b-> cardioïde
+    rho = @a*@fn1(z)+@b+@pert
+  elseif @courbe == 2    ;cissoïde de Dioclès
+    rho = @a*@fn2(z)*@fn2(z)/@fn1(z) +@pert
+  elseif @courbe == 3    ;cochléoïde
+    rho = @a*@fn2(z)/z +@pert
+  elseif @courbe == 4    ;conchoïde de Nicomède
+    rho = @a/@fn2(z)+@b +@pert
+  elseif @courbe == 5
+    rho = (@a^2*@fn1(2*z))^.5 +@pert ;lemniscate de Bernouilli
+  elseif @courbe == 6
+    rho = (@a^2/z)^.5 +@pert   ;lituus
+  elseif @courbe == 7        ;pétales
+    rho = @a*@fn1(@b*z) +@pert
+  elseif @courbe == 8        ;parabole
+    rho = 2*@a/(1-@fn1(z)) +@pert
+  elseif @courbe == 9        ;spirale d'Archimède
+    rho = @a*z +@pert
+  elseif @courbe == 10        ;spirale hyperbolique
+    rho = @a/z +@pert
+  elseif @courbe == 11        ;spirale logarithmique
+    rho = exp(@a*z) +@pert
+  elseif @courbe == 12        ;strophoïde
+    rho = @a*@fn1(2*z)/@fn1(z) +@pert
+  endif
+  x = real(rho)
+  y = imag(rho)
+  if @coord == 1
+    x = rho * cos(real(z))
+    y = rho * sin(imag(z))
+  elseif @coord ==2
+    x = rho * cosh(real(z))
+    y = rho * sinh(imag(z))
+  endif
+  z= z^@power + @fnx(x) + @fny(y * 1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                       
+default:
+  title="Courbes polaires"
+  helpfile="mde-help\mde-courbes-polaires-formula.htm"
+  method = multipass
+  periodicity = 0
+  param courbe
+    caption = "Curve"
+    enum="Bifolium" "Limacon" "Cissoid" "Cochleoid" \
+      "Conchoid" "Lemniscate" "Lituus" "Petals" "Parabola" \
+      "Archimedes spir." "Hyperbolic spir." \
+      "Logarithmic spir." "Strophoid"
+  endparam
+  param a
+    caption = "a"
+    default = 1.0
+  endparam
+  param b
+    caption = "b"
+    default = 1.0
+  endparam
+  param power
+    caption = "Power"
+    default = (2.0,0.0)
+  endparam
+  param pert
+    caption = "Offset"
+    default = (0.0,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Polar" "Cartesian" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam   
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  func fn1
+    caption = "Fist Function"
+    default = cos()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = sin()
+  endfunc   
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+}
+
+md-fantbailj-e{
+; Michèle Dessureault, août 2000
+;
+init:
+  z = #pixel
+  float phi = 0.0
+  int iter=0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  float x = 0.0
+  float y = 0.0
+loop:
+  z = z^@power + @seed
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  iter= iter +1
+  path = path + cabs(z)
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout               
+default:
+  title = "Fantaisie bailout (Julia)"
+  helpfile="mde-help\mde-fantaisie-bailout.htm"
+  periodicity = 0
+  method = multipass
+  param seed
+    caption = "Julia seed"
+    default = (-1.25, 0)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This defines the power of the Julia set. Use (2,0) \
+            for the standard Julia set."
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc  
+switch:
+  type = "md-fantbailm-e"
+  power = power
+  bailout = bailout
+  fnbl = fnbl
+  test = test
+  bornes = bornes
+}
+
+md-fantbailm-e {
+; Michèle Dessureault, août 2000
+;
+init:
+  z = @start
+  float phi = 0.0
+  int iter=0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  float x = 0.0
+  float y = 0.0
+loop:
+  z = z^@power + #pixel  
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  iter=iter+1
+  path = path + cabs(z)
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                  
+default:
+  title = "Fantaisie bailout (Mandelbrot)"
+  helpfile="mde-help\mde-fantaisie-bailout.htm"
+  center = (-0.5, 0)
+  periodicity = 0
+  method = multipass
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "Perturbation. Use (0,0) for the standard Mandelbrot set."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = "This defines the power of the Mandelbrot set. Use (2,0) \
+            for the standard Mandelbrot set."
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+    endparam 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+switch:
+  type = "md-fantbailj-e"
+  seed = #pixel
+  power = power
+  bailout = bailout
+  fnbl = fnbl
+  test = test
+  bornes = bornes
+}
+
+md-c0301{
+;
+; Michèle Dessureault, août/August 2001
+; Version personnelle de gpm-c03-01 de Gedeon Peteri,
+; elle-même modification de c03-01 de Morgan Owens
+; Personal version of gpm-c03-01 from Gedeon Peteri,
+; itself modification of c03-01 from Morgan Owens
+; 
+init:
+  t=@p1
+  z=@fn3(#pixel)
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+   x=real(z),y=imag(z)
+   Tx=@fn1(x*(x*x-3))
+   Ty=@fn2(y*(y*y-3))
+   x=x-t*Ty,y=@fn4(y+t*Tx)
+   ;z=x+y
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+  endif
+  ;z= z^@power + @fnx(x * (1.0,0.0)) + @fny(y * (0.0,1.0))
+  z= @fnx(x) + @fny(y * 1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                    
+default:
+  title="Fleur de Tchebychev"
+  helpfile="mde-help\mde-fleur-tchebychev.htm"
+  method = multipass
+  periodicity = 0
+  magn = 0.75
+  param p1
+   caption="Parameter"
+   default=(0.25,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+func fn1
+  caption="Function 1"
+  default = ident()
+  endfunc
+func fn2
+  caption="Function 2"
+  default = ident()
+  endfunc
+func fn3
+  caption="Function 3"
+  default = ident()
+  endfunc
+func fn4
+  caption="Function 4"
+  default = ident()
+endfunc 
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+}
+
+md-pairimpair-j{
+;
+; Michèle Dessureault, juillet 2000
+; Inspiré des formules Barnsley 1,2,3
+; telles que traduites de Fractint -> par F. Slijkerman
+; Inspired from the Fractint Barnsley 1,2,3
+; as translated to UF by F. Slijkerman
+; 
+init:
+  z = #pixel
+  bool est_pair = true
+  int temp = 0
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  temp2 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  float x = 0.0
+  float y = 0.0
+loop:
+  if @sgn == true
+    temp3 = real(z) * imag(z)
+    if temp3 < 0
+      signe = -1.0
+    endif
+  endif
+  if @pairimp == 0 || @pairimp == 2
+    temp2 = z
+  elseif @pairimp == 1 || @pairimp == 3
+    temp2 = real(z) * imag(@start) + real(@start) * imag(z)
+  elseif @pairimp == 4 || @pairimp == 5
+    temp2 = real(z) * imag(#pixel) + real(#pixel) * imag(z)
+  elseif @pairimp == 6
+    temp2 = real(z)
+  elseif @pairimp == 7
+    temp2 = imag(z)
+  elseif @pairimp == 8
+    temp2 = real(z) * imag(z)
+  elseif @pairimp == 9
+    temp2 = real(z) + imag(z)
+  elseif @pairimp == 10
+    temp2 = diff
+  elseif @pairimp == 11
+    temp2 = phi
+  elseif @pairimp == 12
+    temp2 = cabs(z)
+  elseif @pairimp == 13
+    temp2 = path  
+  elseif @pairimp == 14
+    temp2 = iter 
+  endif
+  if @intf == 0
+    temp = ceil(signe*cabs(temp2))
+  elseif @intf == 1
+    temp = floor(signe*cabs(temp2))
+  elseif @intf == 2
+    temp = trunc(signe*cabs(temp2))
+  elseif @intf == 3
+    temp = round(signe*cabs(temp2))
+  endif
+  if temp % 2 == 0
+    est_pair = true
+  else
+    est_pair = false
+  endif  
+  IF est_pair
+    if @pairimp == 0 || @pairimp == 1 || @pairimp == 4 
+      z = (z - 1) * @start
+    elseif @pairimp == 2 || @pairimp == 3 || @pairimp >= 5
+      z = sqr(z) - 1
+    endif 
+  ELSE
+    if @pairimp == 0 || @pairimp == 1 || @pairimp >= 6
+      z = (z + 1) * @start
+    elseif @pairimp == 2 || @pairimp == 4
+      z = sqr(z) - 1 + @start * real(z)
+    elseif @pairimp == 3 || @pairimp == 5 
+      z = sqr(z) - 1 + @start * imag(z)
+    endif
+  ENDIF
+  z = @fnpi(z)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                       
+default:
+  title = "Pair impair (Julia)"
+  helpfile="mde-help\mde-pair-impair.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = .75
+  param start
+    caption = "Seed"
+    default = (0.6, 1.1)
+  endparam
+  param pairimp
+    caption = "Odd-Even Type"
+    enum = "first" "second" "third" "fourth" "fifth" "sixth" \
+           "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param sgn
+    caption = "Apply Odd-Even Sign?"
+    default = false
+  endparam
+  param intf
+    caption = "Odd-Even Factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = ident()
+  endfunc
+switch:
+  type = "md-pairimpair-m"
+  bailout = bailout
+  test = test
+  fnbl = fnbl
+  fnpi = fnpi
+  pairimp = pairimp
+  bornes = bornes
+  sgn = sgn
+  intf = intf
+}
+
+md-pairimpair-m {
+;
+; Michèle Dessureault, juillet 2000
+; Inspiré des formules Barnsley 1,2,3
+; telles que traduites de Fractint -> par F. Slijkerman
+; Inspired from the Fractint Barnsley 1,2,3
+; as translated to UF by F. Slijkerman
+;
+init:
+  z = #pixel + @start
+  bool est_pair = true
+  int temp = 0
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  temp2 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  float x = 0.0
+  float y = 0.0
+loop:
+  if @sgn == true
+    temp3 = real(z) * imag(z)
+    if temp3 < 0
+      signe = -1.0
+    endif
+  endif
+  if @pairimp == 0 || @pairimp == 2
+    temp2 = z
+  elseif @pairimp == 1 || @pairimp == 3
+    temp2 = real(z) * imag(@start) + real(@start) * imag(z)
+  elseif @pairimp == 4 || @pairimp == 5
+    temp2 = real(z) * imag(#pixel) + real(#pixel) * imag(z)
+  elseif @pairimp == 6
+    temp2 = real(z)
+  elseif @pairimp == 7
+    temp2 = imag(z)
+  elseif @pairimp == 8
+    temp2 = real(z) * imag(z)
+  elseif @pairimp == 9
+    temp2 = real(z) + imag(z)
+  elseif @pairimp == 10
+    temp2 = diff
+  elseif @pairimp == 11
+    temp2 = phi
+  elseif @pairimp == 12
+    temp2 = cabs(z)
+  elseif @pairimp == 13
+    temp2 = path 
+  elseif @pairimp == 14
+    temp2 = iter 
+  endif
+  if @intf == 0
+    temp = ceil(signe*cabs(temp2))
+  elseif @intf == 1
+    temp = floor(signe*cabs(temp2))
+  elseif @intf == 2
+    temp = trunc(signe*cabs(temp2))
+  elseif @intf == 3
+    temp = round(signe*cabs(temp2))
+  endif
+  if temp % 2 == 0
+    est_pair = true
+  else
+    est_pair = false
+  endif  
+  IF est_pair
+    if @pairimp == 0 || @pairimp == 1 || @pairimp == 4
+      z = (z - 1) * #pixel
+    elseif @pairimp == 2  || @pairimp == 3 || @pairimp >= 5
+      z = sqr(z) - 1
+    endif
+  ELSE
+    if @pairimp == 0 || @pairimp == 1 || @pairimp >= 6
+      z = (z + 1) * #pixel
+    elseif @pairimp == 2 || @pairimp == 4
+      z = sqr(z) - 1 + #pixel * real(z)
+    elseif @pairimp == 3 || @pairimp == 5
+      z = sqr(z) - 1 + #pixel * imag(z)
+    endif
+  ENDIF
+  z = @fnpi(z)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                        
+default:
+  title = "Pair Impair (Mandelbrot)"
+  helpfile="mde-help\mde-pair-impair.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  param start
+    caption = "Starting Point"
+    default = (0, 0)
+  endparam
+  param pairimp
+    caption = "Odd-even Type"
+    enum = "first" "second" "third" "fourth" "fifth" "sixth" \
+           "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param intf
+    caption = "Odd-even Factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real"  
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = ident()
+  endfunc
+switch:
+  type = "md-pairimpair-j"
+  start = pixel
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  fnbl = fnbl
+  fnpi = fnpi
+  bornes = bornes
+  sgn = sgn
+  intf = intf
+}
+
+md-potpourri-ceja {
+; Michèle Dessureault, avril 2001
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; ma formule Pair-impair
+; et la formule Celtic Julia de Paul Carlson
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair formula
+; and Paul Carlson's Celtic Julia
+; avril 2001/April 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel
+loop:
+  z = z^@power
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+    z = z - real(z) + abs(real(z)) - @start
+  ELSE
+    z = z - imag(z) + abs(imag(z)) - @start
+  endif
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                  
+default:
+  title = "Pot-pourri celtique (Julia)"
+  helpfile="mde-help\mde-pot-pourri-celtique.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Seed"
+    default = (0.6, 1.1)
+  endparam
+  param power
+    caption = "Power"
+    default=(2,0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-potpourri-cema"
+  bailout = bailout
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  sgn = sgn
+  test = test
+  power = power
+  coord = coord
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}
+
+md-potpourri-cema {
+; Michèle Dessureault, avril 2001
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; ma formule Pair-impair
+; et la formule Celtic Julia de Paul Carlson
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair formula
+; and Paul Carlson's Celtic Julia
+; avril 2001/April 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  Oldz = z
+  float bailtest = 0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel + @start
+loop:
+  z = z^@power
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+    z = z - real(z) + abs(real(z)) - #pixel
+  ELSE
+      z = z - imag(z) + abs(imag(z)) - #pixel
+  endif
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                   
+default:
+  title = "Pot-pourri celtique (Mandelbrot)"
+  helpfile="mde-help\mde-pot-pourri-celtique.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Starting Point"
+    default = (0, 0)
+  endparam
+  param power
+    caption = "Power"
+    default=(2,0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = ident()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc  
+switch:
+  type = "md-potpourri-ceja"
+  start = pixel
+  bailout = bailout
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  coord = coord
+  sgn = sgn
+  test = test
+  power = power
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}
+
+md-potpourri-poja {
+; 
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; ma formule Pair-impair
+; et la formule Pokorny de Paul Carlson
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair formula
+; and Paul Carlson's Pokorny
+; avril 2001/April 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel
+loop:
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+    z = z^@power - @start
+  ELSE
+    z = 1.0/z^@power - @start
+  endif
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                  
+default:
+  title = "Pot-pourri Pokorny (Julia)"
+  helpfile="mde-help\mde-pot-pourri-pokorny.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Seed"
+    default = (0.6, 1.1)
+  endparam
+  param power
+    caption = "Power"
+    default=(2,0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-potpourri-poma"
+  bailout = bailout
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  sgn = sgn
+  test = test
+  power = power
+  coord = coord
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}
+
+md-potpourri-poma {
+; 
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; ma formule Pair-impair
+; et la formule Pokorny de Paul Carlson
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair formula
+; and Paul Carlson's Pokorny
+; avril 2001/April 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  Oldz = z
+  float bailtest = 0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel + @start
+loop:
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+    z = z^@power - #pixel
+  ELSE
+      z = 1.0/z^@power - #pixel
+  endif
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                   
+default:
+  title = "Pot-pourri Pokorny (Mandelbrot)"
+  helpfile="mde-help\mde-pot-pourri-pokorny.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Starting Point"
+    default = (0, 0)
+  endparam
+  param power
+    caption = "Power"
+    default=(2,0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = ident()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc  
+switch:
+  type = "md-potpourri-poja"
+  start = pixel
+  bailout = bailout
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  coord = coord
+  sgn = sgn
+  test = test
+  power = power
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}
+
+md-psifs-ea {
+; Michèle Dessureault, août 2000
+;
+; D'après Roger Stevens, "Fractal programming in C",
+; p.394 à 397 (algorithme de IFS)
+;
+init:
+  float x = 0
+  float y = 0  
+  float a1=0
+  float a2=0
+  float a3=0
+  float a4=0
+  float b1=0
+  float b2=0
+  float b3=0
+  float b4=0
+  float c1=0
+  float c2=0
+  float c3=0
+  float c4=0
+  float d1=0
+  float d2=0
+  float d3=0
+  float d4=0
+  float e1=0
+  float e2=0
+  float e3=0
+  float e4=0
+  float f1=0
+  float f2=0
+  float f3=0
+  float f4=0
+  float a=0
+  float b=0
+  float c=0
+  float d=0
+  float e0=0
+  float f=0
+  float p=0
+  float r1=0
+  float r2=0
+  float r3=0
+  float r4=0
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  if @figure == 0    ;Sierpinsky
+    a1=a2=a3=d1=d2=d3=e3=f3=0.5
+    e2=1.0
+    r1=10813.0
+    r2=21626.0
+    r3=32767.0
+  endif
+  if @figure == 1    ;fougère
+    a2=f2=f3=f4=0.2
+    a3=-0.15
+    a4=d4=0.85
+    b2=-0.26
+    b3=0.28
+    b4=0.04
+    c2=0.23
+    c3=0.26
+    c4=-0.04
+    d1=0.16
+    d2=0.22
+    d3=0.24
+    r1=328.0
+    r2=2621.0
+    r3=4915.0
+    r4=32767.0
+  endif
+  if @figure == 2    ; arbre
+    a2=d2=0.1
+    a3=b4=c3=d3=d4=0.42
+    a4=b3=c4=-0.42
+    d1=0.5
+    f2=f3=f4=0.2
+    r1=1638.0
+    r2=6553.0
+    r3=19660.0
+    r4=32767.0
+  endif
+  if @figure == 3    ; arbre de Cantor
+   a1=a2=d1=d2=0.333
+   a3=d3=0.667
+   e2=1.0
+   e3=f3=0.5
+   r1=10813.0
+   r2=21626.0
+   r3=32767.0
+  endif    
+loop:
+  if @hasard == 1
+    p = real(#random*z)*32767.0
+  elseif @hasard == 2
+    p = imag(#random*z)*32767.0
+  elseif @hasard == 0 ; pas de hasard
+    p = (real(z)+imag(z)) % 32767
+  elseif @hasard == 3
+    p = (real(#random*z)+imag(#random*z)) *32767.0
+  elseif @hasard == 4
+    p = (real(#random*z)-imag(#random*z)) *32767.0
+  elseif @hasard == 5
+    p = (real(#random*z)*imag(#random*z)) *32767.0
+  elseif @hasard == 6
+    p = (real(#random*z)/imag(#random*z)) *32767.0
+  elseif @hasard == 7
+    p = (imag(#random*z)/real(#random*z)) *32767.0
+  elseif @hasard == 8
+    p = (real(#random*z)^imag(#random*z)) *32767.0
+  elseif @hasard == 9
+    p = (imag(#random*z)^real(#random*z)) *32767.0
+  elseif @hasard == 10 ; multi
+    p = (real(z)+imag(z)) * 32767
+  endif
+  if @wrp == true && p > 32767
+     p = p % 32767
+  endif
+  if p <= r1
+    a = a1
+    b = b1
+    c = c1
+    d = d1
+    e0 = e1
+    f = f1
+  endif
+  if p > r1 && p <= r2
+    a = a2
+    b = b2
+    c = c2
+    d = d2
+    e0 = e2
+    f = f2
+  endif
+  if p > r2 && p <= r3
+    a = a3
+    b = b3
+    c = c3
+    d = d3
+    e0 = e3
+    f = f3
+  endif
+  if p > r3 && p <= r4 && (@figure == 1 || @figure == 2)
+    a = a4
+    b = b4
+    c = c4
+    d = d4
+    e0 = e4
+    f = f4
+  endif
+  x = a*real(z) + b*imag(z) + e0
+  y = c*real(z) + d*imag(z) + f
+  z = z + x + y * 1i
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Pseudo IFS"
+  helpfile="mde-help\mde-pseudo-IFS.htm"
+  method = multipass
+  periodicity = 0
+  param figure
+    caption = "Related Figure"
+    enum = "sierpinsky" "fern" "tree" "Cantor tree"
+  endparam
+  param hasard
+    caption ="Chaos"
+    enum="no" "real" "imag" "real+imag" "real-imag" "real*imag" \
+         "real/imag" "imag/real" "real^imag" "imag^real" "multi"
+    hint="How to apply the chaos to the IFS figure"
+  endparam
+  param wrp
+    caption = "Apply wrap around?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam 
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+}
+
+md-fourier-ea {
+; Michèle Dessureault, sept 2000
+;
+; - D'après les pages 474ss des Standard Mathematical Tables
+; 22ème édition 
+; - From the Standard Mathematical Tables, 22nd edition, pp474
+; and following
+; 
+; 4 premiers termes de l'équation générale des séries de Fourier:
+; 4 first terms of Fourier Series general equation:
+; a0/2 + a1*cos(pi*#z/L)+ b1*sin(#pi*#z/L) +
+;        a2*cos(2*pi*#z/L)+ b2*sin(2*#pi*#z/L) +
+;        a3*cos(3*pi*#z/L)+ b3*sin(3*#pi*#z/L) +
+;        a4*cos(4*pi*#z/L)+ b4*sin(4*#pi*#z/L)
+;
+init:
+  z=#pixel
+  x=(0.0,0.0)
+  y=(0.0,0.0)
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  w = (0.0,0.0)
+  bool est_pair = true
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:  
+  w= @a0/2 + @a1*cos(#pi*z/@l)+ @b1*sin(#pi*z/@L)
+  w= w+@a2*cos(2*#pi*z/@L)+ @b2*sin(2*#pi*z/@L)
+  w= w+@a3*cos(3*#pi*z/@L)+ @b3*sin(3*#pi*z/@L)
+  w= w+@a4*cos(4*#pi*z/@L)+ @b4*sin(4*#pi*z/@L) + @offset
+  x=real(w)
+  y=imag(w)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = rho
+    y = theta
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = rho * cosh(real(#z))
+    y = rho * sinh(imag(#z))
+  endif
+  z= @fnx(x) + @fny(y * 1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path
+    elseif @pairimp == 9
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                      
+default:
+  title="Fourier"  
+  method = multipass
+  periodicity = 0
+  magn = 2
+  helpfile="mde-help\mde-fourier-ufm.htm"
+  param a0
+    caption = "A0"
+    default = 1.0
+  endparam
+  param a1
+    caption = "A1"
+    default = 1.0
+  endparam
+  param b1
+    caption = "B1"
+    default = 0.0
+  endparam
+  param a2
+    caption = "A2"
+    default = 1.0
+  endparam
+  param b2
+    caption = "B2"
+    default = 0.0
+  endparam
+  param a3
+    caption = "A3"
+    default = 1.0
+  endparam
+  param b3
+    caption = "B3"
+    default = 0.0
+  endparam
+  param a4
+    caption = "A4"
+    default = 1.0
+  endparam
+  param b4
+    caption = "B4"
+    default = 0.0
+  endparam
+  param l
+    caption = "Wavelength"
+    default = 1.0
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0.0,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam 
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+
+}
+
+md-epsrot-jeb {
+; Michèle Dessureault, septembre/september 2001
+; Ma version personnelle de Wayne Kiely's Epsilon_Rot
+; My personal version of Wayne Kiely's Epsilon_Rot
+;
+init:
+  float x = 0
+  float y = 0  
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  z = z^@power+@c
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Epsilonia (Julia)"
+  helpfile="mde-help\mde-epsilonia.htm"
+  method = multipass
+  periodicity = 0
+  param c
+    caption ="Seed"
+    default = (0.6, 1.1)
+  endparam
+  param power
+    caption ="Power"
+    default = (2.0,0.0)
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (-0.01,0.01)
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-epsrot-meb"
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  fnbl = fnbl
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  power = power
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+}
+
+md-epsrot-meb {
+; Michèle Dessureault, septembre/september 2001
+; Ma version personnelle de Wayne Kiely's Epsilon_Rot
+; My personal version of Wayne Kiely's Epsilon_Rot
+;
+init:
+  float x = 0
+  float y = 0  
+  z=#pixel+@c
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  z = z^@power+#pixel
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if ((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs)))
+      z=1E6            ;forces escape
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                     
+default:
+  title = "Epsilonia (Mandelbrot)"
+  helpfile="mde-help\mde-epsilonia.htm"
+  method = multipass
+  periodicity = 0
+  param c
+    caption ="Starting point"
+    default =(0.0,0.0)
+  endparam
+  param power
+    caption ="Power"
+    default = (2.0,0.0)
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (-0.01,0.01)
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam 
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"  
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc
+switch:
+  type = "md-epsrot-jeb"
+  c = pixel
+  bailout = bailout
+  test = test
+  pairimp = pairimp
+  fnbl = fnbl
+  fnpi = fnpi
+  sgn = sgn
+  intf = intf
+  power = power
+  bornes = bornes
+  fnb = fnb
+  barn = barn
+  barn_offset = barn_offset
+}
+
+md-polynome-c{
+;
+; Michèle Dessureault, septembre/september 2001
+;
+init:
+  z=#pixel
+  bool est_pair = true
+  int temp1 = 0
+  temp2 = (0.0,0.0)
+  float signe = 1.0
+  temp3 = (0.0,0.0)
+  w = (0.0,0.0)
+  int iter = 0
+  float x =0.0
+  float y = 0.0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+loop:
+  if @var == 0
+    w = @a1*@fn1(z^@p1)+@a2*@fn2(z^@p2)+@a3*@fn3(z^@p3)+@a4
+  elseif @var == 1
+    w = (@a1*@fn1(z^@p1)+@a2*@fn2(z^@p2))/(@a3*@fn3(z^@p3)+@a4)
+  elseif @var == 2
+    w = (@a1*@fn1(z^@p1)+@a2*@fn2(z^@p2))+(@a3*@fn3(z^@p3)+@a4)/ \
+        (@a1*@p1*@fn1(z^@p2)+@a2*@p2*@fn2(z^@p1))+(@a3*@p3*@fn3(z))
+  endif
+  x=real(w)
+  y=imag(w)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+  endif
+  z = z + @fnx(x)+ @fny(y*1i)
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  if (@barn == 1 && real(z) >= @barn_offset) || \
+     (@barn == 2 && imag(z) >= @barn_offset) || \
+     (@barn == 3 && (real(z) * imag(z)) >= @barn_offset) || \
+     (@barn == 4 && (real(z) + imag(z)) >= @barn_offset) || \
+     (@barn == 5 && diff >= @barn_offset) || \
+     (@barn == 6 && phi >= @barn_offset) || \
+     (@barn == 7 && cabs(z) >= @barn_offset) || \
+     (@barn == 8 && path >= @barn_offset) || \
+     (@barn == 9 && iter >= @barn_offset)    
+       z = @fnb(z)
+  endif
+  if @pairimp > 0
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @pairimp == 1
+      temp2 = real(z)
+    elseif @pairimp == 2
+      temp2 = imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 4
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 5
+      temp2 = diff
+    elseif @pairimp == 6
+      temp2 = phi
+    elseif @pairimp == 7
+      temp2 = cabs(z)
+    elseif @pairimp == 8
+      temp2 = path 
+    elseif @pairimp == 9
+      temp2 = iter 
+    endif
+    if @intf == 0
+      temp1 = ceil(signe*cabs(temp2))
+    elseif @intf == 1
+      temp1 = floor(signe*cabs(temp2))
+    elseif @intf == 2
+      temp1 = trunc(signe*cabs(temp2))
+    elseif @intf == 3
+      temp1 = round(signe*cabs(temp2))
+    endif
+    if temp1 % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+    IF est_pair
+      z = @fnpi(z)
+    endif
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                    
+default:
+  title="Polynome"
+  helpfile="mde-help\mde-polynome.htm"
+  method = multipass
+  periodicity = 0
+  magn = 0.75
+  param var
+    caption = "Variation"
+    enum = "true polynome" "pseudo Moebius" "pseudo Newton"
+  endparam
+  param a1
+    caption = "A1"
+    default = (1.0,0.0)
+  endparam
+  param a2
+    caption = "A2"
+    default = (1.0,0.0)
+  endparam
+  param a3
+    caption = "A3"
+    default = (1.0,0.0)
+  endparam
+  param a4
+    caption = "A4"
+    default = (1.0,0.0)
+  endparam
+  param p1
+    caption = "Power 1"
+    default = (3.0,0.0)
+  endparam
+  param p2
+    caption = "Power 2"
+    default = (2.0,0.0)
+  endparam
+  param p3
+    caption = "Power 3"
+    default = (1.0,0.0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn
+    caption = "Barnsley type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam  
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "none" "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  func fn1
+    caption = "First Function"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = ident()
+  endfunc
+  func fn3
+    caption = "Third Function"
+    default = ident()
+  endfunc    
+  func fnx
+    caption = "Apply F(x)"
+    default = ident()
+  endfunc
+  func fny
+    caption = "Apply F(y)"
+    default = ident()
+  endfunc 
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc   
+}
+
+md-potpourri-baja {
+; 
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; mes formules Pair-impair & Barnsley imaginaire
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair & Barnsley imaginaire formula
+; Michèle Dessureault, septembre/september 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  Oldz = z
+  float bailtest = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel
+loop:
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+     if @for == 0 
+        z = (z - 1) * @start
+     elseif @for == 1 || @for == 2
+        z = sqr(z) - 1
+     endif
+  ELSE
+     if @for == 0
+        z = (z + 1) * @start
+     elseif @for == 1
+        z = sqr(z) - 1 + @start * real(z)
+     elseif @for == 2
+      z = sqr(z) - 1 + @start * imag(z)
+     endif
+  endif
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                  
+default:
+  title = "Pot-pourri Barnsley (Julia)"
+  helpfile="mde-help\mde-pot-pourri-barnsley.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param for
+    caption = "Formula"
+    enum = "Barnsley 1" "Barnsley 2" "Barnsley im"
+  endparam
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Seed"
+    default = (0.6, 1.1)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = flip()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = flip()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc 
+switch:
+  type = "md-potpourri-bama"
+  bailout = bailout
+  for = for
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  sgn = sgn
+  test = test
+  coord = coord
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}
+
+md-potpourri-bama {
+; 
+; Fantaisie basée sur la conversion Fractint->UF faite par 
+; Frederik Slijkerman des formules Barnsley,
+; mes formules Pair-impair & Barnsley imaginaire
+;
+; Fantasy based on the Fractint->UF conversion made by
+; Frederik Slijkerman of the Barnsley formulas,
+; my own Pair-impair & Barnsley imaginaire formula
+; Michèle Dessureault, septembre/september 2001
+;
+init:
+  int iter = 0
+  float phi = 0.0
+  float path = 0.0
+  float diff = 0.0
+  float bfac = 0.0
+  float x = 0.0
+  float y = 0.0
+  float rho = 0.0
+  float theta =0.0
+  Oldz = z
+  float bailtest = 0.0
+  int temp = 0
+  float signe =1.0
+  bool est_pair = true
+  float temp2 = 0.0
+  float temp3 = 0.0
+  float bi = real(@bornes)
+  float bs = imag(@bornes)
+  z = #pixel + @start
+loop:
+  if @p_switch == 0
+    if @barn_type == 0
+      bfac = real(z)
+    elseif @barn_type == 1
+      bfac = imag(z)
+    elseif @barn_type == 2
+      bfac = real(z) * imag(z)
+    elseif @barn_type == 3
+      bfac = real(z) + imag(z)
+    elseif @barn_type == 4
+      bfac = diff
+    elseif @barn_type == 5
+      bfac = phi
+    elseif @barn_type == 6
+      bfac = cabs(z)
+    elseif @barn_type == 7
+      bfac = path
+    elseif @barn_type == 8
+      bfac = iter    
+    endif
+  endif
+  if @p_switch == 1
+    if @pairimp == 0
+      temp2 = real(z)
+    elseif @pairimp == 1
+      temp2 = imag(z)
+    elseif @pairimp == 2
+      temp2 = real(z) * imag(z)
+    elseif @pairimp == 3
+      temp2 = real(z) + imag(z)
+    elseif @pairimp == 4
+      temp2 = diff
+    elseif @pairimp == 5
+      temp2 = phi
+    elseif @pairimp == 6
+      temp2 = cabs(z)
+    elseif @pairimp == 7
+      temp2 = path
+    elseif @pairimp == 8
+      temp2 = iter   
+    endif
+    if @sgn == true
+      temp3 = real(z) * imag(z)
+      if temp3 < 0
+        signe = -1.0
+      endif
+    endif
+    if @intf == 0
+      temp = ceil(signe*temp2)
+    elseif @intf == 1
+      temp = floor(signe*temp2)
+    elseif @intf == 2
+      temp = trunc(signe*temp2)
+    elseif @intf == 3
+      temp = round(signe*temp2)
+    endif
+    if temp % 2 == 0
+      est_pair = true
+    else
+      est_pair = false
+    endif  
+  endif
+  IF (@p_switch == 0 && bfac >= @barn_offset) || \
+     (@p_switch == 1 && est_pair)
+     IF @for == 0
+        z = (z - 1) * #pixel
+     elseif @for == 1 || @for == 2
+        z = sqr(z) - 1
+     endif
+  ELSE
+     if @for == 0
+        z = (z + 1) * #pixel
+     elseif @for == 1
+        z = sqr(z) - 1 + #pixel * real(z)
+     elseif @for == 2
+        z = sqr(z) - 1 + #pixel * imag(z)
+     endif
+  ENDIF
+  x = real(z)
+  y = imag(z)
+  if @coord == 1
+    rho = sqrt(sqr(x)+sqr(y))
+    theta = atan2(y/x)
+    if theta < 0
+      theta = theta + 2 * #pi
+    endif
+    x = real(rho)
+    y = imag(theta)
+    z = x+flip(y)
+  elseif @coord ==2
+    rho = sqrt(sqr(x)+sqr(y))
+    x = real(rho * cosh(x))
+    y = imag(rho * sinh(y))
+    z = x+flip(y)
+  endif
+  if @p_switch == 0
+     z = @fnb(z)
+  else
+     z = @fnpi(z)
+  endif
+  iter=iter + 1
+  path = path + cabs(z)
+  phi = atan2(z)
+  phi = phi/#pi
+  if phi < 0.0
+    phi = phi + 2.0
+  endif
+  diff = cabs(z-oldz)
+  oldz = z
+  x = real(z)
+  y = imag(z)
+  if !((bi==0)&&(bs==0))
+    if (((((x-y)>bi) && ((x-y)<bs)) || (((x+y)>bi) && ((x+y)<bs))))
+        z=1E6            ;forces escape
+    endif
+  endif
+  if @test == 0 
+    bailtest = |z|
+  elseif @test == 1
+    bailtest = sqr(real(z))
+  elseif @test == 2
+    bailtest = sqr(imag(z))
+  elseif @test == 5
+    bailtest = sqr(abs(real(z)) + abs(imag(z)))
+  elseif @test == 6
+    bailtest = sqr(real(z) + imag(z))
+  elseif @test == 7
+    bailtest = |z|+iter^2
+  elseif @test == 8
+    bailtest = |z|+phi^2
+  elseif @test == 9
+    bailtest = |z|+path^2
+  elseif @test == 10
+    bailtest = |z|+diff^2
+  elseif @test == 11
+    bailtest = sqr(abs(real(z))- abs(imag(z)))
+  elseif @test == 12
+    bailtest = sqr(abs(real(z))* abs(imag(z)))
+  elseif @test == 13
+    bailtest = sqr(abs(real(z))/ abs(imag(z)))
+  elseif @test == 14
+    bailtest = sqr(abs(real(z))^ abs(imag(z)))
+  elseif @test == 15
+    bailtest = sqr(abs(imag(z))^ abs(real(z)))
+  endif
+bailout:
+ (@test == 3 && @fnbl(sqr(real(z))) <= @bailout && @fnbl(sqr(imag(z))) < @bailout) ||   \
+ (@test == 4 && (@fnbl(sqr(real(z))) <= @bailout || @fnbl(sqr(imag(z))) < @bailout)) || \
+ (@test < 3 || @test >4) && @fnbl(bailtest) <= @bailout                   
+default:
+  title = "Pot-pourri Barnsley (Mandelbrot)"
+  helpfile="mde-help\mde-pot-pourri-barnsley.htm"
+  method = multipass
+  periodicity = 0
+  maxiter = 149
+  magn = 0.75
+  param for
+    caption = "Formula"
+    enum = "Barnsley 1" "Barnsley 2" "Barnsley im"
+  endparam
+  param p_switch
+    caption = "Switch"
+    enum = "Barnsley" "Odd-Even"
+  endparam
+  param start
+    caption = "Starting Point"
+    default = (0, 0)
+  endparam
+  param coord
+    caption = "Coordinates"
+    enum="Cartesian" "Polar" "Hyperbolic"
+    default = 0
+  endparam
+  param barn_type
+    caption = "Barnsley Type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param barn_offset
+    caption = "Barnsley Offset"
+    default = 0.0
+  endparam 
+  param pairimp
+    caption = "Odd-Even type"
+    enum = "real" "imag" "real*imag" "real+imag" \
+           "diff" "angle" "magnitude" "path" "iteration"
+  endparam
+  param intf
+    caption = "Odd-Even factor"
+    enum = "ceil" "floor" "trunc" "round"
+  endparam
+  param sgn
+    caption = "Apply Odd-even Sign?"
+    default = false
+  endparam
+  param bornes
+    caption ="Escape Range"
+    default = (0.0,0.0)
+  endparam
+  param test
+    caption = "Bailout Test"
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "iter" "angle" \
+           "path" "diff" "minus" "product" "division" "real^imag" \
+           "imag^real" 
+    hint = "This gives a choice of test conditions for bailing out"
+  endparam
+  param bailout 
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+  endparam
+  func fnb
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+  func fnpi
+    caption = "Odd-even Function"
+    default = ident()
+  endfunc 
+  func fnbl
+    caption = "Bailout Function"
+    default = ident()
+    hint = "To choose some function for further bailout tests"
+  endfunc  
+switch:
+  type = "md-potpourri-baja"
+  start = pixel
+  for = for
+  bailout = bailout
+  p_switch = p_switch
+  pairimp = pairimp
+  intf = intf
+  coord = coord
+  sgn = sgn
+  test = test
+  barn_type = barn_type
+  barn_offset = barn_offset
+  bornes = bornes
+  fnbl = fnbl
+  fnb = fnb
+  fnpi = fnpi
+}

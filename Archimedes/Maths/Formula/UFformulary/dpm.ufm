@@ -1,0 +1,2351 @@
+comment {
+  Fractal formulas by Daniel Martin
+
+  Welcome to my public pack of formulas for Animation
+
+  All comments welcome - fractals@mediaguise.com.au
+
+  Changes / Updates List:
+  
+  29-10-2007: The Curve-O-Matic Animator Added, written for improving animations.
+  ??-??-2007: Big change of pack, ditched 'star' ratings and improved exisiting formulas
+  03-08-2007: Removed all 'switch' parameters - they did not work
+  02-08-2007: Fixed up all the identifiers (sorry for the previous mess) and added '*** Julia Pie'
+  01-08-2007: Made first pack available
+  
+  Notes:
+  The Curve-O-Matic Animator Added! This function makes it simple to animate the Seed around circles or spirals!
+  The inspiration for this was to enable users to easily create looping animation or perfect curves without having
+  to calculate the x,y co-ordinates each time. Just by luck, the same theory was eaily applied to the Inverse
+  mapping technique and other fractals.
+  Big thanks to Philip Taylor for his mathematical ability in creating this formula.
+
+  Star Rating system ditched, after many realisations and discoveries, i realised there should be no need for a star rating
+  
+  I have tried to unsure that these codes have not already been created, however if there is any similarity between these formulas
+  and creations of your own, please contact me to resolve the issue.
+  
+  Most the fractals i have created are based on creating nice flowing animation as opposed to unique fractals.
+  
+  All content © Media Guise 2007
+
+}
+
+;;;;;;;;;;;;;;;;; ***** New Formulas *****
+dpm-TCOMA-V1  {
+
+; The Curve-o-Matic Animator - Version 1 - Daniel Martin 2007
+
+; Animates the seed or start point of a fractal along the lines of a Circle or Rose Curve,
+; this allows for easy creation of looping animations with very few keyframes.
+; The idea was inspired by trying to get the seed of a Julia to follow a 'circle'
+; without having to keyframe each point to generate a smooth curve.
+
+; The easiest way to get started is to turn the 'Animate' button on, go to the end of the timeline
+; and change the 'Curve 1 Rotation' to 0. Turn off 'Animate' and press play. You can now see the Julia
+; animating around a circle at the point (-1.25,0).
+
+; The Curve seed is added onto the basic seed, set the basic seed to (0,0) to allow the curves to
+; control the seed completely.
+
+; Currently, you can have upto 3 Curves animating in conjunction with each other that
+; can create circles, Rose curve shapes (eg: flowers) Spirals, spirographs and many other
+; interesting looping patterns.
+
+; A full help and explanation page will be available soon at:
+; http://fractals.mediaguise.com
+
+; Thanks to Philip Taylor for all his help and to the UFBeta group for their testing and input.
+; Susan Chambless - Switch feature, David Makin - Mandelbrot Z init
+
+; -- Functions Built In:
+
+; Fractals: Mandelbrot, Julia, Julia - Mandelbrot, Phoenix (Both), Nova (Both) and my J-L-Perspective
+; Switch Type Function (Julia's Only)
+; 3 'Stacked' Curve controls
+; Curve Distort and Draw distort Operators
+; Iteration Distance Modifier - Also available standalone and simplified
+; Final Effects - Some ways to distort the final Z of the fractal
+
+; -- General Build Notes:
+
+; The 'Basic Circle' uses a different math of 'Curve Circle', which is based off a rose curve.
+; Advanced Shapes and Distorts are NOT available on the 'Basic Circle'
+; The Switch feature seems to be working properly, however there may be issues.
+; Converted entire formula to be based off 'arrays', which saved coding length and hopefully will
+; keep the speed of the draw faster.
+
+
+; Future Versions
+
+; Other popular fractal types eg: Slope Fractals
+; Different types of curves eg: Hyperbola etc
+; More general Fractal Distorts
+; Any suggestions?
+
+global:
+;; -- // Start Global Init \\ --
+; Setup all Arrays to be used - Currently only 1 to 3 are being used, the rest are for potential expansion
+bool aCurve[10] ; Use Curve # = true/false
+bool aCurveAdvOp[10] ; Curve # Advanced Options = true/false
+
+float aDeg[10] ; Float Arrays
+float aCurveDeg[10]
+float aAngAdj[10]
+
+int aLoop[100] ; Integer Arrays
+int asType[10]
+int aRadOp[10]
+int agCurveNo[1]
+int aCX[50]
+int aCY[50]
+int aCurveAdvX[10]
+int aCurveAdvY[10]
+
+complex aCurveRad[10] ; Complex Arrays
+complex aCurveCenter[10]
+complex aR[10]
+complex gC[10]
+complex aK[10]
+complex aJ[10]
+
+; Assign values to the array from user set parameters
+
+aCurve[1] = @curve1
+aCurve[2] = @curve2
+aCurve[3] = @curve3
+
+aCurveAdvOp[1] = @curve1adv1
+aCurveAdvOp[2] = @curve2adv1
+aCurveAdvOp[3] = @curve3adv1
+
+aCurveAdvX[1] = @curve1X
+aCurveAdvX[2] = @curve2X
+aCurveAdvX[3] = @curve3X
+
+aCurveAdvY[1] = @curve1Y
+aCurveAdvY[2] = @curve2Y
+aCurveAdvY[3] = @curve3Y
+
+aStype[1] = @Stype1
+aStype[2] = @Stype2
+aStype[3] = @Stype3
+
+aCurveDeg[1] = @curve1deg
+aCurveDeg[2] = @curve2deg
+aCurveDeg[3] = @curve3deg
+
+aCurveRad[1] = @curve1Radius
+aCurveRad[2] = @curve2Radius
+aCurveRad[3] = @curve3Radius
+
+aCurveCenter[1] = @curve1center
+aCurveCenter[2] = @curve2center
+aCurveCenter[3] = @curve3center
+
+aRadOp[1] = @Radop1
+aRadOp[2] = @Radop2
+aRadOp[3] = @Radop3
+
+aAngAdj[1] = @curve1angleadj
+aAngAdj[2] = @curve2angleadj
+aAngAdj[3] = @curve3angleadj
+
+
+agCurveNo[0] = 4 ; Number of total curves, insterted for future expansion
+
+;; -- \\ End Global Init // --
+
+; -- // Start Main Global Script \\ -- ;
+
+aLoop[0] = 1 ; Reset loop count
+while  (aLoop[0] < agCurveNo[0]) ; Begin Loop
+if @advangle == true ; Advanced Angle Options ON?
+   aDeg[aLoop[0]] =  (aCurveDeg[aLoop[0]] / aAngAdj[aLoop[0]]) ; Incase other loops require different math to #pi
+elseif(aStype[aLoop[0]]==0) ; If 'Basic Circle' is Chosen
+   aDeg[aLoop[0]] = (aCurveDeg[aLoop[0]]/180*#pi)   ; Converts the number intro degrees
+else ; Advanced Angle Options OFF.
+   aDeg[aLoop[0]] = (aCurveDeg[aLoop[0]]/360*#pi)
+endif
+aDeg[4] = (@Itdeg/180*#pi)  ; Converts Iteration distance modifier Rotation to Degrees
+
+; Begin main Rose Curve calculation
+if aCurve[aLoop[0]] == true ;; If 'Use Curve #' is on
+   if aCurveAdvOp[aLoop[0]] == false  ;; If 'Curve 1 Advanced Options' is OFF
+      if(aStype[aLoop[0]]==0) ; If 'Basic Curve' is selected, calculate circle
+          aR[aLoop[0]] = aCurveRad[aLoop[0]]
+          aK[aLoop[0]] = (aR[aLoop[0]]*(cos(aDeg[aLoop[0]])))
+          aJ[aLoop[0]] =(aR[aLoop[0]]*(sin(aDeg[aLoop[0]])))
+      else ; If any other preset curve is chosen, aCX/aCY is converted accordingly
+          if(aStype[aLoop[0]]==1)  ;; Determine loop pattern by fraction
+             aCX[aLoop[0]] = 1
+             aCy[aLoop[0]] = 1
+          elseif(aStype[aLoop[0]]==2); 1 Petal
+             aCX[aLoop[0]] = 3
+             aCY[aLoop[0]] = 1
+          elseif(aStype[aLoop[0]]==3) ; 2 Petals
+             aCX[aLoop[0]] = 2
+             aCY[aLoop[0]] = 1
+          elseif(aStype[aLoop[0]]==4) ; 3 Petals
+             aCX[aLoop[0]] = 5
+             aCY[aLoop[0]] = 1
+          elseif(aStype[aLoop[0]]==5) ; 4 Petals
+             aCX[aLoop[0]] = 4
+             aCY[aLoop[0]] = 1
+          elseif(aStype[aLoop[0]]==6) ; 1 Bud
+             aCX[aLoop[0]] = 1
+             aCY[aLoop[0]] = 2
+          elseif(aStype[aLoop[0]]==7) ; 2 Buds
+             aCX[aLoop[0]] = 3
+             aCY[aLoop[0]] = 5
+          elseif(aStype[aLoop[0]]==8) ; 3 Buds
+             aCX[aLoop[0]] = 2
+             aCY[aLoop[0]] = 3
+          elseif(aStype[aLoop[0]]==9) ; 4 Buds
+             aCX[aLoop[0]] = 2
+             aCY[aLoop[0]] = 7
+          elseif(aStype[aLoop[0]]==10) ; Flower 1
+             aCX[aLoop[0]] = 9
+             aCY[aLoop[0]] = 7
+          elseif(aStype[aLoop[0]]==11) ; Flower 2
+             aCX[aLoop[0]] = 13
+             aCY[aLoop[0]] = 7
+          elseif(aStype[aLoop[0]]==12) ; Flower 3
+             aCX[aLoop[0]] = 12
+             aCY[aLoop[0]] = 7
+          endif
+          aR[aLoop[0]] = Cos((aCX[aLoop[0]]/aCY[aLoop[0]])*aDeg[aLoop[0]]) ; Calculate curve curve and convert to cartesian
+          aR[aLoop[0]] = aR[aLoop[0]] * aCurveRad[aLoop[0]]
+          aK[aLoop[0]] = (aR[aLoop[0]]*(cos(aDeg[aLoop[0]])))
+          aJ[aLoop[0]] = (aR[aLoop[0]]*(sin(aDeg[aLoop[0]])))
+      endif
+      gC[aLoop[0]] = aK[aLoop[0]] + flip(aJ[aLoop[0]])
+      gC[aLoop[0]] = gC[aLoop[0]] +  aCurveCenter[aLoop[0]] ; Seed modification and center offset
+   else  ; If 'Curve # Advanced Options' is ON
+      aCX[aLoop[0]] = aCurveAdvX[aLoop[0]] ; Get user defined fraction X/Y
+      aCY[aLoop[0]] = aCurveAdvY[aLoop[0]]
+      aR[aLoop[0]] = Cos((aCX[aLoop[0]]/aCY[aLoop[0]])*aDeg[aLoop[0]]) ; curve curve # Polar conversion code
+          if(aRadOp[aLoop[0]]==0) ; Curve # Advanced Shape Radius Operator Code
+             aR[aLoop[0]] = aR[aLoop[0]] + aCurveRad[aLoop[0]]
+         elseif(aRadOp[aLoop[0]]==1)
+             aR[aLoop[0]] = aR[aLoop[0]] - aCurveRad[aLoop[0]]
+         elseif(aRadOp[aLoop[0]]==2)
+             aR[aLoop[0]] = aR[aLoop[0]] * aCurveRad[aLoop[0]]
+         elseif(aRadOp[aLoop[0]]==3)
+             aR[aLoop[0]] = aR[aLoop[0]] / aCurveRad[aLoop[0]]
+         elseif(aRadOp[aLoop[0]]==4)
+             aR[aLoop[0]] = aR[aLoop[0]]
+         endif
+       endif ; End Advanced Curve 1 Code
+   endif
+aLoop[0] =  aLoop[0] + 1
+endwhile
+; -- \\ End Global Script // -- ;
+
+; -- // Start Init Code \\ -- ;
+init:
+; Phoenix variables
+complex y = (0,0)
+complex newz = (0,0)
+; Nova variables
+complex zsquared = (0,0)
+complex zcubed = (0,0)
+complex zold = (0,0)
+; Other variables and Arrays
+float aCurveDegDistAmt[10]
+float distmult = @Distmult
+float it1 = @ItRadius
+
+bool aUseCurveDist[10]
+bool aLCurve[10]
+
+int aCurveDistOp[10]
+int aLoop2[100]
+int alCurveNo[1]
+int Itcount = 1
+int ItStart = @itStart
+int ItEnd = @itEnd
+
+complex aC[10]
+complex aNewDeg[10]
+complex aCurveLk[10]
+complex aCurveLj[10]
+complex aCurveCenterL[10]
+complex newdist = (0,0)
+complex feed = @feed
+complex seeditdistance = @distance
+complex tempC = (0,0)
+complex Cp = #pixel
+complex theoldz = (0,0)
+; Determine fractal type and set z up accordingly
+if @fractal == "Mandelbrot"
+   z = @start
+   elseif @Fractal == "Nova - M"
+   z = @start
+   elseif @Fractal == "Julia - M"
+   z = @start
+   elseif @Fractal == "Phoenix - M"
+   z = @start
+   else
+   z = #pixel
+endif
+; -- \\ End Init Code // -- ;
+
+; -- // Start Loop Code \\ -- ;
+loop:
+; Setup Arrays
+aC[1] = gC[1]
+aC[2] = gC[2]
+aC[3] = gC[3]
+
+aLCurve[1] = aCurve[1]
+aLCurve[2] = aCurve[2]
+aLCurve[3] = aCurve[3]
+
+aUseCurveDist[1] = @Usecurve1Dist
+aUseCurveDist[2] = @Usecurve2Dist
+aUseCurveDist[3] = @Usecurve3Dist
+
+aCurveDistOp[1] = @curve1degop
+aCurveDistOp[2] = @curve2degop
+aCurveDistOp[3] = @curve3degop
+
+aCurveDegDistAmt[1] = @curve1distamt
+aCurveDegDistAmt[2] = @curve2distamt
+aCurveDegDistAmt[3] = @curve3distamt
+
+aCurveLk[1] = (0,0)
+aCurveLk[2] = (0,0)
+aCurveLk[3] = (0,0)
+aCurveLj[1] = (0,0)
+aCurveLj[2] = (0,0)
+aCurveLj[3] = (0,0)
+
+aCurveCenterL[1]  =  aCurveCenter[1]
+aCurveCenterL[2]  =  aCurveCenter[2]
+aCurveCenterL[3]  =  aCurveCenter[3]
+
+alCurveNo[0] = agCurveNo[0] ; number of times to loop is preditermined in global section
+
+aLoop2[0] = 1
+while  (aLoop2[0] < alCurveNo[0])
+; -- // Start Advanced Options, Distance Distort and Final Curve Offset Code \\ -- ;
+; NOTE: Couldn't work out any other way to get functions to work with Arrays so this section had to be alterted.
+if aCurve[aLoop2[0]] == true
+   if aUseCurveDist[aLoop2[0]]==true
+      if (aCurveDistOp[aLoop2[0]] == 0)  ;; Standard (rotation*#pixel)
+         aNewDeg[aLoop2[0]] = (aDeg[aLoop2[0]]*#pixel)
+         aNewDeg[aLoop2[0]] = aNewDeg[aLoop2[0]]*aCurveDegDistAmt[aLoop2[0]]
+      elseif (aCurveDistOp[aLoop2[0]] == 1) ; Type A
+         aNewDeg[aLoop2[0]] = aDeg[aLoop2[0]]+(#pixel*z)
+         aNewDeg[aLoop2[0]] = aNewDeg[aLoop2[0]]*aCurveDegDistAmt[aLoop2[0]]
+      elseif (aCurveDistOp[aLoop2[0]] == 2) ; Type B
+         aNewDeg[aLoop2[0]] = (aDeg[aLoop2[0]]-(#pixel/z)-(#pixel*z))
+         aNewDeg[aLoop2[0]] = aNewDeg[aLoop2[0]]*aCurveDegDistAmt[aLoop2[0]]
+      elseif (aCurveDistOp[aLoop2[0]] == 3) ; Type C
+         aNewDeg[aLoop2[0]] = z*(aDeg[aLoop2[0]]-#pixel/z)
+         aNewDeg[aLoop2[0]] = aNewDeg[aLoop2[0]]*aCurveDegDistAmt[aLoop2[0]]
+           elseif (aCurveDistOp[aLoop2[0]] == 4) ; Type D
+         aNewDeg[aLoop2[0]] = (aDeg[aLoop2[0]]+(#pixel*#pi))
+         aNewDeg[aLoop2[0]] = aNewDeg[aLoop2[0]]*aCurveDegDistAmt[aLoop2[0]]
+      endif
+       if aLoop2[0] == 1
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve1dcos(cos(aNewDeg[aLoop2[0]]))))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve1dsin(sin(aNewDeg[aLoop2[0]]))))
+       elseif aLoop2[0] == 2
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve2dcos(cos(aNewDeg[aLoop2[0]]))))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve2dsin(sin(aNewDeg[aLoop2[0]]))))
+       elseif aLoop2[0] == 3
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve3dcos(cos(aNewDeg[aLoop2[0]]))))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve3dsin(sin(aNewDeg[aLoop2[0]]))))
+      else
+      ; Do nothing
+      endif
+   else
+   if aCurveAdvOp[aLoop2[0]] == true
+         if aLoop2[0] == 1
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve1cos(aDeg[aLoop2[0]])))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve1sin(aDeg[aLoop2[0]])))
+      elseif aLoop2[0] == 2
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve2cos(aDeg[aLoop2[0]])))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve2sin(aDeg[aLoop2[0]])))
+      elseif aLoop2[0] == 3
+         aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(@curve3dcos(aDeg[aLoop2[0]])))
+         aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(@curve3dsin(aDeg[aLoop2[0]])))
+      else
+      ; Do nothing
+      endif
+      else
+   aCurveLk[aLoop2[0]] = (aR[aLoop2[0]]*(cos(aDeg[aLoop2[0]])))
+   aCurveLj[aLoop2[0]] = (aR[aLoop2[0]]*(sin(adeg[aLoop2[0]])))
+   endif
+   endif
+   aC[aLoop2[0]] = aCurveLk[aLoop2[0]] + flip(aCurveLj[aLoop2[0]]) ; Create the Curve
+   aC[aLoop2[0]] = aC[aLoop2[0]] + aCurveCenterL[aLoop2[0]] ; Add the Curve # Center Offset
+endif
+; -- // End Advanced Options, Distance Distort and Final Curve Offset Code \\ -- ;
+
+; -- // Start Iteration Distance Modifier Code \\ -- ;
+float itDeg = @ItDeg
+itDeg = (itDeg/180*#pi)
+if @UseItDist == true
+   itx = it1*cos(ItDeg)
+   ity = it1*sin(ItDeg)
+   seedItdistance =   itx + flip(ity)
+   tempc = tempc - (seeditDistance * distmult)
+    if @ItDist == true
+      if @DistOp == "Pixel"
+         newdist = @Distance + @pixOp(#pixel)
+      elseif @DistOp == "Z"
+         newdist = @Distance + @zOp(z)
+      elseif @DistOp == "Z Pixel"
+         newdist = @distance + @SeedOp(z / #pixel)
+      endif
+   else
+       newdist = (0,0)
+   endif
+; Setup variables for fractal calculation
+ tempC = tempC + newdist  ;; -- Adds distort effect here
+ if ItStart < Itcount
+    if ItEnd > Itcount
+       aC[aLoop2[0]] =  aC[aLoop2[0]] + TempC  ;; -- setup for Julia based fractals
+       Cp = #pixel + tempc ;; setup for Mandelbrot based fractals
+    endif
+ endif
+ else
+    Cp = #pixel
+endif
+; -- // End Iteration Distance Modifier Code \\ -- ;
+aLoop2[0] =  aLoop2[0] + 1
+endwhile
+; Setup C for final calculation based off which curves are on or off.
+if aLCurve[1] == true
+   if aLCurve[2] == true
+      if aLCurve[3] == true
+         c = aC[1] + aC[2] + aC[3]
+      else
+          c =  aC[1] + aC[2]
+      endif
+   elseif aLCurve[3] == true
+      c =  aC[1] + aC[3]
+   else
+      c =  aC[1]
+   endif
+elseif aLCurve[2] == true
+   if aLCurve[3] == true
+      c =  aC[2] + aC[3]
+   else
+      c =  aC[2]
+   endif
+elseif aLCurve[3] == true
+   c =  aC[3]
+else
+   c =  tempc
+endif
+
+; -- // Start Fractal Calculation Code \\ -- ;
+
+
+; Julia Code
+if @Fractal == "Julia"
+if @JOP == 0 ; Standard
+   z = z^@power + ((c+@seed) + feed)
+elseif @JOP == 1 ; Flipped
+z = (z^@power + (c+@seed) + feed)
+z = z / @Jfunc(Z)
+elseif @JOP == 2 ; Function
+z = @Jfunc(z^@power + (c+@seed) + feed)
+elseif @JOP == 3 ; Function
+z = z^@power + @jfunc((c+@seed) + feed) / #z
+endif
+; Julia - Mandelbrot Code (Not technically correct)
+elseif @fractal == "Julia - M"
+   if @JMSE == "Seed 1"
+   if @JMOP == 0 ; Standard
+      C = (C+@seed) * @JMFUNC(Cp)
+   elseif @JMOP == 1 ; Old Z
+      C = (C+theoldz) * @JMFUNC(Cp+@seed)
+   elseif @JMOP == 2 ; Double Seed
+      C = (C+(Cp+@seed)) * @JMFUNC(Cp+@seed)
+   elseif @JMOP == 3 ; Z seed
+      C = (C+(z-@seed)) * @JMFUNC(Cp)
+   elseif @JMOP == 4 ; Inverted
+      C = ((C+@seed) * @JMFUNC(Cp)) / ((C) / @JMFUNC(Cp))
+      C = (C) / sqr(C)
+   endif
+      z = z^@power + (c + @seed2 + feed)
+   elseif @JMSE == "Seed 2"
+        if @JMOP == 0 ; Standard
+      C = (C+@seed2) * @JMFUNC(Cp)
+   elseif @JMOP == 1 ; Old Z
+      C = (C+theoldz) * @JMFUNC(Cp+@seed2)
+   elseif @JMOP == 2 ; Double Seed
+      C = (C+(Cp+@seed2)) * @JMFUNC(Cp+@seed2)
+   elseif @JMOP == 3 ; Z seed
+      C = (C+(z-@seed2)) * @JMFUNC(Cp)
+   elseif @JMOP == 4 ; Inverted
+      C = ((C+@seed2) * @JMFUNC(Cp)) / ((C) / @JMFUNC(Cp))
+      C = (C) / sqr(C)
+   endif
+      z = z^@power + ((@seed + c) + feed)
+   endif
+
+; Mandelbrot Code
+elseif @fractal == "MandelBrot"
+z = z + (c + feed)
+z = z^@power + (Cp - (c + feed))
+
+; Phoenix - J Code
+elseif @Fractal == "Phoenix - J"
+   if @PJSE == "Seed"
+      newz = z^@power  +  z^@power2 * ((c+@seed) + feed)  +  @distort * y
+      y = z
+      z = newz
+   elseif @PJSE == "Distortion"
+      newz = z^@power  +  z^@power2 * @seed  +  ((c+@distort)+ feed) * y
+      y = z
+      z = newz
+   endif
+
+; Phoenix - M Code
+elseif @Fractal == "Phoenix - M"
+z = z + (c + feed)
+   if @PMSE == "Distortion"
+      newz = z^@power  +  z^@power2 * Cp + (@distort - (c+feed)) * y
+      y = z
+      z = newz
+   elseif @PMSE == "Pixel"
+      newz = z^@power  +  z^@power2 * (Cp - (c+feed))  +  @distort * y
+      y = z
+      z = newz
+   endif
+
+; Nova Code
+elseif @fractal == "Nova - J"
+   if @JNSE == "Seed"
+      if (@power == (3,0)); special optimized routine for power 3
+         zsquared = sqr(z)
+         zcubed = zsquared * z
+         zold = z
+         z = z - @distort * (zcubed-1) / (3*zsquared) + ((c+@seed) + feed)
+      else
+         zold = z
+         z = z - @distort * (z^@power-1) / (@power * z^(@power-1)) + ((c+@seed) + feed)
+      endif
+   elseif @JNSE == "distort"
+      if (@power == (3,0))
+         zsquared = sqr(z)
+         zcubed = zsquared * z
+         zold = z
+         z = z - ((c+@distort) + feed) * (zcubed-1) / (3*zsquared) +  @seed
+      else
+         zold = z
+         z = z - ((c+@distort) + feed) * (z^@power-1) / (@power * z^(@power-1)) + @seed
+      endif
+   endif
+
+; M - Nova Code
+elseif @fractal == "Nova - M"
+
+   if @MNSE == "distort"
+      if (@power == (3,0))
+         zsquared = sqr(z)
+         zcubed = zsquared * z
+         zold = z
+         z = z - (@distort - (c+feed)) * (zcubed-1) / (3*zsquared) + Cp
+      else
+         zold = z
+         z = z - (@distort - (c+feed)) / (@power * z^(@power-1)) + Cp
+      endif
+   elseif @MNSE == "Pixel"
+      if (@power == (3,0))
+         zsquared = sqr(z)
+         zcubed = zsquared * z
+         zold = z
+         z = z - @distort * (zcubed-1) / (3*zsquared) + (Cp - (c+feed))
+      else
+         zold = z
+         z = z - @distort * (z^@power-1) / (@power * z^(@power-1)) +  (Cp - (c+feed))
+      endif
+   endif
+
+; Julia-Lambada Perspective Code (Just to show how other simple fractals can be manipulated)
+elseif @fractal == "J-L-Perspective"
+   if @JLSE == "Seed 1"
+      jl = (3.14159-z)
+      z = ((c+@seed) + feed)*z*(jl*jl)+@seed2+z-@seed3^(@power-1)
+   elseif  @JLSE == "Seed 2"
+      jl = (3.14159-z)
+      z = @seed*z*(jl*jl)+((c+@seed2) + feed)+z-@seed3^(@power-1)
+      elseif @JLSE == "Seed 3"
+      jl = (3.14159-z)
+      z = @seed*z*(jl*jl)+@seed2+z-((c+@seed3) + feed)^(@power-1)
+   else
+      jl = (3.14159-z)
+      z = @seed*z*(jl*jl)+@Seed2+z-@Seed3^(@power-1)
+   endif
+endif
+if @useFE == true ; FINAL EFFECTS SECTION
+ if @fe1 == true
+   z = z + (@FE1amt * #pixel)
+ endif
+ if @fe2 == true
+   newz = sin(z) / cos(z)
+   z = z + (newz * @FE2amt)
+ endif
+ if @fe3 == true
+   newz = @fe3f(z) + (sqrt(#pi*#pixel))
+   z = @FE3amt * (newz)
+ endif
+ if @fe4 == true
+   newz = @fe4f(z)
+   z = @FE4amt * (newz*z)
+ endif
+endif
+
+theoldz = z
+itcount = itcount + 1
+; -- \\ End Fractal Calculation Code // -- ;
+
+; -- \\ End Main Loop // -- ;
+
+bailout:
+; Switches bailot if a Nova is selected
+(@fractal == "Mandelbrot" && |z| < @bailout) || \
+(@fractal == "Phoenix - J" && |z| < @bailout) || \
+(@fractal == "Phoenix - M" && |z| < @bailout) || \
+(@fractal == "J-L-Perspective" && |z| < @bailout) || \
+(@fractal == "Nova - J" &&  |z - zold| >  @novabail) || \
+(@fractal == "Nova - M" &&  |z - zold| >  @novabail) || \
+(@fractal == "Julia" && |z| < @bailout) || \
+(@fractal == "Julia - M" && |z| < @bailout)
+
+switch: ; May have some issues.
+  type       = "TCOMA-v1"
+  bailout    = @bailout
+  novabail   = @novabail
+  fractal    = @switchmode
+  switchmode = @fractal
+  version    = @version
+  seed       = #pixel
+  start      = #pixel
+  power      = @power
+  distort    = @distort
+  power2     = @power2
+
+; -- // Start Parameter and Interface Layout \\ -- ;
+default:
+  title = "* The Curve-O-Matic Animator - v1"
+  helptopic = "www.fractals.mediaguise.com.au"
+  periodicity = 0
+
+  param help
+  caption = "- Show Notes and Tips -"
+  default = false
+  endparam
+  ; Notes and Tips
+heading
+caption = "- Animation Tips -"
+expanded = False
+visible = @help
+text = "The easiest way to get started is to animate the 'Curve 1 Rotation' \
+       from 0 to 360 degrees. The rest of the tips are assuming all the settings are on their \
+       default. "
+endheading
+param tips1
+caption = "More Tips"
+default = false
+visible = @help
+endparam
+heading
+caption = "- Curve Method -"
+expanded = false
+visible = @help && @tips1
+text = "Set the (Basic Fractal Seed) to (0,0), (Curve 1 Radius) to (-1.75,0), \
+       (Curve 1 Center) to (-0.25,0). This creates the same basic animation but \
+       works entierly off the Curve instead of the Basic Seed."
+endheading
+heading
+caption = "- Spirograph Loops -"
+expanded = false
+visible = @help && @tips1
+text = "To create spirograph based loops, animate (Curve 1 Rotation) 360 degrees, \
+       (Curve 2 Rotation) 720 degrees and (Curve 3 Rotation) 1080 degrees"
+endheading
+heading
+caption = "- Oval Loops -"
+expanded = false
+visible = @help && @tips1
+text = "To create a spiral based animation, animate (Curve 1 Rotation) 360 degrees, \
+       then animate the (Curve 1 Center) from (1,0) to (0,0) or similar."
+endheading
+heading
+caption = "- Spiral Loops -"
+expanded = false
+visible = @help && @tips1
+text = "To create a spiral based animation, animate (Curve 1 Rotation) 360 degrees, \
+       then animate the (Curve 1 Radius) from (1) to (0) or similar."
+endheading
+heading
+caption = "- The Iteration Distance Modifier -"
+expanded = false
+visible = @help && @tips1
+text = "This function can be useful to smooth out parts of animated fractals \
+       that change quicker than desired. Just turn on this feature and see how it \
+       alters the animation of the fractal."
+endheading
+heading
+caption = "- Formula Notes -"
+expanded = False
+visible = @help
+text = "This formula creates a different way to animate Fractals. \
+       Instead of moving in a straight line from one point to another, \
+       The seed travels along a curve to create smooth loops without excessive keyframes. \
+       The idea was inspired by trying to get the seed of a Julia to follow a 'circle'\
+       without having to keyframe each point to generate a smooth curve. \
+       Visit www.fractals.mediaguise.com.au for more information."
+endheading
+param help1
+caption = "More Notes"
+default = false
+visible = @help
+endparam
+heading
+caption = "- Development Notes -"
+expanded = false
+visible = @help && @help1
+text = "The 'Basic Circle' uses a different math of 'Curve Circle', which is based off a rose curve.  \
+       Advanced Shapes and Distorts are NOT available on the 'Basic Circle' \
+       The Switch feature seems to be working properly, however there may be issues. \
+       Converted entire formula to be based off 'arrays', which saved coding length and hopefully will  \
+       keep the speed of the draw faster. "
+endheading
+heading
+caption = "- Version Notes -"
+expanded = false
+visible = @help && @help1
+text = "First official release, hope it is useful! current version features include: \
+       * Fractals: Mandelbrot, Julia, Julia - Mandelbrot, Phoenix (Both), Nova (Both) and my J-L-Perspective \
+       * Switch Type Function (Julia's Only) * 3 'Stacked' Curve controls \
+       * Curve Distort and Draw distort Operators \
+       * Iteration Distance Modifier - Also available standalone and simplified \
+       * Final Effects - Some ways to distort the final Z of the fractal"
+endheading
+; Basic Parameters
+heading
+caption = "Basic Fractal Settings"
+expanded = true
+endheading
+   param fractal
+   caption = "Fractal Type"
+   default = 1
+   enum = "Mandelbrot" "Julia" "Julia - M" "Phoenix - J" "Phoenix - M" "Nova - J" "Nova - M" "J-L-Perspective"
+   endparam
+   param JOP
+   caption = "Julia Operator"
+   default = 0
+   enum = "Standard" "Flipped" "Function" "Func Z"
+   visible = @fractal == "Julia"
+   endparam
+    func JFUNC
+   caption = "Julia Function"
+   default = sin()
+   visible = @fractal == "Julia" && @JOP != "Standard"
+   endfunc
+   param JMOP
+   caption = "J - M Operator"
+   default = 0
+   enum = "Standard" "Old Z" "Double Seed" "Z seed" "Flipped"
+   visible = @fractal == "Julia - M"
+   endparam
+   func JMFUNC
+   caption = "J - M Function"
+   default = cos()
+   visible = @fractal == "Julia - M"
+   endfunc
+   param JMSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "Seed 1" "Seed 2"
+   visible = @fractal == "Julia - M"
+   endparam
+   param JLSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "Seed 1" "Seed 2" "Seed 3"
+   visible = @fractal == "J-L-Perspective"
+   endparam
+   param MNSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "distort" "Pixel"
+   visible = @fractal == "Nova - M"
+   endparam
+   param JNSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "Seed" "distort"
+   visible = @fractal == "Nova - J"
+   endparam
+   param PJSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "Seed" "Distortion"
+   visible = @fractal == "Phoenix - J"
+   endparam
+   param PMSE
+   caption = "Seed to Affect"
+   default = 0
+   enum = "Distortion" "Pixel"
+   visible = @fractal == "Phoenix - M"
+   endparam
+   param start
+   caption = "Starting Point"
+   default = (0,0)
+   visible = @fractal == "Mandelbrot" || @fractal == "Nova - M" || @fractal == "Phoenix - M"
+   endparam
+   param seed
+   caption = "Seed"
+   default = (-1.25,0)
+   visible = @fractal == "J-L-Perspective" || @fractal == "Nova - J" || \
+             @fractal == "Phoenix - J" || @fractal == "Julia" || \
+             @fractal == "Julia - M"
+   endparam
+   param seed2
+   caption = "Seed 2"
+   default = (0,0)
+   visible = @fractal == "Julia - M"  || @fractal == "J-L-Perspective"
+   endparam
+   param seed3
+   caption = "Seed 3"
+   default = (0,0)
+   visible = @fractal == "J-L-Perspective" && @JLSE != "Seed 3"
+   endparam
+   param power
+   caption = "Power"
+   default = (2,0)
+   endparam
+   param power2
+   caption = "Power 2"
+   default = (0,0)
+   visible = @fractal == "Phoenix - J" || @fractal == "Phoenix - M"
+   endparam
+   param distort
+   caption = "Distortion"
+   default = (1,0)
+   visible = @fractal == "Phoenix - J" || @fractal == "Phoenix - M" || \
+             @fractal == "Nova - J" || @fractal == "Nova - M" || \
+             @fractal == "Nova - J"
+   endparam
+   param bailout
+   caption = "Bailout value"
+   default = 128.0
+   visible = @fractal == "Mandelbrot" || @fractal == "Julia" || @fractal == "Phoenix - J" || @Fractal == "J-L-Perspective" || \
+             @Fractal == "Julia - M"   || @fractal == "Phoenix - M"
+   $IFDEF VER40
+   exponential = true
+   $ENDIF
+   endparam
+   param novabail
+   caption = "Nova Bailout"
+   default =0.0001
+   visible = @fractal == "Nova - J" || @fractal == "Nova - M"
+   $IFDEF VER40
+   exponential = true
+   $ENDIF
+   endparam
+   param switchmode
+   caption="Switch Type"
+   default=1
+   enum = "Mandelbrot" "Julia" "Julia - M" "Phoenix - J" "Phoenix - M" "Nova - J" "Nova - M" "J-L-Perspective"
+   hint = "Switches between some of the main types of fractals"
+   endparam
+
+; Curve 1 Parameters
+heading
+caption = "Curve 1 Settings"
+expanded = true
+endheading
+   param curve1
+   caption = "Use Curve 1"
+   default = true
+   endparam
+   float param curve1deg
+   caption = "Curve 1 Rotation"
+   default = 0
+   visible = @curve1 == true
+   endparam
+   float param curve1Radius
+   caption = "Curve 1 Radius"
+   default = .125
+   visible = @curve1 == true
+   endparam
+   param curve1center
+   caption = "Curve 1 Center"
+   default = (-.125,0)
+   visible = @curve1 == true
+   endparam
+   param Stype1
+   caption="Curve Shape Type"
+   default=0
+   enum= "Basic Circle" "Curve Circle" "3 Petals" "4 Petals" "5 Petals" "8 Petals" \
+         "2 Buds" "3 Buds" "4 Buds" "Flower 1" "Flower 2" "Flower 3" "Flower 4"
+   visible = @curve1 && !@curve1adv1
+   endparam
+   param curve1adv1
+   caption = "Advanced Shapes"
+   default = false
+   visible = @curve1 && @Stype1 != "Basic Circle"
+   endparam
+   int param curve1X
+   caption = "Shape X"
+   default = 1
+   visible = @curve1 && @curve1adv1
+   endparam
+   int param curve1Y
+   caption = "Shape Y"
+   default = 1
+   visible = @curve1 && @curve1adv1
+   endparam
+   param RadOp1
+   caption = "Radius Opertator"
+   default = 2
+   enum = "+ Radius" "- Radius" "* Radius" "/ Radius" "No Radius"
+   visible = @curve1 && @curve1adv1
+   endparam
+   func curve1Sin
+   caption = "Y Operator"
+   default = sin()
+   visible = @curve1 && @curve1adv1
+   endfunc
+   func curve1Cos
+   caption = "X Operator"
+   default = cos()
+   visible = @curve1 && @curve1adv1
+   endfunc
+   param Usecurve1Dist
+   caption = "Distort Fractal"
+   default = false
+   visible = @curve1 && @Stype1 != "Basic Circle"
+   endparam
+   param curve1degop
+   caption = "Rotation Distort"
+   default = 0
+   enum = "Standard" "Type A" "Type B" "Type C" "Type D"
+   visible = @curve1 && @Usecurve1Dist
+   endparam
+   func curve1dSin
+   caption = "Y Distort Op"
+   default = conj()
+   visible = @curve1 && @Usecurve1Dist
+   endfunc
+   func curve1dCos
+   caption = "X Distort Op"
+   default = conj()
+   visible = @curve1 && @Usecurve1Dist
+   endfunc
+   float param curve1distamt
+   caption = "Distort Amount"
+   default = 4
+   visible = @curve1 && @Usecurve1Dist
+   endparam
+   func curve1mdegop
+   caption = "Mandelbrot Z Oper"
+   default = sin()
+   visible = @curve1 && @Usecurve1Dist &&   @fractal == "Julia - M"
+   endfunc
+
+; Curve 2 Parameters
+heading
+caption = "Curve 2 Settings"
+expanded = false
+endheading
+   param curve2
+   caption = "Use Curve 2"
+   default = false
+   endparam
+   float param curve2deg
+   caption = "Curve 2 Rotation"
+   default = 0
+   visible = @curve2 == true
+   endparam
+   float param curve2Radius
+   caption = "Curve 2 Radius"
+   default = -0.125
+   visible = @curve2 == true
+   endparam
+   param curve2center
+   caption = "Curve 2 Center"
+   default = (0,0.125)
+   visible = @curve2 == true
+   endparam
+   param Stype2
+   caption="Curve Shape Type"
+   default=0
+   enum= "Basic Circle" "Curve Circle" "3 Petals" "4 Petals" "5 Petals" "8 Petals" \
+         "2 Buds" "3 Buds" "4 Buds" "Flower 1" "Flower 2" "Flower 3" "Flower 4"
+   visible = @curve2 && !@curve2adv1
+   endparam
+   param curve2adv1
+   caption = "Advanced Shapes"
+   default = false
+   visible = @curve2 && @Stype2 != "Basic Circle"
+   endparam
+   int param curve2X
+   caption = "Shape X"
+   default = 1
+   visible = @curve2 && @curve2adv1
+   endparam
+   int param curve2Y
+   caption = "Shape Y"
+   default = 1
+   visible = @curve2 && @curve2adv1
+   endparam
+   param RadOp2
+   caption = "Radius Opertator"
+   default = 2
+   enum = "+ Radius" "- Radius" "* Radius" "/ Radius" "No Radius"
+   visible = @curve2 && @curve2adv1
+   endparam
+   func curve2Sin
+   caption = "Y Operator"
+   default = conj()
+   visible = @curve2 && @curve2adv1
+   endfunc
+   func curve2Cos
+   caption = "X Operator"
+   default = conj()
+   visible = @curve2 && @curve2adv1
+   endfunc
+   param Usecurve2Dist
+   caption = "Distort Fractal"
+   default = false
+   visible = @curve2 && @Stype2 != "Basic Circle"
+   endparam
+   param curve2degop
+   caption = "Rotation Distort"
+   default = 0
+   enum = "Standard" "Type A" "Type B" "Type C" "Type D"
+   visible = @curve2 && @Usecurve2Dist
+   endparam
+   func curve2dSin
+   caption = "Y Distort Op"
+   default = conj()
+   visible = @curve2 && @Usecurve2Dist
+   endfunc
+   func curve2dCos
+   caption = "X Distort Op"
+   default = conj()
+   visible = @curve2 && @Usecurve2Dist
+   endfunc
+   param curve2distamt
+   caption = "Distort Amount"
+   default = 4
+   visible = @curve2 && @Usecurve2Dist
+   endparam
+   func curve2mdegop
+   caption = "Mandelbrot Z Oper"
+   default = sin()
+   visible = @curve2 && @Usecurve2Dist &&   @fractal == "Julia - M"
+   endfunc
+
+; Curve 3 Parameters
+heading
+caption = "Curve 3 Settings"
+expanded = false
+endheading
+   param curve3
+   caption = "Use Curve 3"
+   default = false
+   endparam
+   float param curve3deg
+   caption = "Curve 3 Rotation"
+   default = 0
+   visible = @curve3 == true
+   endparam
+   float param curve3Radius
+   caption = "Curve 3 Radius"
+   default = .15
+   visible = @curve3 == true
+   endparam
+   param curve3center
+   caption = "Curve 3 Center"
+   default = (0.15,-0.15)
+   visible = @curve3 == true
+   endparam
+   param Stype3
+   caption="Curve Shape Type"
+   default=0
+   enum= "Basic Circle" "Curve Circle" "3 Petals" "4 Petals" "5 Petals" "8 Petals" \
+         "2 Buds" "3 Buds" "4 Buds" "Flower 1" "Flower 2" "Flower 3" "Flower 4"
+   visible = @curve3 && !@curve3adv1
+   endparam
+   param curve3adv1
+   caption = "Advanced Shapes"
+   default = false
+   visible = @curve3 && @Stype3 != "Basic Circle"
+   endparam
+   int param curve3X
+   caption = "Shape X"
+   default = 1
+   visible = @curve3 && @curve3adv1
+   endparam
+   int param curve3Y
+   caption = "Shape Y"
+   default = 1
+   visible = @curve3 && @curve3adv1
+   endparam
+   param RadOp3
+   caption = "Radius Opertator"
+   default = 2
+   enum = "+ Radius" "- Radius" "* Radius" "/ Radius" "No Radius"
+   visible = @curve3 && @curve3adv1
+   endparam
+   func curve3Sin
+   caption = "Y Operator"
+   default = conj()
+   visible = @curve3 && @curve3adv1
+   endfunc
+   param Usecurve3Dist
+   caption = "Distort Fractal"
+   default = false
+   visible = @curve3 && @Stype3 != "Basic Circle"
+   endparam
+   param curve3degop
+   caption = "Rotation Distort"
+   default = 0
+   enum = "Standard" "Type A" "Type B" "Type C" "Type D"
+   visible = @curve3 && @Usecurve3Dist
+   endparam
+   func curve3distop
+   caption = "Distort Operator"
+   default = tan()
+   visible = @curve3 && @Usecurve3Dist
+   endfunc
+   func curve3Cos
+   caption = "X Operator"
+   default = conj()
+   visible = @curve3 && @curve3adv1
+   endfunc
+   func curve3dSin
+   caption = "Y Distort Op"
+   default = conj()
+   visible = @curve3 && @curve3adv1
+   endfunc
+   func curve3dCos
+   caption = "X Distort Op"
+   default = conj()
+   visible = @curve3 && @curve3adv1
+   endfunc
+   param curve3distamt
+   caption = "Distort Amount"
+   default = 4
+   visible = @curve3 && @Usecurve3Dist
+   endparam
+   func curve3mdegop
+   caption = "Mandelbrot Z Oper"
+   default = sin()
+   visible = @curve3 && @Usecurve3Dist &&   @fractal == "Julia - M"
+   endfunc
+
+; -- Iteration Distance Params
+heading
+caption = "Iteration Distance Settings"
+expanded = false
+endheading
+   param useitdist
+   caption = "Use Iteration Distance Mod"
+   default = false
+   endparam
+   param ItDeg
+   caption = "Iteration Rotation"
+   default = 0.0
+   visible = @UseItDist
+   endparam
+   param ItRadius
+   caption = "Iteration Radius"
+   default = .1
+   visible = @UseItDist
+   endparam
+   float param distmult
+   caption = "Distance Multiplier"
+   default = 0.01
+   hint = "This function determines how far each iteration will be drawn apart \
+           Note: This can range from 0 - 40 depending on what the 'Distance Seed' is set at"
+   visible = @UseItDist
+   endparam
+   int param ItStart
+   caption = "Start Iteration"
+   default = 1
+   hint = "This function determines how far each iteration will be drawn apart \
+           Note: This can range from 0 - 40 depending on what the 'Distance Seed' is set at"
+   visible = @UseItDist
+   endparam
+   int param ItEnd
+   caption = "End Iteration"
+   default = 100
+   hint = "This function determines how far each iteration will be drawn apart \
+           Note: This can range from 0 - 40 depending on what the 'Distance Seed' is set at"
+   visible = @UseItDist
+   endparam
+   param ItDist
+   caption = "Use Distance Distort"
+   default = false
+   hint = "Applies different distortion effect to the way the fractal is drawn"
+   visible = @UseItDist
+   endparam
+   param DistOp
+   caption = "Distort Operator"
+   default = 0
+   enum = "Pixel" "Z" "Z Pixel"
+   visible = @UseItDist && @ItDist
+   hint = "Switches between available distort types"
+   endparam
+   param distance
+   caption = "Distance Seed"
+   default = (0.01, 0)
+   visible = @UseItDist && @ItDist
+   hint = "This function determines how the seed changes as each iteration is drawn\
+           Note: is best used with very small numbers around 0.01 to 2.0"
+   endparam
+   func pixOp
+   caption = "Pixel Operator"
+   default = exp()
+   visible = @UseItDist && @ItDist && @DistOp == "Pixel"
+   hint = "Change this to dramatically change the way the fractal is drawn"
+   endfunc
+   func zOp
+   caption = "Z Operator"
+   default = recip()
+   visible = @UseItDist && @ItDist && @DistOp == "Z"
+   hint = "Change this to dramatically change the way the fractal is drawn"
+   endfunc
+   func seedOp
+   caption = "zPix Operator"
+   default = cotanh()
+   visible = @UseItDist && @ItDist && @DistOp == "Z Pixel"
+   hint = "Change this to dramatically change the way the fractal is drawn"
+   endfunc
+
+; Final Z Effects
+heading
+caption = "Final Effects"
+expanded = false
+endheading
+param useFE
+caption = "Use Final Effects"
+default = false
+endparam
+param fe1
+   caption = "Pixel Distort"
+   default = false
+   visible = @useFE
+   endparam
+   param FE1amt
+   caption = "Amount"
+   default = (1,1)
+   visible = @useFE && @FE1
+   endparam
+   param fe2
+   caption = "Sin/Cos Distort"
+   default = false
+   visible = @useFE
+   endparam
+   param FE2amt
+   caption = "Amount"
+   default = (1,1)
+   visible = @useFE && @FE2
+   endparam
+    param fe3
+   caption = "Pi Distort"
+   default = false
+   visible = @useFE
+   endparam
+   func fe3f
+   caption = "Function"
+   default = sin()
+   visible = @useFE && @FE3
+   endfunc
+   param FE3amt
+   caption = "Amount"
+   default = (1,0)
+   visible = @useFE && @FE3
+   endparam
+     param fe4
+   caption = "Function Distort"
+   default = false
+   visible = @useFE
+   endparam
+      func fe4f
+   caption = "Function"
+   default = cos()
+   visible = @useFE && @FE4
+   endfunc
+   param FE4amt
+   caption = "Amount"
+   default = (1,0)
+   visible = @useFE && @FE4
+   endparam
+; Advanced Params
+heading
+caption = "Advanced Settings"
+expanded = false
+endheading
+   param feed
+   caption = "Seed Tweaker"
+   default = (0,0)
+   endparam
+   param advangle
+   caption = "Rotation Tweaker"
+   default = false
+   endparam
+   param curve1AngleAdj
+   caption = "curve 1 Angle Adjuster"
+   default = 57.28835
+   visible = @advangle
+   endparam
+   param curve2AngleAdj
+   caption = "curve 2 Angle Adjuster"
+   default = 57.28835
+   visible = @advangle
+   endparam
+   param curve3AngleAdj
+   caption = "curve 3 Angle Adjuster"
+   default = 57.2884
+   visible = @advangle
+   endparam
+
+}
+
+dpm-IDM-v1  {
+
+; The Iteration Distance Modifier is designed to allow you to 'spread' each iteration as it is drawn.
+; This is a simple formula that adds the 'distance' to the seed of the fractal. The greater the distance,
+; the more gap in between each iteration along the specified seed of the fractal (or starting point).
+
+; This forumla was written to improve some elements of fractal animation, particularly
+; sections of the Julia that 'flick' quickly during animation.
+; Distance Distort are just some extra modifiers created during the process.
+
+; Note: I have built some of the common fractals into the one formula, instead of creating seperate files.
+; Some tweaking may be needed to re-create the typical formation of the standard fractals.
+; This formula is easily incorporated into most other existing fractals, please feel free to do so.
+
+; A full tutorial is available at:
+; http://fractals.mediaguise.com.au/formulas/idm-v1.htm
+; or
+; http://trinfinity.com.au - in the formulas section
+
+; Thanks to everyone that coded the original formulas i have just created and addition to the exisiting
+; formulas. Thanks to Susan Chambless for her help with the switch function.
+
+; Daniel Martin July 2007
+
+init:
+  ; Global variables
+ complex c = #pixel
+ complex newdist = (0,0)
+ ; Phoenix variables
+ complex y = (0,0)
+ complex newz = (0,0)
+ ;Nova variables
+ complex zsquared = (0,0)
+  complex zcubed = (0,0)
+  complex zold = (0,0)
+
+ ;; -- Determine fractal type and set z up accordingly
+ if @fractal == "Mandelbrot"
+ z = @start
+ else
+ z = #pixel
+ c = @seed
+ endif
+
+;; -- Start Loop
+loop:
+ ;; -- Subtract the result of the multiplier divided by the seed from the C value
+ float distmult = @Distmult
+ c = c - (@distance * distmult)
+
+ ;; -- Checks if 'Use Distance Distort' is on, if so run commands.
+ ;; -- These are just some random elements i found interesting, no particular reason for them
+ ;; -- Converts the user param 'Distance' into variable 'newdist'
+if @ItDist == true
+if @DistOp == "Pixel"
+newdist = @Distance + @pixOp(#pixel)
+elseif @DistOp == "Z"
+newdist = @Distance + @zOp(z)
+elseif @DistOp == "Z Pixel"
+newdist = @distance + @SeedOp(z / #pixel)
+endif
+else
+newdist = (0,0)
+endif
+
+; Setup variables for fractal calculation
+c = c + newdist  ;; -- Adds distort effect here
+ seedC =  @seed + c  ;; -- setup for Julia based fractals
+ pixelC = #pixel + c ;; setup for Mandelbrot based fractals
+
+;; -- Determine 'Fractal Type' and calculate Z accordingly.
+if(@fractal=="Mandelbrot")
+z = z^@power + pixelC
+elseif(@fractal=="Julia")
+z = z^@power + seedC
+elseif(@fractal=="Phoenix - M")
+newz = z^@power  +  z^@power2 * pixelC  +  @distort * y
+y = z
+z = newz
+elseif(@fractal=="Phoenix - J")
+newz = z^@power  +  z^@power2 * seedC  +  @distort * y
+y = z
+z = newz
+elseif(@fractal=="Nova - J")
+if (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @distort * (zcubed-1) / (3*zsquared) + seedC
+  else
+    zold = z
+    z = z - @distort * (z^@power-1) / (@power * z^(@power-1)) + seedC
+  endif
+  elseif(@fractal=="Nova - M")
+if (@power == (3,0)); special optimized routine for power 3
+    zsquared = sqr(z)
+    zcubed = zsquared * z
+    zold = z
+    z = z - @distort * (zcubed-1) / (3*zsquared) + pixelC
+  else
+    zold = z
+    z = z - @distort * (z^@power-1) / (@power * z^(@power-1)) + pixelC
+  endif
+endif
+;; -- End Loop
+
+bailout:
+; Switches bailot if a Nova is selected
+(@fractal == "Mandelbrot" && |z| < @bailout) ||          \
+(@fractal == "Julia" && |z| < @bailout) ||               \
+(@fractal == "Phoenix - J" && |z| < @bailout) ||         \
+(@fractal == "Phoenix - M" && |z| < @bailout) ||         \
+(@fractal == "Nova - J" &&  |z - zold| >  @novabail)  || \
+(@fractal == "Nova - M" &&  |z - zold| >  @novabail)
+switch:
+  type       = "IDM-v1"
+  bailout    = @bailout
+  novabail   = @novabail
+  fractal    = @switchmode
+  switchmode = @fractal
+  version    = @version
+  seed       = #pixel
+  power      = @power
+  distort    = @distort
+  power2     = @power2
+default:
+  title = "* Iteration Distance Modifier - v1"
+  center = (0, 0)
+  magn = 1
+  maxiter = 1000
+  periodicity = 0
+  heading
+  caption = "Fractal Settings"
+  endheading
+  param fractal
+  caption="Fractal Type"
+  default=0
+  enum="Julia" "Mandelbrot" "Phoenix - J" "Phoenix - M" "Nova - M" "Nova - J"
+  hint = "Switches between some of the main types of fractals"
+  endparam
+  param switchmode
+  caption="Switch Mode"
+  default=0
+  enum="Julia" "Mandelbrot" "Phoenix - J" "Phoenix - M" "Nova - M" "Nova - J"
+  hint = "Switches between some of the main types of fractals"
+  endparam
+  param seed
+  caption = "Seed"
+  default = (-0.6, 0)
+  visible = @fractal == "Julia" || @fractal == "Phoenix - J" || @fractal == "Nova - J"
+    hint = "For the typical Julia use (-1.25,0) \
+          For the typical Phoenix Julia use (0.5667,0)"
+  endparam
+  param start
+  caption = "Starting Point"
+  default = (0, 0)
+  visible = @fractal == "Mandelbrot" || @fractal == "Phoenix - M" || @fractal == "Nova - M"
+    hint = "Standard starting point"
+  endparam
+  param distort
+  caption = "Relax/Distort"
+  default = (-.5, 0)
+  visible = @fractal == "Phoenix - J" || @fractal == "Phoenix - M"  ||   @fractal == "Nova - J" || \
+          @fractal == "Nova - M"
+  hint = "For the typical Phoenix Julia use (-0.5,0) \
+          For the typical Phoenix Mandelbrot use (0.5,0)"
+  endparam
+  param power
+  caption = "Power"
+  default = (2,0)
+  hint = "Standard power"
+  endparam
+  param power2
+  caption = "Power 2"
+  default = (0,0)
+  visible = @fractal == "Phoenix - J" || @fractal == "Phoenix - M"
+  hint = "Phoenix power"
+  endparam
+  param bailout
+  caption = "Bailout value"
+  default = 128.0
+  min = 1.0
+  hint = "Standard bailout"
+  visible = @fractal != "Nova - J"  && @fractal != "Nova - M"
+  $IFDEF VER40
+exponential = true
+$ENDIF
+  endparam
+    param novabail
+  caption = "Nova Bailout value"
+  default = 0.00001
+  hint = "Nova bailout"
+  visible = @fractal == "Nova - J"  || @fractal == "Nova - M"
+$IFDEF VER40
+exponential = true
+$ENDIF
+  endparam
+
+  ;; -- Iteration Distance Params
+
+  heading
+  caption = "Iteration Distance Settings"
+  endheading
+   float param distmult
+  caption = "Distance Multiplier"
+  default = 0.1
+  hint = "This function determines how far each iteration will be drawn apart \
+           Note: This can range from 0 - 40 depending on what the 'Distance Seed' is set at"
+  endparam
+  param distance
+    caption = "Distance Seed"
+    default = (0.01, 0)
+    hint = "This function determines how the seed changes as each iteration is drawn\
+           Note: is best used with very small numbers around 0.01 to 2.0"
+  endparam
+  param ItDist
+  caption = "Use Distance Distort"
+  default = false
+  hint = "Applies different distortion effect to the way the fractal is drawn"
+  endparam
+  param DistOp
+      caption = "Distort Operator"
+      default = 0
+      enum = "Pixel" "Z" "Z Pixel"
+      visible = @ItDist
+      hint = "Switches between available distort types"
+      endparam
+      func pixOp
+      caption = "Pixel Operator"
+      default = exp()
+      visible = @ItDist && @DistOp == "Pixel"
+      hint = "Change this to dramatically change the way the fractal is drawn"
+      endfunc
+      func zOp
+      caption = "Z Operator"
+      default = recip()
+      visible = @ItDist && @DistOp == "Z"
+      hint = "Change this to dramatically change the way the fractal is drawn"
+      endfunc
+       func seedOp
+      caption = "zPix Operator"
+      default = cotanh()
+      visible = @ItDist && @DistOp == "Z Pixel"
+      hint = "Change this to dramatically change the way the fractal is drawn"
+      endfunc
+
+
+}
+
+
+
+J-L-Perspective {
+; This appears to me, as if the Julia goes through both its standard and inverse states all in the one fractal.
+; While the parameters are named the way they are, that is only my assumption what what is actually being controlled.
+; To get colouring algorithms such as Smooth to work properly, the exponent needs to be let to 3 instead of the default 2.
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+  a = (3.14159-z)
+  z = b*z*(a*a)+@Seed2+z-@Seed3^(@power-1)
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+  a = (3.14159-z)
+  z = @seed*z*(a*a)+b+z-@Seed3^(@power-1)
+   elseif @seedop == "Seed 3"
+ c = c + @distance
+ b = @seed3+ c
+  a = (3.14159-z)
+  z = @seed*z*(a*a)+@Seed2+z-b^(@power-1)
+ endif
+ else
+  a = (3.14159-z)
+  z = @seed*z*(a*a)+@Seed2+z-@Seed3^(@power-1)
+ endif
+
+
+bailout:
+  |z| < @bailout
+default:
+  title = "Julia-Lambada - Perspective"
+  helpfile = "Uf*.chm"
+  helptopic = "Currently Unavailable"
+  center = (2,0)
+  magn = 0.5
+  
+  param seed
+    caption = "Inverse Seed"
+    default = (-.2,0)
+    hint = "This parameter controlls the 'Inverse' of the fractal \
+            This has the most major controll over the fractal."
+    endparam
+    param seed2
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This parameter controlls the Julia state of the fractal \
+            This feature allows finer control over the animation of the fractal."
+    endparam
+    param seed3
+    caption = "Lambada Seed"
+    default = (.01,0)
+    hint = "This parameter controlls the Lambada state of the fractal \
+            This feature allows finer control over the animation of the fractal."
+    endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1E20
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+           heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Seed 2" "Seed 3"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+  switch:
+  type = "J-Pie"
+  @power = power
+  @seed = #pixel
+  @seed2 = seed
+}
+
+
+
+M-J-Pie{
+; Updated: Now has two different methods to calculate Z
+; This one caught my attention by the way the mandelbrot fractal appear out of the julia seed.
+; The Pie radius function works best if only moved along the X axis, as the Y causes the fractal to 'split'
+
+
+init:
+complex c = (0,0)
+  z = #pixel
+  z1 = #pixel
+  z2 = @start
+loop:
+
+if @Meth == "1"
+   if @useItDist == true
+   c = c + @distance
+      if @seedop == "Seed 1"
+         b = @seed + c
+         a = (z^@power) + #pixel^(#pi*@radius*@radius) -#pixel
+         z = z^@power + b + a
+      elseif @seedop == "Radius"
+         b = @radius + c
+         a = (z^@power) + #pixel^(#pi*b*b) - #pixel
+         z = z^@power + @seed + a
+      elseif @seedop == "Pixel"
+         b = #pixel + c
+         a = (z^@power) + b^(#pi*@radius*@radius) - b
+         z = z^@power + @seed + a
+      endif
+   else
+      a = (z^@power) + #pixel^(#pi*@radius*@radius) - #pixel
+      z = z^@power + @seed + a
+   endif
+elseif @Meth == "2"
+  if @useItDist == true
+   c = c + @distance
+   z1 = z1^@power + (@seed + c)
+  z2 = z2^@power + #pixel
+  a = (z^@power) + #pixel^(#pi*@radius*@radius) - #pixel
+  z = (z1*@z1p) + (z2*@z2p) + (a*@a1p)
+   else
+  z1 = z1^@power + @seed
+  z2 = z2^@power + #pixel
+  a = (z^@power) + #pixel^(#pi*@radius*@radius) - #pixel
+  z = (z1*@z1p) + (z2*@z2p) + (a*@a1p)
+endif
+endif
+
+bailout:
+  |z| <= @bailout
+default:
+  title = "Mandelbrot-Julia & Pi"
+  helptopic = "Currently Unavailable"
+  param @Meth
+  caption = "Method"
+  default = 1
+  enum = "1" "2"
+  endparam
+  param seed
+    caption = "Julia seed"
+    default = (-0.88187, 0.2356)
+    hint = "This seed causes the mandelbrot to appear or dissapear."
+  endparam
+  param start
+    caption = "Start"
+    default = (-0.22088, -0.14725)
+    visible = @Meth == "2"
+  endparam
+  param radius
+    caption = "Pie Radius"
+    default = 1
+    hint = "Changes the Pie calculation"
+  endparam
+   float param a1p
+    caption = "Radius Multiplier"
+    default = 0
+    visible = @Meth == "2"
+  endparam
+   float param z1p
+    caption = "Julia Multiplier"
+    default = 1
+    visible = @Meth == "2"
+  endparam
+  float param z2p
+    caption = "Mandelbrot Multiplier"
+    default = 1
+    visible = @Meth == "2"
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+        heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 1
+  enum = "Seed 1" "Radius" "Pixel"
+  visible = @useitdist  && @Meth == "1"
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+}
+
+;;;;;;;;;;;;;;;;; **** Old Star Rated formulas ****
+
+
+J-Inverter3{
+;  This one suprised me, i quite like the different patterns that this one can achive,
+;  Also has good movement for animation, though may fail with colouring algorithms.
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+  a1 = (z/#pixel+@seed2)
+  b1 = a1/(#pixel*@seed3)
+  z = z^@power + (b1+a1)^b
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+  a1 = (z/#pixel+b)
+  b1 = a1/(#pixel*@seed3)
+  z = z^@power + (b1+a1)^@seed
+ elseif @seedop == "Seed 3"
+ c = c + @distance
+ b = @seed3 + c
+  a1 = (z/#pixel+@seed2)
+  b1 = a1/(#pixel*b)
+  z = z^@power + (b1+a1)^@seed
+   elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+  a1 = (z/b+@seed2)
+  b1 = a1/(b*@seed3)
+  z = z^@power + (b1+a1)^@seed
+ endif
+ else
+  a1 = (z/#pixel+@seed2)
+  b1 = a1/(#pixel*@seed3)
+  z = z^@power + (b1+a1)^@seed
+ endif
+
+
+
+  bailout:
+  |z| <= @bailout
+default:
+  title = "Julia - Inverter 3"
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\julia.html"
+  param seed
+    caption = "Julia Seed 1"
+    default = (-3, 0)
+    hint = ""
+  endparam
+  param seed2
+    caption = "Julia Seed 2"
+    default = (0, 0)
+    hint = ""
+  endparam
+  param seed3
+    caption = "Good Controller"
+    default = (.1, 0)
+    hint = ""
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+    hint = ""
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = ""
+  endparam
+      heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 3
+  enum = "Seed 1" "Seed 2" "Seed 3" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+}
+J-Pie{
+;
+; While this one appears fairly scattered, i found some interesting parts to focus on.
+; For some reason i felt like using Pie (3.14159) in a few codes to see what would happen...
+; For animations, moving the (Re) only avoids the fractal splitting
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+ mypie = #pixel^(3.14159^@seed2)
+ z = z^@power + @radius + mypie - b *(mypie/#pixel)
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+ mypie = #pixel^(3.14159^b)
+ z = z^@power + @radius + mypie - @seed *(mypie/#pixel)
+ elseif @seedop == "Radius"
+ c = c + @distance
+ b = @radius + c
+ mypie = #pixel^(3.14159^@seed2)
+  z = z^@power + b + mypie - @seed *(mypie/#pixel)
+   elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+ mypie = b^(3.14159^@seed2)
+  z = z^@power + @radius + mypie - @seed *(mypie/b)
+ endif
+ else
+ mypie = #pixel^(3.14159^@seed2)
+  z = z^@power + @radius + mypie - @seed *(mypie/#pixel)
+ endif
+
+bailout:
+  |z| <= @bailout
+default:
+  title = "Julia & Pi"
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\julia.html"
+  center = (0.2942708335,  -0.03125)
+  magn = 2
+  param seed
+    caption = "Julia seed"
+    default = (0.483741, 0)
+    hint = "Standard seed"
+
+  endparam
+  param seed2
+    caption = "Pie Seed"
+    default = (0.281825, 0)
+    hint = "This seed effects the way that Pie is calculated"
+  endparam
+   param radius
+    caption = "Radius"
+    default = (-0.688302, 0)
+    hint = "errrm the radius..."
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+      heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Seed 2" "Radius" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+}
+
+
+M-J-Type2  {
+; There were certain spirals and oceanlike effects in this fractal that i liked
+; Overall there is not much depth to it though it has some strange movements.
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+ z =  #pixel + (z^@radius + #pixel) / (z^@power + b)
+ elseif @seedop == "Radius"
+ c = c + @distance
+ b = @radius + c
+  z =  #pixel + (z^b + #pixel) / (z^@power + @seed)
+ elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+  z =  #pixel + (z^@radius + b) / (z^@power + @seed)
+ endif
+ else
+  z =  #pixel + (z^@radius + #pixel) / (z^@power + @seed)
+ endif
+
+bailout:
+  |z| <= @bailout
+default:
+  title = "Mandelbrot-Julia - Type A"
+  helpfile = "Uf*.chm"
+  helptopic = "Currently Unavailable"
+  magn = 1
+  param seed
+    caption = "Julia seed"
+    default = (-0.2,-0.2)
+  endparam
+      param radius
+    caption = "Radius"
+    default = (1, 0)
+    hint = "This alters the fractal some more!"
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+    heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Radius" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+}
+
+J-Inverter1{
+; Handles pretty well, gets some interesting patterns but not brilliant
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+ if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+ a = (z/#pixel-@seed2)
+  z = z^@power + (a+b)
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+ a = (z/#pixel-b)
+  z = z^@power + (a+@seed)
+ elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+ a = (z/b-@seed2)
+  z = z^@power + (a+@seed)
+ endif
+ else
+ a = (z/#pixel-@seed2)
+  z = z^@power + (a+@seed)
+ endif
+  bailout:
+  |z| <= @bailout
+default:
+  title = "Julia - Inverter"
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\julia.html"
+  param seed
+    caption = "Julia Seed"
+    default = (0, 0)
+  endparam
+    param seed2
+    caption = "Julia Seed 2"
+    default = (1, 0)
+    hint = "Another controller"
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Seed 2" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+   switch:
+  type = "M-J-Inverter1"
+  @power = power
+  @seed = #pixel
+}
+
+M-J-Inverter1 {
+;  More of the same
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+ if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+  z =  #pixel + (z^@power + #pixel) / (z^@power + b)
+ elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+  z =  #pixel + (z^@power + c) / (z^@power + @seed)
+ endif
+ else
+  z =  #pixel + (z^@power + #pixel) / (z^@power + @seed)
+ endif
+
+bailout:
+  |z| <= @bailout
+default:
+  title = "Mandelbrot-Julia - Inverter"
+  param seed
+    caption = "Julia seed"
+    default = (.5, 0)
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+    heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+   switch:
+  type = "J-Inverter1"
+  @power = power
+  @seed = #pixel
+}
+
+
+J-TypeA {
+; The first real success i had in creating something different, not saying its great, but its certainly something.
+; Has some intersting patches, overal pretty useless but might be good for someone.
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+ z = z^@power ^ (z^@seed2 - #pixel) + b
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+ z = z^@power ^ (z^b - #pixel) + @seed
+ elseif @seedop == "Pixel"
+ c = c + @distance
+ b = #pixel + c
+ z = z^@power ^ (z^@seed2 - b) + @seed
+ endif
+ else
+ c = @seed2
+ z = z^@power ^ (z^@seed2 - #pixel) + @seed
+ endif
+
+bailout:
+  |z| <= @bailout
+default:
+  title = "Julia - Type A"
+  magn = 2
+  center = (0.865625, 0.00625)
+  param seed
+    caption = "Julia seed"
+    default = (0, 0)
+  endparam
+   param seed2
+    caption = "Julia Seed2"
+    default = (0, 0)
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+  param seedop
+  caption = "Seed to Effect"
+  default = 1
+  enum = "Seed 1" "Seed 2" "Pixel"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+  switch:
+  type = "J-TypeB"
+  @power = power
+  @seed = #pixel
+  @seed2 = seed
+}
+J-TypeB {
+;   The second Type version of Julia, again pretty useless due to the sharp edges
+;   but thought it was worth keeping around
+
+init:
+complex c = (0,0)
+  z = #pixel
+loop:
+if @useItDist == true
+if @seedop == "Seed 1"
+ c = c + @distance
+ b = @seed + c
+ z = z^@power ^ (z^@seed2) + b
+ elseif @seedop == "Seed 2"
+ c = c + @distance
+ b = @seed2 + c
+ z = z^@power ^ (z^b) + @seed
+ endif
+ else
+ z = z^@power ^ (z^@seed2) + @seed
+ endif
+  
+bailout:
+  |z| <= @bailout
+default:
+  title = "Julia - Type B"
+  helpfile = "Uf*.chm"
+  helptopic = "Html\formulas\standard\julia.html"
+  param seed
+    caption = "Julia seed"
+    default = (-1.220579, 0.058842)
+  endparam
+   param seed2
+    caption = "Julia Seed2"
+    default = (-0.231692, -0.058842)
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+  heading
+  caption = "Iteration Distancer"
+  endheading
+  param @UseItDist
+  caption = "Use Iteration Distancer"
+  default = false
+  endparam
+    param seedop
+  caption = "Seed to Effect"
+  default = 0
+  enum = "Seed 1" "Seed 2"
+  visible = @useitdist
+  endparam
+  param distance
+  caption = "Distance"
+  default = (-0.01,0)
+  visible = @useitdist
+  endparam
+switch:
+type = "J-TypeA"
+   @power = power
+   @seed = #pixel
+   @seed2 = seed
+  
+}
+
+

@@ -1,0 +1,494 @@
+Image {
+;
+; Image just displays an image from disk. It's best used on the Outside tab,
+; together with the Pixel formula from Standard.ufm.
+; TOO BAD, the standard "Image" don't have wrapping an I had
+; to rewrite it... ;)
+;
+global:
+  Image i = new @imageParam
+  
+final:
+  ; Use #pixel as the complex coordinate inside the image, but scale such that
+  ; the default corner coordinates (-2,1.5)..(2,-1.5) correspond to the entire
+  ; image width.
+  float v = 0.5
+  complex c = v * #pixel
+  float w = 0
+  float h = 0
+  float w1 = 0
+  float h1 = 0
+
+  ; Make sure the ratio of the image is preserved.
+  float ratio
+  if !i.getEmpty()
+    w = i.getWidth()
+    h = i.getHeight()
+    ratio = w / h
+  else
+    ratio = 1
+  endif
+  w1 = real(c) - round(real(v*c))/v
+  h1 = imag(c* ratio) - round(imag(v*c* ratio))/v
+  #color = i.getColor(w1 + flip(h1))
+
+default:
+  title = "Image (wrapped)"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/image.html"
+  heading
+    text = "Tip: the Image coloring algorithm works best with the standard \
+      Pixel fractal formula. This wrapped version is strongly reccomended \
+      to deal with any magnification, mapping!"
+  endheading
+  Image param imageParam
+    caption = "Image"
+    hint = "The image selected here will fill the entire layer, if combined \
+      with the Pixel fractal formula and if the location is set to the \
+      default. To do this, click the Reset button on the Location tab."
+  endparam
+}
+
+zeppo-coloring {
+; Zeppo style attractor, used as a coloring method!
+; By LGN 2010
+; Basic attractor formula is the wonderful "Zeppo" attractor from Marcelo Anelli
+; but I customized it for getting many other variations.
+; Basic coloring code is from Mark Townsend "Martin coloring". (But I changed something).
+;
+; You can't believe how many variations you can get with this formula.
+; Okay, I've warned you :P
+;
+
+init:
+  float xx = 0
+  int iter = 0
+  p = 0
+loop:
+  iter = iter + 1
+
+; Capture z
+  if @znum == iter
+    p = @fn1(#z)
+  endif
+
+final:
+
+; Use that z as the starting point
+; CUSTOMIZED with arbitrary rotation
+  float x = real(p*((0,1)^@angl)) * 1/@scale
+  float y = imag(p*((0,1)^@angl)) * 1/@scale
+
+; Iterate Zeppo formula
+  iter = 0
+  p_2 = 0
+  bool go_on = true
+  while (go_on)
+    xx = x
+    ; 1.01 and not 1 ... To make it plot in more cases
+    x = real(@fu1(1-cabs(y-xx)+xx*y*@p3) + \
+    flip(@fu2(1.01-cabs(1-((xx+y)*@p1)-xx*y*@p4))) - @p2)
+    y = imag(@fu1(1-cabs(y-xx)+xx*y*@p3) + \
+    flip(@fu2(1.01-cabs(1-((xx+y)*@p1)-xx*y*@p4))) - @p2)
+    p_2 = @fn2(x + flip(y))
+    go_on = (iter <= @max_iterations)
+    if go_on == true
+       if @mode==1
+          go_on = go_on || (|p_2| <= @bail)
+          else
+          go_on = go_on && (|p_2| <= @bail)
+          endif
+    endif
+    iter = iter + 1
+  endwhile
+  
+  if cabs(p) > @threshold
+    #index = cabs(p_2)
+  else
+    #solid = true
+  endif
+
+default:
+  title = "Zeppo Coloring"
+  
+  heading
+    caption = "Information"
+    text = "This method works best as inside. \
+    Catch iteration = 1 will plot always but without taking care of \
+    the fractal shape, = 2 fits a bit to the shape and so on. \
+    High values for Maxiter or Bailout will increase accuracy \
+    (and often plotting time too)."
+  endheading
+  param znum
+    caption = "Catch iteration"
+    default = 10
+  endparam
+
+  param max_iterations
+    caption = "Maxiter"
+    hint = "Maxiter has priority, bailout is checked when iter <= maxiter"
+    default = 100
+  endparam
+  
+  float param bail
+    caption = "Bailout"
+    default = 2.0
+    min = 0
+  endparam
+
+  ;--------
+  heading
+    caption = "Zeppo params"
+    text = "Experimental mode is a different style of handling Bailout & Maxiter... \
+    USE AT YOUR RISK, and don't ask me why it sometimes doesn't work."
+  endheading
+  
+  param p1
+    caption = "p1"
+    default = (1,0)
+  endparam
+
+  param p2
+    caption = "p2"
+    default = (0,0)
+  endparam
+  
+  param p3
+    caption = "p3"
+    default = (0,0)
+  endparam
+
+  param p4
+    caption = "p4"
+    default = (0,0)
+  endparam
+
+  func fu1
+    caption = "Function 1"
+    default = sin()
+  endfunc
+
+  func fu2
+    caption = "Function 2"
+    default = sin()
+  endfunc
+  
+  param mode
+    caption = "While stop mode"
+    enum = "Safe" "Experimental"
+    default = 0
+  endparam
+  ;--------
+  heading
+    caption = "Adjustments"
+  endheading
+  
+  float param angl
+    caption = "Rotation"
+    default = .5
+  endparam
+  
+  func fn1
+    caption = "Pre function"
+    default = ident()
+  endfunc
+
+  func fn2
+    caption = "Post function"
+    default = ident()
+  endfunc
+  
+  param @scale
+    caption = "Scale"
+    default = 1.0
+  endparam
+
+  param threshold
+    caption = "Threshold"
+    default = -1.0
+    min = -1.0
+  endparam
+}
+
+lgn_gnarbulous { ; Modified from Mark Townsend Vine orbit trap
+;
+; Gnarbulous formula as an orbit trap.
+;
+init:
+  trap_z = 0
+  trap_p = 0
+  float x = 0
+  float y = 0
+  float xx = 0
+  int iter = 0
+  float dist = 0
+  int n_iter = 0
+  int max_iter = 0
+  int trap_iter = 0
+  float distance = 0
+  float min_dist = 1e30
+
+  if @no_of_iters == 0
+    max_iter = #maxiter - @skip
+  else
+    max_iter = @skip + @no_of_iters
+  endif
+
+loop:
+
+  f_p = #z + @start
+  x = real(f_p) * 1/@scale
+  y = imag(f_p) * 1/@scale
+
+; Iterate the Gnarbulous formula
+  n_iter = 0 , int flavor = @flava
+  while n_iter < @max_iterations
+    xx = x
+    n_iter = n_iter + 1
+    if @mixer
+    flavor = @flava + floor(n_iter * .25)
+    flavor = flavor % 3
+    endif
+    if flavor == 0
+      x = y + @h * real( sin(@c*x - sin( y + @a * cos (y) )) )
+      y = x + @h * real( sin(@c*y - sin( xx + @b * cos (xx) )) )
+    elseif flavor == 1
+      x = y + @h * cabs( cos(x - @c*sin( @a * y + cos (y) )) )
+      y = x + @h * cabs( cos(y - @c*sin( @b * xx + cos (xx) )) )
+    elseif flavor == 2
+      x = x + @h * real( sin(@a * x - cos( @c*y + sin (@b * y) )) )
+      y = y + @h * real( sin(@a * y - cos( @c*xx + sin (@b * xx) )) )
+    else
+      float newx = y
+      float newy = x
+      int i = 0
+      while i < flavor
+        i = i + 1
+        newx = x + real( sin(@c*x - sin( y + @a * cos (y) )) )
+        newy = y + real( sin(@c*y - sin( xx + @b * cos (xx) )) )
+      endwhile
+      x = x + @h * sin(newx)
+      y = y + @h * sin(newy)
+    endif
+  endwhile
+  f_p = x + flip(y)
+
+  if @trap_mode == 0
+
+    ; Closest
+
+    dist = abs(|#z| - |f_p|)
+
+    if (iter >= @skip && iter < max_iter) \
+      && dist < min_dist
+
+      min_dist = dist
+      distance = dist
+      trap_iter = iter
+      trap_z = #z
+      trap_p = f_p
+
+    endif
+
+  elseif @trap_mode == 1
+
+    ; Smallest trap
+
+    dist = cabs(f_p)
+
+    if (iter >= @skip && iter < max_iter) \
+      && dist < min_dist
+
+      min_dist = dist
+      distance = abs(|#z| - |f_p|)
+      trap_iter = iter
+      trap_z = #z
+      trap_p = f_p
+
+    endif
+
+  endif
+
+  iter = iter + 1
+
+final:
+
+  if @color_mode == 0
+    #index = distance + @randomness * real(#random)
+
+  elseif @color_mode == 1
+    #index = 0.01 * trap_iter + @randomness * real(#random)
+
+  elseif @color_mode == 2
+    #index = cabs(trap_z) + @randomness * real(#random)
+
+  elseif @color_mode == 3
+    #index = abs(real(trap_z)) + @randomness * real(#random)
+
+  elseif @color_mode == 4
+    #index = abs(imag(trap_z)) + @randomness * real(#random)
+
+  elseif @color_mode == 5
+    float angle = atan2(trap_z)
+    if angle < 0
+      angle = angle + 2 * #pi
+    endif
+    angle = 1 / (2 * #pi) * angle
+    #index = angle + @randomness * real(#random)
+
+  elseif @color_mode == 6
+    trap_p = @fn2(trap_p)
+  ; Use that z as the starting point
+    float x = real(trap_p) * 1/@mscale
+    float y = imag(trap_p) * 1/@mscale
+  ; Iterate the Martin formula
+    iter = 0
+    while iter < @m_iterations
+      float xx = x
+      x = y - sin(x)
+      y = @a2 - xx
+      iter = iter + 1
+    endwhile
+    trap_p = x + flip(y)
+    #index = cabs(trap_p) + @randomness * real(#random)
+
+  elseif @color_mode == 7
+    #index = cabs(trap_p) + @randomness * real(#random)
+
+  elseif @color_mode == 8
+    #index = abs(real(trap_p)) + @randomness * real(#random)
+
+  elseif @color_mode == 9
+    #index = abs(imag(trap_p)) + @randomness * real(#random)
+
+  elseif @color_mode == 10
+    float a = atan2(trap_p)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a + @randomness * real(#random)
+
+  elseif @color_mode == 11
+    float a = atan2(trap_z - trap_p)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a + @randomness * real(#random)
+  endif
+
+default:
+  title = "Gnarbulous Orbit Trap"
+
+  param trap_mode
+    caption = "Trap mode"
+    enum = "Closest" "Smallest trap"
+  endparam
+
+  param color_mode
+    caption = "Coloring mode"
+    enum = "Distance" "Iteration" "Magnitude" "Real" "Imag" \
+           "Angle" "Martin" "Trap magnitude" "Trap real" \
+           "Trap imag" "Trap angle" "Angle to trap"
+  endparam
+
+  param start
+    caption = "Starting offset"
+    default = (0,0)
+  endparam
+
+  param skip
+    caption = "Iterations to skip"
+    hint = "This is the number of iterations to skip before watching \
+           the orbit."
+    default = 0
+    min = 0
+  endparam
+
+  param no_of_iters
+    caption = "No. of iterations"
+    hint = "This is the number of iterations to monitor the orbit."
+    default = 0
+    min = 0
+  endparam
+  
+  heading
+    caption = "Trap params"
+    text = "This coloring method is slow. If it's a problem, \
+    don't increase flavors and iterations ..."
+  endheading
+  
+  param flava
+    caption = "Flavor"
+    default = 0
+    min = 0
+  endparam
+  
+  bool param mixer
+    caption = "Mixer?"
+    default = false
+  endparam
+
+  complex param a
+    caption = "Gnarby alpha"
+    hint = "Use imaginary part at your risk."
+    default = (3,0)
+  endparam
+
+  complex param b
+    caption = "Gnarby beta"
+    hint = "Use imaginary part at your risk."
+    default = (3,0)
+  endparam
+
+  complex param c
+    caption = "Gnarby gamma"
+    hint = "Use imaginary part at your risk."
+    default = (1,0)
+  endparam
+
+ param h
+    caption = "Gnarby step size"
+    default = 0.1
+  endparam
+
+  param max_iterations
+    caption = "Iterations"
+    hint = "This is the number of iterations for the Gnarby formula."
+    default = 10
+  endparam
+
+
+  param @scale
+    caption = "Gnarby scale"
+    default = 1.0
+  endparam
+
+  param a2
+    caption = "Martin parameter"
+    default = 3.14159
+  endparam
+
+  param m_iterations
+    caption = "Martin iterations"
+    hint = "This is the number of iterations for the Martin formula."
+    default = 10
+  endparam
+
+  param @mscale
+    caption = "Martin scale"
+    default = 1.0
+  endparam
+
+  param randomness
+    caption = "Randomness"
+    hint = "This adds a random texture the the coloring."
+    default = 0.0
+  endparam
+
+  func fn2
+    caption = "Martin function"
+    default = ident()
+  endfunc
+}

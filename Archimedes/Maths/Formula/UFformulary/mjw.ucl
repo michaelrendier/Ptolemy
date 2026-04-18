@@ -1,0 +1,1883 @@
+comment {
+
+  Colourings by Mike Williams
+  bingo@econym.demon.co.uk
+
+}
+
+Multipoint Traps {
+;
+; Adds "multipoint" orbital traps to the standard
+; orbital traps colouring.
+;
+; "Trap order" specifies the number of point orbit traps
+; to be generated.
+;
+init:
+  float d = 0.0
+  float d2 = 0.0
+  complex z2 = (0,0)
+  int iter = 0
+  float diameter2 = sqr(@diameter)
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex r0 = (0,0)
+  complex rh = (0,1) ^ (@traporder / 8); heart rotation value
+  complex zh = (0,0)
+  complex trapcenter2 = @trapcenter
+
+  if @trapshape == "ring ripples" || @trapshape == "grid ripples" || \
+     @trapshape == "radial ripples"
+    diameter2 = #pi / @diameter
+  endif
+
+  sideshift = ((0,1)^(1/@traporder))^4
+  if @trapshape == "multipoint"
+    complex centres[1000]
+    int n = 0
+    while (n <= @traporder)
+      centres[n] = @diameter*(sideshift^n)
+      n = n + 1
+    endwhile
+  endif
+
+  float closest = 1e38
+  float closest1 = 1e38
+  complex point = (0,0)
+  complex point1 = (0,0)
+  complex point2 = (0,0)
+  complex point3 = (0,0)
+  bool done = false
+  int i = 0
+  int i1 = 0
+  
+  if @traptype == "farthest" || @traptype == "sum" || \
+     @traptype == "average" || @traptype == "sign average" || \
+     @traptype == "alternating average" || @traptype == "alternating average 2" || \
+     @traptype == "inverted sum" || @traptype == "exponential average" || \
+     @traptype == "average change" || @traptype == "inverted sum squared" || \
+     @traptype == "trap only"
+    closest = 0.0
+  elseif @traptype == "product"
+    closest = 1.0
+  elseif @traptype == "second farthest" || @traptype == "two farthest"
+    closest = 0.0
+    closest1 = 0.0
+  endif
+
+  bool usesolid = true   ; assume a solid color
+
+loop:
+  iter = iter + 1        ; iteration counter
+
+  if @traptype == "trap only"   ; trap only, work on unadulterated pixel
+    z2 = #pixel
+  else
+    z2 = #z
+  endif
+  
+  z2 = (z2 - trapcenter2) * r; rotate  
+  
+  if @aspect != 1.0
+    z2 = real(z2) + flip(imag(z2) * @aspect) ; apply aspect
+  endif
+  
+  z3 = @Pf(z2)
+  
+  ; determine distance from trap -- different for each shape
+  if @trapshape == "point"
+    d = cabs(z3)
+    
+  elseif @trapshape == "multipoint"
+    int n=1
+    d = 1e20
+    while (n <= @traporder)
+      d2 = cabs(z3 - centres[n])
+      if d2 < d
+        d = d2
+      endif
+      n = n + 1
+    endwhile
+
+  elseif @trapshape == "ring"
+    d = abs(cabs(z3) - @diameter)
+  elseif @trapshape == "ring 2"
+    d = abs(|z3| - diameter2)
+  elseif @trapshape == "egg"
+    d = (cabs(z3-flip(@diameter)*2) + cabs(z3)*@traporder*0.5) * 0.25
+  elseif @trapshape == "hyperbola"
+    d = abs(imag(z3) * real(z3) - @diameter)
+  elseif @trapshape == "hypercross"
+    d = abs(imag(z3) * real(z3))
+  elseif @trapshape == "cross"
+    d = abs(real(z3))
+    d2 = abs(imag(z3))
+    if d2 < d
+      d = d2
+    endif
+  elseif @trapshape == "astroid"
+    d = abs(real(z3))^@traporder + abs(imag(z3))^@traporder
+    if @traporder < 0
+      d = 1/d
+    endif
+  elseif @trapshape == "diamond"
+    d = abs(real(z3)) + abs(imag(z3))
+  elseif @trapshape == "rectangle"
+    d = abs(real(z3))
+    d2 = abs(imag(z3))
+    if d2 > d
+      d = d2
+    endif
+  elseif @trapshape == "box"
+    d = abs(real(z3))
+    d2 = abs(imag(z3))
+    if d2 > d
+      d = d2
+    endif
+    d = abs(d - @diameter)
+  elseif @trapshape == "lines"
+    d = abs(abs(imag(z3)) - @diameter)
+  elseif @trapshape == "waves"
+    d = abs(abs(imag(z3) + sin(real(z3)*@trapfreq)*@traporder*0.25) - @diameter)
+  elseif @trapshape == "mirrored waves"
+    d = abs(abs(imag(z3)) - @diameter + sin(real(z3)*@trapfreq)*@traporder*0.25)
+  elseif @trapshape == "mirrored waves 2"
+    d2 = @diameter - sin(real(z3)*@trapfreq)*@traporder*0.25; compute wave height
+    d  = abs(abs(imag(z3)) - d2); distance to each wave
+    d2 = abs(abs(imag(z3)) + d2)
+    if d2 < d
+      d = d2
+    endif
+  elseif @trapshape == "radial waves"
+    d2 = atan2(z3)
+    d = abs(cabs(z3) * (1 - sin(d2*@trapfreq)*@traporder*0.125) - @diameter)
+  elseif @trapshape == "radial waves 2"
+    d2 = atan2(z3)
+    d2 = sin(d2*@trapfreq)*@traporder*0.125
+    d = abs(cabs(z3) * (1 - d2) - @diameter)
+    d2 = abs(cabs(z3) * (1 + d2) - @diameter)
+    if d2 < d
+      d = d2
+    endif
+  elseif @trapshape == "ring ripples"
+    d = cabs(z3)
+    if d < @traporder
+      d = cos(d * diameter2 * @trapfreq) * sqr(1-d/@traporder)
+    else
+      d = 0
+    endif
+  elseif @trapshape == "grid ripples"
+    d = cabs(z3)
+    if d < @traporder
+      d = (cos(real(z3)*diameter2*@trapfreq) + cos(imag(z3)*diameter2*@trapfreq)) * sqr(1-d/@traporder) * 0.5
+    else
+      d = 0
+    endif
+  elseif @trapshape == "radial ripples"
+    d = atan2(z3)
+    d2 = cabs(z3)
+    if d2 < @traporder
+      d = cos(4 * d * @trapfreq) * sqr(1-d2/@traporder)
+    else
+      d = 0
+    endif
+  elseif @trapshape == "pinch"
+    d2 = atan2(z3)
+    if d2 < 0
+      d2 = d2 + 2*#pi
+    endif
+    d = sqrt(cabs(z3)) / abs(sin(d2*@traporder*0.5))
+  elseif @trapshape == "spiral"
+    d = 1/(cabs(z3)) * @diameter
+    r0 = (0,1) ^ d
+    z3 = z3 * r0
+    d = atan(abs(imag(z3)/real(z3)))
+  elseif @trapshape == "heart"
+    zh = real(z3) + flip(abs(imag(z3)))
+    zh = zh*rh * 3 / @diameter
+    d = abs(real(zh) - sqr(imag(zh)) + 3)
+  endif
+
+  ; now adjust closest/point/i as needed
+  IF (@traptype == 0); closest
+    IF (d < closest)
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+    ENDIF
+    IF (d < @threshold)
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 1); farthest (within threshold)
+    IF (d > closest && d < @threshold)
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 2); first (within threshold)
+    IF (d < @threshold && done == false)
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+      done = true
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 3); last (within threshold)
+    IF (d < @threshold)
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+      done = true
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 4); sum (within threshold)
+    IF (d < @threshold)
+      i = iter
+      point = point + #z
+      point2 = point2 + z2
+      closest = closest + d
+      usesolid = false
+   ENDIF
+  ELSEIF (@traptype == 5); average (within threshold)
+    IF (d < @threshold)
+      i = iter
+      i1 = i1 + 1
+      point = point + #z
+      point2 = point2 + z2
+      closest = closest + d
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 6); product (within threshold)
+    IF (d < @threshold)
+      i = iter
+      point = point * #z / @threshold
+      point2 = point2 * z2 / @threshold
+      closest = closest * d / @threshold
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 7); sign average
+    IF (d < d2)
+      i = i + 1
+      point = point + #z
+      point2 = point2 + z2
+      closest = closest + 1
+      usesolid = false
+    ELSE
+      i = i - 1
+    ENDIF
+    d2 = d
+  ELSEIF (@traptype == 8 || @traptype == 10) ; second/two closest
+    IF (d < closest)
+      i1 = i
+      point1 = point
+      point3 = point2
+      closest1 = closest
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+    ELSEIF (d < closest1)
+      i1 = iter
+      point1 = #z
+      point3 = z2
+      closest1 = d
+    ENDIF
+    IF (d < @threshold)
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 9 || @traptype == 11) ; second/two farthest
+    IF (d > closest && d < @threshold)
+      i1 = i
+      point1 = point
+      point3 = point2
+      closest1 = closest
+      i = iter
+      point = #z
+      point2 = z2
+      closest = d
+      usesolid = false
+    ELSEIF (d > closest1 && d < @threshold)
+      i1 = iter
+      point1 = #z
+      point3 = z2
+      closest1 = d
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 12); funky average
+    IF (d < @threshold)
+      i = i + 1
+      point = #z - point
+      point2 = z2 - point2
+      closest = @threshold - abs(closest - d)
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 13); funky average 2
+    IF (d < @threshold)
+      i = i + 1
+      point = #z - point
+      point2 = z2 - point2
+      closest = abs(d - @threshold + closest)
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 14); funky average 3 (Luke Plant)
+    IF (d < @threshold)
+      i = i + 1
+      d2 = d/@threshold
+      point = #z + (point-#z) * d2
+      point2 = z2 + (point2-z2) * d2
+      closest = closest + d
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 15); funky average 4 (exponential average)
+    IF (d < @threshold)
+      i = i + 1
+      point = #z - point
+      point2 = z2 - point2
+      closest = closest + exp(-d)
+      usesolid = false
+    ENDIF
+  ELSEIF (@traptype == 16); funky average 5 (average distance change)
+    IF (d < d2)
+      point = point + #z
+      point2 = point2 + z2
+      closest = closest + d2-d
+      usesolid = false
+    ENDIF
+    d2 = d
+  ELSEIF (@traptype == 17); funky average 6 (Luke Plant, 1/squared)
+    IF (d < @threshold)
+      i = i + 1
+      usesolid = false
+    ENDIF
+    d2 = sqr(d/@threshold)
+    point = #z + (point-#z) * d2
+    point2 = z2 + (point2-z2) * d2
+    closest = closest + 1/d2
+  ELSEIF (@traptype == 18); trap only, do first iteration
+    IF (iter == 1)
+      point = #z
+      point2 = z2
+      closest = d/@threshold
+      IF (d < @threshold)
+        usesolid = false
+      ENDIF
+    ENDIF
+  ENDIF
+  
+final:
+  ; Apply solid color, if it is allowed.
+  if @solidcolor
+    #solid = usesolid
+  else
+    #solid = false
+  endif
+  
+  ; Calculate index value.
+  ; Un-fudge anything that was fudged.
+  IF (@traptype == 5); traptype average
+    point = point / i1
+    point2 = point2 / i1
+    closest = closest / i1
+  ELSEIF (@traptype == 6); traptype product
+    closest = abs(closest)
+  ELSEIF (@traptype == 7); traptype sign average
+    point = point / iter
+    point2 = point2 / iter
+    closest = closest / iter
+  ELSEIF (@traptype == 8 || @traptype == 9) ; second closest or farthest
+    i = i - i1
+    point = point - point1
+    point2 = point2 - point3
+    closest = closest - closest1
+  ELSEIF (@traptype == 10 || @traptype == 11) ; two closest or farthest
+    i = round((i + i1) / 2)
+    point = (point + point1) / 2
+    point2 = (point2 + point3) / 2
+    closest = (closest + closest1) / 2
+  ELSEIF (@traptype == 14); funky average 3
+    closest = @threshold * i - closest
+  ENDIF
+
+  ; choose coloring based on method
+  IF (@trapcolor == 0); distance
+    IF (@traptype == 2 || @traptype == 3) ; first or last type
+      #index = closest / @threshold
+    ELSE; any other trap type
+      #index = closest
+    ENDIF
+  ELSEIF (@trapcolor == 1); magnitude
+    #index = cabs(point2)
+  ELSEIF (@trapcolor == 2); real
+    #index = abs(real(point2))
+  ELSEIF (@trapcolor == 3); imaginary
+    #index = abs(imag(point2))
+  ELSEIF (@trapcolor == 4); angle to trap
+    d = atan2(point2)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 5); angle to trap 2 (no aspect)
+    point = point - @trapcenter
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 6); angle to origin
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 7); angle to origin 2 (old ReallyCool)
+    #index = 0.02 * abs(atan(imag(point) / real(point)) * 180/#pi)
+  ELSEIF (@trapcolor == 8); iteration
+    d = i
+    #index = d / #maxiter
+  ENDIF
+  
+default:
+  title = "Multipoint Traps"
+  param trapshape
+    caption = "Trap Shape"
+    default = 0
+    enum = "multipoint"  \
+           "point" "ring" "ring 2" "egg" "hyperbola" "hypercross" \
+           "cross" "astroid" "diamond" "rectangle" "box" "lines" \
+    "waves" "mirrored waves" "mirrored waves 2" \
+   "radial waves" "radial waves 2" "ring ripples" \
+   "grid ripples" "radial ripples" "pinch" "spiral" "heart" 
+    hint = "This is the shape of the orbit trap."
+  endparam
+  param diameter
+    caption = "  Diameter"
+    default = 1.0
+    hint = "This is the diameter of the trap (for ring, box, \
+            line and multipoint shapes)."
+    visible = @trapshape != "point" && @trapshape != "hypercross" && \
+              @trapshape != "cross" && @trapshape != "astroid" && \
+              @trapshape != "diamond" && @trapshape != "rectangle" && \
+              @trapshape != "radial ripples" && @trapshape != "pinch"
+  endparam
+  param traporder
+    caption = "  Order"
+    default = 16
+    max = 999
+    hint = "Number of leaves for the pinch trap shape, the \
+            exponent to use for astroid curves (try 0.66667), \
+            'egginess', the height of waves, \
+            or the number of points for multipoint."
+    visible = @trapshape != "point" && @trapshape != "ring" && \
+              @trapshape != "ring 2" && @trapshape != "hyperbola" && \
+              @trapshape != "hypercross" && @trapshape != "cross" && \
+              @trapshape != "diamond" && @trapshape != "rectangle" && \
+              @trapshape != "box" && @trapshape != "lines" && \
+              @trapshape != "spiral"
+  endparam
+  param trapfreq
+    caption = "  Frequency"
+    default = 1.0
+    hint = "The frequency of ripples or waves."
+    visible = @trapshape == "waves" || @trapshape == "mirrored waves" || \
+              @trapshape == "mirrored waves 2" || @trapshape == "radial waves" || \
+              @trapshape == "radial waves 2" || @trapshape == "ring ripples" || \
+              @trapshape == "grid ripples" || @trapshape == "radial ripples"
+  endparam
+  param trapcolor
+    caption = "Trap Coloring"
+    default = 0
+    enum = "distance" "magnitude" "real" "imaginary" "angle to trap" \
+           "angle to trap 2" "angle to origin" "angle to origin 2" "iteration"
+    hint = "This is the information used to produce a color."
+  endparam
+  param traptype
+    caption = "Trap Mode"
+    default = 0
+    enum = "closest" "farthest" "first" "last" "sum" "average" "product" \
+           "sign average" "second closest" "second farthest" "two closest" \
+           "two farthest" "alternating average" "alternating average 2" "inverted sum" \
+           "exponential average" "average change" "inverted sum squared" \
+           "trap only"
+    hint = "This is how points will be chosen to use for coloring."
+  endparam
+  param threshold
+    caption = "  Threshold"
+    hint = "This is the width of the trap area, used for most trap modes."
+    visible = @traptype != "sign average" && @traptype != "average change"
+    default = 0.25
+    min = 0
+  endparam
+  complex func Pf
+    caption = "Point function"
+    ;visible = @trapshape == "multipoint"
+    default = ident()
+  endfunc
+
+  heading
+    caption = "Options"
+  endheading
+  param trapcenter
+    caption = "Trap Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+  endparam
+  param aspect
+    caption = "Aspect Ratio"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the trap is.  You can distort the \
+            trap by using a value other than 1.0."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap should \
+            be rotated."
+  endparam
+  param solidcolor
+    caption = "Use Solid Color"
+    default = false
+    hint = "If enabled, areas 'outside' the trap area will be colored \
+            with the 'solid color' on the coloring tab."
+  endparam
+}
+
+Direct Displacement Map(OUTSIDE) {
+;
+; This is a very special purpose colouring algorithm.
+; It's not expected to look good on screen.
+;
+; It's sole purpose is to generate 24-bit displacement maps
+; and height fields for 3d rendering programs that can
+; accept such things. The RGB values at a point represent a
+; height as 65536*R + 256*G + B, so that over 16 million 
+; gradations of height can be accommodated instead of the usual
+; 256. This makes it possible to produce much smoother
+; displacement maps.
+;
+; So, if you want to produce smooth displacement maps, I suggest
+; setting the Maximum Iterations to a value that's very much
+; larger than 256 (otherwise you'll only get that number of
+; height gradations) and setting the inside colouring to 
+; solid white.
+;
+; This direct colouring ignores all the standard colour settings
+; (Color Density, Transfer Function, Solid Color, Gradient Offset,
+; Repeat Gradient) and ignores the gradient.
+;
+$DEFINE DIRECT
+
+final:
+  float x = 256.0 * real(#numiter/#maxiter)
+  float r = trunc(x)
+  float g = trunc((x-r)*256)
+  float b = 0 ;trunc(((x-r)*256-g)*256)
+  #color = rgb(r/256,g/256,b/256)  
+  
+default:
+  title = "Direct Displacement Map" 
+}
+
+Speed {
+;
+; Speed based colouring.
+;
+; A pixel is coloured based on the speed with which the
+; particle moves along its orbit.
+;
+; Only steps which move at a speed between the Min and Max Speed
+; parameters are considered.
+;
+; Version 2: Add "Stretch Index" option
+;
+init:
+  float min = 1e20
+  int iter = 0
+  last = (0,0)
+  float this = 0
+  float index = 1e20
+loop:
+  iter = iter + 1
+  if iter == 1
+    last = #z
+  else
+    this = cabs(#z - last)
+    if (this < @Lmax) && (this > @Lmin)
+      index = this
+      if this < min
+        min = this
+      endif 
+    endif
+  endif
+final:
+  if @type == "min"
+    index = min
+  endif
+  #index = index
+  if @sol == true && (index == 1e20)
+    #solid = true
+  else
+    if @stretch
+      #index = (index-@Lmin)/(@Lmax-@Lmin)
+    endif
+  endif
+default:
+  title = "Speed Limits"
+  param type
+    enum = "min" "last"
+    hint = "Colouring is based on the speed of the slowest step or the last step"
+  endparam
+  float param Lmin
+    caption = "Min speed"
+    default = 0.2
+    min = 0.0
+    hint = "Set to zero to allow all speeds"
+  endparam
+  float param Lmax
+    caption = "Max speed"
+    default = 0.5
+    hint = "Should be greater than Min Speed"
+  endparam
+  bool param stretch
+    caption = "Stretch Index"
+    hint = "Stretch the index so that the whole gradient maps to the speeds \
+            which lie within the speed limits"
+  endparam
+  bool param sol
+    caption = "Use solid colour"
+    hint = "Specifies that points which have no steps within the speed limits \
+            are to use the solid colour instead of colour index zero"
+  endparam
+}
+
+Mangle {
+;
+; A selective angle based colouring
+;
+; A point is coloured with a value related to the angle of its orbit.
+; (Sort of like an orbit trap, but trapping orbit angle rather than point location)
+;
+; Version 2: add variant options
+; (Variant B is what I had originally intended to code)
+; Version 3: add "Stretch index" option
+;
+init:
+  float min = 1e20
+  float max = -1e20
+  float tot = 0.0
+  int iter = 0
+  int count = 0
+  last = (0,0)
+  float this = 0
+  float index = 0
+  float Lmin = (@Lmin-0.5) * 2 * #pi
+  float Lmax = (@Lmax-0.5) * 2 * #pi
+loop:
+  iter = iter + 1
+  if iter == 1
+    last = #z
+  else
+    this = atan2(#z - last)
+    if (this < Lmax) && (this > Lmin)
+      count = count + 1
+      index = this
+      tot = tot + this
+      if this < min
+        min = this
+      endif 
+      if this > max
+        max = this
+      endif 
+    endif
+  endif
+  if (@variant == 1)
+    last = #z
+  endif
+  if (@variant == 2)
+    last = (0,0)
+  endif
+final:
+  if @type == "min"
+    index = abs(min)
+  elseif @type == "max"
+    index = abs(max)
+  elseif @type == "average"
+    index = abs(tot/count)
+  endif
+  if @sol == true && (index > 1e10 || index == 0)
+    #solid = true
+  endif
+  if @stretch
+    #index = (index-Lmin)/(Lmax-Lmin)
+  else
+    #index = index
+  endif
+default:
+  title = "Mangle"
+  param type
+    enum = "min" "max" "last" "average"
+  endparam
+  float param Lmin
+    caption = "Minimum"
+    default = 0.1
+    min = 0.0
+    max = 1.0
+    hint = "Between 0.0 and 1.0"
+  endparam
+  float param Lmax
+    caption = "Maximum"
+    default = 0.2
+    min = 0.0
+    max = 1.0
+    hint = "Should be greater than Minimum and less than 1.0"
+  endparam
+  bool param stretch
+    caption = "Stretch Index"
+    hint = "Stretch the index so that the whole gradient maps to the speeds \
+            which lie within the speed limits"
+    default = true
+  endparam
+  bool param sol
+    caption = "Use solid colour"
+    hint = "Specifies that points which have no steps within the angle limits \
+            are to use the solid colour instead of colour index zero"
+  endparam
+  param variant
+    enum = "A" "B" "C"
+    hint = "Slight variations"
+  endparam
+}
+
+mjw-Spots {
+; An Op-Art colouring
+;
+; Outputs two colours - the colours at index 0 and index 200
+;
+; Hints: for black spots on white background 
+;        use the standatd greyscale gradient
+;
+;        for square spots use threshold 0 and Type "Spots"
+;        for diamond spots use threshold 0 and Type "Spots 3"
+
+final:
+  float a = 0;
+  if @Type == 0
+    float Scale = @scale
+    a = (sin(real(#z)/Scale) + sin(imag(#z)/Scale/@stretch))/2
+  elseif @Type == 1
+    float Scale = @scale * 2
+    a = abs((sin(real(#z)/Scale) + sin(imag(#z)/Scale/@stretch))/2)
+  elseif @Type == 2
+    float Scale = @scale * 2
+    a = sin(real(#z)/Scale) * sin(imag(#z)/Scale)
+  elseif @Type == 3
+    float Scale = @scale*2*pi
+    a = abs((real(#z)/Scale - floor(real(#z)/Scale) -0.5) \
+      * (imag(#z)/Scale/@stretch - floor(imag(#z)/Scale/@stretch) -0.5)) * 4
+  elseif @Type == 4
+    float Scale = @scale*2*pi
+    a = (real(#z)/Scale - floor(real(#z)/Scale) -0.5) \
+      + (imag(#z)/Scale/@stretch - floor(imag(#z)/Scale/@stretch) -0.5)
+  elseif @Type == 5
+    float Scale = @scale*2*pi
+    a = abs((real(#z)/Scale - floor(real(#z)/Scale) -0.5) \
+      + (imag(#z)/Scale/@stretch - floor(imag(#z)/Scale/@stretch) -0.5))
+  endif
+  if (a < @threshold)
+    #index = 0.5
+  else
+    #index = 0
+  endif
+default:
+  title="Spots"
+  param Type
+    caption = "Type"
+    enum = "Spots" "Spots 2" "Spots 3" "Spots 4" "Triangles" "Stars" 
+  endparam
+  float param scale
+    hint = "change the scale of the pattern"
+    caption="scale"
+    default = 0.02
+  endparam
+  float param stretch
+    hint = "change the 'vertical' scale of the pattern"
+    caption="stretch"
+    default = 1.0
+    visible = @Type != 2 && @Type != 3
+  endparam
+  float param threshold
+    hint = "change the shape of the spots"
+    caption="threshold"
+    default = 0.5
+    min = -1
+    max = 1
+  endparam
+}  
+
+
+mjw-CA-1 {
+;Simple Cellular Automata
+;
+; It's more of a "proof of concept" than a useful colouring
+; The cells have three possible states which become colour index values 0, 1/3 and 2/3
+; A cell on the next row gets its state by looking at the sum of the states
+;   of three nearby cells on the row above. 
+;   E.g. if the three cells have states 2, 0, 1 then the new cell gets its state
+;   from the parameter "Three".
+; The CA algorithm wraps at the sides
+;
+; Note: This colouring doesn't work well if the Drawing Method of
+;       the formula is set to "Guessing"
+;
+; It mindlessly ignores the formula (so use one that calculates quickly)
+; and ignores the Location parameters, such as magnification and rotation
+;
+
+global:
+  int seed = @myseed
+  int x=0
+  int y=0
+  int x1=0
+  int x2=0
+  int sum=0
+  int pix[#width,#height]
+  int ca[7]
+
+  ; store the val<n> params in an array
+  ca[0] = @val0
+  ca[1] = @val1
+  ca[2] = @val2
+  ca[3] = @val3
+  ca[4] = @val4
+  ca[5] = @val5
+  ca[6] = @val6
+  
+  ;randomize the y=0 row
+  x=0
+  while x<#width
+    seed = random(seed)
+    pix[x,0] = abs(round(seed % 3))
+    x=x+1
+  endwhile
+  
+  ;caclulate the following rows
+  y=1
+  while y<#height
+    x=0
+    while x<#width
+      ; wrap round the edges
+      x1 = x-1
+      if x1<0
+        x1=x1+#width
+      endif
+      x2 = x+1
+      if x2 >= #width
+        x2 = x2 - #width
+      endif
+      sum = pix[x,y-1] + pix[x1,y-1] + pix[x2,y-1]
+      pix[x,y] = ca[sum]
+      x=x+1
+    endwhile
+    y=y+1
+  endwhile
+  
+final:
+  #index = pix[#x,#y]/3
+default:
+  title="Cellular Automata 1"
+  int param val0
+    caption = "Zero"
+    default = 2
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 0"
+  endparam
+  int param val1
+    caption = "One"
+    default = 1
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 1"
+  endparam
+  int param val2
+    caption = "Two"
+    default = 1
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 2"
+  endparam
+  int param val3
+    caption = "Three"
+    default = 1
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 3"
+  endparam
+  int param val4
+    caption = "Four"
+    default = 2
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 4"
+  endparam
+  int param val5
+    caption = "Five"
+    default = 0
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 5"
+  endparam
+  int param val6
+    caption = "Six"
+    default = 1
+    min = 0
+    max = 2
+    hint = "value for cell when sum = 6"
+  endparam
+  int param myseed
+    caption = "Random Seed"
+    default = 123456
+    hint = "Change this seed to randomize the start row."
+  endparam
+}
+
+mjw-CA-2 {
+; two colour 1D totalistic Cellular Automata
+; the colours are at index 0 and index 199
+;
+; Note: This colouring doesn't work well if the Drawing Method of
+;       the formula is set to "Guessing"
+;
+; It mindlessly ignores the formula (so use one that calculates quickly)
+; and ignores the Location parameters, such as magnification and rotation
+;
+
+global:
+  int seed = @myseed
+  int x=0, int y=0, int x1=0, int d=0, int sum=0
+  int pix[#width,#height]
+  int R=0, int C=0, int M=1
+  int S[100]
+  int B[100]
+
+  int i=0
+  while i<100
+    S[i]=0
+    B[i]=0
+    i=i+1
+  endwhile
+
+  ; set up the rules
+  
+  if @Rule == "Champagne" ; R3,C0,M1,S3,S6,S7,B0,B1
+    R=3, C=2, M=1
+    S[3]=1, S[6]=1, S[7]=1
+    B[0]=1, B[1]=1
+  elseif @Rule == "Class 4 a" ; R2,C0,M1,S1,S3,B2,B3,B4
+    R=2, C=2, M=1
+    S[1]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Class 4 b" ; R6,C0,M1,S3,S4,S5,S9,S11,S12,S13, B0,B1,B3,B13
+    R=6, C=2, M=1
+    S[3]=1, S[4]=1, S[5]=1, S[9]=1, S[11]=1, S[12]=1, S[13]=1
+    B[0]=1, B[1]=1, B[3]=1, B[13]=1
+  elseif @Rule == "Date Palms"; R5,C0,M1,S0,S7,S8,S9,S10,S11,B0
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[8]=1, S[9]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Embossed Triangles" ;R2,C0,M1,S2,S3,B2,B3,B4
+    R=2, C=2, M=1
+    S[2]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Forest" ;R10,C0,M0,S1,S2,S6,S7,S9,S12, S14,S17, B1,B7,B10,B11,B13,B15, B16,B17,B19
+    R=10, C=2, M=0
+    S[1]=1, S[2]=1, S[6]=1, S[7]=1, S[9]=1, S[12]=1, S[14]=1, S[17]=1
+    B[1]=1, B[7]=1, B[11]=1, B[13]=1, B[15]=1, B[16]=1, B[17]=1, B[19]=1
+  elseif @Rule == "Gears 1" ;R5,C0,M1,S0,S7,S10,S11,B0
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Gears 2" ;R5,C0,M1,S0,S6,S10,S11,B0
+    R=5, C=2, M=1
+    S[0]=1, S[6]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Marvel"    ; R3,C0,M0,S0,S5,S6,B0,B3
+    R=3, C=2, M=0
+    S[0]=1, S[5]=1, S[6]=1
+    B[0]=1, B[3]=1
+  elseif @Rule == "Noname";R2,C0,M1,S0,S3,S4,B2,B4,B5
+    R=2, C=2, M=1
+    S[0]=1, S[3]=1, S[4]=1
+    B[2]=1, B[4]=1, B[5]=1
+  elseif @Rule == "Pascal's Triangle" ;R1,C0,M1,B1
+    R=1, C=2, M=1, B[1]=1
+  elseif @Rule == "Porridge";R1,C0,M1,S0,S3,B0,B2
+    R=1, C=2, M=1
+    S[0]=1, S[3]=1
+    B[0]=1, B[2]=1
+  elseif @Rule == "Roots";R4,C0,M1,S1,S2,S5,S6,S9,B3,B4,B6
+    R=4, C=2, M=1
+    S[1]=1, S[2]=1, S[5]=1, S[6]=1, S[9]=1
+    B[3]=1, B[4]=1, B[6]=1
+  elseif @Rule == "The City";R3,C0,M0,S0,S3,B0,B4
+    R=3, C=2, M=0
+    S[0]=1, S[3]=1
+    B[0]=1, B[4]=1
+  elseif @Rule == "Tulips";R10,C0,M1,S0,S3,S6,S10,S11, S14,S15, S16,S17,S18,S19,S20,   S21,B1,B11,B12, B17,B18,B19,B20,B21
+    R=10, C=2, M=1
+    S[0]=1, S[3]=1, S[6]=1, S[10]=1, S[14]=1, S[15]=1
+    S[16]=1, S[17]=1, S[18]=1, S[19]=1, S[20]=1, S[21]=1
+    B[1]=1, B[11]=1, B[12]=1, B[17]=1, B[18]=1, B[19]=1
+    B[20]=1, B[21]=1
+  endif
+  
+  if @Init == "Random"
+    ;randomize the y=0 row
+    x=0
+    while x<#width
+      seed = random(seed)
+      pix[x,0] = abs(seed)%(C+1)
+      x=x+1
+    endwhile
+  else
+    ; single central pixel
+    x=0
+    while x<#width
+      pix[x,0] = 0
+    x=x+1
+    endwhile
+    pix[trunc(#width/2),0] = 1
+  endif
+  
+  ;caclulate the following rows
+  y=1
+  while y<#height
+    x=0
+    while x<#width
+      sum=0
+      d=-R
+      ; count the totalistic sum
+      while d <= R
+        x1 = x+d
+        ; wrap round the edges
+        if x1<0
+          x1=x1+#width
+        endif
+        if x1 >= #width
+          x1 = x1 - #width
+        endif
+        if (pix[x1,y-1] > 0) && (M==1 || d!=0)
+          sum = sum + 1
+        endif
+        d=d+1
+      endwhile
+      ; decide if born
+      if pix[x,y-1]==0 && B[sum]==1
+        pix[x,y]=1
+      ; decide survival
+      elseif pix[x,y-1]>0 && S[sum]==1
+        pix[x,y]=1
+      ; history count
+      else
+        if C<3
+          pix[x,y]=0
+        else
+          if pix[x,y-1] > 0
+            pix[x,y] = pix[x,y-1]+1
+            if pix[x,y]>=C
+              pix[x,y]=0
+            endif
+          endif
+        endif
+      endif
+
+      x=x+1
+    endwhile
+    y=y+1
+  endwhile
+  
+final:
+  #index = pix[#x,#y]/C
+default:
+  title="Cellular Automata 2"
+
+  param Rule
+    caption = "Rule"
+    enum = "Champagne" "Class 4 a" "Class 4 b" \
+           "Date Palms" "Embossed Triangles" "Forest" \
+           "Gears 1" "Gears 2" "Marvel" "Noname" \
+           "Pascal's Triangle" "Porridge" "Roots" \
+           "The City" "Tulips" 
+  endparam
+  param Init
+    caption = "Initialisation"
+    enum = "Random" "Single point"
+  endparam
+  int param myseed
+    caption = "Random Seed"
+    default = 123456
+    visible = @Init == "Random"
+  endparam
+}
+mjw-CA-3 {
+; polychrome 1D totalistic Cellular Automata
+;
+; Note: This colouring doesn't work well if the Drawing Method of
+;       the formula is set to "Guessing"
+;
+; It mindlessly ignores the formula (so use one that calculates quickly)
+; and ignores the Location parameters, such as magnification and rotation
+;
+; Custom rules
+; ============
+;
+; Rule range: Specifies how many cells from the previous row are
+;             examined. If it's even, then the central cell is ignored.
+;             Higher values take longer to process
+;
+; Rule depth: It's probably best to leave this set to 2
+;
+; Rules for cell birth and survival:
+;             Consider these to be a sequence of separate integers.
+;             E.g. if the birth rule is "840" then an empty cell
+;             comes "alive" if zero, four or eight of the examined
+;             cells are alive.
+;
+; The defaults for the custom rule are the same as the "Bonzai" rule
+;
+; Built in rules
+; ==============
+;
+; The equivalent custom rule settings for some built-in rules are:
+;
+; Name                 Range   Depth   Birth   Survive
+;
+; Abacus               5       10      30      10
+; Bonzai               9        2      840     13579
+; Champagne            7        2      10      367
+; Class 4 a            5        2      234     13
+; Embossed Triangles   5        2      234     23
+; Fences               13      25      1478    350
+; Marvel               6        2      30      560
+; Maze                 7       10      1345    345
+; Noname 1             5        2      245     340
+; Noname 2             5       15      12      23
+; Pascal's Triangle    3        2      1       9
+; Porridge             3        2      20      30
+; Roots                9        2      346     12569
+; Shaded Triangles     7        3      34567   234560
+; The City             6        2      30      40
+; Walls                5       15      23      13
+; Wallpaper            3        2      30      2
+; Zig Zag              3       15      13      13
+
+
+
+global:
+  int seed = @myseed
+  int x=0, int y=0, int x1=0, int d=0, int sum=0
+  int pix[#width,#height]
+  int R=0, int C=0, int M=1
+  int S[100]
+  int B[100]
+  int MaxStates = 40
+  
+  int i=0
+  while i<100
+    S[i]=0
+    B[i]=0
+    i=i+1
+  endwhile
+
+  ; set up the rules
+  
+  if @Rule == "Custom"
+    M=@Range % 2
+    R=trunc(@Range/2)
+    C=@Depth
+    if C<2
+      C=2
+    endif    
+    int K = @Survive
+    while K > 0
+      S[K % 10] = 1
+      K = trunc(K/10)
+    endwhile
+    int K = @Births
+    while K > 0
+      B[K % 10] = 1
+      K = trunc(K/10)
+    endwhile
+    
+  elseif @Rule == "Abacus"
+    R=2, C=10, M=1
+    S[0]=1, S[1]=1
+    B[0]=1, B[3]=1
+  elseif @Rule == "Bonzai"
+    R=4, C=2, M=1
+    S[1]=1, S[3]=1, S[5]=1, S[7]=1, S[9]=1
+    B[0]=1, B[4]=1, B[8]=1
+  elseif @Rule == "Champagne"
+    R=3, C=2, M=1
+    S[3]=1, S[6]=1, S[7]=1
+    B[0]=1, B[1]=1
+  elseif @Rule == "Class 4 a"
+    R=2, C=2, M=1
+    S[1]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Class 4 b" 
+    R=6, C=2, M=1
+    S[3]=1, S[4]=1, S[5]=1, S[9]=1, S[11]=1, S[12]=1, S[13]=1
+    B[0]=1, B[1]=1, B[3]=1, B[13]=1
+  elseif @Rule == "Date Palms"
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[8]=1, S[9]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Embossed Triangles" 
+    R=2, C=2, M=1
+    S[2]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Fences"
+    R=6, C=25, M=1
+    S[1]=1, S[4]=1, S[7]=1,S[8]=1
+    B[0]=1, B[3]=1, B[5]=1
+  elseif @Rule == "Forest"
+    R=10, C=2, M=0
+    S[1]=1, S[2]=1, S[6]=1, S[7]=1, S[9]=1, S[12]=1, S[14]=1, S[17]=1
+    B[1]=1, B[7]=1, B[11]=1, B[13]=1, B[15]=1, B[16]=1, B[17]=1, B[19]=1
+  elseif @Rule == "Gears 1" 
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Gears 2" 
+    R=5, C=2, M=1
+    S[0]=1, S[6]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Marvel"
+    R=3, C=2, M=0
+    S[0]=1, S[5]=1, S[6]=1
+    B[0]=1, B[3]=1
+  elseif @Rule == "Maze"
+    R=3, C=10, M=1
+    S[3]=1, S[4]=1, S[5]=1
+    B[1]=1, B[3]=1, B[4]=1, B[5]=1
+  elseif @Rule == "Noname 1"
+    R=2, C=2, M=1
+    S[0]=1, S[3]=1, S[4]=1
+    B[2]=1, B[4]=1, B[5]=1
+  elseif @Rule == "Noname 2"
+    R=2, C=15, M=1
+    S[2]=1, S[3]=1
+    B[1]=1, B[2]=1
+  elseif @Rule == "Pascal's Triangle" 
+    R=1, C=2, M=1, B[1]=1
+  elseif @Rule == "Porridge"
+    R=1, C=2, M=1
+    S[0]=1, S[3]=1
+    B[0]=1, B[2]=1
+  elseif @Rule == "Roots"
+    R=4, C=2, M=1
+    S[1]=1, S[2]=1, S[5]=1, S[6]=1, S[9]=1
+    B[3]=1, B[4]=1, B[6]=1
+  elseif @Rule == "Shaded Triangles"
+    R=3, C=3, M=1
+    S[0]=1, S[2]=1, S[3]=1, S[4]=1, S[5]=1, S[6]=1
+    B[3]=1, B[4]=1, B[5]=1, B[6]=1, B[7]=1
+  elseif @Rule == "Skyscrapers"
+    R=6, C=10, M=1
+    S[2]=1, S[4]=1, S[6]=1, S[7]=1, S[8]=1, S[11]=1, S[13]=1
+    B[0]=1, B[1]=1, B[3]=1, B[8]=1, B[12]=1
+  elseif @Rule == "The City"
+    R=3, C=2, M=0
+    S[0]=1, S[3]=1
+    B[0]=1, B[4]=1
+  elseif @Rule == "Tulips"
+    R=10, C=2, M=1
+    S[0]=1, S[3]=1, S[6]=1, S[10]=1, S[14]=1, S[15]=1
+    S[16]=1, S[17]=1, S[18]=1, S[19]=1, S[20]=1, S[21]=1
+    B[1]=1, B[11]=1, B[12]=1, B[17]=1, B[18]=1, B[19]=1
+    B[20]=1, B[21]=1
+  elseif @Rule == "Walls"
+    R=2, C=15, M=1
+    S[2]=1, S[3]=1
+    B[1]=1, B[3]=1
+  elseif @Rule == "Wallpaper"
+    R=1, C=2, M=1
+    S[2]=1, B[0]=1, B[3]=1
+  elseif @Rule == "Wood Grain"
+    R=8, C=3, M=0
+    S[1]=1, S[2]=1, S[4]=1, S[6]=1, S[7]=1, S[10]=1
+    S[12]=1, S[13]=1, S[14]=1
+    B[0]=1, B[2]=1, B[3]=1, B[4]=1, B[5]=1, B[6]=1
+    B[7]=1, B[10]=1, B[11]=1, B[13]=1, B[15]=1
+  elseif @Rule == "Zig Zag"
+    R=1, C=15, M=1
+    S[1]=1, S[3]=1
+    B[1]=1, B[3]=1
+  endif
+
+  if @Init == "Random"
+    ;randomize the y=0 row
+    x=0
+    while x<#width
+      seed = random(seed)
+      pix[x,0] = abs(seed)%@RRange
+      x=x+1
+    endwhile
+  elseif @Init == "Single Point"
+    ; single central pixel
+    x=0
+    while x<#width
+      pix[x,0] = 0
+    x=x+1
+    endwhile
+    pix[trunc(#width/2),0] = 1
+  else
+    x=0
+    while x<#width
+      if x<#width/4 || x>3*#width/4
+        pix[x,0] = 0
+      else
+        pix[x,0] = 1
+      endif
+    x=x+1
+    endwhile
+  endif
+
+ int Iter = 0
+ while Iter < @Iterations
+  ;caclulate the following rows
+  y=1
+  while y<#height
+    x=0
+    while x<#width
+      pix[x,y]=0
+      sum=0
+      d=-R
+      ; count the totalistic sum
+      while d <= R
+        x1 = x+d
+        ; wrap round the edges
+        if x1<0
+          x1=x1+#width
+        endif
+        if x1 >= #width
+          x1 = x1 - #width
+        endif
+        if ((pix[x1,y-1]>0 && C<3) || (pix[x1,y-1]==1 && C>2)) \
+        && (M==1 || d!=0)
+          sum = sum + 1
+        endif
+        d=d+1
+      endwhile
+
+      ; case 1 - no history (but live cells change colour)
+      if C<3
+        ; if it was alive, does it survive?
+        if pix[x,y-1] > 0 && S[sum] == 1
+          pix[x,y] = pix[x,y-1] +1
+          if pix[x,y] >= MaxStates
+            pix[x,y] = MaxStates - 1
+          endif
+        ; if it was dead, is it born?
+        elseif pix[x,y-1] == 0 && B[sum] == 1
+          pix[x,y] = 1
+        else
+          pix[x,y] = 0
+        endif          
+      else  ; case 2 - history active - only state 1 is alive
+            ; and only 0 is really dead
+            ; other values are undead and can't be born
+        ; if it was really dead, is it born?
+        if pix[x,y-1] == 0 && B[sum] == 1
+          pix[x,y] = 1
+        ; if it was alive, does it survive?
+        elseif pix[x,y-1] == 1 && S[sum] == 1
+          pix[x,y] = 1
+        ; if it didn't survive or was already undead, age it
+        elseif pix[x,y-1] > 0
+          pix[x,y] = pix[x,y-1] +1
+          if pix[x,y] > C
+            pix[x,y] = 0
+          endif
+        endif          
+      endif
+      x=x+1
+    endwhile
+    y=y+1
+  endwhile
+  
+  ; copy the last row back to the top and go round again
+  if Iter < @Iterations-1
+    x=0
+    while x<#width
+      pix[x,0] = pix[x,(#height-1)]
+      x=x+1
+    endwhile
+  endif
+  Iter = Iter+1
+ endwhile
+  
+  
+final:
+  #index = pix[#x,#y]/MaxStates
+default:
+  title="Cellular Automata 3"
+
+  param Init
+    caption = "Initialisation"
+    enum = "Random" "Single point" "Chunk"
+    hint = "Different ways of starting the first line"
+  endparam
+  int param myseed
+    caption = "Random Seed"
+    default = 123456
+    visible = @Init == "Random"
+    hint = "Different random numbers"
+  endparam
+  int param RRange
+    caption =  "Random Scope"
+    default = 3
+    min = 3
+    max = 25
+    visible = @Init == "Random"
+    hint = "Different styles of randomness, 3 to 25"
+  endparam  
+  param Rule
+    caption = "Rule"
+    enum = "Custom" "Abacus" "Bonzai" "Champagne" "Class 4 a" "Class 4 b" \
+           "Date Palms" "Embossed Triangles" "Fences" "Forest" \
+           "Gears 1" "Gears 2" "Marvel" "Maze" "Noname 1" "Noname 2" \
+           "Pascal's Triangle" "Porridge" "Roots" "Shaded Triangles" \
+           "Skyscrapers" "The City" "Tulips" "Walls" "Wallpaper" \
+           "Wood Grain" "Zig Zag"
+    hint = "Built-in rule or 'Custom' to write your own"
+  endparam
+  int param Range
+    caption = "Rule range"
+    min = 2
+    default = 9
+    visible = @Rule == "Custom"
+  endparam
+  int param Depth
+    caption = "Rule depth"
+    max=25
+    default = 2
+    visible = @Rule == "Custom"
+  endparam
+  int param Births
+    caption = "Rule for cell birth"
+    min=0
+    default = 840
+    visible = @Rule == "Custom"
+  endparam
+  int param Survive
+    caption = "Rule for cell survival"
+    min=0
+    default = 13579
+    visible = @Rule == "Custom"
+  endparam  
+  int param Iterations
+    caption = "Iterations"
+    min = 1
+    hint = "Subsequent iterations use the bottom line to start again from the top \
+            which can get rid of the odd stuff at the top"
+  endparam  
+}
+mjw-CA-4 {
+; polychrome 1D totalistic Cellular Automata
+;
+; Note: This colouring doesn't work well if the Drawing Method of
+;       the formula is set to "Guessing"
+;
+; CA4 is just the same as CA3 except that it responds to magnifications,
+; rotations, mappings, etc. The cellular automaton is still calculated on
+; a fixed rectangular grid, so when you zoom in you'll see the square
+; shapes of the individual cells. When you zoom out, you can specify
+; whether the area outside the rectangle is filled with "solid" colour
+; or with a repeat of the pattern. The repeated pattern wraps seamlessly
+; horizontally but not vertically.
+;
+; Custom rules
+; ============
+;
+; Rule range: Specifies how many cells from the previous row are
+;             examined. If it's even, then the central cell is ignored.
+;             Higher values take longer to process
+;
+; Rule depth: It's probably best to leave this set to 2
+;
+; Rules for cell birth and survival:
+;             Consider these to be a sequence of separate integers.
+;             E.g. if the birth rule is "840" then an empty cell
+;             comes "alive" if zero, four or eight of the examined
+;             cells are alive.
+;
+; The defaults for the custom rule are the same as the "Bonzai" rule
+;
+; Built in rules
+; ==============
+;
+; The equivalent custom rule settings for some built-in rules are:
+;
+; Name                 Range   Depth   Birth   Survive
+;
+; Abacus               5       10      30      10
+; Bonzai               9        2      840     13579
+; Champagne            7        2      10      367
+; Class 4 a            5        2      234     13
+; Embossed Triangles   5        2      234     23
+; Fences               13      25      1478    350
+; Marvel               6        2      30      560
+; Maze                 7       10      1345    345
+; Noname 1             5        2      245     340
+; Noname 2             5       15      12      23
+; Pascal's Triangle    3        2      1       9
+; Porridge             3        2      20      30
+; Roots                9        2      346     12569
+; Shaded Triangles     7        3      34567   234560
+; The City             6        2      30      40
+; Walls                5       15      23      13
+; Wallpaper            3        2      30      2
+; Zig Zag              3       15      13      13
+
+
+
+global:
+  int seed = @myseed
+  int x=0, int y=0, int x1=0, int d=0, int sum=0
+  int pix[#width,#height]
+  int R=0, int C=0, int M=1
+  int S[100]
+  int B[100]
+  int MaxStates = 40
+  
+  int i=0
+  while i<100
+    S[i]=0
+    B[i]=0
+    i=i+1
+  endwhile
+
+  ; set up the rules
+  
+  if @Rule == "Custom"
+    M=@Range % 2
+    R=trunc(@Range/2)
+    C=@Depth
+    if C<2
+      C=2
+    endif    
+    int K = @Survive
+    while K > 0
+      S[K % 10] = 1
+      K = trunc(K/10)
+    endwhile
+    int K = @Births
+    while K > 0
+      B[K % 10] = 1
+      K = trunc(K/10)
+    endwhile
+    
+  elseif @Rule == "Abacus"
+    R=2, C=10, M=1
+    S[0]=1, S[1]=1
+    B[0]=1, B[3]=1
+  elseif @Rule == "Bonzai"
+    R=4, C=2, M=1
+    S[1]=1, S[3]=1, S[5]=1, S[7]=1, S[9]=1
+    B[0]=1, B[4]=1, B[8]=1
+  elseif @Rule == "Champagne"
+    R=3, C=2, M=1
+    S[3]=1, S[6]=1, S[7]=1
+    B[0]=1, B[1]=1
+  elseif @Rule == "Class 4 a"
+    R=2, C=2, M=1
+    S[1]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Class 4 b" 
+    R=6, C=2, M=1
+    S[3]=1, S[4]=1, S[5]=1, S[9]=1, S[11]=1, S[12]=1, S[13]=1
+    B[0]=1, B[1]=1, B[3]=1, B[13]=1
+  elseif @Rule == "Date Palms"
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[8]=1, S[9]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Embossed Triangles" 
+    R=2, C=2, M=1
+    S[2]=1, S[3]=1
+    B[2]=1, B[3]=1, B[4]=1
+  elseif @Rule == "Fences"
+    R=6, C=25, M=1
+    S[1]=1, S[4]=1, S[7]=1,S[8]=1
+    B[0]=1, B[3]=1, B[5]=1
+  elseif @Rule == "Forest"
+    R=10, C=2, M=0
+    S[1]=1, S[2]=1, S[6]=1, S[7]=1, S[9]=1, S[12]=1, S[14]=1, S[17]=1
+    B[1]=1, B[7]=1, B[11]=1, B[13]=1, B[15]=1, B[16]=1, B[17]=1, B[19]=1
+  elseif @Rule == "Gears 1" 
+    R=5, C=2, M=1
+    S[0]=1, S[7]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Gears 2" 
+    R=5, C=2, M=1
+    S[0]=1, S[6]=1, S[10]=1, S[11]=1
+    B[0]=1
+  elseif @Rule == "Marvel"
+    R=3, C=2, M=0
+    S[0]=1, S[5]=1, S[6]=1
+    B[0]=1, B[3]=1
+  elseif @Rule == "Maze"
+    R=3, C=10, M=1
+    S[3]=1, S[4]=1, S[5]=1
+    B[1]=1, B[3]=1, B[4]=1, B[5]=1
+  elseif @Rule == "Noname 1"
+    R=2, C=2, M=1
+    S[0]=1, S[3]=1, S[4]=1
+    B[2]=1, B[4]=1, B[5]=1
+  elseif @Rule == "Noname 2"
+    R=2, C=15, M=1
+    S[2]=1, S[3]=1
+    B[1]=1, B[2]=1
+  elseif @Rule == "Pascal's Triangle" 
+    R=1, C=2, M=1, B[1]=1
+  elseif @Rule == "Porridge"
+    R=1, C=2, M=1
+    S[0]=1, S[3]=1
+    B[0]=1, B[2]=1
+  elseif @Rule == "Roots"
+    R=4, C=2, M=1
+    S[1]=1, S[2]=1, S[5]=1, S[6]=1, S[9]=1
+    B[3]=1, B[4]=1, B[6]=1
+  elseif @Rule == "Shaded Triangles"
+    R=3, C=3, M=1
+    S[0]=1, S[2]=1, S[3]=1, S[4]=1, S[5]=1, S[6]=1
+    B[3]=1, B[4]=1, B[5]=1, B[6]=1, B[7]=1
+  elseif @Rule == "Skyscrapers"
+    R=6, C=10, M=1
+    S[2]=1, S[4]=1, S[6]=1, S[7]=1, S[8]=1, S[11]=1, S[13]=1
+    B[0]=1, B[1]=1, B[3]=1, B[8]=1, B[12]=1
+  elseif @Rule == "The City"
+    R=3, C=2, M=0
+    S[0]=1, S[3]=1
+    B[0]=1, B[4]=1
+  elseif @Rule == "Tulips"
+    R=10, C=2, M=1
+    S[0]=1, S[3]=1, S[6]=1, S[10]=1, S[14]=1, S[15]=1
+    S[16]=1, S[17]=1, S[18]=1, S[19]=1, S[20]=1, S[21]=1
+    B[1]=1, B[11]=1, B[12]=1, B[17]=1, B[18]=1, B[19]=1
+    B[20]=1, B[21]=1
+  elseif @Rule == "Walls"
+    R=2, C=15, M=1
+    S[2]=1, S[3]=1
+    B[1]=1, B[3]=1
+  elseif @Rule == "Wallpaper"
+    R=1, C=2, M=1
+    S[2]=1, B[0]=1, B[3]=1
+  elseif @Rule == "Wood Grain"
+    R=8, C=3, M=0
+    S[1]=1, S[2]=1, S[4]=1, S[6]=1, S[7]=1, S[10]=1
+    S[12]=1, S[13]=1, S[14]=1
+    B[0]=1, B[2]=1, B[3]=1, B[4]=1, B[5]=1, B[6]=1
+    B[7]=1, B[10]=1, B[11]=1, B[13]=1, B[15]=1
+  elseif @Rule == "Zig Zag"
+    R=1, C=15, M=1
+    S[1]=1, S[3]=1
+    B[1]=1, B[3]=1
+  endif
+
+  if @Init == "Random"
+    ;randomize the y=0 row
+    x=0
+    while x<#width
+      seed = random(seed)
+      pix[x,0] = abs(seed)%@RRange
+      x=x+1
+    endwhile
+  elseif @Init == "Single Point"
+    ; single central pixel
+    x=0
+    while x<#width
+      pix[x,0] = 0
+    x=x+1
+    endwhile
+    pix[trunc(#width/2),0] = 1
+  else
+    x=0
+    while x<#width
+      if x<#width/4 || x>3*#width/4
+        pix[x,0] = 0
+      else
+        pix[x,0] = 1
+      endif
+    x=x+1
+    endwhile
+  endif
+
+ int Iter = 0
+ while Iter < @Iterations
+  ;caclulate the following rows
+  y=1
+  while y<#height
+    x=0
+    while x<#width
+      pix[x,y]=0
+      sum=0
+      d=-R
+      ; count the totalistic sum
+      while d <= R
+        x1 = x+d
+        ; wrap round the edges
+        if x1<0
+          x1=x1+#width
+        endif
+        if x1 >= #width
+          x1 = x1 - #width
+        endif
+        if ((pix[x1,y-1]>0 && C<3) || (pix[x1,y-1]==1 && C>2)) \
+        && (M==1 || d!=0)
+          sum = sum + 1
+        endif
+        d=d+1
+      endwhile
+
+      ; case 1 - no history (but live cells change colour)
+      if C<3
+        ; if it was alive, does it survive?
+        if pix[x,y-1] > 0 && S[sum] == 1
+          pix[x,y] = pix[x,y-1] +1
+          if pix[x,y] >= MaxStates
+            pix[x,y] = MaxStates - 1
+          endif
+        ; if it was dead, is it born?
+        elseif pix[x,y-1] == 0 && B[sum] == 1
+          pix[x,y] = 1
+        else
+          pix[x,y] = 0
+        endif          
+      else  ; case 2 - history active - only state 1 is alive
+            ; and only 0 is really dead
+            ; other values are undead and can't be born
+        ; if it was really dead, is it born?
+        if pix[x,y-1] == 0 && B[sum] == 1
+          pix[x,y] = 1
+        ; if it was alive, does it survive?
+        elseif pix[x,y-1] == 1 && S[sum] == 1
+          pix[x,y] = 1
+        ; if it didn't survive or was already undead, age it
+        elseif pix[x,y-1] > 0
+          pix[x,y] = pix[x,y-1] +1
+          if pix[x,y] > C
+            pix[x,y] = 0
+          endif
+        endif          
+      endif
+      x=x+1
+    endwhile
+    y=y+1
+  endwhile
+  
+  ; copy the last row back to the top and go round again
+  if Iter < @Iterations-1
+    x=0
+    while x<#width
+      pix[x,0] = pix[x,(#height-1)]
+      x=x+1
+    endwhile
+  endif
+  Iter = Iter+1
+ endwhile
+  
+  
+final:
+  float Q = #height/#width
+  int ix = trunc(((real(#pixel)+2)/4)*#width)
+  int iy = trunc(((-imag(#pixel)+2*Q)/4)*#width)
+  if @Edges == "Use Solid"
+    if ( ix<0 || ix>=#width || iy<0 || iy >=#height)
+      #solid = true
+    else
+      #index = pix[ix,iy]/MaxStates
+    endif
+  else
+    while (ix < 0) 
+      ix=ix+#width 
+    endwhile
+    while (iy < 0)
+      iy=iy+#height 
+    endwhile
+    #index = pix[ix%#width,iy%#height]/MaxStates
+  endif
+    
+default:
+  title="Cellular Automata 4"
+
+  param Init
+    caption = "Initialisation"
+    enum = "Random" "Single point" "Chunk"
+    hint = "Different ways of starting the first line"
+  endparam
+  int param myseed
+    caption = "Random Seed"
+    default = 123456
+    visible = @Init == "Random"
+    hint = "Different random numbers"
+  endparam
+  int param RRange
+    caption =  "Random Scope"
+    default = 3
+    min = 3
+    max = 25
+    visible = @Init == "Random"
+    hint = "Different styles of randomness, 3 to 25"
+  endparam  
+  param Rule
+    caption = "Rule"
+    enum = "Custom" "Abacus" "Bonzai" "Champagne" "Class 4 a" "Class 4 b" \
+           "Date Palms" "Embossed Triangles" "Fences" "Forest" \
+           "Gears 1" "Gears 2" "Marvel" "Maze" "Noname 1" "Noname 2" \
+           "Pascal's Triangle" "Porridge" "Roots" "Shaded Triangles" \
+           "Skyscrapers" "The City" "Tulips" "Walls" "Wallpaper" \
+           "Wood Grain" "Zig Zag"
+    hint = "Built-in rule or 'Custom' to write your own"
+  endparam
+  int param Range
+    caption = "Rule range"
+    min = 2
+    default = 9
+    visible = @Rule == "Custom"
+  endparam
+  int param Depth
+    caption = "Rule depth"
+    max=25
+    default = 2
+    visible = @Rule == "Custom"
+  endparam
+  int param Births
+    caption = "Rule for cell birth"
+    min=0
+    default = 840
+    visible = @Rule == "Custom"
+  endparam
+  int param Survive
+    caption = "Rule for cell survival"
+    min=0
+    default = 13579
+    visible = @Rule == "Custom"
+  endparam  
+  int param Iterations
+    caption = "Iterations"
+    min = 1
+    hint = "Subsequent iterations use the bottom line to start again from the top \
+            which can get rid of the odd stuff at the top"
+  endparam  
+  param Edges
+    caption = "Edges"
+    enum = "Use Solid" "Repeat"
+  endparam
+}

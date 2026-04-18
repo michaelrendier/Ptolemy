@@ -1,0 +1,8195 @@
+comment {
+If you had made something good out of this I WANT TO SEE IT.
+So please share it here:
+http://edo555.deviantart.com/
+
+I have no idea about images being made by my formulas
+alsou that could be the only profit of this.
+...
+Fractal equation developed by Edgar Malinovsky.
+Included my found formulas. 
+Tried to code as user friendly and fast as could.
+
+Includes:
+- Malinovsky Deco Fractal M and J sets (mandelbrot like fractal)
+- Menorah fractal. Infinite candlestick fractal.
+- Fractal StarBrot (star made of mandelbrots). J set included.
+- VectorMandelBrot & julia (tweak generating floral set or set with rings or squares).
+all research is going on here:
+ http://www.fractalforums.com/new-theories-and-research/is-there-anything-novel-left-to-do-in-m-like-escape-time-fractals-in-2d/  
+- Newtonian Nova Moon. Reveals crescents. J set switch in formula.
+- Zuzubrot. Checkuered squares and crosses. J switch in formula.
+- Walbrot. 4 formulas of fractals of very complex geometry. 
+- Quadratic General. Generalisation of other formulas, on real numbers, good for square patterns.
+- Kalisetes Sefirii. 7 equations of ducks like space filling patterns of kaliset concept. Good julias. 
+}
+
+MalinovskyDecoFractal {
+; z=z*sinh(z)-c^2 or  z=z^(n-1)*sinh(z)-c^n
+; Had written this formula more than 5 years agou for Fractal Explorer.
+; with my name but deco sounds nice.
+; Mandelbrot like set with sinh function.
+; Features small julia satelites flying around the main set and
+; more julias around julia each with mandelbrot at it's core + leave pattern.
+; by Edgars Malinovskis 15. 01. 2012
+
+; 13.10.2012. + pixel mapping function.		
+
+; 05.11.2013.
+;+ more bailout options, so then with oldz
+;+ Phoenix/ Manowar version could be made, fisheye and nicer interface.
+
+; http://edo555.deviantart.com/
+global:
+int zpower=@power-1
+float fisheyeplus=@fishstrenght+1
+
+init:
+complex c=#pixel
+
+IF (@usefisheye)
+c=(@fishstrenght+cabs(c) )/fisheyeplus*c
+ENDIF
+
+IF (@pixelstart)
+z=c
+z=@func_post(z)
+ELSE
+z=@start
+ENDIF
+
+IF (@inverted)
+c=@func_post(c)
+c=1/c^@power
+ELSE
+c=@func_post(c)
+c=c^@power
+ENDIF
+
+bool bailed = FALSE
+complex oldz=z
+complex oldestz=z
+
+loop:
+
+oldestz=oldz
+oldz=z
+
+; core formula, rest are modifications
+z = Sinh(z)*z^zpower - c
+
+IF (@mwphoenix==1)
+z=z+oldz
+ELSEIF (@mwphoenix==2)
+z=z+oldz*@distortion
+ELSEIF (@mwphoenix==3)
+z=z+oldz*@distortion +oldestz*@distortion2
+ENDIF
+
+;Burning ship version:
+IF (@absfractal)
+z=abs(z)
+ENDIF
+
+
+
+;here comes bailout
+IF (@bailoutcondition==0)
+; this bailout generates leave pattern as do formula
+	IF (abs(real(z))+abs(imag(z)) > @bailout)
+	bailed=TRUE
+	ENDIF
+ELSEIF (@bailoutcondition==1)
+
+	IF( |z| > @bailout)
+	bailed=TRUE
+	ENDIF
+ELSEIF (@bailoutcondition==2)
+
+	IF(|z| > @bailout || |z - oldz| < @lowerbailout)
+	bailed=TRUE
+	ENDIF
+ENDIF
+
+bailout:
+bailed==FALSE
+
+default:
+title = "MalinovskyDecoFractal"
+magn = 0.8
+rating = recommended
+periodicity = 0
+  
+heading
+caption = "http://edo555.deviantart.com/"
+endheading
+  
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+param pixelstart
+caption ="initial Z = pixel"
+default = FALSE
+hint="Starts with initial z = pixel instead of 0 as did older soft. Generating broken lake in corners as did the original implementation. Aka mathematically incorrect but more features."
+endparam
+
+param start
+caption = "Starting Point"
+default = (0,0)
+hint = "The starting point can be used to distort the set."
+visible = (@pixelstart == FALSE)
+endparam
+  
+heading
+caption = "bailouts"
+endheading
+
+param bailoutcondition
+caption = "Bailout Type"
+default=0
+enum = "SumOfAbsolutes" "Modulus (squared)" "Dual"
+hint="Allows to chose bailout condition. Modulus squared |z| is a tradition from Fractint thus some color methods could work better with it. Dual is simmilar to that of magnet."
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 777
+min = 1
+hint = "This parameter defines how soon an orbit bails out while iterating. Large values reveals satelite julias."
+endparam
+
+param lowerbailout
+caption = "Convergent bailout"
+default = 0.00005
+min = 0
+visible = (@bailoutcondition==2)
+hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+endparam
+
+heading
+caption = "mutations"
+endheading
+
+param absfractal
+caption="Abs/Burning Ship"
+default=FALSE
+endparam
+
+param mwphoenix
+caption="Phoenix/Manowar"
+default=0
+enum="None" "Manowar" "Phoenix" "Simurgh"
+hint="Adds oldz, thus it works like Phoenix or Manowar formulas"
+endparam
+
+float param distortion
+visible=(@mwphoenix==2 || @mwphoenix==3)
+    caption = "Distortion"
+    default = 0.5
+    hint = "Sets how 'strong' the previous iteration's effect should be on the fractal. 1 is manowar."
+  endparam
+
+float param distortion2
+visible=( @mwphoenix==3)
+    caption = "Distortion 2"
+    default = -0.25
+    hint = "Sets how 'strong' the second previous iteration's effect should be on the fractal."
+  endparam
+
+param inverted
+caption ="Inverted Set (recip of pixel mapping)"
+default = FALSE
+hint="The same as circle invere. Unlike pixel mapping this changes c, so inverted m-set is map for julia sets."
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param usefisheye
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to mapping (pixel values)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@usefisheye)
+default=2
+hint="Denomintor, decreesing value increases effect."
+endparam
+
+heading
+caption = "Info"
+text = "Default it's z=z*sinh(z)-c^2 or  z=z^(n-1)*sinh(z)-c^n Mandelbrot like fractal with mirriads of small julialike satelites at every level of zoom. With large bailout value artefacts appears, that's becouse then the involved hyperbolic function requires Additional Precision."
+endheading
+
+switch:
+type="MalinovskyDecoFractal_julia"
+julparam=#pixel
+power=power
+bailout=bailout
+inverted=inverted
+absfractal=absfractal
+func_post=func_post
+pixelstart=pixelstart
+bailoutcondition=bailoutcondition
+lowerbailout=lowerbailout
+mwphoenix=mwphoenix
+distortion=distortion
+distortion2=distortion2
+usefisheye=usefisheye
+fishstrenght=fishstrenght
+}
+
+
+MalinovskyDecoFractal_julia {
+; z=z*sinh(z)-c^2 or  z=z^(n-1)*sinh(z)-c^n
+; Had written this formula more than 5 years agou for Fractal Explorer.
+; Mandelbrot like set with sinh function.
+; Features small julia satelites flying around main julia set  
+; each with slightly differet shape + leave pattern.
+; by Edgars Malinovskis 15. 01. 2012
+
+; 13.10.2012. + pixel mapping function.		
+
+; 05.11.2013.
+;+ more bailout options, so then with oldz
+;+ Phoenix/ Manowar version could be made, fisheye and nicer interface.
+
+; http://edo555.deviantart.com/
+global:
+int zpower=@power-1
+float fisheyeplus=@fishstrenght+1
+
+init:
+IF (@inverted)
+complex c=1/@julparam^@power
+ELSE
+complex c=@julparam^@power
+ENDIF
+
+IF (@usefisheye)
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+z=#pixel
+ENDIF
+
+z=@func_post(z)
+
+bool bailed = FALSE
+complex oldz=z
+complex oldestz=z
+
+loop:
+oldestz=oldz
+oldz=z
+
+;core formula, rest are modifications
+z = Sinh(z)*z^zpower - c
+
+IF (@mwphoenix==1)
+z=z+oldz
+ELSEIF (@mwphoenix==2)
+z=z+oldz*@distortion
+ELSEIF (@mwphoenix==3)
+z=z+oldz*@distortion +oldestz*@distortion2
+ENDIF
+
+;Burning ship version:
+IF (@absfractal)
+z=abs(z)
+ENDIF
+
+;here comes bailout
+IF (@bailoutcondition==0)
+; this bailout generates leave pattern as do formula
+	IF (abs(real(z))+abs(imag(z)) > @bailout)
+	bailed=TRUE
+	ENDIF
+ELSEIF (@bailoutcondition==1)
+
+	IF( |z| > @bailout)
+	bailed=TRUE
+	ENDIF
+ELSEIF (@bailoutcondition==2)
+
+	IF(|z| > @bailout || |z - oldz| < @lowerbailout)
+	bailed=TRUE
+	ENDIF
+ENDIF
+
+bailout:
+bailed==FALSE
+
+default:
+title = "MalinovskyDecoFractal Julia"
+magn = 1.0
+periodicity = 0
+
+heading
+caption = "http://edo555.deviantart.com/"
+endheading
+
+int param power
+caption = "Power n"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+heading
+caption = "Julia"
+endheading
+
+complex param julparam
+caption="Julia Seed"
+default=(0,0.5)
+endparam
+
+heading
+caption = "bailouts"
+endheading
+
+param bailoutcondition
+caption = "Bailout Type"
+default=0
+enum = "SumOfAbsolutes" "Modulus (squared)" "Dual"
+hint="Allows to chose bailout condition. Modulus squared |z| is a tradition from Fractint thus some color methods could work better with it. Dual is simmilar to that of magnet."
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 777
+min = 1
+hint = "This parameter defines how soon an orbit bails out while iterating. Large values reveals satelite julias."
+endparam
+
+param lowerbailout
+caption = "Convergent bailout"
+default = 0.00005
+min = 0
+visible = (@bailoutcondition==2)
+hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+endparam
+
+heading
+caption = "mutations"
+endheading
+
+param absfractal
+caption="Abs/Burning Ship"
+default=FALSE
+endparam
+
+param mwphoenix
+caption="Phoenix/Manowar"
+default=0
+enum="None" "Manowar" "Phoenix" "Simurgh"
+hint="Adds oldz, thus it works like Phoenix or Manowar formulas"
+endparam
+
+float param distortion
+visible=(@mwphoenix==2 || @mwphoenix==3)
+    caption = "Distortion"
+    default = 0.5
+    hint = "Sets how 'strong' the previous iteration's effect should be on the fractal. 1 is manowar."
+  endparam
+
+float param distortion2
+visible=( @mwphoenix==3)
+    caption = "Distortion"
+    default = -0.25
+    hint = "Sets how 'strong' the second previous iteration's effect should be on the fractal."
+  endparam
+
+param inverted
+caption ="Inverted set"
+default = FALSE
+hint="The same as circle invere. Unlike pixel mapping this changes c, so inverted m-set is map for julia sets."
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param usefisheye
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to mapping (pixel values)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@usefisheye)
+default=2
+hint="Denomintor, decreesing value increases effect."
+endparam
+
+param pixelstart
+caption ="initial Z = pixel"
+default = FALSE
+visible=FALSE
+hint="Starts with initial z = pixel instead of 0 as did older soft. Generating broken lake in corners as did the original implementation. Aka mathematically incorrect but more features."
+endparam
+
+heading
+caption = "Info"
+text = "Default it's z=z*sinh(z)-c^2 or  z=z^(n-1)*sinh(z)-c^n Mandelbrot like fractal with mirriads of small julialike satelites at every level of zoom. With large bailout value artefacts appears, that's becouse then the involved hyperbolic function requires Additional Precision."
+endheading
+
+switch:
+type="MalinovskyDecoFractal"
+power=power
+bailout=bailout
+inverted=inverted
+func_post=func_post
+pixelstart=pixelstart
+absfractal=absfractal
+bailoutcondition=bailoutcondition
+lowerbailout=lowerbailout
+mwphoenix=mwphoenix
+distortion=distortion
+distortion2=distortion2
+usefisheye=usefisheye
+fishstrenght=fishstrenght
+}
+
+
+MenorahFractal {
+; Generates infinite fractal, requires zoom out.
+; Hyperbolic inverted variation on Fractal Explorer version of Fractint spider formula.
+; Exponent larger than 2 needs real negative N, at least -3.
+
+; c=1/pixel 	loop:
+; z= z^power+c+1/pixel
+; c= (0.5+N)*c+z
+; by Edgars Malinovskis 15. 01. 2012
+
+; http://edo555.deviantart.com/
+global:
+complex w=@multi*0.02+0.5
+
+init:
+complex c= 1/#pixel
+z= c
+complex p= c
+
+loop:
+z= z^@power+c+p
+c= w*c+z
+
+bailout:
+; this bailout generates leave pattern
+abs(real(z))+abs(imag(z)) < @bailout
+
+default:
+title = "Menorah Fractal"
+magn = 0.1
+periodicity = 0
+maxiter = 250
+
+int param power
+caption = "Power"
+default = 2
+min = 2
+hint = "This parameter sets the exponent for an equation."
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating. Zoom out requires large value."
+endparam
+
+heading
+caption = "Multiplicator N"
+text = "Adds 1/50 to a factor. Negative N increases fractal, so Power >2 requires negative real N, at least -3."
+endheading
+
+param multi
+caption = "Multiplicator N"
+default = (0,0)
+endparam
+}
+
+
+StarBrot {
+; Star generated by polynomial z=z/K-z^n+1/c
+; Nice before winter holly-days. Insides are turned out, 
+; so inside coluring paints outside. Main intrest are shape. 
+; Star sides are exponent n -1. Julias are pretty ordinar.
+; by Edgars Malinovskis 15. 01. 2012
+
+; + inside switch and more fun but strange julias. 21. 04. 2012. 
+
+; http://edo555.deviantart.com/
+init:
+IF (@settype=="Mandelbrot type")
+complex c=1/#pixel
+z=0
+ELSE
+complex c=1/@julia
+z=1/#pixel
+ENDIF
+
+loop:
+z = z/@geometry - z^@power + c
+
+bailout:
+|z| < @bailout
+
+default:
+title = "StarBrot"
+magn = 0.4
+periodicity = 0
+  
+int param power
+caption = "Power exponent n"
+default = 7
+hint = "power 7 generates 6 sided star aka MogenDavid. 6 degree polynomial - 5 sided star."
+endparam
+  
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+endparam
+
+complex param geometry
+caption = "Star Geometry"
+default = (2.0,0)
+hint = "Divisor K influences star geometry. imag values curves set"
+endparam
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+param julia
+caption = "Julia Seed"
+default = (-1.5,0)
+visible = (@settype == "Julia type")
+endparam
+
+switch:
+type="StarBrot"
+julia=#pixel
+power=power
+geometry=geometry
+bailout=bailout
+settype= switchsettype
+switchsettype=settype
+}
+
+
+VectorMandelBrot {
+; Mandelbrot variation, in each iteration adding value to the unit vector
+; Factor 0.15 generates grass like fractals, -0.3 mandelbrots with rings
+; -1 reveals julias made out of rings. Imaginary values rotates things.
+; Quite nicely implemented by Kerry Mitchell,
+; but before square equation;)
+; Interesting enought, cabs |function| using 8 power creates different results than standart square cabs.
+
+; by Edgars Malinovskis 15. 01. 2012
+;You may redistribute this algorithm, modify, derivate or use comercialy
+; as you wish as long as you give proper credits.
+
+;+ added ideas found Tobby Marshall 's "Unit Vector Explorer". Simpler so easyer to use;)
+; Z/cabs(Z) are analytical, others are not.
+
+; + Rewritten unit vector addition formula backwards as it calculates faster. 05.03.2012
+
+; 13.10.2012. + pixel mapping function.	
+;+ full supermodulus shape (contains all ring pow=2 , abs square pow=1 and pow8 shapes and more)
+
+; http://edo555.deviantart.com/
+
+global:
+float invmodpower=recip(@modpower)
+
+init:
+IF (@inverted)
+complex c=@func_post(#pixel)
+c=1/c
+ELSE
+complex c=@func_post(#pixel)
+c=c
+ENDIF
+z= @start
+
+loop:
+z = z^@power + c
+
+IF (@vectype=="ring by cabs")
+z = z/cabs(z) * @vfactor + z
+
+ELSEIF (@vectype=="square by abs(r)+abs(i)" )
+z =z/(abs(real(z))+abs(imag(z))) * @vfactor + z
+
+ELSEIF (@vectype=="cosine by cabs" && cabs(z) != 0)
+z = cos(z/cabs(z) ) * @vfactor + z
+
+ELSEIF (@vectype=="by power 8 modulus" )
+z = z/( (real(z)^8+imag(z)^8)^0.125 ) * @vfactor + z
+; why does cabs function using power 8 gives result other than using 2???
+
+; Now I found why, becouse it is the superelipse shape.
+
+ELSEIF (@vectype=="+Z/acosH(Z)")
+z =z/acosh(z) * @vfactor + z
+
+ELSEIF (@vectype=="xZ/cabs(Z)")
+z = z/cabs(z) *z
+
+ELSEIF (@vectype=="+Z/log(Z)")
+z =z/log(z) * @vfactor + z
+
+ELSEIF (@vectype=="z/supermodulus")
+
+; generates just everything what is in the category of superelipse
+
+complex radius = ( abs(real(z))^@modpower + abs(imag(z))^@modpower )^(invmodpower)
+
+z =z/radius * @vfactor + z
+
+ENDIF
+
+bailout:
+|z| < @bailout
+
+default:
+title = "VectorMandelBrot"
+magn = 0.7
+center = (-0.5, 0)
+periodicity = 0
+maxiter = 250
+helptopic="http://www.fractalforums.com/new-theories-and-research/is-there-anything-novel-left-to-do-in-m-like-escape-time-fractals-in-2d/msg38948/#newinit:"
+  
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+  
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Unit Vector"
+text = "Tweak being calculated together with main equation. Small positive values generates grass like fractals, small negative value circles. -1 julias made of rings."
+endheading
+
+param vectype
+caption="Vector Equation Type"
+default=0
+enum="ring by cabs" "square by abs(r)+abs(i)" "cosine by cabs" "by power 8 modulus" "+Z/acosH(Z)" "xZ/cabs(Z)" "+Z/log(Z)" "z/supermodulus"
+endparam
+
+complex param vfactor
+caption = "Vector Tweak Factor"
+default=(-0.4, 0)
+visible = (@vectype != "xZ/cabs(Z)")
+endparam
+
+float param modpower
+caption = "sModulus power"
+default= 0.5
+visible = (@vectype == "z/supermodulus")
+endparam
+
+bool param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse. Unlike pixel mapping it inverses c, so m-set is map for julia sets."
+endparam
+
+complex  param start
+caption = "Starting Point"
+default = (0,0)
+hint = "The starting point parameter can be used to distort the set."
+endparam
+  
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+  
+switch:
+type="VectorMandelJulia"
+julia=#pixel
+power=power
+bailout=bailout
+inverted=inverted
+vectype=vectype
+vfactor=vfactor
+func_post=func_post
+modpower=modpower
+}
+
+
+VectorMandelJulia {
+; Mandelbrot variation, in each iteration adding value to the unit vector
+; Factor 0.15 generates floral fractals, -0.3 mandelbrots with rings
+; -1 reveals julias made of rings.
+; Quite nicely implemented by Kerry Mitchell,
+; but before square equation;)
+
+; by Edgars Malinovskis 15. 01. 2012
+;You may redistribute this algorithm, modify, derivate or use comercialy
+; as you wish as long as you give proper credits.
+
+;+ added ideas found Tobby Marshall 's "Unit Vector Explorer". Simpler so easyer to use;)
+; Z/cabs(Z) are analytical, others are not.
+
+; + Rewritten unit vector addition formula backwards as it calculates faster. 05.03.2012
+
+; 13.10.2012. + pixel mapping function.	
+;+ full supermodulus shape (contains all ring pow=2 , abs square pow=1 and pow8 shapes and more)
+
+; http://edo555.deviantart.com/
+
+global:
+float invmodpower=recip(@modpower)
+
+init:
+IF (@inverted)
+complex c=1/@julia
+ELSE
+complex c=@julia
+ENDIF
+z= #pixel
+z=@func_post(z)
+
+loop:
+z = z^@power + c
+
+IF (@vectype=="ring by cabs")
+z = z/cabs(z) * @vfactor + z
+
+ELSEIF (@vectype=="square by abs(r)+abs(i)" )
+z =z/(abs(real(z))+abs(imag(z))) * @vfactor + z
+
+ELSEIF (@vectype=="cosine by cabs" && cabs(z) != 0)
+z = cos(z/cabs(z) ) * @vfactor + z
+
+ELSEIF (@vectype=="by power 8 modulus" )
+z = z/( (real(z)^8+imag(z)^8)^0.125 ) * @vfactor + z
+; why does cabs function using power 8 gives result other than using 2???
+
+; Now I found why, becouse it is the superelipse shape.
+
+ELSEIF (@vectype=="+Z/acosH(Z)")
+z =z/acosh(z) * @vfactor + z
+
+ELSEIF (@vectype=="xZ/cabs(Z)")
+z = z/cabs(z) *z
+
+ELSEIF (@vectype=="+Z/log(Z)")
+z =z/log(z) * @vfactor + z
+
+ELSEIF (@vectype=="z/supermodulus")
+
+; generates just everything what is in the category of superelipse
+
+complex radius = ( abs(real(z))^@modpower + abs(imag(z))^@modpower )^(invmodpower)
+
+z =z/radius * @vfactor + z
+
+ENDIF
+bailout:
+|z| < @bailout
+
+default:
+title = "VectorMandelJulia"
+magn = 0.9
+periodicity = 0
+maxiter = 250
+helptopic="http://www.fractalforums.com/new-theories-and-research/is-there-anything-novel-left-to-do-in-m-like-escape-time-fractals-in-2d/msg38948/#newinit:"
+  
+int param power
+caption = "Power"
+default = 3
+hint = "This parameter sets the exponent for the formula."
+endparam
+  
+float param bailout
+caption = "Bailout value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(1.443,1.6)
+endparam
+
+heading
+caption = "Unit Vector"
+text = "Tweak being calculated together with main equation. -1 generates julias made of rings or squares, small positive values - floral julias."
+endheading
+
+param vectype
+caption="Vector Equation Type"
+default=0
+enum="ring by cabs" "square by abs(r)+abs(i)" "cosine by cabs" "by power 8 modulus" "+Z/acosH(Z)" "xZ/cabs(Z)" "+Z/log(Z)" "z/supermodulus"
+endparam
+
+complex param vfactor
+caption = "Vector Tweak Factor"
+default=(-1, 0)
+hint="0.15 makes grass fractal, -0.3 rings, -1 julias of rings, imaginary values curves the set"
+visible = (@vectype != "xZ/cabs(Z)")
+endparam
+
+float param modpower
+caption = "sModulus power"
+default=0.75
+visible = (@vectype == "z/supermodulus")
+endparam
+
+bool param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse. Unlike pixel mapping it inverses c, so m-set is map for julia sets."
+endparam
+  
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+  
+switch:
+type="VectorMandelBrot"
+power=power
+bailout=bailout
+inverted=inverted
+vectype=vectype
+vfactor=vfactor
+func_post=func_post
+modpower=modpower
+}
+
+
+NwtonMoon {
+; Moon generated by inverted newtonian mandelbrot
+; z=(K+1)*z- (z^N - z)/(N*z^(N-1)-1) + 1/C
+; Circle inverse with Nova are pretty similar, but unlike
+; nova higher powers produce more but flatter lunas. 
+; by Edgars Malinovskis 19. 01. 2012
+
+;Based on Fractal Explorer version and not on the standart UF.
+;+ Added julia/mandel switch from code of Tobby Marshall. 04.03.2012.
+
+; http://edo555.deviantart.com/
+
+global:
+;trying to fasten up calculation
+int power2=@coefPow-1
+complex geometry= @coefLunar+1
+float nwtbailout=0.0001/@bailout
+float fisheyeplus=@fishstrenght+1
+
+init:
+
+complex c=#pixel
+IF (@usefisheye)
+c=(@fishstrenght+cabs(c) )/fisheyeplus*c
+ENDIF
+
+IF (@settype=="Mandelbrot type")
+c=1/c
+z=0
+complex z0=(0, 0)
+ELSE
+;julia set, switch c and z
+z=c
+c=1/@julia
+complex z0=(0, 0)
+ENDIF
+
+loop:
+z0=z;
+z=geometry*z- (z^@coefPow-z)/(@coefPow*z^(power2)-1) + c
+	IF (@LunarVector!=0)
+	z=(z/(1+cabs(z))) * @LunarVector +z; pseudo unit vector for newton
+	ENDIF
+
+bailout:
+(|z-z0|>nwtbailout)
+
+default:
+title = "Newtonian Nova Moon"
+magn = 0.4
+periodicity = 0
+  
+int param coefPow
+caption = "Power Exponent N"
+default = 2
+endparam
+
+heading
+caption = "Info"
+text = "Bailout increases inside size, max iter decreases."
+endheading  
+
+float param bailout
+caption = "Bailout Value"
+default = 100.0
+min = 1.0
+endparam
+
+complex param coefLunar
+caption = "Lunar Geometry K"
+default = (0,0)
+hint = "Factor K influences lunar geometry"
+endparam
+
+float param LunarVector
+caption = "+Vector Tweak"
+default = 0.0
+hint = "Pseudo unit vector for Moon. If zero, it isn't calculated."
+endparam
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+param julia
+caption = "Julia Seed"
+default = (3.5, 0.3)
+visible = (@settype == "Julia type")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param usefisheye
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to mapping (pixel values)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@usefisheye)
+default=4
+hint="Denomintor, decreesing value increases effect."
+endparam
+
+switch:
+type="NwtonMoon"
+julia=#pixel
+coefPow=coefPow
+coefLunar=coefLunar
+bailout=bailout
+LunarVector=LunarVector
+settype= switchsettype
+switchsettype=settype
+usefisheye=usefisheye
+fishstrenght=fishstrenght
+}
+
+
+Bumblebrot {
+; This code implements two fractal equations.
+; 1st one have quite an interesting shape. Zoomed it have 
+; typical features. + 2 nice types of julias.
+; Main interest of 2nd, the Tricorn are its shape,
+; inverted >3 power versions looks as flowers.
+; But some julias are pretty nice too.
+
+; Unit vector make fractals look more floral.
+; 
+; by Edgars Malinovskis 23. 01. 2012
+
+;
+; - Switchable julia set inside of formula.
+; + Changable factor for bumblebrot, so more shapes. 26.04.2012.
+
+; http://edo555.deviantart.com/
+
+global:
+int zpower=@power-1
+
+init:
+float unit = 0
+complex c=0
+
+IF (@MJsettype=="Mandelbrot")
+IF (@inverted)
+c=1/#pixel
+ELSE
+complex c=#pixel
+ENDIF
+z=0
+
+ELSEIF (@MJsettype=="Julia")
+IF (@inverted)
+z= 1/#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julparam
+ENDIF
+
+loop:
+
+IF (@settype == 0)
+z= flip( sqr(z^@power/( @talisfactor +z^zpower)+c) )
+ELSE
+z= flip(z^@power)+c
+ENDIF
+
+IF (@vectype == "z/cabs(z)")
+unit = cabs(z)
+IF (unit != 0)
+z=z/unit * @vfactor+z
+ENDIF
+ENDIF
+
+bailout:
+|z| < @bailout
+
+default:
+title = "Bumblebrot"
+magn = 0.8
+periodicity = 0
+  
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param settype
+caption="Use Equation"
+default=0
+enum="Bumblebrot" "Multicorn" 
+endparam
+
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+param MJsettype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia" 
+endparam
+
+param switchMJsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julparam
+caption="Julia Seed"
+default=(0.44,0.55)
+visible = (@MJsettype=="Julia")
+endparam
+
+param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse but implemented in equation."
+endparam
+ 
+complex param talisfactor
+caption = "Talis Factor"
+default = (1,1);
+hint = "Factor T in equation z=flip(  z^2/(z+T) +c  )^2.  Influences angle and shape of the fractal.  If coefficient is 0,0 fractal have ordinary tricorn shape."
+visible = (@settype=="Bumblebrot")
+endparam
+
+param vectype
+caption="Unit Vector"
+default=0
+enum="None" "z/cabs(z)" 
+endparam
+
+complex param vfactor
+caption = "Vector Tweak Factor"
+default=(0.2,0)
+visible = (@vectype=="z/cabs(z)")
+endparam
+
+switch:
+type="Bumblebrot"
+julparam=#pixel
+power=power
+bailout=bailout
+inverted=inverted
+vectype=vectype
+vfactor=vfactor
+settype=settype
+MJsettype=switchMJsettype
+switchMJsettype=MJsettype
+talisfactor=talisfactor
+}
+
+
+Zuzubrot {
+; Made this by trying to implement version of true 3D mandelbrot set 
+; and making a mistake. Based on work of Francisco de Asis Fernandes Diaz
+; about cyclic numbers and little bit of mine.
+; http://www.fractalforums.com/index.php?topic=9842.0
+
+; Similar to kali / ducks pattern sets, but of chekuered squares and crosses.
+; With abs function and bailout >100 a city map pattern. 
+; As with kalisets, details is revealed by exponent smoothing 
+; orbit traps or twin lamps with small (colour) iteration values.  
+
+; by Edgar Malinovsky 12.02.2012.
+; You may redistribute this algorithm, modify, derivate or use comercialy as you wish as long as you give proper credits.
+
+;04.09.2013 + few more functions of z.
+
+; http://edo555.deviantart.com/
+
+init:
+complex c=0
+float zx=0 
+float zy =0
+float zzx =0
+float zzy =0
+float zzw =0
+float cx =0
+float cy=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=1/#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=@start
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=1/@julia
+ELSE
+c=@julia
+ENDIF
+z= #pixel
+z=@func_post(z)
+ENDIF
+	cx=real(c)
+	cy=imag(c)
+loop:
+	zx=real(z)
+	zy=imag(z)
+
+	zzx=zx*zx+zy*zy+cx
+	zzw=12*zx*zy+12*zy*zy; just for a half-newton bailout.
+	zzy=2*zy*zx+cy
+
+	zx=zzx
+	zy=zzy
+	z= zzx + flip(zzy)
+
+IF (@function=="Abs")
+z=abs(z)
+ELSEIF (@function=="Conj")
+z=conj(z)
+ELSEIF (@function=="Naked singularity")
+z=z
+ELSEIF (@function=="Square")
+z=sqr(z)
+ELSEIF (@function=="Talis")
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@function=="Perpendicular Ru")
+z= abs(real(z))-flip(imag(z))
+ENDIF
+
+bailout:
+abs(zzx-zzw)+ abs(zzy) < @bailout
+
+default:
+title = "Zuzubrot"
+magn = 1
+center = (-0.5, 0)
+periodicity = 0
+  
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia" 
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  
+float param bailout
+caption = "Bailout Value"
+default = 20.0
+min = 0.5
+hint = "This parameter defines how soon an orbit bails out while iterating.\
+	having 12 or 120 reveals different sets."
+endparam
+
+param inverted
+caption ="Inverted Set (recip of pixel mapping)"
+default = FALSE
+hint="The same as circle inverse. Unlike pixel mapping it inverses c, so m-set is map of julia sets."
+endparam
+ 
+param function
+caption="Post function"
+default=0
+enum="Naked singularity" "Abs" "Conj" "Square" "Talis" "Perpendicular Ru"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@function==4)
+default=0.4
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-1.6, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+ complex  param start
+    caption = "Starting Point"
+    default = (0.5,0)
+    visible = (@settype=="Mandelbrot")
+    hint = "The starting point aka critical point influences set shape."
+  endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+switch:
+type="Zuzubrot"
+julia=#pixel
+function=function
+bailout=bailout
+inverted=inverted
+settype= switchsettype
+switchsettype=settype
+start=#pixel
+func_post=func_post
+talisfactor=talisfactor
+}
+
+
+Walbrot {
+; Formulas by Fracmonk aka Jeffrey Barthelmes 
+; from this thread
+; http://www.fractalforums.com/new-theories-and-research/is-there-anything-novel-left-to-do-in-m-like-escape-time-fractals-in-2d/
+
+; Z=(((((Z^2xC) +1 )^2) -1 )^2) -1 is posted:
+; http://www.fractalforums.com/index.php?topic=4881.msg25998#msg25998 
+; Z=(((((Z^3)xC+i)^3)+i)^3)+i is posted:
+; http://www.fractalforums.com/index.php?topic=4881.msg27524#msg27524 
+;  Z=(ZxZxC+1)+1/(ZxZxC+1) is posted
+; http://www.fractalforums.com/index.php?topic=4881.msg25998#msg25998 
+
+; All are mathematically correct and analytical, with very complex
+; geometry, so not so easy to find good spots and colouring.
+; Could require high max iteration value.
+; implemented on 04.03.2012.
+; First two equations is known as Multipowerbrot,
+; becouse they have different power shapes connected in single fractal.
+
+; http://edo555.deviantart.com/
+
+global:
+complex imagD=@imaginaryD*1i
+float realD=@realVD
+init:
+complex c=0
+float unit=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=1/#pixel
+ELSE
+c=#pixel
+ENDIF
+z=@start
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z= 1/#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+ENDIF
+
+loop:
+
+IF (@equation == 0)
+z=((((z^2*c+realD)^2)-realD)^2)-realD
+
+ELSEIF (@equation == 1)
+z= ((((z^3*c+imagD)^3)+imagD)^3)+imagD
+
+ELSEIF  (@equation == 2)
+z=1/(sqr(z)*c+realD) + sqr(z)*c+realD
+
+ELSEIF  (@equation == 3)
+z=1/(z^3*c+ realD) + z^3*c+ realD
+ENDIF
+
+
+IF (@vectype == "z/modulus(z)")
+   unit = cabs(z)
+   IF (unit != 0)
+   z=z/unit * @vfactor+z
+   ENDIF
+ELSEIF (@vectype == "z+1/z")
+   z=recip(z) + z
+ENDIF
+
+bailout:
+|z| < @bailout
+
+default:
+title = "Multipowerbrot"
+periodicity = 0
+maxiter = 250
+  
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param equation
+caption="Use Equation"
+default=0
+enum="Even Power" "Odd Power" "Soap Squared" "Soap Cubed"
+endparam
+
+heading
+caption = "Info"
+text = "Even power formula Z=((((Z^2xC+D)^2)-D)^2)-D  where D is real number. \
+Odd power formula Z=((((z^3xC+D)^3)+D)^3)+D  where D is imaginary value. \
+Soap squared Z=(Z^2xC+D)+1/(Z^2xC+D) \
+and cubed Z=(Z^3xC+D)+1/(Z^3xC+D) where D is real. \
+by Fracmonk aka Jeffrey Barthelmes. First two equations is known as Multipowerbrot, becouse they have different power shapes connected in single fractal. www.fractalforums.com"
+endheading
+
+float param realVD
+caption = "real determinant D"
+default = 1
+visible = (@equation=="Even Power" || @equation=="Soap Squared" || @equation=="Soap Cubed")
+hint = "Parameter defining formula."
+endparam
+
+float param imaginaryD
+caption = "imag determinant D"
+default = 1
+visible = (@equation=="Odd Power")
+hint = "Parameter defining formula."
+endparam
+
+param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse but implemented in formula."
+endparam
+ 
+param settype
+caption="Set Type"
+default=0
+enum="Mandelbrot" "Julia" 
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.25, -0.2)
+visible = (@settype=="Julia")
+endparam
+
+complex  param start
+caption = "Starting Point"
+default = (0,0)
+visible = (@settype=="Mandelbrot")
+hint = "The starting point parameter can be used to distort the set."
+endparam
+
+param vectype
+caption="Unit Vector and 1/z addition"
+default=0
+enum="None" "z/modulus(z)" "z+1/z"
+endparam
+
+complex param vfactor
+caption = "Vector add Factor"
+default=(-2,0)
+visible = (@vectype=="z/modulus(z)")
+endparam
+
+switch:
+type="Walbrot"
+julia=#pixel
+start=#pixel
+equation=equation
+bailout=bailout
+inverted=inverted
+settype= switchsettype
+switchsettype=settype
+realVD=realVD
+imaginaryD= imaginaryD
+vectype=vectype
+vfactor=vfactor
+}
+
+QuadraticGen	{
+;by Jos Hendriks, origianally in Fractint, about 1990       	
+; Implementation by Edgar Malinovsky 09.04.2012.
+
+; Generalisation of Mandelbrot, Tricorn, my Zuzubrot and
+; everything quadratic in between. Good for square patterns. 
+; From fractalforums thread:
+; http://www.fractalforums.com/index.php?topic=11008.0
+
+; Try inside colouring and julias or left of Mset
+; or with Abs and bottom of Mset.
+; Goes better with analytical colour methods.	
+		
+; 13.10.2012. + pixel mapping function.	
+;04.09.2013 + few more functions of z.	
+
+; http://edo555.deviantart.com/
+
+init:
+	float zx=0
+	float zy=0
+	float zzx=0
+	float zzy=0
+	complex c=0
+	float unit=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=1/#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=1/@julia
+ELSE
+c=@julia
+ENDIF
+z= #pixel
+z=@func_post(z)
+ENDIF
+
+loop:
+zx=real(z)
+zy=imag(z)
+
+	zzx=sqr(zx)*@p1 + sqr(zy)* @p2 + @p3*zx*zy
+	zzy=sqr(zx)*@p4 + sqr(zy)*@p5 + @p6*zx*zy
+z=flip(zzy) + zzx + c
+             
+IF (@function=="Abs")
+z=abs(z)
+ELSEIF (@function=="Conj")
+z=conj(z)
+ELSEIF (@function=="None")
+ELSEIF (@function=="Square")
+z= sqr(z)
+ELSEIF (@function=="Talis")
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@function=="SZA Butterfly")
+z= sqr(imag(z)) - sqrt(abs(real(z))) + flip (sqr(real(z)) - sqrt(abs(imag(z) )))
+ELSEIF (@function=="Perpendicular Ru")
+z= abs(real(z))-flip(imag(z))
+ELSEIF (@function=="Celtic")
+z=z-c
+z=z - real(z) + abs(real(z)) - c
+ENDIF
+
+IF (@vectype == "z/modulus(z)")
+unit = cabs(z)
+IF (unit != 0)
+z=z/unit * @vfactor + z
+ENDIF
+ENDIF
+
+bailout:		
+	|z|< @bailout			
+		
+default:
+title = "Quadratic General"
+rating = recommended
+magn = 1
+center = (-0.5, 0)
+;maxiter = 250
+periodicity = 0
+
+float param bailout
+caption = "Bailout Value"
+default = 1280
+min = 0.5
+endparam
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia" 
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-1.6, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse. Unlike pixel mapping this inverts C, so inverted m-set is map of julia sets."
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+heading
+caption = "Info"
+text = "Quadratic forms by Jos Hendriks          			\
+X = K*X^2 + L*Y^2 + M*X*Y  + C			\
+Y = O*X^2 + P*Y^2 + Q*X*Y   + C			\
+Coefficients 1,-1,0,0,0,2 generates Mandelbrot set.  \
+-1,1,0,0,0,2 are Tricorn fractal."
+endheading
+
+  float param p1
+    caption = "X= coef K* x^2"
+    default=1.0
+  endparam
+   float param p2
+    caption = "X= coef L* y^2"
+    default=1.0
+  endparam
+    float param p3
+    caption = "X= coef M* xy"
+default=0
+  endparam
+   float param p4
+    caption = "Y= coef O* x^2"
+default=0
+  endparam
+    float param p5
+    caption = "Y= coef P* y^2"
+default=0
+  endparam
+   float param p6
+    caption = "Y= coef Q* xy"
+    default=2.4
+ endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Abs" "Conj" "Square" "Talis" "SZA Butterfly" "Perpendicular Ru" "Celtic"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@function==4)
+default=0.4
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+param vectype
+caption="Unit Vector"
+default=0
+enum="None" "z/modulus(z)" 
+endparam
+
+complex param vfactor
+caption = "Vector add Factor"
+default=(-0.3, 0)
+visible = (@vectype=="z/modulus(z)")
+endparam
+
+switch:
+  type = "QuadraticGen"
+  julia = #pixel
+  p1=p1
+  p2=p2
+  p3=p3
+  p4=p4
+  p5=p5
+  p6=p6
+function=function
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+vectype=vectype
+vfactor=vfactor
+func_post=func_post
+talisfactor=talisfactor
+}
+
+Kalisetes_Sefirii	{
+; 7 in 1.
+; Collection of kaliset type pattern formulas
+; formulas 3,4,7 are my original inovation,
+; rest were found in internet, mostly in softologyblog.
+; Sefir stands for space filling rotation.
+
+; Formulas 1 and 2 are the most typical kalisets, 1st one
+; have 'outside' patterns in m-brot mode and a more complex julias,
+; so I put it 1st. Formulas 3 and 4 (Sefir) are most fun to use.
+
+; by Edgar Malinovsky 30.04.2012
+
+; 24.09.2013
+; + mixing together 2 formulas
+; by alternation or random sequences.
+; like in EA lucky and
+; + asinh Ducky Lite as in Ed Algra's Lucky script.
+
+; http://edo555.deviantart.com/
+
+global:
+float zeroD=@D-1
+float fisheyeplus=@fishstrenght+1
+	
+init:
+	complex c=0
+	float unit=0
+	float modulus =0
+
+int formulapick=0
+IF (@mode==0)
+formulapick=@equation
+ENDIF	
+int iter=1	
+int seed = @seedinput
+
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z= #pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+
+loop:
+
+; formula alternation code
+IF (@mode==1)
+;alternation
+   IF (iter==1)
+   formulapick=@equation
+   ELSE
+   formulapick=@equation2
+   iter=0
+   ENDIF
+
+ELSEIF (@mode==2)
+;random more cXaOTic
+seed = random(seed)
+iter= trunc( abs(seed) /(#randomrange/2))
+
+;iter values alternates between 0 and 1.
+   IF (iter==0)
+   formulapick=@equation
+   ELSE
+   formulapick=@equation2
+   ENDIF
+
+ELSEIF (@mode==3)
+;random more equal
+seed = random(seed)
+iter= abs (seed%2)
+
+;iter values alternates between 0 and 1.
+   IF (iter==0)
+   formulapick=@equation
+   ELSE
+   formulapick=@equation2
+   ENDIF
+
+ELSEIF (@mode==4)
+;randomly chose one of 8 formulas
+seed = random(seed)
+formulapick= trunc( abs(seed) /(#randomrange/8))
+
+ENDIF
+
+
+;here starts fractal formulas
+IF (formulapick==0)
+z=abs(z+zeroD)/c*@scale +c
+;z=scale*abs(z+D-1)/c +c
+
+ELSEIF (formulapick==1)
+; some formulas needs to be initialised with z=pixel.
+IF (z==0)
+z=z+ #pixel ;1.0e-15   ;or else formula wount initialise.
+ENDIF
+
+z=abs(1/(z+zeroD) )*@scale + c
+;z=scale*abs[1/(z+D-1)]+c
+
+ELSEIF (formulapick==2)
+z=z+zeroD
+      modulus = |z|
+      IF (modulus ==0)
+      z=0
+      ELSEIF (modulus<1)
+      z=z/modulus
+      ENDIF
+z=z*c*@scale+c
+;z=scale*circlefold (z+D-1)*c +c by Edgar Malinovsky
+
+ELSEIF (formulapick==3)
+z=z+zeroD
+      modulus = |z|
+      IF (modulus ==0)
+      z=0
+      ELSEIF (modulus<1)
+      z=z/modulus
+      ENDIF
+z=z/c*@scale+ c
+;z=scale*circlefold(z+D-1)/c+c by Edgar Malinovsky
+
+ELSEIF (formulapick==4)
+
+IF (z==0)
+z=z+ #pixel ;1.0e-15   ;or else formula wount initialise.
+ENDIF
+
+z=z+zeroD
+z= @scale/abs(z*z*z) + c
+;z=scale/abs[(z+D-1)^3]+c
+
+ELSEIF (formulapick==5)
+
+IF (z==0)
+z=z+ #pixel ;1.0e-15  ;or else formula wount initialise.
+ENDIF
+
+z=(abs(z*c+@D)+ 1/abs(z*c+@D) )*@scale
+;z=scale*[abs(z*c+D)+1/abs(z*c+D)]
+
+ELSEIF (formulapick==6)
+z=abs(z)/(z+ @D + c)*@scale + c
+;z=scale*abs(z)/(z+D+c)+c  by Edgar Malinovsky
+
+ELSEIF (formulapick==7)
+z = asinh(abs(z +zeroD))*@scale + c
+;z = asinh(abs(z)) + c     As in Ed Algra Lucky.
+ENDIF
+
+
+IF (@vectype == "z/modulus(z)")
+unit = cabs(z)
+IF (unit != 0)
+z=z/unit * @vfactor + z
+ENDIF
+ENDIF
+
+
+iter=iter+1
+
+bailout:		
+	|z|< @bailout				
+default:
+title = "Kalisetes Sefirii"
+rating = recommended
+magn = 1
+maxiter = 40
+periodicity = 0
+
+heading
+caption = "Use 'inside' colouring"
+endheading
+
+param mode
+caption="Formula Mode"
+default=0
+enum= "Single Formula" "Alternation" "Random cXaOTic" "Random Equal" "foRMuLa cXaOs"
+hint="Calculate just one formula, each iteration alternate between 2 formulas, or randomly pick which formula to use. Random numbers then could be with more chaotic and more equal distribution. Or just randomly chose between 7 formulas. Last version could be good with number -5."
+endparam
+
+int param seedinput
+caption = "Lucky Number"
+default = 0
+visible = (@mode==2 || @mode==3|| @mode==4)
+hint = "Each seed will generate different fractal. Each seed generates different sequence of random numbers, and it don't depends, is it -1 or 600001. "
+endparam
+
+param equation
+caption="Fractal Formula"
+default=0
+visible = (@mode!=4)
+hint="1-z=scale*abs(z+D-1)/c+c; 2-z=scale*abs[1/(z+D-1)]+c; 3-z=scale*circlefold(z+D-1)*c+c; 4-z=scale*circlefold(z+D-1)/c+c; 5-z=scale/abs[(z+D-1)^3]+c; 6-z=scale*[abs(z*c+D)+1/abs(z*c+D)]; 7-z=scale*abs(z)/(z+D+c)+c;  z = scale*asinh(abs(z + D-1)) + c;"
+enum="1- kaleido Kaliset j" "2- original Kaliset j" "3- Sefir mj" "4- Sefir mj" "5- power3 Kaliset j" "6- dual Kaliset mj" "7- Talis Kaliset mj" "8- Asinh Ducky j"
+endparam
+
+param equation2
+caption="Second Formula"
+default=1
+visible = (@mode==1 || @mode==2|| @mode==3)
+hint="Contr- formula in some of iterations replacing first."
+enum="1- kaleido Kaliset j" "2- original Kaliset j" "3- Sefir mj" "4- Sefir mj" "5- power3 Kaliset j" "6- dual Kaliset mj" "7- Talis Kaliset mj" "8- Asinh Ducky j"
+endparam
+
+heading
+caption = "Bailout"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 777000
+min = 0.5
+endparam
+
+heading
+caption = "Julia block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(-0.52, 0.52)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Scaling the numbers"
+endheading
+
+float param D
+caption = "determinant D"
+default=1.0
+hint="Depending on formula adds to z this number or D-1 value. Talis like coefficient for finetuning of fractal."
+endparam
+
+complex param scale
+caption = "Scale"
+default=(1.0,0)
+hint="Multiplicator applied to formula before adding c-constant value. Mandelbox like factor for tuning of fractal."
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param inverted
+caption ="Fish eye"
+default = FALSE
+hint="Fish eye transform of screen pixels."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+hint="Strenght of Fish Eye. Stronger Fish Eye effect is 0 - 1, larger facor decreeses strenght. Large negative values <-3.5 generates an opposite effect."
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param vectype
+caption="Unit Vector addition"
+default=0
+hint="Modification applied after main equation. Depending on formula negative factor could generate rings, positive shrunks the fractal, and imaginary value rotates it. With kalisets this can change curves."
+enum="None" "z/modulus(z)"
+endparam
+
+complex param vfactor
+caption = "Vector add Factor"
+default=(-0.31, -0.41)
+visible = (@vectype=="z/modulus(z)")
+endparam
+
+heading
+caption = "Info"
+text = "Synthesis of Kalisets, Talis, Ducky, Mandelbox and Ducks space filling curve formulas. All requires low maximum iteration value and inside colouring. Contrast depends on maxiter value, but too high maxiter turns fractal into noise. Formulas 3,4,7 are my own find, rest were found in softologyblog, kaliset concept is based on work of Pablo Roman Andrioli and EA's Ducky. For julia sets only are marked with (j), for both julia and m-brot - (mj). www.fractalforums.com"
+endheading
+
+switch:
+type = "Kalisetes_Sefirii"
+julia = #pixel
+D=D
+scale=scale
+bailout=bailout
+equation=equation
+settype=switchsettype
+switchsettype=settype
+vectype=vectype
+vfactor=vfactor
+func_post=func_post
+seedinput=seedinput
+mode=mode
+equation2=equation2
+inverted=inverted
+fishstrenght=fishstrenght
+}
+
+Swirlbrot {
+; Formula based on kram1032 found transformation.
+; Used for calculation of gravitational waves
+; Of 2 rotating neutron stars.
+; First made for buddhabrot.
+; + multiplication by iterations for more variance.
+; and few other formulas exept Mbrot.
+; by Edgar Malinovsky 12. 12. 2012
+;04.09.2013 + few more functions of z.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+z=#pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+int iter=0
+loop:
+;Swirl transform
+z=exp(flip( @frequency*cabs(z)+@spin*atan2(z)) ) *z
+;standart formula
+IF (@formula ==0)
+z=z^@power
+ELSEIF (@formula ==1)
+z=conj(z)^@power
+ELSEIF (@formula ==2)
+z= z*0.5 - z^(@power+5)
+ELSEIF (@formula ==3)
+z=sinh(z)*z^(@power-1)
+ELSEIF (@formula==4)
+z=z^@power
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@formula==5)
+z= sqr(imag(z)) - sqrt(abs(real(z))) + flip (sqr(real(z)) - sqrt(abs(imag(z) )))
+ELSEIF (@formula==6)
+z=z^@power
+z= abs(real(z))-flip(imag(z))
+ELSEIF (@formula==7)
+z=z^@power
+z=z - real(z) + abs(real(z))
+ENDIF
+
+IF  (@itermultiplied)
+z=z*iter*@itermult
+ENDIF
+
+IF (@formula ==3)
+z=z- c^@power
+ELSEIF (@formula==7)
+z=z-c
+ELSE
+z=z+c
+ENDIF
+
+iter=iter+1
+bailout:
+cabs(z) < @bailout
+
+default:
+title = "Swirlbrot"
+periodicity = 0
+method = multipass
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+param formula
+caption="Fractal Formula"
+default=0
+enum= "Mandelbrot" "Tricorn" "Starbrot" "MalinovskyDeco" "Talis" "SZA Butterfly" "Perpendicular Ru" "Celtic"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@formula==4)
+default=0.5
+hint="Factor n for z=z^pow; z=z*z/(z+n)"
+endparam
+
+heading
+caption = "Swirl"
+endheading
+
+float param  frequency
+caption="Frequency"
+default=0.5
+hint="How strongly swirls."
+endparam
+
+float param   spin
+caption="Spin Number"
+default=0.5
+hint="Each 0.5 of spin gives additional simmetry axis."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.3, 0.6)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+bool param itermultiplied
+caption ="x Iterations"
+default = FALSE
+hint="At each iteration multiplies result of formula by iteration number x coefficient. Don't works with Julia sets."
+endparam
+
+float param itermult
+caption="multiplication factor"
+visible = (@itermultiplied)
+default=0.05
+endparam
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+endparam
+
+switch:
+type="Swirlbrot"
+power=power
+frequency=frequency
+spin=spin
+julia = #pixel
+bailout=bailout
+inverted=inverted
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+itermultiplied=itermultiplied
+itermult=itermult
+formula=formula
+talisfactor=talisfactor
+}
+
+zz_Swirl_Vector {
+;I used this to find continiues
+;3D swirl transform.
+;But it have enought features to be used as formula.
+;It swirls orbits in 3D plane.
+
+;by Edgar Malinovsky 16.01.2013
+
+; http://edo555.deviantart.com/
+
+init:
+complex c=0
+float cx=0
+float cy=0
+float cz=0
+float zx=0
+float zy=0
+float zz=0
+float radius=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=@func_post(recip(c))
+cx=real(c)
+cy=imag(c)
+cz=@height
+ELSE
+c=@func_post(#pixel)
+cx=real(c)
+cy=imag(c)
+cz=@height
+
+ENDIF
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=1/@julia
+cx=real(c)
+cy=imag(c)
+cz=0
+ELSE
+c=@julia
+cx=real(c)
+cy=imag(c)
+cz=0
+ENDIF
+z=@func_post(#pixel)
+zx=real(z)
+zy=imag(z)
+zz=@height
+ENDIF
+
+loop:
+
+IF (@modtype==0)
+radius = sqrt( sqr(zx)+sqr(zy)+sqr(zz) )
+ELSEIF (@modtype==1)
+radius = ( zx^8+ zy^8+ zz^8 )^0.125;
+ENDIF
+
+float angx = atan2(radius+flip(zx))
+float angy = atan2(zx+flip(zy))
+float angz = atan2(radius+flip(zz))
+
+zx= cos(@frequency*radius+ @spin*(angx)) *radius*@scale+cx
+zy= sin(@frequency*radius+ @spin*(angy)) *radius*@scale+cy
+zz= sin(@frequency*radius+ @spin*(angz)) *radius*@scale+cz
+
+z=zx+flip(zy)
+
+bailout:
+  sqrt( sqr(zx)+sqr(zy)+sqr(zz)  ) <= @bailout
+default:
+title = "zz_Swirl_Vector"
+maxiter = 4
+rating = notRecommended
+
+  float param bailout
+    caption = "Bailout value"
+    default = 12
+  endparam
+
+  param modtype
+  caption = "Modulus"
+  default=0
+  enum= "Normal" "Power8"
+  endparam
+
+float param  frequency
+caption="Frequency"
+default=3
+endparam
+
+float param   spin
+caption="Spin Number"
+default=2
+endparam
+
+float  param scale
+    caption = "scale"
+    default = 1.5
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+
+heading
+caption = "Mutations"
+endheading
+
+float param height
+caption="height"
+default=0
+hint="height of 2D slice"
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Inverted Set"
+default = FALSE
+hint="The same as circle inverse. Unlike pixel mapping this inverts C, so inverted m-set is map of julia sets."
+endparam
+
+switch:
+type="zz_Swirl_Vector"
+frequency=frequency
+spin=spin
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+scale=scale
+height=height
+modtype=modtype
+}
+
+Pauldebrot {
+;Complex 2-variable quadratic system
+; by Paul Derbyshire aka Pauldebrot.
+; http://www.fractalforums.com/ultrafractal/complex-2-variable-quadratic-experiment/
+; implementation by Edgar Malinovsky 16.01.2013
+; Fish Eye instead of inverse 18.01.2013
+;04.09.2013 + few more functions of z.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+
+complex c=0
+complex ws=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=@seed
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z=#pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+  complex w = @seed2
+loop:
+;formula:
+  ws = sqr(w)
+  w = w/z*(@wfactor)
+  z = sqr(z) + ws
+
+;now adding c and introducing tricorn and burning ship versions
+IF (@zfunction=="None")
+z=z+c
+ELSEIF (@zfunction=="Tricorn")
+z=conj(z)+c
+ELSEIF (@zfunction=="Burning Ship")
+z=abs(z)+c
+ELSEIF (@zfunction=="Square")
+z=sqr(z) +c
+ELSEIF (@zfunction=="Talis")
+z=sqr(z)/(z+@talisfactor)+c
+ELSEIF (@zfunction=="SZA Butterfly")
+z= sqr(imag(z)) - sqrt(abs(real(z))) + flip (sqr(real(z)) - sqrt(abs(imag(z) ))) +c
+ELSEIF (@zfunction=="Perpendicular Ru")
+z= abs(real(z))-flip(imag(z)) +c
+ELSEIF (@zfunction=="Celtic")
+z=z - real(z) + abs(real(z)) - c
+ENDIF
+
+bailout:
+  |z| < @bailout
+default:
+  center = (-0.5,0)
+  maxiter = 250
+ ; rating = recommended
+  periodicity = 0
+  title = "Pauldebrot"
+
+heading
+caption = "Formula Block"
+endheading
+  param seed
+    caption = "Mbrot Seed"
+    default = (0,1)
+    visible = (@settype=="Mandelbrot")
+  endparam
+  param seed2
+    caption = "Seed of W"
+    default = (1,0)
+  endparam
+  param wfactor
+    caption = "Factor of W"
+    default = 0.5
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 10000.0
+    min = 0
+  endparam
+
+  heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.3, 0.6)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param zfunction
+caption="Z function"
+default=0
+enum="None" "Tricorn" "Burning Ship" "Square" "Talis" "SZA Butterfly" "Perpendicular Ru" "Celtic"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@zfunction==4)
+default=0.25
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+heading
+caption = "Info"
+text="Complex 2-variable quadratic system of mandelbrot like function by Paul Derbyshire aka Pauldebrot. http://www.fractalforums.com/ultrafractal/complex-2-variable-quadratic-experiment/ It have both julia seed and mandelbrot seed. Factor of W decides how much second quadratic equation is used, small W factor means it is almoust mndelbrot, but increasing it increases sizes of holes. Seeds are starting values. (0,1) (1,0) and (1,0) (1,0) generates nice simmetric overall shapes, but other values alsou generates good zooms."
+endheading
+
+switch:
+type="Pauldebrot"
+julia = #pixel
+bailout=bailout
+inverted=inverted
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+zfunction=zfunction
+wfactor=wfactor
+seed=#pixel
+seed2=seed2
+talisfactor=talisfactor
+}
+
+Swirlbox {
+; Used this to test 3D Swirlbox.
+; Patterns with inside colouring
+; such as exponent smoothing or
+; wave trichrome.
+
+; http://edo555.deviantart.com/
+
+global:
+;Do once
+float fishdivisor= 1/(@Fisheyeness+1)
+
+init:
+float cx=0
+float cy=0
+float cz=0
+float zx=0
+float zy=0
+float zz=0
+float angx=0
+float angy=0
+float angz=0
+float fisheye=0
+float radius=0
+
+IF (@settype=="Mandelbrot")
+cx=real(#pixel)
+cy=imag(#pixel)
+cz=@height
+
+ENDIF
+
+IF (@settype=="Julia")
+cx=real(@julia)
+cy=imag(@julia)
+
+zx=real(#pixel)
+zy=imag(#pixel)
+zz=@height
+ENDIF
+
+loop:
+;continiuous and seamless fold
+
+zx = abs(zx-@Fold) - abs(zx+@Fold) + zx
+zy = abs(zy-@Fold) - abs(zy+@Fold) + zy
+zz = abs(zz-@Fold) - abs(zz+@Fold) + zz
+
+;Fisheye is conformal transform. And scaling.
+fisheye=(@Fisheyeness+sqrt(sqr(zx)+sqr(zy)+sqr(zz) ) )*fishdivisor*@scale
+zx=fisheye*zx
+zy=fisheye*zy
+zz=fisheye*zz
+
+
+;3D swirl transform. Must be at least quasi conformal.
+
+radius = sqrt( sqr(zx)+sqr(zy)+sqr(zz) )
+
+angx=atan2(radius+1i*zx)
+angy=atan2(zx+1i*zy)
+angz=atan2(radius+1i*zz)
+
+zx= cos(@frequency*radius+ @spin*angx)*radius +cx
+zy= sin(@frequency*radius+ @spin*angy)*radius +cy
+zz= sin(@frequency*radius+ @spin*angz)*radius +cz
+
+z=zx+flip(zy)
+
+bailout:
+  (sqr(zx)+sqr(zy)+sqr(zz)) <= @bailout
+default:
+title = "Swirlbox"
+maxiter = 10
+
+float  param scale
+    caption = "scale"
+    default = 0.75
+  endparam
+
+float param  frequency
+caption="Frequency"
+default=4
+endparam
+
+float param   spin
+caption="Spin Number"
+default=4
+endparam
+
+float param Fold
+caption = "Fold lenght"
+default = 1
+endparam
+
+float param   Fisheyeness
+caption="Fisheyeness"
+default=1
+endparam
+
+  float param bailout
+  caption = "Bailout value"
+  default = 15
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "2D slice"
+text="Used this to test 3D Swirlbox. Circular patterns appears with an inside colouring such as exponent smoothing or wave trichrome and zooming in."
+endheading
+
+float param height
+caption="Z Height"
+default=0
+hint="height of 2D slice"
+endparam
+
+switch:
+type="Swirlbox"
+julia = #pixel
+bailout=bailout
+settype=switchsettype
+switchsettype=settype
+height=height
+Fisheyeness=Fisheyeness
+Fold=Fold
+frequency=frequency
+spin=spin
+scale=scale
+}
+
+LogicTurtle {
+; by Edgar Malinovsky 02.04.2013
+; z=z^2+-c
+; Adds or substracts depending on comparision.
+; If modulus of z is smaller than
+; of c, c is added, if larger c is
+; substracted. if equal it stays z^2.
+; Fractal consists repeating finite elements, but is conformal.
+; Hence logic and turtle.
+; http://www.fractalforums.com/mandelbrot-and-julia-set/shattered-fractal/
+;04.09.2013 + few more functions of z.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+int iter=0
+loop:
+;Variations
+IF (@formula ==0)
+;nothing
+ELSEIF (@formula ==1)
+z=abs(z)
+ELSEIF (@formula ==2)
+z= conj(z)
+ELSEIF (@formula==3)
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@formula==4)
+z= abs(real(z))-flip(imag(z))
+ELSEIF (@formula==5)
+z=z - real(z) + abs(real(z))
+ENDIF
+
+;formula starts here
+float cabsz=cabs(z)
+float cabsc=cabs(c)
+
+IF (cabsz < cabsc)
+z= (z)^@power + c
+ELSEIF (cabsz == cabsc)
+z= (z)^@power
+ELSE
+z= (z)^@power - c
+ENDIF
+
+;Variations
+IF  (@itermultiplied)
+z=z*iter*@itermult
+ENDIF
+
+iter=iter+1
+bailout:
+|z| < @bailout
+
+default:
+title = "LogicTurtle"
+periodicity = 0
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.3, 0.6)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param formula
+caption="Formula Variations"
+default=0
+enum= "Mandelbrot" "Burning Ship" "Tricorn" "Talis" "Perpendicular Ru" "Celtic"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@formula==3)
+default=0.5
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+bool param itermultiplied
+caption ="x Iterations"
+default = FALSE
+hint="At each iteration multiplies result of formula by iteration number x coefficient. Don't works with Julia sets."
+endparam
+
+float param itermult
+caption="multiplication factor"
+visible = (@itermultiplied)
+default=0.05
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+endparam
+
+heading
+caption = "Info"
+text="Z=Z^2+-C If modulus of Z is smaller than of C, C is added, if larger C is substracted. If they are equal it stays Z^2. Fractal consists self simmilar finite elements and is conformal. Hence logic and turtle. http://www.fractalforums.com/mandelbrot-and-julia-set/shattered-fractal/"
+endheading
+
+switch:
+type="LogicTurtle"
+power=power
+julia = #pixel
+bailout=bailout
+inverted=inverted
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+itermultiplied=itermultiplied
+itermult=itermult
+formula=formula
+talisfactor=talisfactor
+}
+
+RandomPower {
+; Iterates random power mandelbrot. UF
+; random number generator isn't realy,
+; hence fractal shape depends on seed.
+
+; by Edgars Malinovskis 17. 04. 2013
+
+;http://www.fractalforums.com/mandelbrot-and-julia-set/iterating-random-powers/
+
+; 21.09.2012. Following changes:
+; + with Minimal r it will generate real power julias, too.
+; + Few more reflection based formulas.
+; + minimal power value from which RND power starts.
+; + another random sequence generator generating more equal distribution.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+int seed = @power
+complex c=0
+complex Randpower=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z= #pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+int iter=0
+loop:
+;random power
+int RRandpower = seed = random(seed)
+int IRandpower = seed = random(seed)
+
+;ggenerates random power in range.
+IF (@rndtype==0)
+; more chaotic sequences.
+   IF (@rndpower==0)
+   Randpower= abs( (RRandpower) /(#randomrange/@range)) + flip(abs( (IRandpower) /(#randomrange/@range)))   +@minpower
+   ELSEIF (@rndpower==1)
+   Randpower= abs( (RRandpower) /(#randomrange/@range))   +@minpower
+   ENDIF
+ELSEIF  (@rndtype==1)
+;more equaly distributed sequences.
+   IF (@rndpower==0)
+   Randpower= abs(RRandpower %@range) + flip(abs(IRandpower %@range))   +@minpower
+   ELSEIF (@rndpower==1)
+   Randpower=  abs(RRandpower %@range)  +@minpower
+   ENDIF
+ENDIF
+
+
+;formula
+IF (@formula ==0)
+;mandelbrot
+z=z^Randpower
+ELSEIF (@formula ==1)
+;burning ship
+z=abs(z)^Randpower
+ELSEIF (@formula ==2)
+;Perpendicular Ru
+z=z^Randpower
+z= abs(real(z))-flip(imag(z))
+ELSEIF (@formula ==3)
+;Perpendicular Ru
+z= abs(real(z))-flip(imag(z))
+z=z^Randpower
+ELSEIF (@formula ==4)
+;Celtic
+z=z^Randpower
+z=z - real(z) + abs(real(z)) - 2*c
+ELSEIF (@formula ==5)
+;SZA Butterfly
+z= (imag(z))^Randpower - (abs(real(z)))^recip(Randpower) + flip (   (real(z))^Randpower - (abs(imag(z) ))^recip(Randpower))
+ENDIF
+
+;mutation
+IF  (@itermultiplied)
+z=z*iter*@itermult
+ENDIF
+;formula + c
+z=z+c
+
+iter=iter+1
+bailout:
+|z| < @bailout
+
+default:
+title = "RandomPower"
+periodicity = 0
+rating = recommended
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 777000000000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param rndpower
+caption="RND Power"
+default=0
+enum= "Complex" "Real"
+hint = "Use real or complex numbers as powers of fractal."
+endparam
+
+param rndtype
+caption="RND Type"
+default=0
+enum= "cXaOTic" "Equal"
+hint="Not all Random numbers are equaly random. One formula generates more chaotic distribution in range, another more equal. 1,2,2,2,5 vs 1,4,2,3,5. First one is more random."
+endparam
+
+int param power
+caption = "Random Seed"
+default = 0
+hint = "Each seed will generate different fractal. Each seed generates different sequence of random numbers, and it don't depends, is it -1 or 600001. "
+endparam
+
+int param range
+caption = "Power Range"
+default = 5
+hint = "Power values range of both real and imaginary numbers. Should be kept simmilar to default as then powers goes around 2 as of normal mandelbrot. Real powers varies from minimal to minimal+range and imaginary from 0 to range. "
+endparam
+
+float param minpower
+caption = "Minimal r Power"
+default = 0
+hint = "Minimal real power value. With Minimal r >0 it will generate real power julias as z^0 destroys julias. Real power values varies from minimal to minimal+range."
+endparam
+
+param formula
+caption="Fractal Formula"
+default=1
+hint="Mandelbrot + formulas introducing reflection + SZA butterfly."
+enum= "Mandelbrot" "BurningShip" "Perpendicular Ru after" "Perpendicular Ru before" "Celtic" "SZA Butterfly"
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(-1.5, 0.1)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param inverted
+caption ="Fish eye"
+default = FALSE
+hint="Fish eye transform of screen pixels."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+hint="Strenght of Fish Eye. Stronger Fish Eye effect is 0 - 1, larger facor decreeses strenght. Large negative values <-3.5 generates an opposite effect."
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+bool param itermultiplied
+caption ="x Iterations"
+default = FALSE
+hint="At each iteration multiplies result of formula by iteration number x coefficient. Don't works with Julia sets."
+endparam
+
+float param itermult
+caption="multiplication factor"
+visible = (@itermultiplied)
+default=0.05
+endparam
+
+heading
+caption = "Info"
+text="Iterates z=z^RND + c fractal with power chosen randomly on each iteration in a range real= minimal < RND < Power Range + minimal and imaginary=  0 < RND < Power Range. Since (pseudo) random number sequences are determined by random seed, each seed generates different fractal. Probably the most interesting are Julia sets with random complex powers. Real power julias appears only with Minimal r Power >0. Good with Smooth (Mandelbrot), Smooth Tanh or Wave Trichrome. http://www.fractalforums.com/mandelbrot-and-julia-set/iterating-random-powers/"
+endheading
+
+switch:
+type="RandomPower"
+power=power
+range=range
+rndpower=rndpower
+julia = #pixel
+bailout=bailout
+inverted=inverted
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+itermultiplied=itermultiplied
+itermult=itermult
+formula=formula
+minpower=minpower
+rndtype=rndtype
+}
+
+PerpendicularGrail {
+;Perpendicular cutout of 3D mandelbor (Grail) candidate. The most interesting probably is a 3D version.
+; but zooms like of mandelbrot are pretty good, too.
+; + some additions.
+;http://www.fractalforums.com/new-theories-and-research/few-steps-behind-perfect-3d-mandelbrot/
+
+;In 3D formula is
+; zzx = zx*zx - zy*zy -2*zz*zz -zz*zw -1.25*zw*zw +Cx
+; zzy = 2*zx*zy   			+Cy
+; zzz = 2*zx*(zz+zw)   		+Cz
+; zzw = zx*(zw - 2*zz)		+Cw
+; then
+; z= quaternion(zzx, zzy, zzz, zzw)
+;	zx=zzx
+;	zy=zzy
+;	zz=zzz
+;	zw=zzw
+
+;by Egar Malinovsky 16.08.2013.
+;04.09.2013 + few more functions of z.
+
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1	
+	
+init:
+	float zx=0
+	float zy=0
+	float zzx=0
+	float zzy=0
+	float zw=0
+	float zzw=0
+	complex c=0
+	float unit=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z=#pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+loop:
+zx=real(z)
+zy=imag(z)
+zw=zzw
+
+	zzx=zx*zx -2*zy*zy -zy*zw -1.25*zw*zw
+	zzy=2*zx*(zy+zw)
+	zzw = zx*(zw - 2*zy)
+z=flip(zzy) + zzx + c
+
+;mutations:
+IF (@function=="None")
+;nothing
+ELSEIF (@function=="Burning Ship")
+z=abs(z)
+ELSEIF (@function=="Tricorn")
+z=conj(z)
+ELSEIF (@function=="Talis")
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@function=="Celtic")
+z=z-c
+z=z - real(z) + abs(real(z)) - c
+ENDIF
+
+IF (@vectype == "z/modulus(z)")
+unit = cabs(z)
+IF (unit != 0)
+z=z/unit * @vfactor + z
+ENDIF
+ENDIF
+
+bailout:		
+	|z|+|zzw|< @bailout		
+		
+default:
+title = "Perpendicular Grail"
+periodicity = 0
+maxiter = 250
+rating = recommended
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 10000
+min = 0.5
+endparam
+
+param function
+caption="Function"
+default=0
+enum="None" "Burning Ship" "Tricorn" "Talis" "Celtic"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@function==3)
+default=0.25
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.45, 0.27)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+
+param vectype
+caption="Unit Vector"
+default=0
+enum="None" "z/modulus(z)"
+endparam
+
+complex param vfactor
+caption = "Vector add Factor"
+default=(-0.3, 0)
+visible = (@vectype=="z/modulus(z)")
+endparam
+
+heading
+caption = "Info"
+text="Perpendicular cutout of 3D mandelbor (Grail) candidate. The most interesting are 3D version, but it have good mandelbrot like zooms on the right.     http://www.fractalforums.com/new-theories-and-research/few-steps-behind-perfect-3d-mandelbrot/"
+endheading
+
+switch:
+type = "PerpendicularGrail"
+julia = #pixel
+function=function
+talisfactor=talisfactor
+bailout=bailout
+inverted=inverted
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+vectype=vectype
+vfactor=vfactor
+func_post=func_post
+}
+
+
+Crystalfractal {
+;Back in the nineties I wrote a fractal generator program called Minifrac, written in Delphi which I never ;finished and never released.  The program was unremarkable except that it had two fractal variations ;(Crystal 1 and Crystal 2) that I found myself, and also a nice palette generator.  Below is the Pascal ;code for the two Crystal fractals for anyone who is interested. : a tyebillion
+;http://www.fractalforums.com/index.php?topic=14745.msg56868#msg56868
+
+;+ a dual newton and mandelbrot aka magnet bailout conditions.
+
+;here by Egar Malinovsky 16.08.2013.
+
+; http://edo555.deviantart.com/
+
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+complex c=0
+float x=0
+float y=0
+float oldx=0
+float oldy=0
+float cx=0
+float cy=0
+float temp=0
+float olderx=0
+float oldery=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z=#pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+cx=real(c)
+cy=imag(c)
+x=real(z)
+y=imag(z)
+
+loop:
+
+complex oldz =z
+
+oldx=x
+oldy=y
+
+	IF x >= 0
+	temp = x - olderx
+	y = y - oldery
+	x = cx*temp - cy*y + @addval
+	y = cx*y + cy*temp
+	ELSE
+	temp = x + olderx
+	y = y + oldery	
+	x = cx*temp - cy*y - @addval		
+	y = cx*y + cy*temp
+	ENDIF
+
+olderx=oldx
+oldery=oldy
+
+z=x+flip(y)
+
+IF  (@riselast)
+z=z^@riselastpower
+ENDIF
+
+bailout:
+  |z| < @bailout && |z - oldz| > @lowerbailout
+
+default:
+title = "Ytria Crystal"
+periodicity = 0
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1000000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param lowerbailout
+    caption = "Convergent bailout"
+    default = 0.00005
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+float param addval
+caption = "Formula Seed"
+default = 1
+hint = "Added barnsleyish value."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.875, 0.325)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=1
+endparam
+
+bool param riselast
+caption ="last Z=Z^n"
+default = FALSE
+hint="Before bailout rises in power z (z=z^n). Minor effect. Influences when does formula bails out and alsou colours if they are calculated by z value."
+endparam
+
+float param riselastpower
+caption="n of Z^n"
+visible = (@riselast)
+default=2
+hint="value 1 is like no powers."
+endparam
+
+heading
+caption = "Info"
+text="Barnsley fish like fractal formula by tyebillion. + a dual newton and mandelbrot bailot conditions like of magnet formula. Good Julias and a pretty ordinary mandelbrot set, but maybe someone can get something with inside colouring.       http://www.fractalforums.com/index.php?topic=14745.msg56868#msg56868"
+endheading
+
+switch:
+type="Crystalfractal"
+addval=addval
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+lowerbailout=lowerbailout
+fishstrenght=fishstrenght
+riselast=riselast
+riselastpower=riselastpower
+}
+
+Caerulator	{
+;Patern generator mostly based on ideas from rotated mandelbox
+;and Jos Henriks thread about fractals.
+;Uses x and y functions instead of complex numbers.
+;x= rotate(repeat(Scale*x*(x+ Add- transformation(x)) )+ Cx
+;x= rotate(repeat(Scale*y*(y+ Add- transformation(y)) )+ Cy
+;z=Zfunction(z)
+
+; Works with any of Lyapunovs, exponet smoothings, Smooths, log trichrome, statistics, elliptic harlequin colourings.
+
+;p.s. Transformation script are taken from Ed Algra code
+;throught it's ultimate origin is Fractal Explorer source codes.
+; by Edgars Malinovskis 13.12.2013.
+
+;18.12.2013. + small bugfix of scale params not switching and few more repeat functions.
+;01.01.2014 + z complex function.
+
+; http://edo555.deviantart.com/
+
+global:
+float radians= 2*#pi/360 *@rotation
+float fisheyeplus=@fishstrenght+1	
+
+init:
+	float zzx=0
+	float zzy=0
+	complex c=0
+float ux=0
+float uy=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+ENDIF
+c=@func_post(c)
+z=c
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z=#pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+complex oldz=z
+float zx = real(z)
+float zy = imag(z)
+loop:
+oldz=z
+
+;copy past from Ed Algra code exept Sign which were generated by mathematical error
+   if @trans==1 ;                         					sin-sin | cos-sin
+      ux = 1.0E-15+sin(zx-(1.0E-15+sin(zy))),       uy = 1.0E-15+cos(zy-(1.0E-15+sin(zx)))
+   elseif @trans==2 ;                     					in+sin | cos+sin
+      ux = 1.0E-15+sin(zx+(1.0E-15+sin(zy))),       uy = 1.0E-15+cos(zy+(1.0E-15+sin(zx)))
+   elseif @trans==3 ;                     					atan
+      ux = 1.0E-15+atan(zy/(1.0E-15+zx)),           uy = 1.0E-15+atan(zx/(1.0E-15+zy))
+   elseif @trans==4 ;                     					sin*sin | cos*sin
+      ux = 1.0E-15+sin(zx*(1.0E-15+sin(zy))),       uy = 1.0E-15+cos(zy*(1.0E-15+sin(zx)))
+   elseif @trans==5 ;                     					cos-sin | cos-sin
+      ux = 1.0E-15+cos(zx-(1.0E-15+sin(zy))),       uy = 1.0E-15+cos(zy-(1.0E-15+sin(zx)))
+   elseif @trans==6 ;                     					cos+sin | cos+sin
+      ux = 1.0E-15+cos(zx+(1.0E-15+sin(zy))),       uy = 1.0E-15+cos(zy-(1.0E-15+sin(zx)))
+   elseif @trans==7 ;                     					atan2
+      ux = 1.0E-15+atan(zy/(1.0E-15+zx)),           uy = 1.0E-15+atan(zx/(1.0E-15+zy))
+   elseif @trans==8 ;                     					Sign (ex atan3)
+
+if real(zy) > 0,  ux = 0, elseif real(zy) == 0,  ux = -0.5 * #pi, else,    ux = -#pi, endif
+if real(zx) > 0,  uy = 0, elseif real(zx) == 0,  uy = -0.5 * #pi, else,    uy = -#pi, endif
+
+   elseif @trans==9 ;                     					sin & recip
+      uy = 1.0E-15+abs(sin(zx*zx+zy*zy))
+      ux = zx/uy,                      	  uy = zy/uy
+   elseif @trans==10 ;                    					sine stalks
+      ux = sin(zx)/(1.0E-15+sqrt(zx*zx+zy*zy)), uy = sin(zy)/(1.0E-15+sqrt(zx*zx+zy*zy))
+   elseif @trans==11 ;                    					ln stalks
+     uy = 1.0E-15+log(abs(zx*zx+zy*zy-1.0E-15))
+      ux = log(abs(zx+1.0E-15))/uy,           uy = log(abs(zy+1.0E-15))/uy
+   elseif @trans==12 ;                    					sine vibration
+      ux = sin(zx),                         uy = sin(zy)
+   elseif @trans==13 ;                    					cosine vibration
+      ux = cos(zx),                         uy = cos(zy)
+   elseif @trans==14 ;                    					tangens vibration
+      ux = sin(zx)/(abs(cos(zx))+1.0E-15),      uy = sin(zy)/(abs(cos(zy))+1.0E-15)
+   elseif @trans==15 ;                    					sin*cos
+      ux = sin(zx)*cos(zx),                 uy = sin(zy)*cos(zy)
+      else
+      ux=0, uy=0
+   endif
+
+;generates square
+zzx=(zx  * (zx +@addnumber -ux) ) *real(@fscale)
+zzy=(zy  * (zy +@addnumber -uy) ) *imag(@fscale)
+
+;repeats pattern
+if @pattern==1
+zzx=sin(zzx)
+zzy=sin(zzy)
+elseif @pattern==2
+zzx=cos(zzx)
+zzy=cos(zzy)
+elseif @pattern==3
+zzx=atan(zzx)
+zzy=atan(zzy)
+elseif @pattern==4
+zzx=abs(abs(zzx*0.5-trunc(zzx*0.5)) )*2
+zzy=abs(abs(zzy*0.5-trunc(zzy*0.5)) )*2
+elseif @pattern==5
+zzx=sqr(sin(zzx))	
+zzy=sqr(sin(zzy))	
+elseif @pattern==6
+zx=sin(zzx)*cos(zzy)
+zzy=sin(zzy)*cos(zzx)
+zzx=zx
+elseif @pattern==7
+zx=sin(zzy)
+zzy=sin(zzx)
+zzx=zx
+endif
+
+;rotate in complex plane + c
+zx = (zzx*cos(radians) + zzy*sin(radians))  +real(c)
+zy = (zzx*sin(radians) + zzy*cos(radians))  +imag(c)
+
+;for colour
+z=flip(zy) + zx
+
+IF (@usefunction)
+z= @func_x(z)
+zx=real(z)
+zy=imag(z)
+ENDIF
+
+IF  (@riselast)
+z=z^@riselastpower
+ENDIF
+
+bailout:
+  |z| < @bailout && |z - oldz| > @lowerbailout		
+		
+default:
+title = "Caerulator"
+magn = 0.5
+center = (-0.5, 0)
+periodicity = 0
+
+heading
+caption = "Formula Functions"
+endheading
+
+param pattern
+caption="Repeat Function"
+enum= "none" "Sin" "Cos" "Atan" "Triangle" "SinSquared" "SineCosineMix" "FlipedXySin"
+default=1
+hint= "Wave functions for x and y coordinates. Good for Julias as creates infinite pattern but could hide parts of mandelbrot set. Fliped XY is the same as 90 rotation."
+endparam
+
+float param rotation
+caption="Rotation"
+default=0
+hint="Curves lines. Preferable range -10< Rot <10."
+endparam
+
+param trans
+    caption = "Transformation"
+    hint= "from Fractal Explorer. Good mandelbrot with Sign."
+    default = 0
+    enum = "normal" \
+           "sin-sin | cos-sin" \
+           "sin+sin | cos+sin" \
+           "atan" \
+           "sin*sin | cos*sin" \
+           "cos-sin | cos-sin" \
+           "cos+sin | cos+sin" \
+           "atan2" \
+           "Sign" \
+           "sin & recip" \
+           "sine stalks" \
+           "log stalks" \
+           "sine vibration" \
+           "cosine vibration" \
+           "tangens vibration" \
+           "sin*cos"
+endparam
+
+bool param usefunction
+caption ="Z Function"
+default = FALSE
+hint="Use Z function for more patterns."
+endparam
+
+func func_x
+caption="Z Function"
+default=ident()
+visible = (@usefunction)
+endfunc
+
+heading
+caption = "Bailouts"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 10000.0
+min = 0.5
+endparam
+
+param lowerbailout
+    caption = "Convergent bailout"
+    default = 0.000001
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-0.18, -0.18)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Arithmetics"
+endheading
+
+float param addnumber
+caption = "Add Number"
+default=-0.5
+endparam
+
+complex param fscale
+caption = "Scale X Y"
+default=(1,1)
+hint="Streches and skews in X and Y  dimensions."
+endparam
+
+heading
+caption = "Mapping Mutations"
+endheading
+
+bool param riselast
+caption ="last Z=Z^n"
+default = FALSE
+hint="Minor effect. Modifies colours and when formulas bails out by rising z in power (z=z^n) just before a bailout."
+endparam
+
+float param riselastpower
+caption="n of Z^n"
+visible = (@riselast)
+default=3
+hint="value 1 is like no powers."
+endparam
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=2
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+heading
+caption = "Info"
+text = "Pattern generating script like Ducks / Kalisets or Popcorn. Interesting Julias or Mandelbrot of Sign transformation. Consecutive functions x= rotate(repeat(Scale*x*(x+ Add- transformation(x)) )+ c, y= rotate(repeat(Scale*y*(y+ Add- transformation(y)) )+ c  z=Zfunction(z)"
+endheading
+
+switch:
+type = "Caerulator"
+julia = #pixel
+addnumber=addnumber
+fscale=fscale
+bailout=bailout
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+trans=trans
+rotation=rotation
+lowerbailout=lowerbailout
+pattern=pattern
+inverted=inverted
+fishstrenght=fishstrenght
+riselast=riselast
+riselastpower=riselastpower
+func_x=func_x
+usefunction=usefunction
+}
+
+DuckyGlyph	{
+; Basicaly a combination of gnarl and ducky.
+; Inspired by olympics.
+; Uses Glyph by Samuel Monnier, 19.3.00
+; which is modified Vine formula (from Mark Townsend)
+; some ideas from Toby Marshall gnarls,
+; and alsou all the duckies / luckies / kalisets.
+
+;by Edgar Malinovsky 23.02.2014.
+
+; http://edo555.deviantart.com/
+
+global:
+float radians= 2*#pi/360 *@rotation
+float fisheyeplus=@fishstrenght+1	
+
+init:
+  float func areas(const float w) ; mean between variable and its round.
+    return  ( (round(w*@factround)/@factround + w)*0.5)
+  endfunc
+
+	float zzx=0
+	float zzy=0
+	float radius =0
+	complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+ENDIF
+c=@func_post(c)
+z=c
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+c=@julia
+z=(@fishstrenght+cabs(#pixel) )/fisheyeplus*#pixel
+ELSE
+c=@julia
+z=#pixel
+ENDIF
+z=@func_post(z)
+ENDIF
+
+float zx = real(z)
+float zy = imag(z)
+int  iter=0
+int  i = 0
+loop:
+  iter = iter + 1
+  i = 0
+
+;a gnarling cycle
+  zzx=zy
+  zzy=zx
+   while i < @cycles
+   i = i + 1
+   zzx=zzx*@faster
+   zzy=zzy*@faster
+
+   IF (@aritm==0)
+   zzx = zy + @scale1*(sin(zzx) + cos(zzx))
+   zzy = zx + @scale1*(sin(zzy) + cos(zzy))
+   ELSEIF (@aritm==1)
+   zzx = zy + @scale1*(sin(zzx) - cos(zzx))
+   zzy = zx + @scale1*(sin(zzy) - cos(zzy))
+   ELSEIF (@aritm==2)
+   zzx = zy + @scale1*sin(zzx) *cos(zzx)*1.43
+   zzy = zx + @scale1*sin(zzy) *cos(zzy)*1.43
+   ENDIF
+   endwhile
+
+;different gnarls
+IF (@Gnarl==0)
+;symmetric
+   zzx=zzx*@faster
+   zzy=zzy*@faster
+   zx = zx + @scale2*(sin(zzx) + cos(zzx))
+   zy = zy + @scale2*(sin(zzy) + cos(zzy))
+ELSEIF (@Gnarl==1)
+;curls
+   zzx=zzx*@faster
+   zzy=zzy*@faster
+   zx = zx + @scale2*cos(zzx) *tanh(zzx)
+   zy = zy + @scale2*cos(zzy) *tanh(zzy)
+ELSEIF (@Gnarl==2)
+;SAM's original glyph
+   zx = zx - @scale2*(sin(zzx) + cos(zzx))
+   zy = zy + @scale2*(sin(zzy) + cos(zzy))
+ELSEIF (@Gnarl==3)
+;symmetric
+   zzx=zzx*@faster
+   zzy=zzy*@faster
+   zx = zx + @scale2*(areas(sin(zzx)) + areas(cos(zzx)))
+   zy = zy + @scale2*(areas(sin(zzy)) + areas(cos(zzy)))
+ELSEIF (@Gnarl==4)
+;curls
+   zzx=zzx*@faster
+   zzy=zzy*@faster
+   zx = zx + @scale2*areas(cos(zzx))*areas(tanh(zzx))
+   zy = zy + @scale2*areas(cos(zzy))*areas(tanh(zzy))
+ELSEIF (@Gnarl==5)
+;SAM's original glyph
+   zx = zx - @scale2*(areas(sin(zzx)) + areas(cos(zzx)))
+   zy = zy + @scale2*(areas(sin(zzy)) + areas(cos(zzy)))
+ENDIF
+
+;rotate in plane + c
+zzx = (zx*cos(radians) + zy*sin(radians))  +real(c)
+zzy = (zx*sin(radians) + zy*cos(radians))  +imag(c)
+
+;ducks like mirrors
+IF (@Mirror==0)
+zx=zzx
+zy=zzy
+ELSEIF (@Mirror==1)
+;abs
+  zx=abs(zzx-real(@mirrorxy))+real(@mirrorxy)
+  zy=abs(zzy-imag(@mirrorxy))+imag(@mirrorxy)
+ELSEIF (@Mirror==2)
+;sefir
+      radius = sqr(zzx)+sqr(zzy)
+      IF (radius ==0)
+      zx=0
+      zy=0
+      ELSEIF (radius < (@smllradius) )
+      zx=zzx/@smllradius
+      zy=zzy/@smllradius
+      ELSEIF (radius<@bigradius)
+      zx=zzx/radius
+      zy=zzy/radius
+      ENDIF
+ELSEIF (@Mirror==3)
+;spiral, in complex z=z*c
+zx=(zzx*real(c)-zzy*imag(c))
+zy=(zzy*real(c)+zzx*imag(c))
+
+ELSEIF (@Mirror==4)
+;seamless boxfold
+zx = abs(zzx-@fold) - abs(zzx+@fold) + zzx
+zy = abs(zzy-@fold) - abs(zzy+@fold) + zzy
+ENDIF
+
+;goes to colourings
+z=flip(zy) + zx
+
+IF  (@riselast)
+z=z^@riselastpower
+ENDIF
+
+bailout:
+  iter < #maxiter
+default:
+title = "DuckyGlyph"
+periodicity = 0
+maxiter = 20
+rating = recommended
+
+heading
+caption = "Info"
+text = "Use with non basic colouring methods, such as any of the lyapunovs or orbit traps or smooths and search for a Julias. Pattern density depends on Cycles and less so on max iterations. Style depends on Mirror. last Z=Z^n increases contrast. SAM's glyph + ducks like mirror + shattered pieces (areas)."
+endheading
+
+heading
+caption = "Formula Functions"
+endheading
+
+param aritm
+caption="Arithmetics"
+hint="Sin and cosine are eather + - or *."
+default= 0
+enum= "+" "-" "*"
+endparam
+
+param Gnarl
+caption="Gnarl"
+hint="Gnarl trigonometry."
+default= 0
+enum="Symmetric" "Curls" "SAM" "areas Symmetric" "areas Curls" "areas SAM"
+endparam
+
+int param factround
+caption = "Rounding factor"
+default = 3
+min=1
+visible = (@Gnarl>2)
+hint="The larger the factor the less angular will be the result aka less rounding."
+endparam
+
+param Mirror
+caption="Mirror"
+hint="Introduces Ducks like character."
+default= 1
+enum="None" "Abs" "Sefir" "Spiral" "Boxfold"
+endparam
+
+float param fold
+caption="Fold"
+default=1
+visible = (@Mirror=="Boxfold")
+endparam
+
+complex param mirrorxy
+caption="Mirror point"
+default=(0,0)
+visible = (@Mirror=="Abs")
+endparam
+
+float param smllradius
+caption="Small radius"
+default=0.4
+visible = (@Mirror=="Sefir")
+endparam
+
+float param bigradius
+caption="Big radius"
+default=1
+visible = (@Mirror=="Sefir")
+endparam
+
+heading
+caption = "Glyph variables"
+endheading
+
+  param cycles
+    caption = "Cycles"
+    default = 2
+    min = 0
+    hint="Pattern density. How many times transformation is applied in each iteration."
+  endparam
+
+  param faster
+    caption = "main Scale"
+    default = 2.7
+  endparam
+  param scale1
+    caption = "Scale in Cycle"
+    default = 0.7
+  endparam
+  param scale2
+    caption = "Scale out Cycle"
+    default = 0.05
+  endparam
+
+float param rotation
+caption="Rotation"
+default=0
+hint="Rotates z and not a fractal. Small values -2<0<2 or 90 and 180 degrees."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default= 0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+bool param riselast
+caption ="last Z=Z^n"
+default = FALSE
+hint="Minor effect. Strenghtens colours by rising z in power (z=z^n) just befor sending z to colour calculation."
+endparam
+
+float param riselastpower
+caption="n of Z^n"
+visible = (@riselast)
+default=3
+hint="value 1 is like no powers."
+endparam
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@inverted)
+default=2
+endparam
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+switch:
+type = "DuckyGlyph"
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+rotation=rotation
+inverted=inverted
+fishstrenght=fishstrenght
+riselast=riselast
+riselastpower=riselastpower
+cycles=cycles
+faster=faster
+scale1=scale1
+scale2=scale2
+fold=fold
+Mirror=Mirror
+Gnarl=Gnarl
+factround=factround
+aritm=aritm
+mirrorxy=mirrorxy
+smllradius=smllradius
+bigradius=bigradius
+}
+
+Devaney {
+; z=  z^n + C / (z - a)^d
+; whose versions was much researched
+; by Robert L. Devaney
+; julia sets = Sierpinski carpet.
+; http://math.bu.edu/people/bob/papers.html
+; 09.09.2014.
+; 20.09.2014. finaly normal critical points for mset.
+; thanks to http://www.fractalforums.com/index.php?topic=18526.30
+; not much compatibility with previous critical points, sorry.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+
+init:
+complex c=#pixel
+
+IF (@usefisheye)
+c=(@fishstrenght+cabs(c) )/fisheyeplus*c
+ENDIF
+c=@func_post(c)
+
+IF (@settype=="Mandelbrot")
+
+ IF (@criticalpoint==0)
+ z=@startvalue
+ ELSEIF (@criticalpoint==1)
+ z=1-2/(@powern+@powerd)
+ ELSEIF (@criticalpoint==2)
+ z=(@powerd*c/@powern)^recip(@powern+@powerd)
+ ENDIF
+
+ELSEIF (@settype=="Julia")
+z= c
+c=@julia
+ENDIF
+
+int iter=0
+loop:
+
+;formula starts here
+
+z= z^@powern + c / (z - @talis)^@powerd
+
+;Mutations
+IF (@formula ==0)
+ELSEIF (@formula ==1)
+z=abs(z)
+ELSEIF (@formula ==2)
+z= conj(z)
+ELSEIF (@formula==3)
+z=z-c
+z=z - real(z) + abs(real(z)) - c
+ELSEIF (@formula==4)
+z=z - real(z) + abs(real(z))
+ELSEIF (@formula==5)
+z= abs(real(z))-flip(imag(z))
+ENDIF
+
+IF  (@itermultiplied)
+z=iter*@itermult +z
+ENDIF
+
+
+iter=iter+1
+bailout:
+|z| < @bailout
+
+default:
+title = "Devaney"
+periodicity = 0
+magn = 2
+
+heading
+caption = "Info"
+text = "Z=  Z^n + C / (Z - Center)^d  whose julia sets - Sierpinski carpet was much researched by Robert L. Devaney  http://math.bu.edu/people/bob/papers.html "
+endheading
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 10000.0
+min = 1.0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+float param powern
+caption = "Power n"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+float param powerd
+caption = "Power d"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+param criticalpoint
+caption="Critical point"
+default=2
+visible = (@settype=="Mandelbrot")
+hint="Starting value of z. Finaly found the mathematicaly correct version. Still probably only when Center=0."
+enum="manual" "both" "Correct Math"
+endparam
+
+complex param startvalue
+caption = "Starting value"
+default = (0.5 ,0)
+visible = (@criticalpoint=="manual" && @settype=="Mandelbrot")
+hint = "This needs starting z other than 0 and that depends on n / d values."
+endparam
+
+complex param talis
+caption = "Center"
+default = (0,0)
+hint = "Talis like parameter."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.109, 0.0004)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+param formula
+caption="Mirror"
+default=0
+enum= "None" "Burning Ship" "Tricorn" "Celtic" "Assimilated Celtic" "Perpendicular"
+endparam
+
+bool param itermultiplied
+caption ="z+ IterationsxM"
+default = FALSE
+hint="At each iteration to the result ads iteration number x coefficient. Hence orbits have no choice but to escape."
+endparam
+
+float param itermult
+caption="multiplication factor M"
+visible = (@itermultiplied)
+default=0.002
+endparam
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param usefisheye
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to mapping (pixel values)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@usefisheye)
+default=2
+hint="Denomintor, decreesing value increases effect."
+endparam
+
+
+switch:
+type="Devaney"
+powern=powern
+powerd=powerd
+talis=talis
+julia = #pixel
+bailout=bailout
+usefisheye=usefisheye
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+itermultiplied=itermultiplied
+itermult=itermult
+formula=formula
+criticalpoint=criticalpoint
+startvalue=startvalue
+}
+
+FractalusTechna {
+; A transformation placed between the formula and +c.
+; Shatters fractal into blocks of solids.
+; z=formula(z)
+; z=transform(z) repeated Cycles times
+; z=z+c
+; with transform z = z - z/round(z).
+; This transformation would work in 3D as it was found using quaternion math and mandelbulb.
+
+; Edgar Malinovsky
+; 29.10.2014.
+
+; http://edo555.deviantart.com/
+
+global:
+float fisheyeplus=@fishstrenght+1
+int powminus=@power-1
+
+init:
+complex c=#pixel
+
+IF (@usefisheye)
+c=(@fishstrenght+cabs(c) )/fisheyeplus*c
+ENDIF
+c=@func_post(c)
+
+IF (@settype=="Mandelbrot")
+z=0
+
+ELSEIF (@settype=="Julia")
+z= c
+c=@julia
+ENDIF
+
+int iter=0
+int  i = 0
+complex vector =0
+loop:
+i = 0
+
+IF (@formula=="Burning Ship")
+z=abs(z^@power)
+ELSEIF (@formula=="Talis")
+z= (z^@power)/(z^powminus + @talisfactor)
+ELSEIF (@formula=="MalinovskyDeco")
+z=sinh(z)*z
+ELSE
+;good old mandelbrot
+z=z^@power
+ENDIF
+
+;a techno cycle
+while i < @cycles
+i = i + 1
+  IF (@roundtype=="ceil")
+  vector = ceil(z)
+  ELSEIF (@roundtype=="round")
+  vector = round(z)
+  ELSEIF (@roundtype=="floor")
+  vector = floor(z)
+  ELSEIF (@roundtype=="trunc")
+  vector = trunc(z)
+  ENDIF
+
+IF (vector !=0)
+vector = z/vector
+ENDIF
+z=z-vector
+endwhile
+
+IF (@formula=="MalinovskyDeco")
+;this formula requires exotic C.
+z=z-sqr(c)
+ELSE
+z=z+c
+ENDIF
+
+IF  (@itermultiplied)
+z=iter*@itermult +z
+ENDIF
+iter=iter+1
+
+bailout:
+  |z| < @bailout
+default:
+title = "Fractalus Techna"
+periodicity = 1
+method = multipass
+magn = 0.8
+
+heading
+caption = "Info"
+text="Techno like transformation z = z - z/round(z) placed between the formula and +c which shatters fractal into pieces of solids. Transformation is repeated Cycles times, 1 is good for mandelbrot set, larger values goes for the julias. Throught maybe less techno than barnsly techno."
+endheading
+
+heading
+caption = "Shattering"
+endheading
+
+param cycles
+caption = "Cycles"
+default = 2
+min = 0
+hint="How much times during iteration transformation is applied. 2 goes better for julia and 1 for mandelbrot zooms."
+endparam
+
+param roundtype
+caption="Rounding Type"
+default=0
+enum="ceil" "round" "floor" "trunc"
+endparam
+
+heading
+caption = "Formula"
+endheading
+
+param formula
+caption="Formula"
+default=0
+enum="Mandelbrot" "Burning Ship" "Talis" "MalinovskyDeco"
+endparam
+
+int param power
+caption = "Power"
+default = 2
+visible = (@formula=="Mandelbrot"||@formula=="Burning Ship"||@formula=="Talis")
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@formula=="Talis")
+default=1
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+float param bailout
+caption = "Bailout value"
+default = 10000
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.7, -0.33)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+bool param itermultiplied
+caption ="z+ IterationsxM"
+default = FALSE
+hint="At each iteration to the result ads iteration number x coefficient. Hence orbits have no choice but to escape."
+endparam
+
+float param itermult
+caption="multiplication factor M"
+visible = (@itermultiplied)
+default=0.002
+endparam
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param usefisheye
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to mapping (pixel values)."
+endparam
+
+float param fishstrenght
+caption="Fisheye Factor"
+visible = (@usefisheye)
+default=2
+hint="Denomintor, decreesing value increases effect."
+endparam
+
+
+switch:
+type = "FractalusTechna"
+julia = #pixel
+cycles=cycles
+roundtype=roundtype
+formula=formula
+talisfactor=talisfactor
+power = power
+bailout = bailout
+usefisheye=usefisheye
+fishstrenght=fishstrenght
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+itermultiplied=itermultiplied
+itermult=itermult
+}
+
+Mandelnest_norm2 {
+
+; Used to explore 3D mandelnest (fractal by Jeanot) formula in 2D.
+; https://fractalforums.org/share-a-fractal/22/mandelbrot-3d-mandelnest/4028
+; Looks like tricorn, but in Lp space (not 2) it is different.
+; alsou https://en.wikipedia.org/wiki/Lp_space#The_p-norm_in_finite_dimensions
+; by Edgars Malinovskis
+
+init:
+
+; @pnorm   Defined function with, modulus of 3 variables (in LP space)
+float func Modulus(float x , float y, float z1)
+; calculates p norm, |z| in Lp spaces - @pnorm
+  float PnormMod = 0
+;  int Lpnorm = @pnorm
+
+IF @pnorm == 1
+;fast
+PnormMod = abs(x) + abs(y) + abs(z1)
+  ELSEIF @pnorm == 4
+  PnormMod =  (x^4) + (y^4) + (z1^4)
+  PnormMod =  sqrt(sqrt(PnormMod))   ; somehow operator ^ don't works here
+ELSEIF @pnorm == 8
+PnormMod =  (x^8) + (y^8) + (z1^8)
+PnormMod =  sqrt(sqrt(sqrt(PnormMod)))
+ELSE
+;  usual || function
+  PnormMod = sqrt( x*x + y*y + z1*z1)
+ENDIF
+
+  return PnormMod
+endfunc
+
+
+float x = 0
+float y = 0
+float ax = 0
+float ay = 0
+float az = 0
+
+float Modulus0 = 0
+float Modulus1 = 0
+float Modulus2 = 0
+;float Modulus3 = 0
+
+complex c=0
+float z1 = @height + 1.0e-15
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+
+int iter=0
+loop:
+
+x= real(z)
+y= imag(z)
+
+Modulus0 = Modulus(x,y,z1)    ;sqrt( x*x + y*y + z1*z1  )
+
+Modulus1 = Modulus0
+
+ax = asin( x / Modulus0)
+ay = asin( y / Modulus0)
+az = asin( z1 / Modulus0)
+
+ax = ax* @Fpower
+ay = ay* @Fpower
+az = az* @Fpower
+
+Modulus1 = Modulus1 ^ @Fpower
+
+x  = sin (ax)
+y  = sin (ay)
+z1  = sin (az)
+
+;===========
+
+
+Modulus2 = Modulus(x,y,z1)  ;sqrt( x*x + y*y + z1*z1  )
+
+
+x =  x* Modulus1/Modulus2
+y =  y* Modulus1/Modulus2
+z1 = z1* Modulus1/Modulus2
+
+z = x + flip(y)  + c
+
+
+x= real(z)
+y= imag(z)
+;Modulus3 =Modulus(x,y,z1) ;sqrt( x*x + y*y + z1*z1 )
+
+;=================
+;eND OF FORMULA
+
+iter=iter+1
+bailout:
+|z| < @bailout
+
+default:
+title = "Mandelnest Norm"
+periodicity = 0
+rating = notRecommended
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1024
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+int param Fpower
+caption = "Power"
+default = 3
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+int param pnorm
+caption = "Lp space (1,2,4,8)"
+default = 2
+min = 1
+max = 8
+hint = "Lp space."
+endparam
+
+float param height
+caption = "3D Height"
+default = 0
+hint = "Defines cut plane of 3D object."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="Mandelnest_norm2"
+power=power
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+formula=formula
+pnorm=pnorm
+Fpower=Fpower
+}
+
+Duality {
+; 1.Calculates 2 complex powers for each axis
+; aka mandelbrot or tricorn.
+; 2. choses largest value in the axis X and Y.
+; add C
+; https://fractalforums.org/fractal-mathematics-and-new-theories/28/mandelweird-3d-burning-ship/4290/msg29214#msg29214
+; That shows some algorithmic stuff, I don't know.
+; added few more possible modifications.
+; Edgars Malinovskis
+
+init:
+
+float x = 0
+float y = 0
+float x1 = 0
+float y1 = 0
+float x2 = 0
+float y2 = 0
+
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+loop:
+
+x= real(z)
+y= imag(z)
+
+;Basic complex powers
+x1=  x*x - y*y
+x2=  x*x - y*y
+
+y2=  2*x*y
+y1=  2*x*y
+
+;Modifications
+x1= @mw_X1*x1
+x2= @mw_X2*x2
+y1= @mw_Y1*y1
+y2= @mw_Y2*y2
+
+x1= real (@func_X1(x1) )
+x2= real (@func_X2(x2) )
+y1= real (@func_Y1(y1) )
+y2= real (@func_Y2(y2) )
+
+
+IF (y2>y1)
+y=y2
+ELSE
+y=y1
+ENDIF
+
+IF (x2>x1)
+x=x2
+ELSE
+x=x1
+ENDIF
+
+z = x + flip(y)  + C
+
+bailout:
+|z| < @bailout
+
+default:
+title = "Mandelweird conditionals based abs sets"
+periodicity = 0
+
+heading
+caption = "Info"
+text = "- Calculates 2 complex square powers      		\
+(mandelbrot or tricorn)			      		\
+- Choses the largest value	         	 		\
+- Adds C					  \
+X1,X2,Y1,Y2					  \
+1,1,1,1 is Mandelbrot 1,1,-1,-1 is Tricorn. 		\
+alsou 1,-1,1,1 - Celtic 1,1,-1,1 - Burning Ship 1,-1,-1,1 - Buffalo 1,-1,-1,-1 - Celtic Tricorn."
+endheading
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 10000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+float param mw_X1
+caption = "X1"
+default = 1
+hint = "Canonical values 1 or -1."
+endparam
+
+float param mw_X2
+caption = "X2"
+default = 1
+hint = "Canonical values 1 or -1."
+endparam
+
+float param mw_Y1
+caption = "Y1"
+default = 1
+hint = "Canonical values 1 or -1."
+endparam
+
+float param mw_Y2
+caption = "Y2"
+default = 1
+hint = "Canonical values 1 or -1."
+endparam
+
+func func_X1
+caption="Function X1"
+default=ident()
+hint="Function for 1st equation in X axis"
+endfunc
+
+func func_X2
+caption="Function X2"
+default=ident()
+hint="Function for 1st equation in X axis"
+endfunc
+
+func func_Y1
+caption="Function Y1"
+default=ident()
+hint="Function for 1st equation in Y axis"
+endfunc
+
+func func_Y2
+caption="Function Y2"
+default=ident()
+hint="Function for 1st equation in Y axis"
+endfunc
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="Duality"
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+formula=formula
+func_X1=func_X1
+func_X2=func_X2
+func_Y1=func_Y1
+func_Y2=func_Y2
+mw_X1=mw_X1
+mw_X2=mw_X2
+mw_Y1=mw_Y1
+mw_Y2=mw_Y2
+}
+
+TrotskyDragon {
+; Fractal Explorer formula by DR Joseph Trocky
+; Implementation by Edgar Malinovsky
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg29489#msg29489
+; In zooms (-0.4, ...) there are "dragon curves".
+
+init:
+
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+;a critical point thanks to Claude and https://sagecell.sagemath.org
+;z = -1/3*c - 1/3*sqrt(c^2 + 2*c + 3*cos(@phaseshift + z) + 1) - 1/3
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+loop:
+
+Z= (Z+ C +1)*z*z - Sin (Z + @phaseshift) +  C
+
+bailout:
+cabs(z) < @bailout
+
+default:
+title = "Trotsky Dragon"
+periodicity = 0
+
+heading
+caption = "Formula Block"
+text = "Z=(Z+ C +1)*z^2 - Sin (Z + PhaseShift) +  C by Dr. Joseph Trocky"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1024
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+float param phaseshift
+caption = "Phase shift"
+default = 0.5
+hint = "This parameter phase shifts inside sin function."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(-0.37, 0.045)
+visible = (@settype=="Julia")
+endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="TrotskyDragon"
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+phaseshift=phaseshift
+}
+
+
+Triton {
+;
+; Simplification of idea from Fractal Explorer
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg29319#msg29319
+
+;Calculates newton equation embeded in mandelbrot set, initialised with pixel value.
+; maybe there is better critical points of calculation start.
+; by Edgar Malinovsky aka Edgars Malinovskis
+
+init:
+IF (@settype=="Mandelbrot type")
+  z = pixel
+
+  complex c = pixel
+  ELSE
+z=pixel
+c=@julia
+ENDIF
+  
+bool done = false
+  
+loop:
+complex zold = z
+
+Z=Z-(Z^3 + @root)/(3*Z^2)
+Z=Z^@power+C
+
+
+  IF(@bailoutype == "Newton")
+   done = (|z - zold| < @bailout)
+  ElSEIF (@bailoutype == "Mandelbrot")
+   done = (|z| > 1/@bailout)
+  ELSEIF (@bailoutype == "None")
+  ENDIF
+
+bailout:
+!done
+default:
+  title = "Triton a newton + mandelbrot"
+  periodicity = 0
+  method = multipass
+  magn=0.5
+  rating = recommended
+  
+heading
+caption = "Formula Block"
+text = "Iterate newton Z=Z-(Z^3 + Root)/(3*Z^2) and mandelbrot Z=Z^Power+C set combined formula."
+endheading
+
+
+  
+  float param power
+    caption = "Power"
+    default = 2
+    hint = "Specifies the exponent of the equation of quadratic equation."
+  endparam
+  float param root
+    caption = "Root"
+    default = 0.1
+    hint = "Specifies the root of the equation that is solved."
+  endparam
+
+param bailoutype
+caption = "Bailout Type"
+default =0
+enum= "Newton" "Mandelbrot" "None"
+hint = "Newton type often interferes with colour methods and sometimes better results for newton like areas could be achieved by no bailout and inside colouring."
+endparam
+
+  param bailout
+    caption = "Bailout value"
+    default = 0.0000001
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+  
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-2, 0)
+    visible = (@settype=="Julia type")
+  endparam
+  
+  switch:
+type="Triton"
+julia=#pixel
+settype= switchsettype
+switchsettype=settype
+root=root
+power=power
+bailoutype=bailoutype
+bailout=bailout
+}
+
+Person {
+; Found in a blog
+; https://matousstieber.wordpress.com/2016/01/12/mandelbrot-set/
+; implementation by Edgars Malinovskis
+
+init:
+
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+
+loop:
+
+; originaly z= (0,-1)* c*z^5 + 1
+
+z= @multiplicator* c*z^@power + @add
+
+
+bailout:
+cabs(z) < @bailout
+
+default:
+title = "Fractal Person"
+periodicity = 0
+
+heading
+caption = "Formula Block"
+text = "Z=Multiplicator*C*Z^Power+Addition"
+endheading
+
+int param power
+caption="Power"
+default=5
+endparam
+
+complex param add
+caption="Addition"
+default=(1,0)
+endparam
+
+complex param multiplicator
+caption="Multiplicator"
+default=(0,-1)
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 1024
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.137, -0.4)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="Person"
+power=power
+add=add
+multiplicator=multiplicator
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+}
+
+
+Trockyism {
+;From this
+;http://www.wack.ch/fame/chat/jo/cracks/crack1.html
+; idea by Dr. Joseph Trocky.
+;also
+;https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213
+; this could be implemented in everywere.
+; by Edgar Malinovsky
+
+init:
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+int iter = 0
+complex oldC = C
+
+loop:
+iter = iter + 1
+
+IF (@inlaid == iter)
+C=1/C
+ENDIF
+
+z= z^@power
+
+;modifications
+IF (@function=="Mandelbrot")
+z=z + c
+ELSEIF (@function=="Burning Ship")
+z=abs(z+ c)
+ELSEIF (@function=="Tricorn")
+z=conj(z)  + c
+ELSEIF (@function=="Heart")
+z=z+c
+z=z - real(z) + abs(real(z))
+ELSEIF (@function=="Talis")
+;z=z + c
+z=sqr(z)/(z-@talisfactor)    +c
+ELSEIF (@function=="SZA Butterfly")
+z= sqr(imag(z)) - sqrt(abs(real(z))) + flip (sqr(real(z)) - sqrt(abs(imag(z) ))) +c
+ELSEIF (@function=="Perpendicular")
+z=z+ c
+z= abs(real(z))-flip(imag(z))
+ELSEIF (@function=="Celtic")
+z=z - real(z) + abs(real(z)) + c
+ELSEIF (@function=="Celtic Tricorn")
+z= abs(real(z))-flip(imag(z)) + c
+ELSEIF (@function=="Buffalo")
+z=abs(z) + c
+ELSE
+z=z + c
+ENDIF
+
+
+
+;revert back
+C=oldC
+
+bailout:
+cabs(z) < @bailout
+
+default:
+title = "Trocky Crack on Mandelbrot"
+periodicity = 0
+method = multipass
+
+heading
+caption = "Formula Block"
+text = "Z=Z^pow+C During one iterations switches it to +1/C"
+endheading
+
+int param inlaid
+caption = "iteration of 1/C"
+default = 17
+min = 0
+endparam
+
+float param power
+caption = "power"
+default = 2
+min = 0
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 1024
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param function
+caption="Post function"
+default=0
+enum="Mandelbrot" "Burning Ship" "Tricorn" "Heart" "Talis" "SZA Butterfly" "Perpendicular" "Celtic" "Celtic Tricorn" "Buffalo"
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@function==4)
+default=0.4
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="Trockyism"
+power=power
+julia = #pixel
+bailout=bailout
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+inlaid=inlaid
+function=function
+talisfactor=talisfactor
+}
+
+Supernewton {
+;
+; formula from Fractal Explorer
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg29319#msg29319
+
+; 2 newton formulas, one not realy correct newton. But correction destrois fractal
+; by Edgars Malinovskis
+
+init:
+
+  z = pixel
+bool done = false
+
+float dPower1 = @power1 - 1
+float dPower2 = @power2 - 2
+
+loop:
+complex zold = z
+
+; simpler
+;z=Z-(Z^3-1)/(3*Z^2)
+;Z=Z-(Z^4-1)/(4*Z^2)
+
+Z=Z-(Z^@power1-@root)/(@power1*Z^(dPower1))
+Z=Z-(Z^(@power2)-@root)/((@power2)*Z^(dPower2))
+;julia like + #pixel aproches mandebrot set but it's boring
+
+
+  IF(@bailoutype == "Newton")
+    done = (|z - zold| < @bailout)
+  ElSEIF (@bailoutype == "Mandelbrot")
+  done = (|z| > 1/@bailout)
+  ELSEIF (@bailoutype == "None")
+  ENDIF
+
+bailout:
+!done
+default:
+  title = "Super Newton"
+  periodicity = 0
+  method = multipass
+  magn=0.5
+
+heading
+caption = "Formula Block"
+text = "Iterate newton Z=Z-(Z^Power1 - Root)/(Power1*Z^(Power1-1)) and Z=Z-(Z^Power2 - Root)/(Power2*Z^(Power2-2)) sets."
+endheading
+
+  float param power1
+    caption = "Power 1"
+    default = 3
+    hint = "Specifies the exponent of the equation of quadratic equation."
+  endparam
+  
+    float param power2
+    caption = "Power 2"
+    default = 4
+    hint = "Specifies the exponent of the equation of quadratic equation."
+  endparam
+  
+  complex param root
+    caption = "Root"
+    default = (2,0)
+    hint = "Specifies the root of the equation that is solved."
+  endparam
+
+param bailoutype
+caption = "Bailout Type"
+default =0
+enum= "Newton" "Mandelbrot" "None"
+hint = "Newton type bailout often interferes with colour methods and sometimes better results could be achieved by no bailout and inside colouring."
+endparam
+
+  param bailout
+    caption = "Bailout value"
+    default = 0.0000001
+    visible = (@bailoutype!="None")
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+}
+
+Talis {
+;
+; Talis formula from Fractal Explorer, made more generalised and also Tails, kind of simmilar.
+; originaly Talis formula was implemented in DOS fractal generator called Talis by Stephen C. Ferguson
+; Maybe this is another universal fractal.
+; With post functions it is like Ducky,
+; Some inside Lyapunov coloring and decreasing max iterations.
+;
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg29596#msg29596
+; by Edgar Malinovsky aka Edgars Malinovskis
+
+global:
+float powerminus1 = @power-1
+float powerplus1 = @power+1
+
+init:
+complex c=0
+
+IF (@settype=="Mandelbrot")
+IF (@inverted)
+c=(1+cabs(#pixel) )/2*#pixel
+c=@func_post(c)
+ELSE
+c=#pixel
+c=@func_post(c)
+ENDIF
+z=0
+
+IF (@formula=="Tails")
+z=1
+ENDIF
+
+
+ELSEIF (@settype=="Julia")
+IF (@inverted)
+z=(1+cabs(#pixel) )/2*#pixel
+ELSE
+z= #pixel
+ENDIF
+c=@julia
+z=@func_post(z)
+ENDIF
+
+bool done = false
+
+loop:
+complex zold = z
+
+	IF (@formula=="Talis")
+	;Z=Z^N / (M + Z^(N-1) )  + C    ;  N = 2, 3, 4 ....
+	; the original formula
+	Z=Z^@power / (@talisfactor + Z^(powerminus1)  )
+
+ELSEIF (@formula=="Talis variation 2")
+;Talis variation 2
+;Z= (Z^3 + 1 ) / (z^2 + 1) + C
+Z= (Z^powerplus1 + @talisfactor ) / (z^@power + @talisfactor)
+
+	ELSEIF (@formula=="Talis variation 4")
+	;Talis variation 4    !    by Toby Marshall
+	; z=z^3 / (1+z^2 -z^1)  + c
+	z=z^powerplus1 / (@talisfactor + z^@power -z^powerminus1)
+
+ELSEIF (@formula=="Tails")
+;tails  init z=1
+;z=z + 1/z + c
+z=z + 1/z ;+ c
+ENDIF
+
+
+;modifications
+IF (@function=="Nothing")
+z=z + c
+ELSEIF (@function=="Burning Ship")
+z=abs(z+ c)
+ELSEIF (@function=="Buffalo")
+z=abs(z) + c
+ELSEIF (@function=="Talis")
+z=sqr(z)/(z-1)    +c
+ELSEIF (@function=="SZA Butterfly")
+z= sqr(imag(z)) - sqrt(abs(real(z))) + flip (sqr(real(z)) - sqrt(abs(imag(z) ))) +c
+ELSEIF (@function=="Celtic")
+z=abs(real(z))+ flip( imag(z)) +c
+ELSEIF (@function=="Celtic Tricorn")
+z=abs(real(z))- flip( imag(z)) +c
+ELSEIF (@function=="LogAbs")
+z=log(abs(z + c ))
+ELSEIF (@function=="AbsLog")
+z=abs(log(z + c ))
+ELSEIF (@function=="AsinhAbs" )
+z = asinh(abs(z  ))+c
+ELSE
+z=z + c
+ENDIF
+
+
+
+  IF (@bailoutype == "Mandelbrot")
+   done = (|z| > @bailout)
+  ELSEIF(@bailoutype == "Newton || Mandelbrot")
+   done = ( |z| > @bailout ||  |z - zold| < 1/@bailout )
+  ELSEIF (@bailoutype == "None")
+  ENDIF
+
+bailout:
+!done
+
+default:
+title = "Talis"
+periodicity = 0
+method = multipass
+rating = recommended
+
+heading
+caption = "Formula Block"
+text = "Talis formula from Fractal Explorer of the basic type: Talis Z=Z^Pow/(Talis+Z^(Pow-1))+C or Tails Z=Z+1/Z+C. With post functions and inside coloring - Ducky like."
+endheading
+
+param formula
+caption="Formula"
+default=0
+enum="Talis" "Talis variation 2" "Talis variation 4" "Tails"
+endparam
+
+float param power
+caption = "Power"
+visible = (@formula!="Tails")
+default = 2
+min = 0
+endparam
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@formula!="Tails")
+default=1
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+param function
+caption="Post function"
+default=0
+enum="Nothing" "Burning Ship" "Buffalo" "Talis" "SZA Butterfly" "Celtic" "Celtic Tricorn" "LogAbs" "AbsLog" "AsinhAbs"
+endparam
+
+heading
+caption = "Bailout"
+endheading
+
+param bailoutype
+caption = "Bailout Type"
+default =0
+enum= "Mandelbrot" "Newton || Mandelbrot" "None"
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 108
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.2, 0.3)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+param inverted
+caption ="Fish Eye"
+default = FALSE
+hint="Applies Fish Eye transformation to pixel values (mapping)."
+endparam
+
+switch:
+type="Talis"
+power=power
+talisfactor=talisfactor
+formula=formula
+julia = #pixel
+bailout=bailout
+bailoutype=bailoutype
+inverted=inverted
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+function=function
+}
+Swirlandmirror {
+; Cleaned up Swirlbox.
+; Patterns with inside colouring
+; such as exponent smoothing or
+; wave trichrome.
+; or Lyapunov Forducking and
+; Mega Discrete Lagrangian Descriptors.
+
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg30637#msg30637
+
+;Edgars Malinovskis
+
+
+init:
+float cx=0
+float cy=0
+float zx=0
+float zy=0
+float zzx=0
+float zzy=0
+float angx=0
+float angy=0
+float radius=0
+
+IF (@settype=="Mandelbrot")
+cx=real(#pixel)
+cy=imag(#pixel)
+
+ENDIF
+
+IF (@settype=="Julia")
+cx=real(@julia)
+cy=imag(@julia)
+
+zx=real(#pixel)
+zy=imag(#pixel)
+ENDIF
+
+loop:
+; consecutive transformations
+
+   ;1
+IF (@mirror=="Fold")
+;continiuous and seamless fold
+zx = abs(zx-@Fold) - abs(zx+@Fold) + zx
+zy = abs(zy-@Fold) - abs(zy+@Fold) + zy
+ELSEIF (@mirror=="Abs")
+zx=abs(zx)
+zy=abs(zy)
+ELSEIF (@mirror=="None")
+;nothing
+ELSEIF (@mirror=="Stir Z*C" )
+;works as to stir a cofee,
+; analog of complex z=z*c
+zzx=(zx*cx-zy*cy)
+zzy=(zy*cx+zx*cy)
+zx=zzx
+zy=zzy
+ENDIF
+
+    ;2
+;scaling
+zx=zx*@scale
+zy=zy*@scale
+
+
+     ;3
+;swirl transform.
+radius = sqrt( sqr(zx)+sqr(zy) )
+
+angx=atan2(radius+1i*zx)
+angy=atan2(zx+1i*zy)
+
+zx= cos(@frequency*radius+ @spin*angx)*radius +cx
+zy= sin(@frequency*radius+ @spin*angy)*radius +cy
+
+      ;4
+; make complex z
+z=zx+flip(zy)
+
+bailout:
+(abs(zx)+abs(zy)) <= @bailout
+default:
+title = "Swirl and Mirror"
+maxiter = 14
+magn = 0.4
+periodicity = 0
+
+heading
+caption = "Cosmos"
+text="Cleaned up Swirlbox. Circular patterns appears with inside colouring method (that sums up iterations like Lyapunov Forduckin, Mega Discrete Lagrangian Descriptors, wave trichrome or exponent smoothing), max iterations about 10 and zooming in. Swirl formula originated from equation of gravitation waves generated by 2 black hole collision."
+endheading
+
+float  param scale
+    caption = "Scale"
+    default = 0.9
+  endparam
+
+float param  frequency
+caption="Vorticity"
+default=3
+endparam
+
+float param   spin
+caption="Spiral Arms"
+default=5
+endparam
+
+param mirror
+caption = "Mirror"
+default = 0
+enum="Fold" "Abs" "None" "Stir Z*C"
+endparam
+
+float param Fold
+caption = "Fold lenght"
+default = 1
+visible = (@mirror=="Fold")
+endparam
+
+  float param bailout
+  caption = "Bailout value"
+  default = 15
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.3, 0.6)
+    visible = (@settype=="Julia")
+  endparam
+
+
+switch:
+type="Swirlandmirror"
+julia = #pixel
+bailout=bailout
+settype=switchsettype
+switchsettype=settype
+Fold=Fold
+frequency=frequency
+spin=spin
+scale=scale
+mirror=mirror
+}
+
+JMuthFractint {
+; by several Fractint users
+; and then modified by Jim Muth
+;...
+; and then refined or destiled by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg30579#msg30579
+
+global:
+float power = @thirds/3
+
+init:
+
+IF (@settype=="Mandelbrot")
+Z = #pixel
+C = #pixel
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+Z = log(Z)
+  IF(imag(Z)>0)
+  Z = Z + 1i*2*PI
+  ENDIF
+Z = exp(power*(Z + 1i*2*PI ))+ C
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "JMuthFractint Formula"
+periodicity = 0
+method = multipass
+
+heading
+caption = "expl"
+text="Classical mandelbrot set represented by very different angular(?) exp and log based equation. Here power of Z^power+C is represented by 1/3ds as these generate symmetrical sets. So power 2 is 6 thirds and power 3 is 9 thirds. "
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+float param thirds
+caption="Power by thirds"
+default=5
+
+endparam
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(1.4, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="JMuthFractint"
+bailout=bailout
+thirds=thirds
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+MandelAfJulia {
+
+; "Pretty sick.  Try your every fave julias for p1.
+; Haven't we seen this before?!  This *can't* be original!"
+; by Jussi Kantola aka Jute
+
+; Actualy this is very original.
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg30484#msg30484
+; refined by Edgars Malinovskis
+
+init:
+
+Z = 0
+C = #pixel
+complex zJulia=#pixel
+
+
+int iter = 0
+loop:
+
+
+IF iter < @juliaiter
+zJulia = zJulia^@power+@Seed
+
+ELSE
+Z = Z^@power + C + zJulia
+
+ENDIF
+
+iter=iter+1
+
+; ads more variety, not just plain mandelbrot set
+IF (@function=="None")
+ELSEIF (@function=="Burning Ship")
+z=abs(z)
+ELSEIF (@function=="Tricorn")
+z=conj(z)
+ELSEIF (@function=="Talis")
+z=sqr(z)/(z+@talisfactor)
+ELSEIF (@function=="Perpendicular")
+z= abs(real(z))-flip(imag(z))
+ENDIF
+
+
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "Mandelbrot after Julia set"
+periodicity = 0
+method = multipass
+
+int param juliaiter
+caption="do Julia iterations"
+default=1
+endparam
+
+complex param Seed
+caption="Seed"
+default=(0, 0)
+endparam
+
+heading
+caption = "Info"
+text="Good for creepy mandelbrot sets. Does few julia set iterations and then calculates mandelbrot set. Julia seed moves mandelbrot sets around. Conflux of those generates distinct shapes. Each new julia set iteration generates more but smaller mandelbrots."
+endheading
+
+float param power
+caption="formula Power"
+default=2
+endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Burning Ship" "Tricorn" "Talis" "Perpendicular"
+endparam
+
+
+float param talisfactor
+caption="Talis Factor"
+visible = (@function=="Talis")
+default=0.4
+hint="Factor n for z=z*z/(z+n)"
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+endparam
+}
+
+Cubic_CBAP {
+; Holed fractal from Fractint
+; this is 2D representation of mathematical object from higher dimensions, I guess.
+; called CBAP.
+; https://web.archive.org/web/20120123105029/http://klippan.seths.se/ik/CubTut/cubictut.html
+;...
+; reoptimised by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg30915#msg30915
+
+
+init:
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+Z= -C/3 - 1/(C*3)
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+z = z^3 -z*c^2/3 - 2*z/3 - z/(3*c^2) + 2*c^3/27 + 15*c/27 - 12/(27*c) + 2/ (27*c^3)
+
+; adds more variety, not just typical set
+IF (@function=="None")
+ELSEIF (@function=="Burning Ship")
+z=abs(z)
+ELSEIF (@function=="Tricorn")
+z=conj(z)
+ELSEIF (@function=="Perpendicular")
+z= abs(real(z))-flip(imag(z))
+ENDIF
+
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "Cubic formula CBAP"
+periodicity = 0
+method = multipass
+magn = 0.5
+
+heading
+caption = "Formula"
+text = "Popular formula in Fractint. It is a 2D slice of some mathematical object from higher dimensions. Nice zooms, owerall shape and alsou 'burning ship' / 'tricorn' / 'perpendicular' modifications but mostly ordinary julias."
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Burning Ship" "Tricorn" "Perpendicular"
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(1.4, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="Cubic_CBAP"
+bailout=bailout
+julia = #pixel
+function=function
+settype=switchsettype
+switchsettype=settype
+}
+
+LyapunovMandelbrot {
+; calculates differences bewteen 2 fractals
+; from Fractint
+; Morgan L. Owens <******@nznet.gen.nz>
+; Thu, 25 Jul 2002 20:49:19
+;...
+; corrected and expanded by Edgars Malinovskis
+;  https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31047#msg31047
+
+
+global:
+float argument=real(@polarC)
+float magnitude=imag(@polarC)
+
+init:
+
+IF (@settype=="Mandelbrot")
+  Z0= 0
+  C0= #pixel
+  Z1= 0
+  C1= #pixel + magnitude*( cos(argument) + 1i*sin(argument) )
+
+ELSE
+  Z0= #pixel
+  C0= @julia
+  Z1= #pixel
+  C1= @julia + magnitude*( cos(argument) + 1i*sin(argument) )
+
+ENDIF
+
+loop:
+
+; core algorithm
+IF (@sets=="2 Mandelbrot sets")
+Z0 = Z0^@power + C0
+Z1 = Z1^@power + C1
+
+ELSEIF (@sets=="Mandelbrot N BurningShip")
+Z0 = Z0^@power + C0
+Z1 = abs(Z1^@power + C1)
+
+ELSEIF (@sets=="Mandelbrot N Buffalo")
+Z0 = Z0^@power + C0
+Z1 = abs(Z1^@power) + C1
+
+ELSEIF (@sets=="2 Minkowski space sets")
+;split complex
+;zzx=sqr(zx) + sqr(zy)
+;zzy=2*zx*zy
+
+Z0= sqr(real(Z0)) + sqr(imag(Z0)) + flip(2*real(Z0)*imag(Z0)) + C0
+Z1= sqr(real(Z1)) + sqr(imag(Z1)) + flip(2*real(Z1)*imag(Z1)) + C1
+ELSEIF (@sets=="Minkowski and Mandelbrot")
+Z0= sqr(real(Z0)) + sqr(imag(Z0)) + flip(2*real(Z0)*imag(Z0)) + C0
+Z1 = Z1^@power + C1
+
+ELSEIF (@sets=="Minkowski and Buffalo")
+Z0= sqr(real(Z0)) + sqr(imag(Z0)) + flip(2*real(Z0)*imag(Z0)) + C0
+Z1 = abs(Z1^@power) + C1
+
+ENDIF
+
+
+
+; adds more variety, not just typical mandelbrot set
+IF (@function=="None")
+ELSEIF (@function=="Burning Ship")
+Z0= abs(Z0)
+Z1= abs(Z1)
+ELSEIF (@function=="Perpendicular")
+Z0= abs(real(Z0))-flip(imag(Z0))
+Z1= abs(real(Z1))-flip(imag(Z1))
+ENDIF
+
+
+;Calculate standart Z for color methods using Z value. (most)
+Z = (Z1+Z0)*0.5
+
+bailout:
+|Z0-Z1|<@bailout
+
+default:
+title = "Lyapunov Mandelbrots"
+method = multipass
+
+heading
+caption = "Base Set"
+text = "Calculates 2 different formulas, original and perturbed by starting conditons (in polar coordinate system). Good for combination of formulas and mset zooms."
+endheading
+
+complex param polarC
+caption = "argument and magnitude"
+default = (0,-0.45)
+endparam
+
+heading
+caption = "Formulas"
+text = "Calculate 2 formulas with post modification."
+endheading
+
+param sets
+caption="Sets to calculate"
+default=0
+enum="2 Mandelbrot sets" "Mandelbrot N BurningShip" "Mandelbrot N Buffalo" "2 Minkowski space sets" "Minkowski and Mandelbrot" "Minkowski and Buffalo"
+endparam
+
+float param power
+caption = "equation's power"
+default = 2
+min = 0
+endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Burning Ship" "Perpendicular"
+endparam
+
+heading
+caption = "Bailout"
+text = "Bails out on reaching a difference between 2 formulas being larger than bailout value."
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 7200000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-0.3, 0.1)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="LyapunovMandelbrot"
+bailout=bailout
+julia = #pixel
+polarC=polarC
+function=function
+power=power
+sets=sets
+settype=switchsettype
+switchsettype=settype
+}
+
+Richard11th {
+; from Fractint
+; Jm Collard-Richard
+;
+;...
+; made into parameter space by Edgars Malinovskis
+; So that original version is julia set of (0,0)
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/
+; all zooms are like mandelbrot set but made of flowers.
+; same for julias.
+
+
+init:
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+Z= #pixel
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+
+     Z=1/sinh(1/(Z*Z)) + C
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "Richard's 11th - Mandelbrot flower"
+method = multipass
+center = (-0.1, 0)
+
+heading
+caption = "Formula"
+text = "Early formula of visual merit by Jm Collard-Richard made into parameter space. It is like Mandelbrot / Julia set made from 'cabbage family' flowers. Each 'flower' should corespond to minibrot and many of M/J locations must work."
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-0.8, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="Richard11th"
+bailout=bailout
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+PatakiMagnet {
+;from Fractint
+; Made by Pusk s Istv n jr.  E-mail: pataki.v***@****net.hu
+;
+;...
+; reimplemented and expanded by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31088#msg31088
+
+; more easy formula fro magnet 1, but alsou with more powers.
+; congruent with standart magnet type 1 exept that it is dislocated by (1,0).
+
+init:
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+Z= 0
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+;basic type
+Z= (Z^@N + C  )/(Z^@N - 1)
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "Pataki Magnet 1"
+periodicity = 0
+magn = 0.5
+
+heading
+caption = "Formula"
+text = "Simpler formula for Magnet 1 which alsou could be used with additional powers. Same as Magnet 1 but moved by (1,0). Unlike 'Magnet 1' it uses ordinary bailout conditions so it woun't have a problems with most color algorithms."
+endheading
+
+float param N
+caption = "power N"
+default = 2
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.5, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="PatakiMagnet"
+bailout=bailout
+N=N
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+Pi5Sudarshana {
+; different spirals set from Fractint
+; By Godwin Vickers
+; perimeter of a regular polygon circumbscribing a circle, Mandelbrot set
+;...
+; reimplemented by Edgars Malinovskis
+; Sudarshana - fire wheel.
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31134#msg31134
+; Original version had N = 2,
+; but with N=3 it unrolls more of spirals and mandelbrot like structures.
+; alsou dual bailout conditions reveals more.
+
+global:
+;inversed bailout / 10 to test for convergent orbits
+float invBailout = 0.1/@bailout
+
+init:
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+Z= #pixel
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+complex zOld=Z
+
+Z = @N * Z * C *tan(Pi/Z)
+
+bailout:
+|Z| < @bailout && |Z - zOld| > invBailout
+
+
+default:
+title = "Pi 2,5 Sudarshana"
+method = multipass
+periodicity = 0
+magn = 1.5
+
+heading
+caption = "Formula Block"
+text = "Sudarshana - fire wheel. Fractal have unusual spirals in zooms and julias. Formula for 'perimeter of a regular polygon circumbscribing a circle.' Uses dual bailout conditions (divergent and convergent), convergent (inside) and divergent regions works differently. Originaly N=2 but N=3 have more structures."
+endheading
+
+float param N
+caption = "N Scale"
+default = 2.5
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 10800000
+min = 0
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.2, -0.4)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="Pi5Sudarshana"
+bailout=bailout
+N=N
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+Minkowskinewton {
+;
+;from Fractint
+; Morgan L. Owens <****@nznet.gen.nz>
+; Tue, 14 Jan 2003 19:54:33
+;...
+; optimised and made into parameter space by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31149#msg31149
+
+; I called it Minkowski becouse it looks like
+; minkowski space (split complex) mandelbrot set stitched with complex mandelbrot or julia.
+
+
+init:
+
+IF (@settype=="Mandelbrot type")
+  z = #pixel
+  complex c = #pixel
+ELSE ;julia set
+  z=#pixel
+  c=@julia
+ENDIF
+
+float Cx = real(C)
+float Cy = imag(C)
+float X = 0
+float Y = 0
+float newX = 0
+float newY = 0
+
+bool done = false
+
+loop:
+complex oldZ = z
+X = real(Z)
+Y = imag(Z)
+
+;formula
+  newX=  @A* X - X^3 - 2*Y^2  + Cx
+  newY=  @A* Y - 3*Y*X^2      + Cy
+
+;make complex
+  Z= newX + flip(newY)
+
+
+; modifications
+IF (@function=="None")
+ELSEIF (@function=="Abs")
+z=abs(z)
+ELSEIF (@function=="Conj")
+z=conj(z)
+ELSEIF (@function=="Square")
+z= sqr(z)
+ENDIF
+
+
+; bailout
+  IF(@bailoutype == "Newton")
+    done = (|Z - oldZ| < @bailout)
+  ElSEIF (@bailoutype == "Mandelbrot")
+  done = (|Z| > 1/@bailout)
+  ElSEIF (@bailoutype == "Dual")
+  done = ( |Z| > 1/@bailout || |Z - oldZ| < @bailout )
+  ELSEIF (@bailoutype == "None")
+  ENDIF
+
+bailout:
+!done
+default:
+  title = "Minkowski and Newton set"
+  periodicity = 0
+  rating = recommended
+  method = multipass
+
+heading
+caption = "Formula Block"
+text = "Very easy power 3 formula. Default A = 2 generates nice julia sets and zooms, A = 1 have 'Mandelbrot Type' as combination of Mandelbrot set and Minkowski (split complex) mandelbrot set. Abs or zoom on right does magics."
+endheading
+
+
+  float param A
+    caption = "Multiplicator A"
+    default = 2
+  endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Abs" "Conj" "Square"
+endparam
+
+heading
+caption = "Bailout block"
+text = "Original newton bailout could interfere with colour methods so there are another options."
+endheading
+
+param bailoutype
+caption = "Bailout Type"
+default =2
+enum= "Newton" "Mandelbrot" "Dual" "None"
+hint = "Newton type bailout often interferes with colour methods and sometimes better results could be achieved by no bailout and inside colouring."
+endparam
+
+float  param bailout
+    caption = "Bailout value"
+    default = 0.0000001
+    visible = (@bailoutype!="None")
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.5, 0)
+    visible = (@settype=="Julia type")
+  endparam
+
+  switch:
+type="Minkowskinewton"
+julia=#pixel
+settype= switchsettype
+switchsettype=settype
+A=A
+function=function
+bailoutype=bailoutype
+bailout=bailout
+}
+
+Dualist {
+; Dualist function created to ilustrate ancient philosophical Liar paradox
+; Ducks and kaliset like.
+; from Fractint with many names like Chaotic Dualist, Liar or Zeppo
+; more in:
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31270#msg31270
+
+; scientic publication on philosophy and chaos theory
+; Pattern and chaos: New images in the semantics of paradox G. Mar, P. Grim
+; DOI:10.2307/2215637
+
+; enchanted version by Edgars Malinovskis aka Edgar Malinovsky
+; original version had useless modifications for fractal exploration and was a julia set of (0,0).
+
+global:
+float realScale = real(@scale)
+float imagScale = imag(@scale)
+
+init:
+;variable declaration
+float Z_x = 0
+float Z_y = 0
+
+float tempZ_x = 0
+float tempZ_y = 0
+
+float C_x = 0
+float C_y = 0
+float pnorm_Z=0
+
+;complex C =0
+
+IF (@settype=="Mandelbrot type")
+ Z_x = 0
+ Z_y = 0
+; Z=0
+
+ C_x = real(#pixel)
+ C_y = imag(#pixel)
+;  C=  #pixel
+ELSE ;julia set
+
+ Z_x = real(#pixel)
+ Z_y = imag(#pixel)
+; Z = #pixel
+
+ C_x = real(@julia)
+ C_y = imag(@julia)
+; C=   @julia
+ENDIF
+
+loop:
+
+;dualist function:
+  tempZ_x  =  1 - abs(Z_y - Z_x )
+  tempZ_y  =  1 - abs(1 - Z_x - Z_y )
+
+;complex scaling:
+Z_x =  tempZ_x*realScale -  tempZ_y*imagScale
+Z_y =  tempZ_y*realScale +  tempZ_x*imagScale
+
+; Z=Z+C
+Z_x = Z_x   + C_x
+Z_y = Z_y   + C_y
+
+;make complex Z (for color methods)
+Z = Z_x + flip(Z_y)
+
+
+;This formula alsou could be written as complex Ultra Fractal equation:
+;Z =( 1 - abs( imag(Z) - real(Z) ) + flip(1 - abs(1 - real(Z) - imag(Z) ) ) )*@scale + C
+
+
+; calculate bailout conditions using different Pnorms
+; mutch influence escaping areas.
+; It uses real modulus not UF ||
+IF (@bailotPnorm=="Lp1 Squares")
+pnorm_Z = abs(Z_x) + abs(Z_y)
+ELSEIF (@bailotPnorm=="Lp2 Circles")
+pnorm_Z = cabs(z)
+ELSEIF (@bailotPnorm=="Lp4 Supercircle")
+pnorm_Z = (Z_x^4 +   Z_y^4)^0.25
+ENDIF
+
+bailout:
+  pnorm_Z < @bailout
+
+default:
+title = "Dualist Function"
+method = multipass
+center = (0.5, 0.5)
+rating = recommended
+
+heading
+caption = "Formula Block"
+text = "Ducks and kaliset like formula created to ilustrate a philosophical paradox. Could be recomended search for julia sets and also use of inside coloring."
+endheading
+
+complex param scale
+caption = "Scale"
+default=(1.0,0)
+hint="Multiplicator applied to formula before adding c-constant value. Mandelbox like factor for tuning of fractal."
+endparam
+
+heading
+caption = "Bailout"
+text = "Outside areas of this 'philosophers ship' fractal very mutch depends on bailout type and value."
+endheading
+
+param bailotPnorm
+caption = "Bailout Type"
+default =0
+enum= "Lp1 Squares" "Lp2 Circles" "Lp4 Supercircle"
+endparam
+
+float  param bailout
+    caption = "Bailout value"
+    default = 3
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.55, -0.55)
+    visible = (@settype=="Julia type")
+  endparam
+
+heading
+caption = "Paradox"
+text = "Dualist paradox of liar and truthteller. It is created by declaration that 'I am lying'. This sentence have no solution by binary logics. 2 ancient philosophers have died seeking the answer;)"
+endheading
+
+  switch:
+type="Dualist"
+julia=#pixel
+settype= switchsettype
+switchsettype=settype
+bailotPnorm=bailotPnorm
+bailout=bailout
+scale=scale
+}
+
+XG_Mandelbrot6D {
+; 6D number based mandelbrot set from Fractint
+; originaly by Jos Hendriks or Lee H. Skinner
+;
+; additional complex extension of triternions
+;...
+; made mathematicaly transparent by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31610#msg31610
+
+;"did the Mandelbrot set exist before computers were invented?"
+
+init:
+
+;variable declaration
+float Z_x  = 0
+float Z_xi = 0
+float Z_y  = 0
+float Z_yi = 0
+float Z_z  = 0
+float Z_zi = 0
+
+float tempZ_x  = 0
+float tempZ_xi = 0
+float tempZ_y  = 0
+float tempZ_yi = 0
+float tempZ_z  = 0
+float tempZ_zi = 0
+
+float C_x  = 0
+float C_xi = 0
+float C_y  = 0
+float C_yi = 0
+float C_z  = 0
+float C_zi = 0
+
+IF (@settype=="Mandelbrot type")
+ Z_x  = 0
+ Z_xi = 0
+ Z_y  = 0
+ Z_yi = 0
+ Z_z  = 0
+ Z_zi = 0
+
+ C_x = real(#pixel)
+ C_yi = imag(#pixel) ;Y axis is yi not y!
+
+ C_z  = real(@zHeight) ;variable, slice in dimension
+ C_zi = imag(@zHeight) ;variable, slice in dimension
+
+ELSE ;julia set
+
+ C_x = real(@julia)
+ C_yi = imag(@julia)
+ C_z = real(@zJulia)
+ C_zi= imag(@zJulia)
+
+ Z_x  = real(#pixel)
+ Z_xi = 0
+ Z_y  = 0
+ Z_yi = imag(#pixel)
+ Z_z  = real(@zHeight) ;variable, slice in dimension
+ Z_zi = imag(@zHeight) ;variable, slice in dimension
+
+ENDIF
+
+
+
+loop:
+
+
+;formula.
+;Triternion 3D mandelbrot set formula writen with complex numbers for each number
+;thus it is 6D mandelbrot.
+  tempZ_x  =   Z_x *Z_x + 2*Z_y *Z_z   - Z_xi *Z_xi - 2*Z_yi *Z_zi
+  tempZ_y  =   Z_z *Z_z + 2*Z_x *Z_y   - Z_zi *Z_zi - 2*Z_xi *Z_yi
+  tempZ_z  =   Z_y *Z_y + 2*Z_z *Z_x   - Z_yi *Z_yi - 2*Z_zi *Z_xi
+
+  tempZ_xi = 2*Z_x *Z_xi   + 2*Z_y *Z_zi + 2*Z_yi *Z_z
+  tempZ_yi = 2*Z_z *Z_zi   + 2*Z_x *Z_yi + 2*Z_xi *Z_y
+  tempZ_zi = 2*Z_y *Z_yi   + 2*Z_z *Z_xi + 2*Z_zi *Z_x
+
+Z_x  = tempZ_x    + C_x
+Z_xi = tempZ_xi   + C_xi ;here c=0
+Z_y  = tempZ_y    + C_y  ;here c=0
+Z_yi = tempZ_yi   + C_yi
+Z_z  = tempZ_z    + C_z
+Z_zi = tempZ_zi   + C_zi
+
+;make complex Z (for color methods)
+  Z = Z_x + flip(Z_y)
+
+
+bailout:
+abs(Z_x) + abs(Z_xi) + abs(Z_x) + abs(Z_y) + abs(Z_yi) + abs(Z_z) + abs(Z_zi) < @bailout
+
+default:
+  title = "X dimension Personality Mandelbrot"
+  periodicity = 0
+  method = multipass
+  rating = recommended
+
+heading
+caption = "Formula Block"
+text = "6D number based mandelbrot and julia sets. As 6D it could be explored as 2D slice. Interesting julia set zooms and doubled 'fractals inside a fractals'."
+endheading
+
+
+  complex param zHeight
+    caption = "Dimension slice"
+    default = (0,0)
+  endparam
+
+float  param bailout
+    caption = "Bailout value"
+    default = 3330000
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-0.75, 0)
+    visible = (@settype=="Julia type")
+  endparam
+
+complex param zJulia
+    caption="Julia Seed Z"
+    default=0
+    visible = (@settype=="Julia type")
+  endparam
+
+  switch:
+type="XG_Mandelbrot6D"
+julia=#pixel
+zJulia=zJulia
+settype= switchsettype
+switchsettype=settype
+zHeight=zHeight
+bailout=bailout
+}
+
+MMagnetPataki {
+;from Fractint
+; Magnet like by Puskas Istvan jr.
+; no distinctive magnet character are left
+; but fractal have very elaborate holes
+; maybe of second order (doubled herman rings?)
+;...
+; made  by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31381#msg31381
+
+; version 1.1 added true critical point
+
+init:
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+;Z= #pixel+0.1
+;Z= 0.1
+
+;Thanks to Claude and https://sagecell.sagemath.org I got true critical point:
+Z = -1/4*c - 1/4*sqrt(1/3)*sqrt(-(4*c^2 - 3*(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3)*(c^2 + 6*c + 9) + 8*c - 12*(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(2/3) + 4)/(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3)) - 1/2*sqrt(1/2*(c - 5)^2 + 8*c + 3/2*sqrt(1/3)*((c - 5)^3 + 24*(c - 1)*(c - 5) - 16*c^2 + 40*c - 24)/sqrt(-(4*c^2 - 3*(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3)*(c^2 + 6*c + 9) + 8*c - 12*(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(2/3) + 4)/(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3)) - 1/3*(12*(c - 1)^2 - 13*c^2 + 22*c - 13)/(-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3) - (-1/4*c^5 - 5/4*c^4 + 1/12*sqrt(9*c^4 + 36*c^3 + 54*c^2 + 36*c + 43/3)*(c + 1)^3 - 8*(c - 1)^3 - 15/2*c^3 + (13*c^2 - 22*c + 13)*(c - 1) + 17/2*c^2 - 49/4*c + 19/4)^(1/3) - 8) + 5/4
+
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+
+Z=( (Z^2 + C) / (2*Z + C - 1 ) )^2 - 2*Z
+
+bailout:
+|Z|<@bailout
+
+
+default:
+title = "MiniMagnet"
+magn = 0.35
+
+heading
+caption = "Formula"
+text = "Formula like Z='Magnet 1' -2Z. It don't use magnets bailout so works with most color methods. Very dense holed fractal, maybe too mutch. This set seems to have doubled Herman rings julia sets, lots of unconnected satelites and multiple critical points."
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-1.7, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="MMagnetPataki"
+bailout=bailout
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+RegulaFalsi_Newt {
+;
+; by Rui S. Parracho
+; False rule in romanian
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg31870#msg31870
+
+; by Edgar Malinovsky aka Edgars Malinovskis
+
+init:
+  Z = #pixel
+  complex C = #pixel
+complex ZoldER =@seed
+
+loop:
+complex Zold = Z
+
+Z = Z - @root*(Z - ZoldER)*(Z^@power + C) / (Z^@power - ZoldER^@power )
+ZoldER = Zold
+
+; generalised:
+; Function ( complex^2 + C )
+; Z = Z - root*(Z - ZoldER)* Function (Z) / (Function (Z) - Function (ZoldER) )
+
+
+bailout:
+|Z - Zold| > @bailout
+
+default:
+  title = "Regula Falsi Newton"
+  periodicity = 0
+  method = multipass
+  maxiter = 250
+  rating = recommended
+
+heading
+caption = "Formula Block"
+text = "Newton type fractal using value of Z before 2 iterations. Imaginary Root curves 'threads' and imaginary Starting Seed makes fractal non-mirrored. Infinite in both directions of zoom. Larger power makes it more dense like deep zooms."
+endheading
+
+
+
+  int param power
+    caption = "Power"
+    default = 2
+    hint = "Specifies the exponent of the equation."
+  endparam
+  complex param root
+    caption = "Root"
+    default = (1.65,0)
+    hint = "Specifies the root of the equation that is solved."
+  endparam
+complex param  seed
+    caption = "Starting Seed"
+    default = (1,0.01)
+    hint = "Specifies starting seed of ZoldER."
+  endparam
+
+heading
+caption = "Bailout"
+text = "value < small enought for Mega Discrete Lagrangian Descriptors coloring."
+endheading
+
+  param bailout
+    caption = "Bailout value"
+    default = 0.000000000000001
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+}
+
+Luna_n_Lyra_Newton {
+;
+;from Chaos Pro
+; Bernd Lehnhoff 2004
+;The following fractals were derived from Heron's formula for
+;calculating square roots with an added perturbation.
+;...
+; implemented by Edgars Malinovskis
+; https://fractalforums.org/share-a-fractal/22/some-old-stuff-maybe-fractal-nostalgia/4213/msg32106#msg32106
+
+
+init:
+
+IF (@settype=="Mandelbrot type")
+  z = #pixel
+  complex c = #pixel
+ELSE ;julia set
+  z=#pixel
+  c=@julia
+ENDIF
+
+
+
+loop:
+complex Zold = Z
+
+
+;formula
+IF (@formula=="Luna")
+;Luna
+  Z = Z - Z / @Power * (1 + @A*1i - ( C / Z)^@Power ) + 0.5
+
+ELSEIF (@formula=="Lyra")
+;Lyra
+    Z = (@Power * Z) / ( (Z / C )^@Power + @Power - 1 + @A*1i) + 0.5
+ENDIF
+
+
+; modifications
+IF (@function=="None")
+ELSEIF (@function=="Abs")
+z=abs(z)
+ELSEIF (@function=="Ducks logabs")
+z= log(abs(z))
+ENDIF
+
+
+bailout:
+|Z - Zold| > @bailout
+default:
+  title = "Luna n Lyra newton set"
+  periodicity = 0
+  method = multipass
+  center = (-0.5, 0)
+  maxiter = 250
+  rating = recommended
+
+heading
+caption = "Formula Block"
+text = "2 simmilar but distinct formulas of a newton type. Nice zooms, fractal shapes and julia sets. Based on Heron's formula for square roots."
+endheading
+
+ int param Power
+    caption = "Power"
+    default = 3
+  endparam
+
+param formula
+caption="Luna or Lyra"
+default=0
+enum="Luna" "Lyra"
+endparam
+
+float  param bailout
+    caption = "Bailout value"
+    default = 1E-16
+    min = 0
+    hint = "This parameter defines how soon a convergent orbit bails out while \
+            iterating. Smaller values give more precise results but usually \
+            require more iterations."
+  endparam
+
+heading
+caption = "Mutations"
+text = "Modifications of a base formula. A - curves fractal, Post function - changes to ducks like with just nice julia sets."
+endheading
+
+  float param A
+    caption = "A, imaginary addition"
+    default = 0
+  endparam
+
+param function
+caption="Post function"
+default=0
+enum="None" "Abs"  "Ducks logabs"
+endparam
+
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption = "Set Type"
+default =0
+enum= "Mandelbrot type" "Julia type"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot type" "Julia type"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0, 0)
+    visible = (@settype=="Julia type")
+  endparam
+
+  switch:
+type="Luna_n_Lyra_Newton"
+julia=#pixel
+settype= switchsettype
+switchsettype=settype
+A=A
+Power = Power
+function=function
+bailout=bailout
+formula=formula
+}
+TailsMandelbrot {
+;...
+;  by Edgars Malinovskis
+
+;https://fractalforums.org/fractal-mathematics-and-new-theories/28/complex-polynomials-using-division/4614/msg32630#msg32630
+
+
+init:
+
+complex Mandel = 0
+
+IF (@settype=="Mandelbrot")
+C= #pixel
+z=0
+; another possible critical point
+;z = -sqrt(-c + 1)
+
+ELSE
+Z=#pixel
+C=@julia
+ENDIF
+
+loop:
+
+Mandel = Z^@Power + C
+Z= ( Mandel + 1 / Mandel )* 0.5  + @Excentricity
+
+
+bailout:
+|Z|<@bailout
+
+default:
+title = "TailsMandelbrot"
+method = multipass
+center = (0, 0)
+magn=0.5
+rating = recommended
+
+heading
+caption = "info"
+text = "Mandelbrot(z)=Z^n+C Formula(Z)=(Mandelbrot+1/Mandelbrot)/2+Excentricity. Variable 'Excentricity' positions holed area. With Excentricity=1 set is simmilar to Omnibrot but satelites of main n=2 set have power 4 shapes. Excentricity=1i introduces some imaginary curls."
+endheading
+
+complex param Excentricity
+caption = "Excentricity"
+default = (0,0)
+endparam
+
+int param Power
+caption = "Power n"
+default = 2
+endparam
+
+float param bailout
+caption = "Bailout Value"
+default = 772000
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.462, 0)
+visible = (@settype=="Julia")
+endparam
+
+switch:
+type="TailsMandelbrot"
+bailout=bailout
+Excentricity=Excentricity
+Power = Power
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+}
+
+3Dextended_shapes {
+; made to test extended complex numbers in 3 and more dimensions
+; by using trigonometric aproach to algebra.
+; specificaly formula with strange outcomes.
+
+; https://fractalforums.org/fractal-mathematics-and-new-theories/28/3d-fractals-extending-complex-number-to-spaces-with-high-dimensions/4675/msg34279#msg34279
+
+; by Edgars Malinovskis
+init:
+
+ ; define basic variables for 3D vector
+float x = 0
+float y = 0
+float z1 = 0
+float Cx = 0
+float Cy = 0
+float Cz =  0
+
+; other variables
+float hyp_xy=0
+float hyp_xy_sq=0
+
+float radius=0
+float theta=0
+float phi=0
+
+float radiusC=0
+float thetaC=0
+float phiC=0
+
+float radiusM=0
+float thetaM=0
+float phiM=0
+
+float radius_result=0
+float theta_result=0
+float phi_result=0
+
+int intmPower = 0
+
+; setting changable variables
+float mpower = @power
+float Add_X=real(@Add)
+float Add_Y=imag(@Add)
+float Add_Z=@AddZ
+float Multiplicator_X=real(@Multiplicator)
+float Multiplicator_Y=imag(@Multiplicator)
+float Multiplicator_Z = @MultiplicatorZ
+
+IF (@settype=="Mandelbrot")
+x=  1.0e-15
+y= 0
+z1=0
+
+float Cx = real(#pixel)
+float Cy = imag (#pixel)
+float Cz =  @height
+
+ELSEIF (@settype=="Julia")
+
+x= real(#pixel)
+y= imag(#pixel)
+z1=@height
+
+float Cx = real(@julia)
+float Cy = imag (@julia)
+float Cz =  0
+ENDIF
+
+loop:
+
+;=================================================
+; formula z= (0,-1)* c*z^5 +1
+; parametrised z= Multiplicator(x,y,z)* c*z^5 + Add(x,y,z)
+
+;makeing power values an integers - faster (not here!)
+intmPower =round(mPower)
+
+;=================================================
+; trigonometric values of Z vector
+
+hyp_xy_sq = x*x+y*y;
+radius = Sqrt(hyp_xy_sq + z1*z1);
+hyp_xy = Sqrt(hyp_xy_sq);
+
+   if y > 0
+    Theta = acos(x/hyp_xy);
+   else
+    Theta = -acos(x/hyp_xy);
+   endif
+
+Phi   = Asin(z1/radius);
+
+;=================================================
+; trigonometric values of C vector
+
+hyp_xy_sq = Cx*Cx + Cy*Cy;
+radiusC = Sqrt(hyp_xy_sq + Cz*Cz);
+hyp_xy = Sqrt(hyp_xy_sq);
+
+   if Cy > 0
+    ThetaC = acos(Cx/hyp_xy);
+   else
+    ThetaC = -acos(Cx/hyp_xy);
+   endif
+
+PhiC   = Asin(Cz/radiusC);
+
+;=================================================
+; trigonometric values of Multiplicator vector
+
+hyp_xy_sq = Multiplicator_x*Multiplicator_x + Multiplicator_y*Multiplicator_y;
+radiusM = Sqrt(hyp_xy_sq + Multiplicator_z*Multiplicator_z);
+hyp_xy = Sqrt(hyp_xy_sq);
+
+   if Multiplicator_y > 0
+    ThetaM = acos(Multiplicator_x/hyp_xy);
+   else
+    ThetaM = -acos(Multiplicator_x/hyp_xy);
+   endif
+
+PhiM   = Asin(Multiplicator_z/radiusM);
+
+;==========================================
+; calculate Z^n*C*M, result in trig form.
+
+radius_result = ( radius ^ intmPower) * radiusC *radiusM;
+theta_result  = intmPower * theta + ThetaC + ThetaM;
+phi_result    = intmPower * phi   + PhiC + PhiM;
+
+;========================================
+; result in vector form + Add_(x,y,z)
+
+x=  radius_result* cos(theta_result)* cos(phi_result)  + Add_X;
+y=  radius_result* sin(theta_result)* cos(phi_result)  + Add_Y;
+z1=  radius_result* sin(phi_result)   + Add_Z;
+
+;=================
+;END OF FORMULA
+
+;for colour algorithms
+z = x + flip(abs(y)+abs(z1))
+
+bailout:
+x*x+y*y +z1*z1 < @bailout
+
+default:
+title = "Trigonometric algebra test"
+periodicity = 0
+rating = notRecommended
+
+heading
+caption = "info"
+text = "Calculates 'fractal person formula' Z= (0,-1)* C*Z^5 + 1 parameterised Z= Multiplicator(x,y,z)* C*Z^5 + Add(x,y,z) in 3D space using trigonometric algebra like Mandelbulb. 3D height is Z axis variable. Made to test 'Extending complex number to spaces with 3, 4 or any number of dimensions' by Peng Kuan."
+endheading
+
+heading
+caption = "Formula Block"
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 1024
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+float param height
+caption = "3D Height"
+default = 0
+hint = "Defines cut plane of 3D object."
+endparam
+
+heading
+caption = "Formula variables"
+endheading
+
+int param power
+caption = "Power"
+default = 5
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+complex param Add
+caption = "Addition"
+default = (1,0)
+endparam
+
+float param AddZ
+caption = "Addition Z"
+default = 0
+endparam
+
+complex param Multiplicator
+caption = "Multiplicator"
+default = (0,-1)
+endparam
+
+float param MultiplicatorZ
+caption = "Multiplicator"
+default = 0
+endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(0.137, -0.4)
+    visible = (@settype=="Julia")
+  endparam
+
+switch:
+type="3Dextended_shapes"
+mpower=mpower
+julia = #pixel
+bailout=bailout
+settype=switchsettype
+switchsettype=settype
+formula=formula
+pnorm=pnorm
+power=power
+Add=Add
+AddZ=AddZ
+height=height
+Multiplicator=Multiplicator
+MultiplicatorZ=MultiplicatorZ
+}
+
+Trigonometric_mandelbrot {
+; made to test extended complex numbers in 3 and more dimensions
+; by using trigonometric algebra.
+; Mandelbrot set - Mandelbulb.
+
+; https://fractalforums.org/fractal-mathematics-and-new-theories/28/3d-fractals-extending-complex-number-to-spaces-with-high-dimensions/4675/msg34318#msg34318
+
+; by Edgars Malinovskis
+init:
+
+ ; define basic variables for 3D vector
+float x = 0
+float y = 0
+float z1 = 0
+float Cx = 0
+float Cy = 0
+float Cz =  0
+float temp = 0
+
+; other variables
+float hyp_xy=0
+float hyp_xy_sq=0
+
+float radius=0
+float theta=0
+float phi=0
+
+float radius_result=0
+float theta_result=0
+float phi_result=0
+
+int intmPower = 0
+
+; setting changable variables
+
+float mpower = @power
+
+
+IF (@settype=="Mandelbrot")
+x=  1.0e-15
+y=  1.0e-15
+z1= 1.0e-15
+
+float Cx = real(#pixel)
+float Cy = imag (#pixel)
+float Cz =  @height
+
+ELSEIF (@settype=="Julia")
+
+x= real(#pixel) +1.0e-15
+y= imag(#pixel) +1.0e-15
+z1=@height
+
+float Cx = real(@julia)
+float Cy = imag (@julia)
+float Cz =  @julia_Z
+ENDIF
+
+
+;//makeing power values an integers - faster (maybe not here)
+intmPower =round(mPower)
+
+;======================================================
+;switching axis
+if (@switchaxis=="XY")
+; do nothing
+elseif (@switchaxis=="XZ")
+
+ temp = y
+ y = z1
+ z1 = temp
+
+ temp = Cy
+ Cy = Cz
+ Cz = temp
+elseif (@switchaxis=="YZ")
+
+ temp = x
+ x = y
+ y = z1
+ z1 = temp
+
+ temp = Cx
+ Cx = Cy
+ Cy = Cz
+ Cz = temp
+endif
+
+float invPnorm = recip(@pnorm)
+
+loop:
+
+;// Z=Z^n+C
+;//=================================================
+;/// trigonometric values of Z vector
+
+hyp_xy_sq = x*x+y*y
+hyp_xy = Sqrt(hyp_xy_sq)
+
+;;===================================================================
+; calculate radius -> pnorm =2 -> normal
+;; @pnorm  (in LP space) ;; calculates p norm, |z| in Lp spaces - @pnorm
+IF @pnorm == 1
+;;fast
+radius = abs(x) + abs(y) + abs(z1)
+  ELSEIF @pnorm == 4
+  radius =  (x^4) + (y^4) + (z1^4)
+  radius =  sqrt(sqrt(radius))   ; operator ^ is less accurate!
+ELSEIF @pnorm == 8
+radius =  (x^8) + (y^8) + (z1^8)
+radius =  sqrt(sqrt(sqrt(radius)))
+ELSEIF @pnorm == 2
+;;  usual |z| function
+  radius  = Sqrt(hyp_xy_sq + z1*z1)
+ELSE
+;;  slow full code
+  radius =  abs(x^@pnorm) + abs(y^@pnorm) + abs(z1^@pnorm)
+  radius = radius^invPnorm   ;float precision limits @pnorm>3
+ENDIF
+
+   if y > 0
+    Theta = acos(x/hyp_xy)
+   else
+    Theta = -acos(x/hyp_xy)
+   endif
+
+Phi   = Asin(z1/radius)
+
+;//==========================================
+;// calculate Z^n, result in trig form.
+
+radius_result =  radius^intmPower
+theta_result  = intmPower * theta
+phi_result    = intmPower * phi
+
+;///========================================
+;// result in vector form + C
+
+x= radius_result* cos(theta_result)* cos(phi_result) + Cx
+y= radius_result* sin(theta_result)* cos(phi_result) + Cy
+z1= radius_result* sin(phi_result) + Cz
+
+;=================
+;END OF FORMULA
+
+;for colour algorithms make z value
+z = x + flip(abs(y)+abs(z1))
+
+bailout:
+x*x+ y*y +z1*z1 < @bailout
+
+default:
+title = "Mandelbulb - Trigonometric Mandelbrot"
+periodicity = 0
+;rating = notRecommended
+
+heading
+caption = "info"
+text = "Mandelbrot Z=Z^n+C calculated using trigonometric algebra in 3D - 'sine positive Mandelbulb' but as 2D slices, mostly for testing. In UF5 Lp spaces > 3 will work for just exact numbers of 4 and 8 or with Additional Precision. Formula for normal version -> Lp=2 is faster but fastest is Lp=1. 3D height is unseen (z) axis. As julia set uses 3D seed (x,y,z) height is transfered to it. 'Extending complex number to spaces with 3, 4 or any number of dimensions' by Peng Kuan."
+endheading
+
+float param bailout
+caption = "Bailout Value"
+default = 10000.0
+min = 0
+hint = "This parameter defines how soon an orbit bails out while iterating."
+endparam
+
+heading
+caption = "Formula Block"
+endheading
+
+
+param switchaxis
+caption = "switch Axis"
+default = 0
+enum = "XY" "XZ" "YZ"
+endparam
+
+int param power
+caption = "Power"
+default = 2
+hint = "This parameter sets the exponent for the formula."
+endparam
+
+float param pnorm
+caption = "Lp space (1,2,4,8)"
+default = 2
+hint = "Lp space."
+endparam
+
+float param height
+caption = "3D Height"
+default = 0
+hint = "Defines cut plane of 3D object."
+endparam
+
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+complex param julia
+caption="Julia Seed"
+default=(0.3, 0.6)
+visible = (@settype=="Julia")
+endparam
+
+float param julia_Z
+caption="Julia Seed Z"
+default=0
+endparam
+
+switch:
+type="Trigonometric_mandelbrot"
+mpower=mpower
+julia = #pixel
+bailout=bailout
+settype=switchsettype
+switchsettype=settype
+formula=formula
+pnorm=pnorm
+switchaxis=switchaxis
+power=power
+julia_Z=height
+}
+
+Omnibrot {
+;mostly copy past of famous Onmibrot formula by someone Kevin or kjknohw.
+; Z=Z^m * exp(n/Z) + C
+; esp(1/z) represents https://en.wikipedia.org/wiki/Essential_singularity.
+
+; originaly from here:
+; https://www.fractalforums.com/new-theories-and-research/omnibrot-getting-m-sets-of-all-powers/
+
+; original commentary:
+;have you ever wanted to explore a mandelbrot set with an infinite power
+;without getting a boring circle?
+;Multiplying functions toghether with roots of a given multiplicity allows you
+;to have "coexisting" msets. i.e. z=z^2*(z-1)^3 + c will have
+;fully-formed power 2 and power 3 msets.
+;Multiplying a large positive and a large negative power, for which the total
+;power is +2, allows us to explore a high-power mset without it becomming a circle.
+;Our formula:
+;z = z^(BIG)*(z-1/BIG)^(2-BIG)+#pixel.
+;converges as BIG -> infinity to: z*z*exp(1/z)+#pixel  (courtasy Wolfram Alpha)
+init:
+complex c=0
+
+IF (@settype=="Mandelbrot")
+c=#pixel
+c=@func_post(c)
+z=C
+ELSEIF (@settype=="Julia")
+z= #pixel
+c=@julia
+z=@func_post(z)
+ENDIF
+
+loop:
+
+  if @carrier==1, ;optimizations.   not mutch.
+     z = z*exp(@n/z) + C
+  elseif  @carrier==2
+     z = sqr(z)*exp(@n/z) + C
+  else
+     z = z^@carrier*exp(@n/z) + C
+  endif
+
+bailout:
+  |z| < @bailout
+default:
+  title = "Omnibrot - Tamed infinite power"
+  center = (-0.5, 0)
+  maxiter = 1000
+
+heading
+caption = "info"
+text = "OMIBROT formula generalised as Z=Z^m*exp(n/Z)+C. The exp(1/z) is canonical example of 'esential singularity' abtaining all values as z -> 0. n regulates amount of it's influence. Powers 'm' works as for Mandelbrot exept that if m=1 it is like Talis fractal."
+endheading
+
+float param bailout
+    caption = "Bailout value"
+    default = 72000
+$IFDEF VER40
+    exponential = true
+$ENDIF
+  endparam
+
+  float param carrier
+    caption = "m - power"
+    default = 2
+    hint = "an overall power to gaurentee divergence for large z."
+  endparam
+
+
+  float param n
+    caption = "n - singularity"
+    default = 1
+  endparam
+
+heading
+caption = "Julia Block"
+endheading
+
+param settype
+caption="Set type"
+default=0
+enum="Mandelbrot" "Julia"
+endparam
+
+param switchsettype
+caption = "switch to"
+default = 1
+enum = "Mandelbrot" "Julia"
+visible = false
+endparam
+
+  complex param julia
+    caption="Julia Seed"
+    default=(-1.25, 0)
+    visible = (@settype=="Julia")
+  endparam
+
+heading
+caption = "Mutations"
+endheading
+
+
+func func_post
+caption="Pixel mapping function"
+default=ident()
+hint="Function applied during iteration initialisation. New coordinates of pixel = function(coordinates of pixel). This curves not c, but the plane, on which fractal is drawn, so only ident m-set is map for julia sets. Recip works as circle inverse."
+endfunc
+
+
+switch:
+  type = "Omnibrot"
+  bailout = bailout
+  carrier = carrier
+n=n
+julia = #pixel
+settype=switchsettype
+switchsettype=settype
+func_post=func_post
+}
+

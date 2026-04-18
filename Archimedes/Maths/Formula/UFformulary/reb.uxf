@@ -1,0 +1,5862 @@
+mandala_space { ; Ron Barnett, November 1999
+transform:
+  if @center == 1
+    center = #center
+  else
+    center = @tcenter
+  endif 
+  float angle = @phi*#pi/180
+  float relx = (real(#pixel)-real(center))  
+  float rely = (imag(#pixel)-imag(center))
+  float x = relx*cos(rely)*@scale
+  float y = relx*sin(rely)*@scale
+  float zz = rely*cos(relx)*@scale
+  float xx = x
+  x = x*cos(#angle) + y*sin(#angle)
+  y = -xx*sin(#angle)*sin(angle) + \
+       y*cos(#angle)*sin(angle) + \
+       zz*cos(angle)
+  #pixel = x + flip(y)
+  #pixel = #pixel + center     
+default:
+  title = "Mandala Space"
+  param center
+    caption = "Use Screen Center"
+    default =0
+    enum = "No" "Yes"
+  endparam  
+  param tcenter
+    caption = "Custom Center"
+    default = (-0.5,0.0)
+  endparam  
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam   
+  param phi
+    caption = "Out of Plane Rotation"
+    default = 0.0
+  endparam  
+}
+}
+
+Hyperparaboloid {; Ron Barnett, December 1999
+; Based on the transform of fs
+
+transform:
+  float tt = 0
+  float lambda = 0
+  float u = 0
+  float v = 0
+  float x = 0
+  float y = 0
+  float z = 0
+
+  ; Construct a line from the current pixel on the screen through 3D space.
+  ; The line is defined by (sx, sy, sz) + lambda * (dx, dy, dz) where
+  ; lambda can be any real value > 0. So the line does not extend behind
+  ; the screen.
+  
+  float sx = -@transx
+  float sy = -@transy
+  float sz = -@transz
+  float dx = real(#pixel)
+  float dy = imag(#pixel)
+  float dz = 4
+  
+  ; Convert angles from degrees to radians.
+  float angx = (@rotx * #pi) / 180
+  float angy = (@roty * #pi) / 180
+  float angz = (@rotz * #pi) / 180
+  
+  ; Rotate the line according to the (rotx, roty, rotz) angle.
+
+  ; Apply rotation around Z axis
+  tt = cos(angz) * sy - sin(angz) * sx
+  sx = cos(angz) * sx + sin(angz) * sy
+  sy = tt  
+  tt = cos(angz) * dy - sin(angz) * dx
+  dx = cos(angz) * dx + sin(angz) * dy
+  dy = tt
+  
+  ; Apply rotation around Y axis
+  tt = cos(angy) * sx - sin(angy) * sz
+  sz = cos(angy) * sz + sin(angy) * sx
+  sx = tt
+  tt = cos(angy) * dx - sin(angy) * dz
+  dz = cos(angy) * dz + sin(angy) * dx
+  dx = tt
+  
+  ; Apply rotation around X axis
+  tt = cos(angx) * sz - sin(angx) * sy
+  sy = cos(angx) * sy + sin(angx) * sz
+  sz = tt
+  tt = cos(angx) * dz - sin(angx) * dy
+  dy = cos(angx) * dy + sin(angx) * dz
+  dz = tt
+  
+  ; Now compute the intersection of the line with the hyperparaboloid, and return
+  ; the intersection point in #pixel (texture coordinates).
+  ; This is the only shape-dependent part.
+  
+    ; Sphere shape (radius 0.5)
+    ;
+    ; This must be solved:
+    ; [ sx ]          [ dx ]   [ x ]
+    ; [ sy ] + lambda [ dy ] = [ y ]
+    ; [ sz ]          [ dz ]   [ z ]
+    ; and
+    ; x^2 - y^2 = 10*z
+    
+    float a = sqr(dx) - sqr(dy)
+    float b = 2 * sx * dx - 2 * sy * dy - 10*dz
+    float c = sqr(sx) - sqr(sy) - 10*sz
+    
+    float d = sqr(b) - 4 * a * c
+    
+    if d < 0
+      ; No roots exist.
+      #solid = true
+    else
+      ; One or two roots: select smallest.
+      if a >= 0
+        lambda = (-b - sqrt(d)) / (2 * a)
+      else
+        lambda = (-b + sqrt(d)) / (2 * a)
+      endif
+      
+      if lambda < 0
+        ; Intersection point is behind the screen.
+        #solid = true
+      else
+        x = sx + lambda * dx
+        y = sy + lambda * dy
+        z = sz + lambda * dz
+        
+        if z == 0
+          if x > 0
+            u = 2
+          else
+            u = -2
+          endif
+        else
+          u = (4 / #pi) * atan(x / abs(z))
+        endif
+        
+        v = (4 / #pi) * atan(y / sqrt(sqr(x) + sqr(z)))
+      endif
+    endif
+    
+  #pixel = u + flip(v)  
+  #pixel = @fraccenter + #pixel * exp(flip((@fracangle * #pi) / 180)) / @fracmagn
+
+default:
+  title = "Hyperparaboloid"
+  
+  param rotx
+    caption = "X rotation"
+    default = 0.0
+    hint = "Rotation around the x-axis, in degrees. The x-axis points to \
+            the right. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing to \
+            the right. Your (curled) fingers now indicate the direction of \
+            positive X rotation."
+  endparam
+  
+  param roty
+    caption = "Y rotation"
+    default = 0.0
+    hint = "Rotation around the y-axis, in degrees. The y-axis points \
+            upwards. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing \
+            upwards. Your (curled) fingers now indicate the direction of \
+            positive Y rotation."
+  endparam
+  
+  param rotz
+    caption = "Z rotation"
+    default = 270.0
+    hint = "Rotation around the z-axis, in degrees. The z-axis points into \
+            the screen. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing into \
+            the screen. Your (curled) fingers now indicate the direction of \
+            positive Z rotation."
+  endparam
+  
+  param transx
+    caption = "X Translation"
+    default = 0.0
+    hint = "Translation along the x-axis. The x-axis points to the right, \
+            so increasing this value will move the fractal to the right, too."
+  endparam
+  
+  param transy
+    caption = "Y Translation"
+    default = -0.5
+    hint = "Translation along the y-axis. The y-axis points upwards, \
+            so increasing this value will move the fractal upwards, too."
+  endparam
+  
+  param transz
+    caption = "Z Translation"
+    default = 2.0
+    hint = "Translation along the z-axis. The z-axis points into the screen, \
+            so increasing this value will move the fractal away."
+  endparam  
+  
+  param fraccenter
+    caption = "Fractal Center"
+    default = (0,0)
+    hint = "Center of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+  
+  param fracmagn
+    caption = "Fractal Magnification"
+    default = 1.0
+    hint = "Magnification of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracangle
+    caption = "Fractal Rotation"
+    default = 0.0
+    hint = "Rotation angle (in degrees) of the fractal image. Use here \
+            what you would normally enter in the Location tab."
+  endparam
+}
+
+attract_formula_tx { ; Ron Barnett, January 2000
+; updated April 2002 and Nov 2, 2004
+; updated February 13, 2005
+; added Sprott 3D attractors November 2006
+global:
+  float qd[101,13]
+; Sprott attractor data
+  qd[0,1]=1,qd[0,2]=-1.1,qd[0,3]=-0.2,qd[0,4]=-0.1,qd[0,5]=-0.4,qd[0,6]=0.1,qd[0,7]=-0.3,qd[0,8]=0.8,qd[0,9]=-0.1,qd[0,10]=0.3,qd[0,11]=-1,qd[0,12]=-0.9
+  qd[1,1]=0.9,qd[1,2]=-0.1,qd[1,3]=0.2,qd[1,4]=0.5,qd[1,5]=-0.6,qd[1,6]=-1.0,qd[1,7]=-0.9,qd[1,8]=-0.8,qd[1,9]=1.0,qd[1,10]=-0.2,qd[1,11]=0.4,qd[1,12]=-0.2
+  qd[2,1]=-0.8,qd[2,2]=1.1,qd[2,3]=0.5,qd[2,4]=1.1,qd[2,5]=1.1,qd[2,6]=1.1,qd[2,7]=-0.6,qd[2,8]=-0.1,qd[2,9]=-0.6,qd[2,10]=-0.1,qd[2,11]=0.2,qd[2,12]=0.5
+  qd[3,1]=-0.8,qd[3,2]=-0.7,qd[3,3]=0.4,qd[3,4]=0.8,qd[3,5]=0.4,qd[3,6]=1.1,qd[3,7]=0.9,qd[3,8]=0.9,qd[3,9]=0.4,qd[3,10]=0.6,qd[3,11]=0.9,qd[3,12]=0.1
+  qd[4,1]=0.9,qd[4,2]=0.5,qd[4,3]=-1.2,qd[4,4]=0.0,qd[4,5]=-0.3,qd[4,6]=0.0,qd[4,7]=0.2,qd[4,8]=0.4,qd[4,9]=0.9,qd[4,10]=-0.1,qd[4,11]=-1.1,qd[4,12]=-0.1
+  qd[5,1]=0.6,qd[5,2]=-0.1,qd[5,3]=-0.5,qd[5,4]=-1.2,qd[5,5]=-0.3,qd[5,6]=-0.6,qd[5,7]=0.8,qd[5,8]=0.4,qd[5,9]=-0.1,qd[5,10]=1.0,qd[5,11]=-0.8,qd[5,12]=-1.0
+  qd[6,1]=-0.8,qd[6,2]=0.5,qd[6,3]=0.5,qd[6,4]=-0.7,qd[6,5]=-0.9,qd[6,6]=1.0,qd[6,7]=-0.1,qd[6,8]=-0.4,qd[6,9]=1.1,qd[6,10]=-0.4,qd[6,11]=0.0,qd[6,12]=-0.3
+  qd[7,1]=-0.6,qd[7,2]=0.8,qd[7,3]=0.4,qd[7,4]=-0.8,qd[7,5]=-1.0,qd[7,6]=-1.1,qd[7,7]=-0.8,qd[7,8]=1.0,qd[7,9]=0.3,qd[7,10]=1.0,qd[7,11]=0.8,qd[7,12]=0.4
+  qd[8,1]=-0.9,qd[8,2]=-0.4,qd[8,3]=-1.1,qd[8,4]=-0.4,qd[8,5]=0.8,qd[8,6]=0.9,qd[8,7]=0.9,qd[8,8]=-0.2,qd[8,9]=-1.1,qd[8,10]=-0.7,qd[8,11]=-0.2,qd[8,12]=0.1
+  qd[9,1]=-0.2,qd[9,2]=0.8,qd[9,3]=-0.4,qd[9,4]=-0.3,qd[9,5]=-0.8,qd[9,6]=1.0,qd[9,7]=0.5,qd[9,8]=-0.9,qd[9,9]=0.9,qd[9,10]=-0.6,qd[9,11]=0.4,qd[9,12]=-0.3
+  qd[10,1]=0.7,qd[10,2]=-0.3,qd[10,3]=-1.1,qd[10,4]=0.5,qd[10,5]=0.3,qd[10,6]=-0.7,qd[10,7]=0.0,qd[10,8]=0.9,qd[10,9]=-0.4,qd[10,10]=0.3,qd[10,11]=0.7,qd[10,12]=0.2
+  qd[11,1]=1.1,qd[11,2]=-0.4,qd[11,3]=-0.1,qd[11,4]=-1.1,qd[11,5]=-0.8,qd[11,6]=-0.9,qd[11,7]=-0.7,qd[11,8]=-0.7,qd[11,9]=0.7,qd[11,10]=0.4,qd[11,11]=0.0,qd[11,12]=-0.1
+  qd[12,1]=-1.2,qd[12,2]=-0.1,qd[12,3]=-0.5,qd[12,4]=0.6,qd[12,5]=-1.0,qd[12,6]=-0.3,qd[12,7]=-0.6,qd[12,8]=-0.2,qd[12,9]=-0.8,qd[12,10]=-0.7,qd[12,11]=-0.4,qd[12,12]=0.1
+  qd[13,1]=0.2,qd[13,2]=1.0,qd[13,3]=-0.3,qd[13,4]=0.9,qd[13,5]=0.6,qd[13,6]=-0.5,qd[13,7]=0.6,qd[13,8]=1.0,qd[13,9]=-1.0,qd[13,10]=-0.1,qd[13,11]=-1.2,qd[13,12]=0.8
+  qd[14,1]=-0.6,qd[14,2]=-0.5,qd[14,3]=0.7,qd[14,4]=0.4,qd[14,5]=-0.7,qd[14,6]=-0.1,qd[14,7]=0.7,qd[14,8]=0.4,qd[14,9]=-0.7,qd[14,10]=1.0,qd[14,11]=0.1,qd[14,12]=-0.1
+  qd[15,1]=0.6,qd[15,2]=-0.3,qd[15,3]=-0.1,qd[15,4]=-1.1,qd[15,5]=-1.1,qd[15,6]=0.5,qd[15,7]=-0.1,qd[15,8]=0.1,qd[15,9]=0.7,qd[15,10]=0.9,qd[15,11]=-0.8,qd[15,12]=1.0
+  qd[16,1]=-0.4,qd[16,2]=-1.0,qd[16,3]=-0.7,qd[16,4]=-0.7,qd[16,5]=-1.1,qd[16,6]=-0.1,qd[16,7]=1.2,qd[16,8]=-0.5,qd[16,9]=-0.7,qd[16,10]=0.3,qd[16,11]=0.5,qd[16,12]=-0.6
+  qd[17,1]=-0.7,qd[17,2]=0.7,qd[17,3]=1.0,qd[17,4]=-0.5,qd[17,5]=0.7,qd[17,6]=0.3,qd[17,7]=0.8,qd[17,8]=-0.9,qd[17,9]=-0.8,qd[17,10]=-1.0,qd[17,11]=-0.6,qd[17,12]=-1.1
+  qd[18,1]=0.8,qd[18,2]=0.3,qd[18,3]=0.0,qd[18,4]=0.2,qd[18,5]=0.3,qd[18,6]=-0.8,qd[18,7]=-0.4,qd[18,8]=-1.2,qd[18,9]=-0.9,qd[18,10]=-1.1,qd[18,11]=-0.2,qd[18,12]=0.2
+  qd[19,1]=0.3,qd[19,2]=1.0,qd[19,3]=-0.4,qd[19,4]=0.9,qd[19,5]=0.3,qd[19,6]=-0.5,qd[19,7]=0.0,qd[19,8]=-1.0,qd[19,9]=-1.2,qd[19,10]=0.1,qd[19,11]=-0.9,qd[19,12]=0.0
+  qd[20,1]=1.2,qd[20,2]=-0.2,qd[20,3]=-0.9,qd[20,4]=1.1,qd[20,5]=0.5,qd[20,6]=-0.5,qd[20,7]=0.3,qd[20,8]=-0.5,qd[20,9]=-1.2,qd[20,10]=0.6,qd[20,11]=-0.1,qd[20,12]=-0.4
+  qd[21,1]=0.2,qd[21,2]=0.3,qd[21,3]=0.4,qd[21,4]=-0.1,qd[21,5]=1.2,qd[21,6]=-0.5,qd[21,7]=-0.4,qd[21,8]=-1.1,qd[21,9]=0.5,qd[21,10]=-1.2,qd[21,11]=1.2,qd[21,12]=0.3
+  qd[22,1]=1.1,qd[22,2]=0.4,qd[22,3]=-0.3,qd[22,4]=-0.2,qd[22,5]=0.4,qd[22,6]=-1.0,qd[22,7]=0.6,qd[22,8]=-0.4,qd[22,9]=-0.5,qd[22,10]=1.2,qd[22,11]=-0.9,qd[22,12]=1.0
+  qd[23,1]=-1.1,qd[23,2]=0.9,qd[23,3]=1.1,qd[23,4]=0.4,qd[23,5]=-1.2,qd[23,6]=1.0,qd[23,7]=0.3,qd[23,8]=0.3,qd[23,9]=0.3,qd[23,10]=-0.7,qd[23,11]=0.6,qd[23,12]=-0.9
+  qd[24,1]=-0.1,qd[24,2]=-0.4,qd[24,3]=-0.8,qd[24,4]=-0.8,qd[24,5]=0.9,qd[24,6]=-0.2,qd[24,7]=0.9,qd[24,8]=-0.2,qd[24,9]=-0.9,qd[24,10]=-0.9,qd[24,11]=-0.4,qd[24,12]=-1.2
+  qd[25,1]=-0.7,qd[25,2]=-0.2,qd[25,3]=-0.4,qd[25,4]=0.4,qd[25,5]=-0.9,qd[25,6]=0.9,qd[25,7]=0.3,qd[25,8]=-0.3,qd[25,9]=-1.1,qd[25,10]=-0.2,qd[25,11]=0.0,qd[25,12]=-0.4
+  qd[26,1]=-0.6,qd[26,2]=1.1,qd[26,3]=-0.2,qd[26,4]=0.7,qd[26,5]=-0.1,qd[26,6]=1.1,qd[26,7]=-1.2,qd[26,8]=0.0,qd[26,9]=1.1,qd[26,10]=0.3,qd[26,11]=0.7,qd[26,12]=0.8
+  qd[27,1]=0.1,qd[27,2]=-0.7,qd[27,3]=0.2,qd[27,4]=-0.2,qd[27,5]=0.1,qd[27,6]=1.2,qd[27,7]=-0.5,qd[27,8]=-0.9,qd[27,9]=0.5,qd[27,10]=0.4,qd[27,11]=-1.0,qd[27,12]=0.2
+  qd[28,1]=0.7,qd[28,2]=-0.6,qd[28,3]=-0.2,qd[28,4]=0.1,qd[28,5]=0.2,qd[28,6]=-0.2,qd[28,7]=-0.8,qd[28,8]=-0.7,qd[28,9]=0.6,qd[28,10]=1.2,qd[28,11]=0.4,qd[28,12]=1.2
+  qd[29,1]=-0.4,qd[29,2]=-0.1,qd[29,3]=-0.2,qd[29,4]=-0.4,qd[29,5]=-1.2,qd[29,6]=0.8,qd[29,7]=-0.7,qd[29,8]=-0.1,qd[29,9]=0.6,qd[29,10]=0.5,qd[29,11]=-0.9,qd[29,12]=0.7
+  qd[30,1]=-0.9,qd[30,2]=0.4,qd[30,3]=-0.6,qd[30,4]=-0.7,qd[30,5]=1.1,qd[30,6]=0.9,qd[30,7]=0.2,qd[30,8]=-1.0,qd[30,9]=0.3,qd[30,10]=1.1,qd[30,11]=0.3,qd[30,12]=0.0
+  qd[31,1]=-0.6,qd[31,2]=-0.4,qd[31,3]=1.1,qd[31,4]=-1.0,qd[31,5]=-0.6,qd[31,6]=1.2,qd[31,7]=0.4,qd[31,8]=0.3,qd[31,9]=-0.1,qd[31,10]=-0.8,qd[31,11]=0.9,qd[31,12]=0.1,
+  qd[32,1]=0.2,qd[32,2]=-0.2,qd[32,3]=-0.3,qd[32,4]=-1.1,qd[32,5]=-0.3,qd[32,6]=-0.9,qd[32,7]=0.4,qd[32,8]=1.0,qd[32,9]=0.5,qd[32,10]=1.1,qd[32,11]=-0.7,qd[32,12]=-1.2
+  qd[33,1]=1.0,qd[33,2]=-0.8,qd[33,3]=-0.9,qd[33,4]=-0.3,qd[33,5]=-0.8,qd[33,6]=-0.1,qd[33,7]=0.3,qd[33,8]=-0.3,qd[33,9]=0.1,qd[33,10]=-0.1,qd[33,11]=0.1,qd[33,12]=-1.1
+  qd[34,1]=0.0,qd[34,2]=-0.9,qd[34,3]=0.0,qd[34,4]=-0.8,qd[34,5]=0.6,qd[34,6]=0.9,qd[34,7]=0.2,qd[34,8]=-0.9,qd[34,9]=-1.0,qd[34,10]=-1.2,qd[34,11]=-0.8,qd[34,12]=-1.2
+  qd[35,1]=0.2,qd[35,2]=0.4,qd[35,3]=-1.2,qd[35,4]=-0.6,qd[35,5]=-1.2,qd[35,6]=0.6,qd[35,7]=0.4,qd[35,8]=-1.1,qd[35,9]=1.2,qd[35,10]=-0.9,qd[35,11]=-0.4,qd[35,12]=-0.1
+  qd[36,1]=0.7,qd[36,2]=0.5,qd[36,3]=-1.2,qd[36,4]=-0.6,qd[36,5]=0.3,qd[36,6]=0.2,qd[36,7]=-1.2,qd[36,8]=-0.6,qd[36,9]=0.2,qd[36,10]=-0.7,qd[36,11]=-0.1,qd[36,12]=0.8
+  qd[37,1]=0.3,qd[37,2]=-0.3,qd[37,3]=-1.1,qd[37,4]=-1.0,qd[37,5]=0.5,qd[37,6]=-0.8,qd[37,7]=0.8,qd[37,8]=1.1,qd[37,9]=0.8,qd[37,10]=0.1,qd[37,11]=-0.9,qd[37,12]=0.1
+  qd[38,1]=-0.8,qd[38,2]=-1.1,qd[38,3]=-0.1,qd[38,4]=-0.5,qd[38,5]=-0.2,qd[38,6]=0.6,qd[38,7]=0.0,qd[38,8]=-0.8,qd[38,9]=-0.3,qd[38,10]=1.2,qd[38,11]=-1.0,qd[38,12]=1.1
+  qd[39,1]=0.5,qd[39,2]=0.3,qd[39,3]=-0.7,qd[39,4]=-0.2,qd[39,5]=-0.3,qd[39,6]=1.1,qd[39,7]=0.8,qd[39,8]=1.1,qd[39,9]=-1.0,qd[39,10]=-0.1,qd[39,11]=0.4,qd[39,12]=-0.6
+  qd[40,1]=-0.5,qd[40,2]=0.4,qd[40,3]=0.6,qd[40,4]=0.8,qd[40,5]=-0.3,qd[40,6]=-1.2,qd[40,7]=0.7,qd[40,8]=-0.5,qd[40,9]=-0.7,qd[40,10]=-1.0,qd[40,11]=0.1,qd[40,12]=-0.5
+  qd[41,1]=1.1,qd[41,2]=0.3,qd[41,3]=-1.2,qd[41,4]=1.0,qd[41,5]=0.7,qd[41,6]=-1.2,qd[41,7]=0.8,qd[41,8]=-0.7,qd[41,9]=0.1,qd[41,10]=-0.2,qd[41,11]=-1.0,qd[41,12]=1.0
+  qd[42,1]=-0.6,qd[42,2]=-0.2,qd[42,3]=1.0,qd[42,4]=0.9,qd[42,5]=-1.1,qd[42,6]=-0.6,qd[42,7]=0.3,qd[42,8]=0.7,qd[42,9]=-0.7,qd[42,10]=0.0,qd[42,11]=0.1,qd[42,12]=-0.6
+  qd[43,1]=0.6,qd[43,2]=-0.6,qd[43,3]=-0.5,qd[43,4]=0.2,qd[43,5]=-0.7,qd[43,6]=0.3,qd[43,7]=-0.5,qd[43,8]=0.8,qd[43,9]=-0.5,qd[43,10]=-1.1,qd[43,11]=-0.2,qd[43,12]=1.2
+  qd[44,1]=0.0,qd[44,2]=0.2,qd[44,3]=0.1,qd[44,4]=-0.9,qd[44,5]=-0.9,qd[44,6]=-1.2,qd[44,7]=-0.8,qd[44,8]=-1.0,qd[44,9]=0.4,qd[44,10]=0.1,qd[44,11]=0.6,qd[44,12]=0.4
+  qd[45,1]=-1.2,qd[45,2]=1.0,qd[45,3]=1.2,qd[45,4]=-0.8,qd[45,5]=-1.1,qd[45,6]=0.4,qd[45,7]=-0.2,qd[45,8]=0.6,qd[45,9]=-0.2,qd[45,10]=0.5,qd[45,11]=-1.0,qd[45,12]=-0.2
+  qd[46,1]=-0.2,qd[46,2]=-1.1,qd[46,3]=-0.5,qd[46,4]=0.1,qd[46,5]=0.9,qd[46,6]=0.3,qd[46,7]=0.5,qd[46,8]=-0.6,qd[46,9]=-1.0,qd[46,10]=0.8,qd[46,11]=-0.7,qd[46,12]=-0.7
+  qd[47,1]=-0.3,qd[47,2]=-0.3,qd[47,3]=0.7,qd[47,4]=-0.9,qd[47,5]=1.0,qd[47,6]=0.8,qd[47,7]=-0.7,qd[47,8]=-0.9,qd[47,9]=0.5,qd[47,10]=0.8,qd[47,11]=0.1,qd[47,12]=0.2
+  qd[48,1]=-0.8,qd[48,2]=-0.8,qd[48,3]=1.2,qd[48,4]=0.7,qd[48,5]=-0.7,qd[48,6]=0.1,qd[48,7]=1.0,qd[48,8]=-0.8,qd[48,9]=-0.6,qd[48,10]=0.5,qd[48,11]=1.0,qd[48,12]=-0.5
+  qd[49,1]=-0.3,qd[49,2]=-0.9,qd[49,3]=0.6,qd[49,4]=-0.2,qd[49,5]=-0.1,qd[49,6]=0.4,qd[49,7]=0.5,qd[49,8]=-1.1,qd[49,9]=1.0,qd[49,10]=-1.2,qd[49,11]=0.0,qd[49,12]=-1.0
+  qd[50,1]=-0.9,qd[50,2]=-0.2,qd[50,3]=1.1,qd[50,4]=0.5,qd[50,5]=0.5,qd[50,6]=-0.8,qd[50,7]=0.3,qd[50,8]=0.2,qd[50,9]=0.0,qd[50,10]=0.3,qd[50,11]=-0.6,qd[50,12]=-1.1
+  qd[51,1]=-1.1,qd[51,2]=0.0,qd[51,3]=1.0,qd[51,4]=0.0,qd[51,5]=0.4,qd[51,6]=0.1,qd[51,7]=-0.3,qd[51,8]=-0.7,qd[51,9]=-0.6,qd[51,10]=0.7,qd[51,11]=-0.8,qd[51,12]=0.9
+  qd[52,1]=0.0,qd[52,2]=-0.5,qd[52,3]=-0.2,qd[52,4]=-1.0,qd[52,5]=-1.2,qd[52,6]=-1.0,qd[52,7]=0.7,qd[52,8]=-0.3,qd[52,9]=-0.8,qd[52,10]=0.4,qd[52,11]=0.0,qd[52,12]=-0.5
+  qd[53,1]=-0.1,qd[53,2]=0.5,qd[53,3]=-0.1,qd[53,4]=-1.0,qd[53,5]=-0.6,qd[53,6]=-0.5,qd[53,7]=-0.6,qd[53,8]=-0.4,qd[53,9]=0.4,qd[53,10]=-0.8,qd[53,11]=-1.2,qd[53,12]=0.5
+  qd[54,1]=0.1,qd[54,2]=-0.8,qd[54,3]=0.6,qd[54,4]=0.1,qd[54,5]=1.1,qd[54,6]=0.6,qd[54,7]=0.3,qd[54,8]=-0.8,qd[54,9]=-1.0,qd[54,10]=-0.5,qd[54,11]=-0.5,qd[54,12]=-1.1
+  qd[55,1]=-1.1,qd[55,2]=0.1,qd[55,3]=1.1,qd[55,4]=0.9,qd[55,5]=0.3,qd[55,6]=-0.3,qd[55,7]=0.9,qd[55,8]=-1.1,qd[55,9]=-0.5,qd[55,10]=0.7,qd[55,11]=0.6,qd[55,12]=-0.2
+  qd[56,1]=-0.9,qd[56,2]=0.4,qd[56,3]=1.2,qd[56,4]=-1.2,qd[56,5]=0.8,qd[56,6]=0.5,qd[56,7]=-0.5,qd[56,8]=0.5,qd[56,9]=0.8,qd[56,10]=-0.4,qd[56,11]=-1.0,qd[56,12]=-1.1
+  qd[57,1]=0.8,qd[57,2]=-0.3,qd[57,3]=0.4,qd[57,4]=-1.0,qd[57,5]=-0.5,qd[57,6]=0.3,qd[57,7]=-1.1,qd[57,8]=0.0,qd[57,9]=0.3,qd[57,10]=0.1,qd[57,11]=-0.8,qd[57,12]=0.7
+  qd[58,1]=-0.2,qd[58,2]=-1.2,qd[58,3]=1.2,qd[58,4]=1.1,qd[58,5]=-1.0,qd[58,6]=0.9,qd[58,7]=0.1,qd[58,8]=-0.5,qd[58,9]=0.7,qd[58,10]=-1.2,qd[58,11]=-0.6,qd[58,12]=1.2
+  qd[59,1]=-0.1,qd[59,2]=-1.0,qd[59,3]=-0.7,qd[59,4]=0.9,qd[59,5]=0.4,qd[59,6]=-0.1,qd[59,7]=-0.6,qd[59,8]=0.4,qd[59,9]=0.6,qd[59,10]=1.0,qd[59,11]=-0.7,qd[59,12]=1.1
+  qd[60,1]=-0.4,qd[60,2]=-0.3,qd[60,3]=0.1,qd[60,4]=0.7,qd[60,5]=1.0,qd[60,6]=0.6,qd[60,7]=-0.3,qd[60,8]=1.0,qd[60,9]=-0.8,qd[60,10]=-0.5,qd[60,11]=0.5,qd[60,12]=0.8
+  qd[61,1]=0.4,qd[61,2]=-0.7,qd[61,3]=0.7,qd[61,4]=0.0,qd[61,5]=1.1,qd[61,6]=0.9,qd[61,7]=0.2,qd[61,8]=-0.9,qd[61,9]=-1.1,qd[61,10]=-0.4,qd[61,11]=-0.1,qd[61,12]=0.1
+  qd[62,1]=0.7,qd[62,2]=-0.2,qd[62,3]=-0.6,qd[62,4]=0.9,qd[62,5]=0.0,qd[62,6]=0.3,qd[62,7]=1.2,qd[62,8]=0.3,qd[62,9]=-0.6,qd[62,10]=-0.6,qd[62,11]=0.3,qd[62,12]=-1.0
+  qd[63,1]=1.0,qd[63,2]=0.7,qd[63,3]=-0.7,qd[63,4]=-0.2,qd[63,5]=0.9,qd[63,6]=0.1,qd[63,7]=0.9,qd[63,8]=1.0,qd[63,9]=-0.9,qd[63,10]=1.0,qd[63,11]=-0.2,qd[63,12]=-0.3
+  qd[64,1]=-0.7,qd[64,2]=1.1,qd[64,3]=0.9,qd[64,4]=1.1,qd[64,5]=0.3,qd[64,6]=-0.2,qd[64,7]=0.3,qd[64,8]=-1.1,qd[64,9]=-1.0,qd[64,10]=0.4,qd[64,11]=-0.6,qd[64,12]=-0.5
+  qd[65,1]=0.5,qd[65,2]=-0.2,qd[65,3]=-0.1,qd[65,4]=-0.6,qd[65,5]=0.3,qd[65,6]=0.7,qd[65,7]=1.0,qd[65,8]=0.6,qd[65,9]=-0.2,qd[65,10]=-1.2,qd[65,11]=0.3,qd[65,12]=-0.6
+  qd[66,1]=1.0,qd[66,2]=-0.8,qd[66,3]=-0.5,qd[66,4]=0.2,qd[66,5]=0.1,qd[66,6]=-0.4,qd[66,7]=-0.7,qd[66,8]=-0.4,qd[66,9]=1.1,qd[66,10]=-1.1,qd[66,11]=-0.5,qd[66,12]=-0.5
+  qd[67,1]=1.1,qd[67,2]=-0.4,qd[67,3]=-0.2,qd[67,4]=-0.6,qd[67,5]=0.4,qd[67,6]=-0.8,qd[67,7]=0.5,qd[67,8]=-0.9,qd[67,9]=-0.6,qd[67,10]=0.1,qd[67,11]=1.2,qd[67,12]=0.7
+  qd[68,1]=-0.2,qd[68,2]=-0.5,qd[68,3]=-0.1,qd[68,4]=-0.1,qd[68,5]=0.7,qd[68,6]=0.3,qd[68,7]=1.1,qd[68,8]=0.9,qd[68,9]=-0.8,qd[68,10]=0.2,qd[68,11]=0.2,qd[68,12]=-0.5
+  qd[69,1]=1.1,qd[69,2]=-0.9,qd[69,3]=0.4,qd[69,4]=-0.7,qd[69,5]=0.2,qd[69,6]=0.0,qd[69,7]=0.4,qd[69,8]=1.2,qd[69,9]=0.8,qd[69,10]=-0.7,qd[69,11]=-0.8,qd[69,12]=0.1
+  qd[70,1]=-0.8,qd[70,2]=0.3,qd[70,3]=0.4,qd[70,4]=-1.1,qd[70,5]=-0.1,qd[70,6]=1.2,qd[70,7]=-0.9,qd[70,8]=-0.7,qd[70,9]=1.2,qd[70,10]=-1.1,qd[70,11]=-0.2,qd[70,12]=0.3
+  qd[71,1]=-0.3,qd[71,2]=-1.2,qd[71,3]=0.5,qd[71,4]=-0.8,qd[71,5]=0.2,qd[71,6]=1.1,qd[71,7]=1.2,qd[71,8]=-0.8,qd[71,9]=0.9,qd[71,10]=-1.1,qd[71,11]=-1.1,qd[71,12]=1.2,
+  qd[72,1]=-0.3,qd[72,2]=-1.2,qd[72,3]=0.7,qd[72,4]=0.3,qd[72,5]=0.4,qd[72,6]=0.6,qd[72,7]=0.1,qd[72,8]=0.7,qd[72,9]=-0.6,qd[72,10]=-0.6,qd[72,11]=0.7,qd[72,12]=0.8
+  qd[73,1]=-1.1,qd[73,2]=0.2,qd[73,3]=0.2,qd[73,4]=-1.1,qd[73,5]=-0.6,qd[73,6]=1.1,qd[73,7]=-0.1,qd[73,8]=0.5,qd[73,9]=1.2,qd[73,10]=0.9,qd[73,11]=0.8,qd[73,12]=-0.7
+  qd[74,1]=0.9,qd[74,2]=0.5,qd[74,3]=-1.1,qd[74,4]=-0.5,qd[74,5]=0.0,qd[74,6]=-1.2,qd[74,7]=0.2,qd[74,8]=1.2,qd[74,9]=-0.5,qd[74,10]=-0.3,qd[74,11]=-0.3,qd[74,12]=-0.8
+  qd[75,1]=0.8,qd[75,2]=0.7,qd[75,3]=-1.2,qd[75,4]=0.4,qd[75,5]=-0.1,qd[75,6]=-1.2,qd[75,7]=-0.7,qd[75,8]=-0.1,qd[75,9]=-1.0,qd[75,10]=0.0,qd[75,11]=-1.0,qd[75,12]=-0.3
+  qd[76,1]=-0.8,qd[76,2]=1.0,qd[76,3]=0.9,qd[76,4]=-1.1,qd[76,5]=-0.9,qd[76,6]=0.4,qd[76,7]=0.6,qd[76,8]=-0.1,qd[76,9]=0.8,qd[76,10]=-0.5,qd[76,11]=-0.2,qd[76,12]=-0.3
+  qd[77,1]=-0.7,qd[77,2]=-1.1,qd[77,3]=0.5,qd[77,4]=0.1,qd[77,5]=-0.6,qd[77,6]=0.6,qd[77,7]=-0.1,qd[77,8]=1.1,qd[77,9]=0.0,qd[77,10]=-1.2,qd[77,11]=-0.1,qd[77,12]=0.4
+  qd[78,1]=0.5,qd[78,2]=-1.1,qd[78,3]=-1.1,qd[78,4]=0.0,qd[78,5]=-0.5,qd[78,6]=0.0,qd[78,7]=0.7,qd[78,8]=1.2,qd[78,9]=-0.9,qd[78,10]=-0.2,qd[78,11]=0.5,qd[78,12]=-1.0
+  qd[79,1]=-0.4,qd[79,2]=-0.3,qd[79,3]=0.3,qd[79,4]=-0.1,qd[79,5]=-1.0,qd[79,6]=1.0,qd[79,7]=-0.7,qd[79,8]=-0.7,qd[79,9]=1.0,qd[79,10]=-1.2,qd[79,11]=0.5,qd[79,12]=0.8
+  qd[80,1]=0.6,qd[80,2]=-0.3,qd[80,3]=0.0,qd[80,4]=0.4,qd[80,5]=-0.8,qd[80,6]=-0.3,qd[80,7]=-0.7,qd[80,8]=-0.9,qd[80,9]=-0.3,qd[80,10]=0.2,qd[80,11]=1.1,qd[80,12]=1.1
+  qd[81,1]=-0.3,qd[81,2]=-0.7,qd[81,3]=0.2,qd[81,4]=-0.7,qd[81,5]=-0.3,qd[81,6]=0.5,qd[81,7]=1.2,qd[81,8]=-0.1,qd[81,9]=-0.8,qd[81,10]=-1.1,qd[81,11]=-0.1,qd[81,12]=-0.8
+  qd[82,1]=0.2,qd[82,2]=-0.4,qd[82,3]=-0.9,qd[82,4]=-0.2,qd[82,5]=1.2,qd[82,6]=1.2,qd[82,7]=0.3,qd[82,8]=-0.7,qd[82,9]=-1.1,qd[82,10]=-0.2,qd[82,11]=-0.2,qd[82,12]=-0.7
+  qd[83,1]=1.2,qd[83,2]=-0.7,qd[83,3]=-0.5,qd[83,4]=0.1,qd[83,5]=0.2,qd[83,6]=-1.1,qd[83,7]=0.3,qd[83,8]=-1.0,qd[83,9]=0.6,qd[83,10]=-0.3,qd[83,11]=0.2,qd[83,12]=-1.1
+  qd[84,1]=0.7,qd[84,2]=-1.2,qd[84,3]=0.9,qd[84,4]=0.0,qd[84,5]=-0.7,qd[84,6]=0.2,qd[84,7]=-0.7,qd[84,8]=1.2,qd[84,9]=0.5,qd[84,10]=1.0,qd[84,11]=-0.4,qd[84,12]=1.2
+  qd[85,1]=1.1,qd[85,2]=-0.4,qd[85,3]=-0.7,qd[85,4]=0.4,qd[85,5]=0.7,qd[85,6]=-0.4,qd[85,7]=-0.3,qd[85,8]=0.5,qd[85,9]=-0.2,qd[85,10]=0.6,qd[85,11]=0.0,qd[85,12]=0.8
+  qd[86,1]=1.2,qd[86,2]=-0.3,qd[86,3]=-0.1,qd[86,4]=-0.9,qd[86,5]=0.6,qd[86,6]=0.0,qd[86,7]=0.6,qd[86,8]=0.6,qd[86,9]=0.9,qd[86,10]=-0.6,qd[86,11]=-1.2,qd[86,12]=0.4
+  qd[87,1]=0.3,qd[87,2]=-1.0,qd[87,3]=0.3,qd[87,4]=-0.1,qd[87,5]=-1.0,qd[87,6]=1.1,qd[87,7]=-0.8,qd[87,8]=-0.4,qd[87,9]=0.6,qd[87,10]=0.0,qd[87,11]=0.6,qd[87,12]=1.0
+  qd[88,1]=-0.3,qd[88,2]=0.0,qd[88,3]=-0.3,qd[88,4]=0.8,qd[88,5]=-0.8,qd[88,6]=0.8,qd[88,7]=0.7,qd[88,8]=1.1,qd[88,9]=-0.5,qd[88,10]=0.0,qd[88,11]=0.6,qd[88,12]=-1.0
+  qd[89,1]=0.4,qd[89,2]=0.8,qd[89,3]=-0.3,qd[89,4]=-0.2,qd[89,5]=-1.2,qd[89,6]=-0.2,qd[89,7]=0.0,qd[89,8]=0.0,qd[89,9]=1.2,qd[89,10]=1.2,qd[89,11]=0.5,qd[89,12]=-1.1
+  qd[90,1]=0.5,qd[90,2]=-0.4,qd[90,3]=-0.8,qd[90,4]=-1.0,qd[90,5]=0.0,qd[90,6]=-0.7,qd[90,7]=0.0,qd[90,8]=-0.5,qd[90,9]=-1.1,qd[90,10]=1.0,qd[90,11]=0.8,qd[90,12]=0.1
+  qd[91,1]=-0.6,qd[91,2]=0.1,qd[91,3]=-0.3,qd[91,4]=-0.8,qd[91,5]=-0.5,qd[91,6]=0.2,qd[91,7]=-1.1,qd[91,8]=0.3,qd[91,9]=0.6,qd[91,10]=1.0,qd[91,11]=-0.2,qd[91,12]=0.9
+  qd[92,1]=1.0,qd[92,2]=0.3,qd[92,3]=-0.5,qd[92,4]=0.6,qd[92,5]=-1.2,qd[92,6]=-0.1,qd[92,7]=-1.0,qd[92,8]=-0.3,qd[92,9]=0.0,qd[92,10]=-1.2,qd[92,11]=0.4,qd[92,12]=0.1,
+  qd[93,1]=-0.1,qd[93,2]=-1.2,qd[93,3]=-1.1,qd[93,4]=-0.3,qd[93,5]=0.9,qd[93,6]=-0.7,qd[93,7]=1.0,qd[93,8]=0.1,qd[93,9]=0.3,qd[93,10]=-0.6,qd[93,11]=0.4,qd[93,12]=-0.5
+  qd[94,1]=-1.2,qd[94,2]=0.8,qd[94,3]=0.1,qd[94,4]=1.1,qd[94,5]=-0.7,qd[94,6]=1.2,qd[94,7]=-0.5,qd[94,8]=0.7,qd[94,9]=-0.4,qd[94,10]=0.9,qd[94,11]=-1.2,qd[94,12]=-0.3
+  qd[95,1]=0.2,qd[95,2]=-0.4,qd[95,3]=-0.9,qd[95,4]=0.0,qd[95,5]=0.6,qd[95,6]=0.4,qd[95,7]=0.5,qd[95,8]=0.7,qd[95,9]=-1.1,qd[95,10]=0.4,qd[95,11]=-0.2,qd[95,12]=-1.1
+  qd[96,1]=0.8,qd[96,2]=0.2,qd[96,3]=-1.1,qd[96,4]=0.7,qd[96,5]=-1.2,qd[96,6]=-1.0,qd[96,7]=0.0,qd[96,8]=-0.3,qd[96,9]=1.1,qd[96,10]=-0.8,qd[96,11]=-0.5,qd[96,12]=0.9
+  qd[97,1]=0.7,qd[97,2]=-0.7,qd[97,3]=1.2,qd[97,4]=0.1,qd[97,5]=-1.0,qd[97,6]=0.1,qd[97,7]=0.5,qd[97,8]=1.1,qd[97,9]=-0.9,qd[97,10]=0.9,qd[97,11]=0.6,qd[97,12]=-1.2
+  qd[98,1]=1.0,qd[98,2]=-0.1,qd[98,3]=-0.8,qd[98,4]=0.0,qd[98,5]=0.7,qd[98,6]=-0.6,qd[98,7]=0.6,qd[98,8]=0.2,qd[98,9]=-0.2,qd[98,10]=0.8,qd[98,11]=1.0,qd[98,12]=-0.4
+  qd[99,1]=0.2,qd[99,2]=-0.9,qd[99,3]=0.1,qd[99,4]=0.5,qd[99,5]=0.0,qd[99,6]=0.8,qd[99,7]=-1.0,qd[99,8]=-0.4,qd[99,9]=0.9,qd[99,10]=-0.2,qd[99,11]=0.6,qd[99,12]=0.0
+  qd[100,1]=-1.0,qd[100,2]=-0.4,qd[100,3]=-0.3,qd[100,4]=0.9,qd[100,5]=0.8,qd[100,6]=1.0,qd[100,7]=-1.2,qd[100,8]=0.5,qd[100,9]=0.3,qd[100,10]=-0.4,qd[100,11]=0.1,qd[100,12]=0.1
+
+  float sq1 = qd[@select,1]
+  float sq2 = qd[@select,2]
+  float sq3 = qd[@select,3]
+  float sq4 = qd[@select,4]
+  float sq5 = qd[@select,5]
+  float sq6 = qd[@select,6]
+  float sq7 = qd[@select,7]
+  float sq8 = qd[@select,8]
+  float sq9 = qd[@select,9]
+  float sq10 = qd[@select,10]
+  float sq11 = qd[@select,11]
+  float sq12 = qd[@select,12]
+
+transform:
+  float version = @version
+  if @oldv == true
+    version = 1.0
+  endif
+  float x = 0
+  float y = 0
+  complex w = @fn1(#pixel - @offset)
+  if @formula == 0 || version == 1.0
+    float x = real(w) / @scale
+    float y = imag(w) / @scale
+  elseif @formula == 1 && version > 1.0
+    float x = real(w) / @mscale
+    float y = imag(w) / @mscale
+  elseif @formula == 2 && version > 1.0
+    float x = real(w) / @hscale
+    float y = imag(w) / @hscale
+  elseif @formula == 3 && version > 1.0
+    float x = real(w) / @pscale
+    float y = imag(w) / @pscale
+  elseif @formula == 4 && @version > 1.0
+    float x = real(w) / @qscale
+    float y = imag(w) / @qscale
+  elseif @formula == 6 && version > 1.0
+    float x = real(w) / @tscale
+    float y = imag(w) / @tscale
+  elseif @formula == 7 && version > 1.0
+    float x = real(w) / @lscale
+    float y = imag(w) / @lscale
+  elseif @formula == 8 && version > 1.0
+    float x = real(w) / @zscale
+    float y = imag(w) / @zscale
+  elseif @formula == "Sprottquad" && version > 1.0
+    float x = real(w) / @sqscale
+    float y = imag(w) / @sqscale
+  endif
+  float xx = 0
+  float zz = 0
+  int i = 0
+  float iterate = 0
+  if @formula == 3 && version > 1.0
+    iterate = @piters
+  elseif @formula == 7 && version > 1.0
+    iterate = @liters
+  elseif @formula == "Sprottquad" && version > 1.0
+    iterate = @sqiters
+  else
+    iterate = @iters
+  endif    
+  while (i < iterate)
+    xx = x
+    if version > 1.0
+      if @formula == 6
+       ; Threeply
+       if x != 0
+         x = y - x/abs(x)*(abs(sin(x)*cos(@tb) + @tc \
+          - x*sin(@ta + @tb + @tc)))
+       else
+         x = y - abs(sin(x)*cos(@tb) + @tc \
+          - x*sin(@ta + @tb + @tc))
+       endif     
+       y = @ta - xx
+      elseif @formula == 2
+        ; Hopalong
+        if x != 0
+          x = y - x/abs(x)*sqrt(abs(@hb*x-@hc)) 
+        else
+          x = y - sqrt(abs(@hb*x-@hc)) 
+        endif
+        y = @ha - xx
+      elseif @formula == 0
+        ; Chip
+        if x != 0
+          x = y - x/abs(x)*cos(sqr(log(abs(@cb*x-@cc)))) \
+            *atan(sqr(log(abs(@cc*x-@cb)))) 
+       else
+          x = y - cos(sqr(log(abs(@cb*x-@cc)))) \
+            *atan(sqr(log(abs(@cc*x-@cb)))) 
+        endif    
+        y = @ca - xx
+      elseif @formula == 4
+        ; Quadruptwo
+        if x != 0
+          x = y - x/abs(x)*sin(log(abs(@qb*x-@qc))) \
+                    *atan(sqr(log(abs(@qc*x-@qb))))
+        else
+          x = y - sin(log(abs(@qb*x-@qc))) \
+                    *atan(sqr(log(abs(@qc*x-@qb))))
+        endif
+        y = @qa - xx
+      elseif @formula == 3
+        ; Pickover
+        x = real(@pfn1(@pa*y)) - zz*real(@pfn2(@pb*x))
+        y = zz*real(@pfn3(@pc*xx)) - real(@pfn4(@pd*y))
+        zz = real(@pfn5(xx))
+      elseif @formula == 1
+        ; CosMartin
+        x = y - cos(x)
+        y = @ma - xx
+      elseif @formula == 7
+        ; Latoocarfian
+        x = real(@lfn1(y*@lb)) + @lc*real(@lfn2(x*@lb)) 
+        y = real(@lfn3(xx*@la)) + @ld*real(@lfn4(y*@la))
+      elseif @formula == 8
+        ; Zito
+        x = x*y +@za*x - y 
+        y = xx + y
+      elseif @formula == "Sprottquad"
+        ; Sprottquad
+        x = sq1 + sq2*x + sq3*x*x + sq4*x*y + sq5*y + sq6*y*y
+        y = sq7 + sq8*xx + sq9*xx*xx + sq10*xx*y + sq11*y + sq12*y*y
+      endif
+    else
+      if @formula == 6
+       ; Threeply
+       if x != 0
+         x = y - x/abs(x)*(abs(sin(x)*cos(@b) + @c \
+          - x*sin(@a + @b + @c)))
+       else
+         x = y - abs(sin(x)*cos(@b) + @c \
+          - x*sin(@a + @b + @c))
+       endif     
+       y = @a - xx
+      elseif @formula == 2
+        ; Hopalong
+        if x != 0
+          x = y - x/abs(x)*sqrt(abs(@b*x-@c)) 
+        else
+          x = y - sqrt(abs(@b*x-@c)) 
+        endif
+        y = @a - xx
+      elseif @formula == 0
+        ; Chip
+        if x != 0
+          x = y - x/abs(x)*cos(sqr(log(abs(@b*x-@c)))) \
+            *atan(sqr(log(abs(@c*x-@b)))) 
+       else
+          x = y - cos(sqr(log(abs(@b*x-@c)))) \
+            *atan(sqr(log(abs(@c*x-@b)))) 
+        endif    
+        y = @a - xx
+      elseif @formula == 4
+        ; Quadruptwo
+        if x != 0
+          x = y - x/abs(x)*sin(log(abs(@b*x-@c))) \
+                    *atan(sqr(log(abs(@c*x-@b))))
+        else
+          x = y - sin(log(abs(@b*x-@c))) \
+                    *atan(sqr(log(abs(@c*x-@b))))
+        endif
+        y = @a - xx
+      elseif @formula == 3
+        ; Pickover
+        x = sin(@a*y) - zz*cos(@b*x)
+        y = zz*sin(@c*xx) - cos(@d*y)
+        zz = sin(xx)
+      elseif @formula == 1
+        ; CosMartin
+        x = y - cos(x)
+        y = @a - xx
+      elseif @formula == 7
+        ; Latoocarfian
+        x = sin(y*@b) + @lc*sin(x*@b) 
+        y = sin(xx*@a) + @ld*sin(y*@a)
+      elseif @formula == 8
+        ; Zito
+        x = x*y +@a*x - y 
+        y = xx + y
+      endif    
+    endif  
+    i = i + 1
+  endwhile
+  if @formula==3&&version > 1.0
+    if @plane == 1
+      y = zz
+    elseif @plane == 2
+      x = zz
+    endif  
+  endif
+  if @formula == 0 || version == 1.0
+    if @mode == 0
+      w = @fn2(x * @scale + flip(y * @scale) + @offset)
+    elseif @mode == 1
+      x = (@scale * x + real(@offset)) * @strength
+      y = (@scale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 1 && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @mscale + flip(y * @mscale) + @offset)
+    elseif @mode == 1
+      x = (@mscale * x + real(@offset)) * @strength
+      y = (@mscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 2   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @hscale + flip(y * @hscale) + @offset)
+    elseif @mode == 1
+      x = (@hscale * x + real(@offset)) * @strength
+      y = (@hscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 3   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @pscale + flip(y * @pscale) + @offset)
+    elseif @mode == 1
+      x = (@pscale * x + real(@offset)) * @strength
+      y = (@pscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 4   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @qscale + flip(y * @qscale) + @offset)
+    elseif @mode == 1
+      x = (@qscale * x + real(@offset)) * @strength
+      y = (@qscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == "Sprottquad"   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @sqscale + flip(y * @sqscale) + @offset)
+    elseif @mode == 1
+      x = (@sqscale * x + real(@offset)) * @strength
+      y = (@sqscale * y + imag(@offset)) * @strength
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 6   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @tscale + flip(y * @tscale) + @offset)
+    elseif @mode == 1
+      x = (@tscale * x + real(@offset)) * @strength
+      y = (@tscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 7   && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @lscale + flip(y * @lscale) + @offset)
+    elseif @mode == 1
+      x = (@lscale * x + real(@offset)) * @strength
+      y = (@lscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  elseif @formula == 8 && version > 1.0
+    if @mode == 0
+      w = @fn2(x * @zscale + flip(y * @zscale) + @offset)
+    elseif @mode == 1
+      x = (@zscale * x + real(@offset)) * @strength
+      y = (@zscale * y + imag(@offset)) * @strength 
+      w = @fn2(#pixel + x + flip(y))
+    endif
+  endif  
+  if @selection == 0
+    #pixel = w
+  else
+    float tested = 0
+    if @select_by == 0
+      tested = cabs(w)
+    elseif @select_by == 1
+      tested = cabs(#pixel - w)
+    elseif @select_by == 2
+      tested = cabs(@offset - w)
+    elseif @select_by == 3
+      tested = cabs(x + flip(y))  
+    endif  
+    bool test = false  
+    if @inverse
+      test = tested <= @threshold
+    else
+      test = tested > @threshold
+    endif  
+    if test
+      if @selection == 1
+        #pixel = w
+      endif  
+    else
+      #solid = true
+    endif  
+  endif    
+default:
+  title = "Attractor Formula Transforms"
+  helpfile = "Attractor Formula Transforms.chm"
+  heading
+    caption="Attractor Formula Transforms"
+  endheading
+$ifdef VER40
+  heading
+    text = "If your upr does not appear as expected, try checking the \
+           'Use original version' box."
+  endheading
+$else
+  heading
+    caption="If your upr does not appear as expected,"
+  endheading
+  heading
+    caption="try checking the 'Use original version' box."
+  endheading
+$endif
+  float param version
+    caption = "Version number"
+    default = 1.1
+    hint = "This is for backwards compatibility with old versions \
+           of the formula."
+    visible = false
+  endparam
+  param oldv
+    caption = "Use original version"
+    default = false
+  endparam  
+  param formula
+    caption = "Formula"
+    enum = "Chip" "CosMartin" "Hopalong" "Pickover" "Quadruptwo" \
+    "Sprottquad" "Threeply" "Latoocarfian" "Zito"
+    default = 0
+  endparam
+  param mode
+    caption = "Mode"
+    enum = "Transform" "Disturb"
+  endparam  
+  param offset
+    caption = "Offset"
+    default = (0,0)
+  endparam  
+  param a
+    caption = "Alpha"
+    default = 1.0
+    visible=@oldv==true
+  endparam
+  param b
+    caption = "Beta"
+    default = 1.0
+    visible=@oldv==true
+  endparam
+  param c
+    caption = "Gamma"
+    default = 1.0
+    visible=@oldv==true
+  endparam
+  param d
+    caption = "Omega"
+    default = 1.0
+    visible=@oldv==true
+  endparam
+  param ca
+    caption = "Alpha"
+    default = -15.0
+    visible=@formula==0 && @oldv==false
+  endparam
+  param cb
+    caption = "Beta"
+    default = -19.0
+    visible=@formula==0 && @oldv==false
+  endparam
+  param cc
+    caption = "Gamma"
+    default = 1.0
+    visible=@formula==0 && @oldv==false
+  endparam
+  param ma
+    caption = "Alpha"
+    default = 0.67
+    visible=@formula==1 && @oldv==false
+  endparam
+  param ha
+    caption = "Alpha"
+    default = 0.4
+    visible=@formula==2 && @oldv==false
+  endparam
+  param hb
+    caption = "Beta"
+    default = 1.0
+    visible=@formula==2 && @oldv==false
+  endparam
+  param hc
+    caption = "Gamma"
+    default = 0.0
+    visible=@formula==2 && @oldv==false
+  endparam
+  param pa
+    caption = "Alpha"
+    default = 2.34
+    visible=@formula==3 && @oldv==false
+  endparam
+  param pb
+    caption = "Beta"
+    default = 0.43
+    visible=@formula==3 && @oldv==false
+  endparam
+  param pc
+    caption = "Gamma"
+    default = -0.65
+    visible=@formula==3 && @oldv==false
+  endparam
+  param pd
+    caption = "Omega"
+    default = -2.43
+    visible=@formula==3 && @oldv==false
+  endparam
+  param qa
+    caption = "Alpha"
+    default = 34.0
+    visible=@formula==4 && @oldv==false
+  endparam
+  param qb
+    caption = "Beta"
+    default = 1.0
+    visible=@formula==4 && @oldv==false
+  endparam
+  param qc
+    caption = "Gamma"
+    default = 5.0
+    visible=@formula==4 && @oldv==false
+  endparam
+  param ta
+    caption = "Alpha"
+    default = -55.0
+    visible=@formula==6 && @oldv==false
+  endparam
+  param tb
+    caption = "Beta"
+    default = -1.0
+    visible=@formula==6 && @oldv==false
+  endparam
+  param tc
+    caption = "Gamma"
+    default = -42.0
+    visible=@formula==6 && @oldv==false
+  endparam
+  param la
+    caption = "Alpha"
+    default = -1.0
+    visible=@formula==7 && @oldv==false
+  endparam
+  param lb
+    caption = "Beta"
+    default = 2.9
+    visible=@formula==7 && @oldv==false
+  endparam
+  param lc
+    caption = "Gamma"
+    default = 0.8
+    visible=@formula==7 && @oldv==false
+  endparam
+  param ld
+    caption = "Omega"
+    default = 0.7
+    visible=@formula==7 && @oldv==false
+  endparam
+  param za
+    caption = "Alpha"
+    default = 0.357
+    visible=@formula==8 && @oldv==false
+  endparam
+  func pfn1
+    caption = "Function 1"
+    default = sin()
+    visible=@oldv==false&&@formula==3
+  endfunc  
+  func pfn2
+    caption = "Function 2"
+    default = cos()
+    visible=@oldv==false&&@formula==3
+  endfunc  
+  func pfn3
+    caption = "Function 3"
+    default = sin()
+    visible=@oldv==false&&@formula==3
+  endfunc  
+  func pfn4
+    caption = "Function 4"
+    default = cos()
+    visible=@oldv==false&&@formula==3
+  endfunc  
+  func pfn5
+    caption = "Function 5"
+    default = sin()
+    visible=@oldv==false&&@formula==3
+  endfunc  
+  func lfn1
+    caption = "Function 1"
+    default = sin()
+    visible=@oldv==false&&@formula==7
+  endfunc  
+  func lfn2
+    caption = "Function 2"
+    default = sin()
+    visible=@oldv==false&&@formula==7
+  endfunc  
+  func lfn3
+    caption = "Function 3"
+    default = sin()
+    visible=@oldv==false&&@formula==7
+  endfunc  
+  func lfn4
+    caption = "Function 4"
+    default = sin()
+    visible=@oldv==false&&@formula==7
+  endfunc  
+  param plane
+    caption = "Display Plane"
+    default = 0
+    enum = "x-y" "x-z" "y-z"
+    visible=@formula==3&&@oldv==false
+  endparam  
+  param iters
+    caption = "Iterations"
+    default = 10  
+    visible= !((@formula==3&&@oldv==false)|| \
+              (@formula==5&&@oldv==false) || (@formula==7&&@oldv==false))
+  endparam
+  param piters
+    caption = "Iterations"
+    default = 2
+    visible=@formula==3&&@oldv==false
+  endparam
+  param liters
+    caption = "Iterations"
+    default = 3
+    visible=@formula==7&&@oldv==false
+  endparam
+  param scale
+    caption = "Scale"
+    default = 0.01
+    hint = "Changes the size of the shapes."
+    visible=@formula==0|| @oldv == true
+  endparam
+  param mscale
+    caption = "Scale"
+    default = 0.03
+    hint = "Changes the size of the shapes."
+    visible=@formula==1 && @oldv == false
+  endparam
+  param hscale
+    caption = "Scale"
+    default = 0.5
+    hint = "Changes the size of the shapes."
+    visible=@formula==2 && @oldv == false
+  endparam
+  param pscale
+    caption = "Scale"
+    default = 1.0
+    hint = "Changes the size of the shapes."
+    visible=@formula==3 && @oldv == false
+  endparam
+  param qscale
+    caption = "Scale"
+    default = 0.03
+    hint = "Changes the size of the shapes."
+    visible=@formula==4 && @oldv == false
+  endparam
+  param tscale
+    caption = "Scale"
+    default = 0.003
+    hint = "Changes the size of the shapes."
+    visible=@formula==6 && @oldv == false
+  endparam
+  param lscale
+    caption = "Scale"
+    default = 0.5
+    hint = "Changes the size of the shapes."
+    visible=@formula==7 && @oldv == false
+  endparam
+  param zscale
+    caption = "Scale"
+    default = 0.5
+    hint = "Changes the size of the shapes."
+    visible=@formula==8 && @oldv == false
+  endparam
+  int param select
+    caption = "Sprott selector"
+    default = 0
+    visible=@formula=="Sprottquad" && @version >= 1.1
+  endparam
+  int param sqiters
+    caption = "Iterations"
+    default = 5
+    visible=@formula=="Sprottquad" && @version >= 1.1
+  endparam
+  float param sqscale
+    caption = "Scale"
+    default = 1.5
+    visible=@formula=="Sprottquad" && @version >= 1.1
+  endparam
+  param strength
+    caption = "Strength"
+    default = 0.5
+    hint = "This is used in only Disturb mode. \
+           In the Disturb mode it changes the amount by which a \
+           pixel is moved."
+    visible=@mode==1       
+  endparam
+  param selection
+    caption = "Selection mode"
+    enum = "None" "Normal" "Selection only"
+  endparam
+  param select_by
+    caption = "Select by"
+    enum = "Magnitude" "Pixel distance" "Offset distance" "Attractor Magnitude"
+    default = 1
+  endparam  
+  param threshold
+    caption = "Selection threshold"
+    default = 1.0
+  endparam  
+  param inverse
+    caption = "Inverse selection"
+    default = false
+  endparam  
+  func fn1
+    caption = "Pixel Modifier"
+    default = ident()
+  endfunc    
+  func fn2
+    caption = "Attractor Modifier"
+    default = ident()
+  endfunc    
+}
+
+Jigsaw { ; Ron Barnett, Feb 27, 2000
+; concept from Triptych by Sylvie Gallet
+transform:
+
+  bool use_c = @central
+  float h = #height/3
+  float r = 0
+
+  if @usecenter 
+    float cx = real(#center)
+    float cy = imag(#center)*#width/#height
+  else
+    float cx = real(@cen)
+    float cy = imag(@cen)*#width/#height    
+  endif
+
+  float x = real(#pixel)
+  float y = imag(#pixel)*#width/#height
+  float hy = imag(#screenpixel)
+  x = x - cx
+  y = y - cy
+
+  if @function == 0 
+     r = sqrt(abs(x*x - y*y))
+  elseif @function == 1 
+     r = (x^(2/3) + y^(2/3))^1.5
+  elseif @function == 2 
+     r = sqrt((x*x + y*y)*(x*x + y*y) - @a*x*x)
+  elseif @function == 3 
+     r = sqrt((x*x + y*y)*(x-1)*(x-1)-@a*x*x)
+  elseif @function == 4 
+     r = sqrt(@a*(x*x + y*y) - x*x*y*y)
+  elseif @function == 5
+     r = sqrt(x*x + y*y)
+  elseif @function == 6 
+     r = sqrt((x*x*x + y*y*y) - @a*x*y)
+  elseif @function == 8
+     r = sqrt(x*x - y*y)
+  elseif @function == 9 
+     r = sqrt((x*x + y*y)*(x*x + y*y) - @a*(x*x - y*y))
+  elseif @function == 10 
+     r = sqrt(abs(x*x - y*y + 2*x*y))
+  elseif @function == 11 
+     r = sqrt(x*x + y*y + x*y)
+  elseif @function == 12 
+     r = sqrt(x*x - y*y + 2*x*y)
+  elseif @function == 13 
+     r = sqrt(x*x*y + y - @a*x)
+  elseif @function == 14 
+     r = sqrt(x*x + y*y + 2*x*y)
+  elseif @function == 15 
+     r = sqrt(x*x*(x+@a) - y*y*(@a-x))
+  elseif @function == 16 
+     r = sqrt(x*x*x + x*y*y +@a*y*y - 3*@a*x*x)
+  elseif @function == 17 
+     r = sqrt(x*x*y-@a*@a*(@a-y))
+  endif      
+
+  if @function != 7
+    if @part == 0
+       if r > @inner/#magn
+          #solid = true
+       endif      
+    elseif @part == 1
+       if r <= @inner/#magn || r >= @ring/#magn
+          #solid = true
+       endif   
+    elseif @part == 2
+       if r < @ring/#magn
+          #solid = true
+       endif   
+    endif
+  else
+    if (trunc(hy/h) != @part)
+      #solid = true
+    elseif (use_c == true)
+      #pixel = (#pixel - #center) * e^-flip(#angle) + #center
+      #pixel = #pixel+flip((@part)-1)*#height/#width/#magn*4/3
+      #pixel = (#pixel - #center) * e^flip(#angle) + #center
+    endif
+  endif
+
+default:
+  title = "Jigsaw"
+param part
+  caption = "Region"
+  enum = "A" "B" "C"
+  hint = "A, B, C are Top, Middle, Bottom \
+         for Horizontal Triptych"
+endparam
+param function
+  caption = "Region shape"
+  enum = "Abs Hyperbola" "Astroid" "Cartoid" \
+         "Conchoid" "Cruciform" "Ellipse" \
+         "Folium" "Horizontal Triptych" \
+         "Hyperbola" "Lemniscate" "Rot Abs Hyperbola" \
+         "Rot Ellipse" "Rot Hyperboloa" \
+         "Serpentine" "Stripes"  "Strophoid" \
+         "Trisectrix" "Witch"
+  default = 5 
+endparam  
+param a
+  caption = "Function parameter"
+  default = 1.0
+  hint = "Only for Cartiod, Conchoid, Cruciform, \
+         Lemniscate, Rose, Serpentine, Strophoid, \
+         Trisectrix and Witch"
+endparam
+param inner
+  caption = "Inner Radius"
+  default = 0.8
+  hint = "Use same setting for Jigsaw coloring"
+endparam  
+param ring
+  caption = "Ring Radius"
+  default = 1.6
+  hint = "Use same setting for Jigsaw coloring"
+endparam
+param cen
+  caption = "Region Center"
+  default = (0.0,0.0)
+  hint = "Use same setting for Jigsaw coloring"
+endparam 
+param usecenter
+  caption = "Use Screen Center"
+  default = true
+endparam
+param central
+  caption = "Use central part of the fractal"
+  default = false
+  hint = "Only for Horiontal Triptych"
+endparam
+}
+
+NineFold { ; Ron Barnett, January, 2001
+; concept from Triptych by Sylvie Gallet
+transform:
+
+  bool use_c = @central
+  float h = #height/3
+  float w = #width/3
+  int position = 0
+
+  float hx = real(#screenpixel)
+  float hy = imag(#screenpixel)
+
+  position = 3*trunc(hx/w) + trunc(hy/h)
+
+  IF position != @part
+    #solid = true
+  ELSEIF (use_c == true)
+    #pixel = (#pixel - #center) * e^-flip(#angle) + #center
+    #pixel = #pixel+flip(@part%3-1)*#height/#width/#magn*4/3 + \
+             (1-trunc(@part/3))*#width/#height/#magn
+    #pixel = (#pixel - #center) * e^flip(#angle) + #center
+  ENDIF
+
+default:
+  title = "NineFold"
+param part
+  caption = "Region"
+  enum = "A1" "B1" "C1" "A2" "B2" "C2" "A3" "B3" "C3"
+  hint = "A, B, and C rows; 1, 2 and 3 are columns"
+endparam
+param central
+  caption = "Use central part of the fractal"
+  default = true
+endparam
+}
+
+IFS_Apollo { ; Ron Barnett, April 4, 2005
+
+transform:
+  float ra = sqrt(3)
+  float x = real(#pixel)
+  float y = imag(#pixel)
+  float aa = 0
+  float a0 = 0
+  float b0 = 0
+  float a1 = -0.5
+  float b1 = 0.5*ra
+  float a2 = -0.5
+  float b2 = -0.5*ra
+  float x1 = 0
+  float y1 = 0
+  float f1x = 0
+  float f1y = 0  
+  float s1 = @scale
+  float s2 = s1
+  int seed = 123456789
+  int i = 0
+  while i < @iter
+    seed = random(seed)
+    float aa = abs(seed)/#randomrange
+    a0 = 3*(1 + ra - x)/((1 + ra - x)^2 + y^2) - (1 + ra)/(2 + ra)
+    b0 = 3*y/((1 + ra - x)^2 + y^2)
+    f1x = a0/(a0^2 + b0^2)
+    f1y = -b0/(a0^2 + b0^2)
+    if aa >= 0 && aa < 1/3
+      x1 = 3*(1 + ra - x)/((1 + ra - x)^2 + y^2) - (1 + ra)/(2 + ra)
+      y1 = 3*y/((1 + ra - x)^2 + y^2)
+    elseif aa >= 1/3 && aa < 2/3  
+      x1 = f1x*a1 - f1y*b1
+      y1 = f1x*b1 + f1y*a1
+    elseif aa >= 2/3 && aa <= 1  
+      x1 = f1x*a2 - f1y*b2
+      y1 = f1x*b2 + f1y*a2
+    endif
+    i = i+1
+  endwhile   
+  #pixel = s1*x1 + flip(s2*y1) 
+
+default:
+  title = "IFS Apollo"
+float param scale
+  caption = "scale"
+  default = 1
+endparam    
+int param iter
+  caption = "# of iterations"
+  default = 1000  
+endparam
+}  
+
+ApollonianGasket {; Ron Barnett April 23, 2005
+; perturbation levels added August 10, 2005
+;
+;
+global:
+  complex cs[1000000]
+  float rad[1000000]
+  int l = 0
+  int ir = 0
+  int si = 0
+  int sj = 0
+  bool continue = true
+  complex rra = 0
+  float rrb = 0
+  float ddx = 0
+  float ddy = 0
+  float ddr = 0
+  float ang = 2*#pi/3
+  complex ipi = flip(#pi);
+  float ar = 0
+  float br = 0
+  complex a = 0
+  complex b = 0
+  float agree = 100
+  float thresh = @scircle/agree
+  float c = 0
+  float temp = 0
+  int ii = 0
+  int i = 0
+  int j = 0
+  int k = 0
+  int ib = 0
+  int start = 0
+  int finish = 0
+  int lev = 2
+  int ji = 0
+  float ddx = 0
+  float ddy = 0
+  float ddr = 0
+  int pert = @pert
+  pert = 11 - pert
+  float scle2 = 0
+  float scle = 0
+  if (@ptype == "None")
+    scle = 2 + sqrt(3)
+    scle2 = 1
+  elseif (@ptype == "Outer Circles")
+    scle = (2 + sqrt(3))*cos(#pi/(pert+6))
+    scle2 = (scle-sqrt(3)-1.5)/0.5
+  else  ; distance to origin for base spheres
+    scle = 2 + sqrt(3)
+    if pert == 10
+      scle2 = 1.0041268407
+    elseif pert == 9
+      scle2 = 1.0049465720
+    elseif pert == 8
+      scle2 = 1.0060422243
+    elseif pert == 7
+      scle2 = 1.0075560883
+    elseif pert == 6
+      scle2 = 1.0097381547
+    elseif pert == 5
+      scle2 = 1.0130643119
+    elseif pert == 4
+      scle2 = 1.0185254
+    elseif pert == 3
+      scle2 = 1.0286754
+    elseif pert == 2
+      scle2 = 1.0515254
+    elseif pert == 1
+      scle2 = 1.1277437913
+    endif
+  endif
+  int level = @level
+
+  cs[1] = exp((0,0)*ang+ipi)*scle
+  cs[2] = exp((0,1)*ang+ipi)*scle
+  cs[3] = exp((0,2)*ang+ipi)*scle
+  cs[4] = 0
+  rad[1] = sqrt(3)+1.5
+  rad[2] = rad[1]
+  rad[3] = rad[1]
+  if (@ptype == "None")
+    rad[4] = 0.5
+  elseif (@ptype == "Outer Circles")
+    rad[4] = scle-sqrt(3)-1.5
+  else ; inner inversion circle radius
+    if pert == 10
+      rad[4] = 0.5151714074
+    elseif pert == 9
+      rad[4] = 0.5181320854
+    elseif pert == 8
+      rad[4] = 0.5220631074
+    elseif pert == 7
+      rad[4] = 0.5274464005
+    elseif pert == 6
+      rad[4] = 0.5351105381
+    elseif pert == 5
+      rad[4] = 0.5465863845
+    elseif pert == 4
+      rad[4] = 0.564987
+    elseif pert == 3
+      rad[4] = 0.597588
+    elseif pert == 2
+      rad[4] = 0.665053
+    elseif pert == 1
+      rad[4] = 0.8524941755
+
+    endif
+  endif
+
+  cs[5] = exp((0,0)*ang)*scle2
+  cs[6] = exp((0,1)*ang)*scle2
+  cs[7] = exp((0,2)*ang)*scle2
+  cs[8] = 0
+  if (@ptype == "None")||(@ptype == "Outer Circles")
+    rad[5] = sqrt(3)/2*scle2
+    rad[6] = rad[5]
+    rad[7] = rad[5]
+    rad[8] = rad[5]+1*scle2
+  else  ; base sphere radii
+    if pert == 10
+      rad[5] = 0.8618985631
+    elseif pert == 9
+      rad[5] = 0.8610788318
+    elseif pert == 8
+      rad[5] = 0.8599831795
+    elseif pert == 7
+      rad[5] = 0.8584693155
+    elseif pert == 6
+      rad[5] = 0.8562872491
+    elseif pert == 5
+      rad[5] = 0.8529610919
+    elseif pert == 4
+      rad[5] = 0.8475
+    elseif pert == 3
+      rad[5] = 0.83735
+    elseif pert == 2
+      rad[5] = 0.8145
+    elseif pert == 1
+      rad[5] = 0.7382816125
+
+    endif
+    rad[6] = rad[5]
+    rad[7] = rad[5]
+    rad[8] = rad[5]+1
+  endif
+
+;
+; Traverse the levels
+  i = 4
+  ii = 9
+
+  ; level 1
+  while ib < 8
+    if ib >= 0 && ib < 4
+      i = ib + 5
+      j = i - 4
+    else
+      i = ib + 1
+      j = i - 3
+      if i == 8
+        j = 1
+      endif
+    endif
+    ar = rad[j], br = rad[i], a = cs[j], b = cs[i]
+    temp = ar^2/(|a-b|-br^2), rad[ii] = temp*br, cs[ii] = temp*(b-a) + a
+;    if ii >= 9 && ii < 13
+;      cut[ii] = ii-8
+;    endif
+    ii = ii + 1
+    ib = ib + 1
+  endwhile
+  start = 9
+  finish = 13
+
+while lev <= level
+  if lev == 2 || lev == 3
+    ji = start
+  endif
+  k = 1
+  while ji < finish
+    while k <=4
+      ar = rad[k], br = rad[ji], a = cs[k], b = cs[ji]
+      temp = ar^2/(|a-b|-br^2), rad[ii] = (temp*br)
+      if abs(rad[ii]) < abs(rad[ji])
+        cs[ii] = temp*(b-a) + a
+        if abs(rad[ii]) < @scircle && @version >=110
+          ii = ii - 1
+        endif
+
+;        cut[ii] = k
+        ii = ii + 1
+      endif
+      ; duplicate removal
+
+      if @version <=110
+        i = 5
+        while i < ii-1
+          ddx = real(cs[i])/real(cs[ii-1])
+          ddy = imag(cs[i])/imag(cs[ii-1])
+          ddr = rad[i]/rad[ii-1]
+          if ddx < 1-thresh
+            c = -1
+          elseif ddx > 1+thresh
+            c = 1
+          elseif ddy < 1-thresh
+            c = -1
+          elseif ddy > 1+thresh
+            c = 1
+          elseif ddr < 1-thresh
+            c = -1
+          elseif ddr > 1+thresh
+            c = 1
+          else
+            c = 0
+          endif
+          if c == 0 ||((rad[ii-1]<0) && lev >2 && @lace)
+            i = ii-1
+            ii = ii-1
+          endif
+          i = i + 1
+        endwhile
+      else
+        if lev < 4
+          i = 5
+          while i < ii-1
+            ddx = real(cs[i])-real(cs[ii-1])
+            ddy = imag(cs[i])-imag(cs[ii-1])
+            ddr = rad[i]-rad[ii-1]
+            if ddx < -thresh
+              c = -1
+            elseif ddx > thresh
+              c = 1
+            elseif ddy < -thresh
+              c = -1
+            elseif ddy > thresh
+              c = 1
+            elseif ddr < -thresh
+              c = -1
+            elseif ddr > thresh
+              c = 1
+            else
+              c = 0
+            endif
+            if c == 0 ||((rad[ii-1]<0) && lev > 2 && @lace)
+              i = ii-1
+              ii = ii-1
+            endif
+            i = i + 1
+          endwhile
+        endif
+      endif
+
+      k = k + 1
+    endwhile
+    k = 1
+    ji= ji + 1
+  endwhile
+  if lev == 2
+    start = ii-12
+    finish = ii
+  else
+    if finish == ii
+      lev = level+1
+    endif
+    finish = ii
+  endif
+  lev = lev + 1
+    j = ii-finish
+    if j > 0
+      l = round((j)/2) + 1
+      ir = j
+      continue = true
+      repeat
+        if l > 1
+          l = l-1
+          rra = cs[l-1+finish]
+          rrb = rad[l-1+finish]
+        else
+          rra = cs[ir-1+finish]
+          rrb = rad[ir-1+finish]
+          cs[ir-1+finish] = cs[finish]
+          rad[ir-1+finish] = rad[finish]
+          ir = ir-1
+          if ir == 0
+            cs[finish] = rra
+            rad[finish] = rrb
+            continue = false
+          endif
+        endif
+
+        if continue == true
+          si = l
+          sj = 2*l
+        endif
+
+        while (sj <= ir) && (continue == true)
+          if sj < ir
+            ddx = real(cs[sj-1+finish])-real(cs[sj+finish])
+            ddy = imag(cs[sj-1+finish])-imag(cs[sj+finish])
+            ddr = rad[sj-1+finish]-rad[sj+finish]
+            if ddx < -thresh
+              c = -1
+            elseif ddx > thresh
+              c = 1
+            elseif ddy < -thresh
+              c = -1
+            elseif ddy > thresh
+              c = 1
+            elseif ddr < -thresh
+              c = -1
+            elseif ddr > thresh
+              c = 1
+            else
+              c = 0
+            endif
+            if c < 0
+              sj = sj + 1
+            endif
+          endif
+          ddx = real(rra)-real(cs[sj-1+finish])
+          ddy = imag(rra)-imag(cs[sj-1+finish])
+          ddr = rrb-rad[sj-1+finish]
+          if ddx < -thresh
+            c = -1
+          elseif ddx > thresh
+            c = 1
+          elseif ddy < -thresh
+            c = -1
+          elseif ddy > thresh
+            c = 1
+          elseif ddr < -thresh
+            c = -1
+          elseif ddr > thresh
+            c = 1
+          else
+            c = 0
+          endif
+          if c < 0
+            cs[si-1+finish] = cs[sj-1+finish]
+            rad[si-1+finish] = rad[sj-1+finish]
+            si = sj
+            sj = sj + sj
+          else
+            sj = ir + 1
+          endif
+        endwhile
+        if (continue == true)
+          cs[si-1+finish] = rra
+          rad[si-1+finish] = rrb
+        endif
+      until continue == false
+
+  ; eliminate duplicates in place for index 'finish' to index 'ii'
+      ir = finish
+      l = finish
+      while ir < ii
+        ddx = real(cs[ir])-real(cs[ir-1])
+        ddy = imag(cs[ir])-imag(cs[ir-1])
+        ddr = rad[ir]-rad[ir-1]
+        if ddx < -thresh
+          c = -1
+        elseif ddx > thresh
+          c = 1
+        elseif ddy < -thresh
+          c = -1
+        elseif ddy > thresh
+          c = 1
+        elseif ddr < -thresh
+          c = -1
+        elseif ddr > thresh
+          c = 1
+        else
+          c = 0
+        endif
+        if c == 0
+          ir = ir + 1
+        else
+          cs[l] = cs[ir]
+          rad[l] = rad[ir]
+          ir = ir +1
+          l = l + 1
+        endif
+      endwhile
+      ii = l
+    endif
+    finish = ii
+endwhile
+
+
+transform:
+  int maxi = ii-1
+  int iii = 0
+  complex c1 = 0
+  complex z3 = #pixel
+  complex z4 = 0
+  #pixel = 0
+  float width = 0
+  float scale = 0
+  complex z2 = 0
+  float x1 = 0
+  float y1 = 0
+  float beta = 0
+  float theta1 = 0
+  float x2 = 0
+  float radius = 0
+  int seed = @seed
+  seed = random(seed)
+
+  iii =9
+  while iii <= maxi
+     radius = abs((rad[iii]))
+     if (radius > 0)&&((@ptype==0)&&((radius < (sqrt(3)/2*scle2-.0001))||@base)&& \
+         (radius < (sqrt(3)/2+1*scle2-.0001))) || \
+        ((@ptype==1)&&((radius < (sqrt(3)/2*scle2-.0001))||@base)&& \
+         (radius < (sqrt(3)/2+1*scle2-.0001)) && \
+         (radius < (sqrt(3)/2*scle2+.0001))) || \
+        ((@ptype==2)&&((radius < (rad[5]-.01))||@base)&& \
+         (radius < (sqrt(3)/2+1-.01)) && (radius < (rad[5]+.01)))
+      radius = rad[iii]
+      if @radmeth == 1
+        radius = abs(radius)
+      elseif @radmeth == 2
+        radius = abs(radius)
+        seed = random(seed)
+        if (abs(seed))%3 == 0
+          radius = -radius
+        endif
+      elseif @radmeth == 3
+        radius = abs(radius)
+        if iii%@mod ==0
+          radius = -radius
+        endif
+      endif
+      c1 = (cs[iii]+@gpos)*@scle/#magn + #center
+      width = radius*2/#magn/@rad*@scle
+      scale = @scale/width/#magn
+      complex z2 = (z3-c1)*scale
+      x1 = cabs(z2)/(width*scale)
+      if x1 < 1
+      ; refraction calcs
+        theta1 = acos(x1)
+        y1=sin(theta1)
+        beta = asin(x1/@n)
+        x2 = -y1/real(tan(theta1+beta))+ x1
+      ; move pixel
+        z4 = (z2/x1 * x2)*@scale/#magn
+        #pixel = z4
+      endif
+    endif
+    iii = iii + 1
+  endwhile
+
+
+  if #pixel != 0
+    #pixel = z4+#center
+  else
+    #solid = true
+  endif
+default:
+  title = "Apollonian Gasket"
+  param version
+    caption = "Formula Version"
+    default = 200
+    hint = "You should never see this parameter; it's used internally to track \
+        which version of the formula was used to create your image, so that \
+        if a bug is found which breaks backwards-compatibility, the formula \
+        can adapt transparently."
+    visible = false
+  endparam
+  param n
+    caption = "Refractive index"
+    default = 1.5
+    hint = "Refactive index of 'glass'"
+  endparam
+  float param scale
+    caption = "Zoom level"
+    default = 2.0
+  endparam
+  float param scle
+    caption = "Magnification"
+    default = 1.0
+  endparam
+  complex param gpos
+    caption = "Gasket Position"
+    default = (0,0)
+  endparam
+  float param rad
+    caption = "radius adjustment"
+    default = 2.0
+  endparam
+$ifdef VER40
+  heading
+    text="The actual number of iterations may be less than \
+          'Max Iters' if all new generations are smaller \
+          than the 'Smallest Circle' setting."
+    visible = @version >= 110
+  endheading
+$endif
+  param level
+    caption = "Max Iters (1-100)"
+    default = 100
+    min = 1
+    max = 100
+  endparam
+$ifdef VER40
+  heading
+    text="Decreasing 'Smallest Circle' will increase the \
+         amount of detail, but rending speed will decrease. "
+    visible = @version >= 110
+  endheading
+$endif
+  param scircle
+    caption = "Smallest Circle"
+    default = 0.01
+    max = 0.01
+    min = 0.0001
+    visible = @version >= 100
+  endparam
+  bool param base
+    caption = "Show Base Set"
+    default = false
+  endparam
+  param lace
+    caption = "Display as Lace"
+    default = false
+    visible = @ptype == "Inner Circle" && (@pert >=8)
+  endparam
+  $ifdef VER40
+    heading
+      text = "Perturbation of Inversion Circles by overlap."
+    endheading
+  $else
+    heading
+      caption = "Perturbation of Inversion Circles"
+    endheading
+    heading
+      caption = "by overlap."
+    endheading
+  $endif
+  param ptype
+    caption = "Perturb Type"
+    default = 0
+    enum = "None" "Outer Circles" "Inner Circle"
+  endparam
+  param pert
+    caption = "Perturb Level (1-10)"
+    default = 1
+    min = 1
+    max = 10
+    visible = @ptype != "None"
+  endparam
+
+  param radmeth
+    caption = "Radius method"
+    default = 0
+    enum = "default" "normal" "random" "index"
+  endparam
+  int param seed
+    caption = "Random seed"
+    default = 124568937
+    visible=@radmeth==2
+  endparam
+  int param mod
+    caption = "Modulus"
+    default = 2
+    visible=@radmeth==3
+  endparam
+}
+
+Formula_Plotter {; Ron Barnett June 2, 2005
+; Based upon the code for the Formula Plotter
+; With glass transform spheres similar to that used for
+; the Apollonian Gasket uxf.
+
+
+global:
+  float csx[300000]
+  float csy[300000]
+  float csz[300000]
+  int rds = 0
+  int i = 0
+  int j = 0
+  int iii = 9
+  float fx = 0.0
+  float ffx = 0.0
+  float xx = 0.0
+  float fy = 0.0
+  float ffy = 0.0
+  float yy = 0.0
+  float zz = 0.0
+  float ffz = 0.0
+  float cy = imag(#center)
+  float cx = real(#center)
+  float txmax = 4.0/#magn
+  float tymax = txmax*#height/#width
+  float xmin = cx - txmax/2
+  float ymin = cy - tymax/2
+  float tzmax = sqrt(txmax^2+tymax^2)
+  float zmin = sqrt(xmin^2 + ymin^2)
+  float radius = 0
+  float fscale = 0
+  float cprojx = 0
+  float cprojy = 0
+  float cprojz = 0
+  if @useproj
+    cprojx = @cprojx
+    cprojy = @cprojy
+    cprojz = @cprojz
+  endif
+;  if @useprojr
+;    cprojx = @cprojx
+;    cprojy = @cprojy
+;    cprojz = @cprojzr
+;  endif
+
+
+
+  ; Initialize radius and scale based on curve type.
+  if @function == "Mandala"
+    radius = @m0radius
+    fscale = @m0fscale
+  elseif @function == "Wiwianka"
+    radius = @m1radius
+    fscale = @m1fscale
+  elseif @function == "Banchoff Klein Bottle"
+    radius = @m2radius
+    fscale = @m2fscale
+  elseif @function == "Seashell"
+    radius = @m3radius
+    fscale = @m3fscale
+  elseif @function == "Mobius Band"
+    radius = @m4radius
+    fscale = @m4fscale
+  elseif @function == "Astrodal Ellipsoid"
+    radius = @m5radius
+    fscale = @m5fscale
+  elseif @function == "Bohemian Dome"
+    radius = @m6radius
+    fscale = @m6fscale
+  elseif @function == "Boy Surface"
+    radius = @m7radius
+    fscale = @m7fscale
+  elseif @function == "Dini's Surface"
+    radius = @m8radius
+    fscale = @m8fscale
+  elseif @function == "Enneper's Surface"
+    radius = @m9radius
+    fscale = @m9fscale
+  elseif @function == "Kuen's Surface"
+    radius = @m10radius
+    fscale = @m10fscale
+  elseif @function == "Swallowtail"
+    radius = @m11radius
+    fscale = @m11fscale
+  elseif @function == "Catalan's Surface"
+    radius = @m12radius
+    fscale = @m12fscale
+  elseif @function == "Hennenberg's Surface"
+    radius = @m13radius
+    fscale = @m13fscale
+  elseif @function == "Corkscrew"
+    radius = @m14radius
+    fscale = @m14fscale
+  elseif @function == "Hyperbolic Helicoid"
+    radius = @m15radius
+    fscale = @m15fscale
+  elseif @function == "Sine Surface"
+    radius = @m16radius
+    fscale = @m16fscale
+  elseif @function == "Trefoil Knot"
+    radius = @m17radius
+    fscale = @m17fscale
+  elseif @function == "Lissajous Knots"
+    radius = @m18radius
+    fscale = @m18fscale
+  elseif @function == "Toroidal Spiral"
+    radius = @m19radius
+    fscale = @m19fscale
+  elseif @function == "Klein Bottle"
+    radius = @m20radius
+    fscale = @m20fscale
+  elseif @function == "Triangular Trefoil"
+    radius = @m21radius
+    fscale = @m21fscale
+  elseif @function == "Bent Horns"
+    radius = @m22radius
+    fscale = @m22fscale
+  elseif @function == "Pisot Triaxial"
+    radius = @m23radius
+    fscale = @m23fscale
+  elseif @function == "Spherical Harmonics"
+    radius = @m24radius
+    fscale = @m24fscale
+  elseif @function == "Slippers Surface"
+    radius = @m25radius
+    fscale = @m25fscale
+  elseif @function == "SuperShape"
+    radius = @m26radius
+    fscale = @m26fscale
+  elseif @function == "Fano Planes"
+    radius = @m27radius
+    fscale = @m27fscale
+  elseif @function == "Twisted Fano"
+    radius = @m28radius
+    fscale = @m28fscale
+  elseif @function == "Cresent"
+    radius = @m29radius
+    fscale = @m29fscale
+  elseif @function == "Twisted Triaxial"
+    radius = @m30radius
+    fscale = @m30fscale
+  elseif @function == "Maeder's Owl"
+    radius = @m31radius
+    fscale = @m31fscale
+  elseif @function == "Stiletto Surface"
+    radius = @m32radius
+    fscale = @m32fscale
+  elseif @function == "Verrill Surface"
+    radius = @m33radius
+    fscale = @m33fscale
+  elseif @function == "Twisted Heart"
+    radius = @m34radius
+    fscale = @m34fscale
+  elseif @function == "Figure 8 Torus"
+    radius = @m35radius
+    fscale = @m35fscale
+  elseif @function == "Triaxial Teardrop"
+    radius = @m36radius
+    fscale = @m36fscale
+  elseif @function == "Lemniscape"
+    radius = @m37radius
+    fscale = @m37fscale
+  elseif @function == "Tractrix"
+    radius = @m38radius
+    fscale = @m38fscale
+  elseif @function == "Triaxial Tritorus"
+    radius = @m39radius
+    fscale = @m39fscale
+  elseif @function == "Saddle Torus"
+    radius = @m40radius
+    fscale = @m40fscale
+  elseif @function == "Limpet Torus"
+    radius = @m41radius
+    fscale = @m41fscale
+  elseif @function == "Bow Tie"
+    radius = @m42radius
+    fscale = @m42fscale
+  elseif @function == "Cross Cap"
+    radius = @m43radius
+    fscale = @m43fscale
+  elseif @function == "Whitney Umbrella"
+    radius = @m44radius
+    fscale = @m44fscale
+  elseif @function == "Triaxial Hexatorus"
+    radius = @m45radius
+    fscale = @m45fscale
+  elseif @function == "Fish Surface"
+    radius = @m46radius
+    fscale = @m46fscale
+  elseif @function == "Twisted Pipe"
+    radius = @m47radius
+    fscale = @m47fscale
+  endif  
+
+  int xlimit = 0
+  int ylimit = 0
+  float u = 0
+  float v = 0
+  int l = 0
+  int ir = 0
+  int si = 0
+  int sj = 0
+  float rra = 0
+  float rrb = 0
+  float rrc = 0
+  bool continue = true
+  float umin = 0
+  float vmin = 0
+  float ustep = 0
+  float vstep = 0  
+  float pcircum = 0
+  int k = 0
+  float kr = 0
+  float sr = 0
+  float ru = 0
+  float rv = 0
+  
+;
+; generate the function spheres
+; 
+  i = 0
+  j = 0
+  int ii = 0
+
+  ; Initialize limits based on curve type.
+  if @function == "Mandala"
+    xlimit = round((@m0xmax-@m0xmin)/@m0xstep)
+    ylimit = round((@m0ymax-@m0ymin)/@m0ystep)
+  elseif @function == "Wiwianka"
+    xlimit = round((@m1xmax-@m1xmin)/@m1xstep)
+    ylimit = round((@m1ymax-@m1ymin)/@m1ystep)
+  elseif @function == "Banchoff Klein Bottle"
+    xlimit = round((@m2xmax-@m2xmin)/@m2xstep)
+    ylimit = round((@m2ymax-@m2ymin)/@m2ystep)
+  elseif @function == "Seashell"
+    xlimit = round((@m3xmax-@m3xmin)/@m3xstep)
+    ylimit = round((@m3ymax-@m3ymin)/@m3ystep)
+  elseif @function == "Mobius Band"
+    xlimit = round((@m4xmax-@m4xmin)/@m4xstep)
+    ylimit = round((@m4ymax-@m4ymin)/@m4ystep)
+  elseif @function == "Astrodal Ellipsoid"
+    xlimit = round((@m5xmax-@m5xmin)/@m5xstep)
+    ylimit = round((@m5ymax-@m5ymin)/@m5ystep)
+  elseif @function == "Bohemian Dome"
+    xlimit = round((@m6xmax-@m6xmin)/@m6xstep)
+    ylimit = round((@m6ymax-@m6ymin)/@m6ystep)
+  elseif @function == "Boy Surface"
+    xlimit = round((@m7xmax-@m7xmin)/@m7xstep)
+    ylimit = round((@m7ymax-@m7ymin)/@m7ystep)
+  elseif @function == "Dini's Surface"
+    xlimit = round((@m8xmax-@m8xmin)/@m8xstep)
+    ylimit = round((@m8ymax-@m8ymin)/@m8ystep)
+  elseif @function == "Enneper's Surface"
+    xlimit = round((@m9xmax-@m9xmin)/@m9xstep)
+    ylimit = round((@m9ymax-@m9ymin)/@m9ystep)
+  elseif @function == "Kuen's Surface"
+    xlimit = round((@m10xmax-@m10xmin)/@m10xstep)
+    ylimit = round((@m10ymax-@m10ymin)/@m10ystep)
+  elseif @function == "Swallowtail"
+    xlimit = round((@m11xmax-@m11xmin)/@m11xstep)
+    ylimit = round((@m11ymax-@m11ymin)/@m11ystep)
+  elseif @function == "Catalan's Surface"
+    xlimit = round((@m12xmax-@m12xmin)/@m12xstep)
+    ylimit = round((@m12ymax-@m12ymin)/@m12ystep)
+  elseif @function == "Hennenberg's Surface"
+    xlimit = round((@m13xmax-@m13xmin)/@m13xstep)
+    ylimit = round((@m13ymax-@m13ymin)/@m13ystep)
+  elseif @function == "Corkscrew"
+    xlimit = round((@m14xmax-@m14xmin)/@m14xstep)
+    ylimit = round((@m14ymax-@m14ymin)/@m14ystep)
+  elseif @function == "Hyperbolic Helicoid"
+    xlimit = round((@m15xmax-@m15xmin)/@m15xstep)
+    ylimit = round((@m15ymax-@m15ymin)/@m15ystep)
+  elseif @function == "Sine Surface"
+    xlimit = round((@m16xmax-@m16xmin)/@m16xstep)
+    ylimit = round((@m16ymax-@m16ymin)/@m16ystep)
+  elseif @function == "Trefoil Knot"
+    xlimit = round((@m17xmax-@m17xmin)/@m17xstep)
+    ylimit = round((@m17ymax-@m17ymin)/@m17ystep)
+  elseif @function == "Lissajous Knots"
+    xlimit = round((@m18xmax-@m18xmin)/@m18xstep)
+    ylimit = round((@m18ymax-@m18ymin)/@m18ystep)
+  elseif @function == "Toroidal Spiral"
+    xlimit = round((@m19xmax-@m19xmin)/@m19xstep)
+    ylimit = round((@m19ymax-@m19ymin)/@m19ystep)
+  elseif @function == "Klein Bottle"
+    xlimit = round((@m20xmax-@m20xmin)/@m20xstep)
+    ylimit = round((@m20ymax-@m20ymin)/@m20ystep)
+  elseif @function == "Triangular Trefoil"
+    xlimit = round((@m21xmax-@m21xmin)/@m21xstep)
+    ylimit = round((@m21ymax-@m21ymin)/@m21ystep)
+  elseif @function == "Bent Horns"
+    xlimit = round((@m22xmax-@m22xmin)/@m22xstep)
+    ylimit = round((@m22ymax-@m22ymin)/@m22ystep)
+  elseif @function == "Pisot Triaxial"
+    xlimit = round((@m23xmax-@m23xmin)/@m23xstep)
+    ylimit = round((@m23ymax-@m23ymin)/@m23ystep)
+  elseif @function == "Spherical Harmonics"
+    xlimit = round((@m24xmax-@m24xmin)/@m24xstep)
+    ylimit = round((@m24ymax-@m24ymin)/@m24ystep)
+  elseif @function == "Slippers Surface"
+    xlimit = round((@m25xmax-@m25xmin)/@m25xstep)
+    ylimit = round((@m25ymax-@m25ymin)/@m25ystep)
+  elseif @function == "SuperShape"
+    xlimit = round((@m26xmax-@m26xmin)/@m26xstep)
+    ylimit = round((@m26ymax-@m26ymin)/@m26ystep)
+  elseif @function == "Fano Planes"
+    xlimit = round((@m27xmax-@m27xmin)/@m27xstep)
+    ylimit = round((@m27ymax-@m27ymin)/@m27ystep)
+  elseif @function == "Twisted Fano"
+    xlimit = round((@m28xmax-@m28xmin)/@m28xstep)
+    ylimit = round((@m28ymax-@m28ymin)/@m28ystep)
+  elseif @function == "Cresent"
+    xlimit = round((@m29xmax-@m29xmin)/@m29xstep)
+    ylimit = round((@m29ymax-@m29ymin)/@m29ystep)
+  elseif @function == "Twisted Triaxial"
+    xlimit = round((@m30xmax-@m30xmin)/@m30xstep)
+    ylimit = round((@m30ymax-@m30ymin)/@m30ystep)
+  elseif @function == "Maeder's Owl"
+    xlimit = round((@m31xmax-@m31xmin)/@m31xstep)
+    ylimit = round((@m31ymax-@m31ymin)/@m31ystep)
+  elseif @function == "Stiletto Surface"
+    xlimit = round((@m32xmax-@m32xmin)/@m32xstep)
+    ylimit = round((@m32ymax-@m32ymin)/@m32ystep)
+  elseif @function == "Verrill Surface"
+    xlimit = round((@m33xmax-@m33xmin)/@m33xstep)
+    ylimit = round((@m33ymax-@m33ymin)/@m33ystep)
+  elseif @function == "Twisted Heart"
+    xlimit = round((@m34xmax-@m34xmin)/@m34xstep)
+    ylimit = round((@m34ymax-@m34ymin)/@m34ystep)
+  elseif @function == "Figure 8 Torus"
+    xlimit = round((@m35xmax-@m35xmin)/@m35xstep)
+    ylimit = round((@m35ymax-@m35ymin)/@m35ystep)
+  elseif @function == "Triaxial Teardrop"
+    xlimit = round((@m36xmax-@m36xmin)/@m36xstep)
+    ylimit = round((@m36ymax-@m36ymin)/@m36ystep)
+  elseif @function == "Lemniscape"
+    xlimit = round((@m37xmax-@m37xmin)/@m37xstep)
+    ylimit = round((@m37ymax-@m37ymin)/@m37ystep)
+  elseif @function == "Tractrix"
+    xlimit = round((@m38xmax-@m38xmin)/@m38xstep)
+    ylimit = round((@m38ymax-@m38ymin)/@m38ystep)
+  elseif @function == "Triaxial Tritorus"
+    xlimit = round((@m39xmax-@m39xmin)/@m39xstep)
+    ylimit = round((@m39ymax-@m39ymin)/@m39ystep)
+  elseif @function == "Saddle Torus"
+    xlimit = round((@m40xmax-@m40xmin)/@m40xstep)
+    ylimit = round((@m40ymax-@m40ymin)/@m40ystep)
+  elseif @function == "Limpet Torus"
+    xlimit = round((@m41xmax-@m41xmin)/@m41xstep)
+    ylimit = round((@m41ymax-@m41ymin)/@m41ystep)
+  elseif @function == "Bow Tie"
+    xlimit = round((@m42xmax-@m42xmin)/@m42xstep)
+    ylimit = round((@m42ymax-@m42ymin)/@m42ystep)
+  elseif @function == "Cross Cap"
+    xlimit = round((@m43xmax-@m43xmin)/@m43xstep)
+    ylimit = round((@m43ymax-@m43ymin)/@m43ystep)
+  elseif @function == "Whitney Umbrella"
+    xlimit = round((@m44xmax-@m44xmin)/@m44xstep)
+    ylimit = round((@m44ymax-@m44ymin)/@m44ystep)
+  elseif @function == "Triaxial Hexatorus"
+    xlimit = round((@m45xmax-@m45xmin)/@m45xstep)
+    ylimit = round((@m45ymax-@m45ymin)/@m45ystep)
+  elseif @function == "Fish Surface"
+    xlimit = round((@m46xmax-@m46xmin)/@m46xstep)
+    ylimit = round((@m46ymax-@m46ymin)/@m46ystep)
+  elseif @function == "Twisted Pipe"
+    xlimit = round((@m47xmax-@m47xmin)/@m47xstep)
+    ylimit = round((@m47ymax-@m47ymin)/@m47ystep)
+  endif 
+
+  ; Initialize step amounts based on curve type.
+  if @function == "Mandala" 
+    umin = @m0xmin
+    vmin = @m0ymin
+    ustep = @m0xstep
+    vstep = @m0ystep  
+  elseif @function == "Wiwianka" 
+    umin = @m1xmin
+    vmin = @m1ymin
+    ustep = @m1xstep
+    vstep = @m1ystep
+  elseif @function == "Banchoff Klein Bottle"
+    umin = @m2xmin
+    vmin = @m2ymin
+    ustep = @m2xstep
+    vstep = @m2ystep
+  elseif @function == "Seashell"
+    umin = @m3xmin
+    vmin = @m3ymin
+    ustep = @m3xstep
+    vstep = @m3ystep
+  elseif @function == "Mobius Band"
+    umin = @m4xmin
+    vmin = @m4ymin
+    ustep = @m4xstep
+    vstep = @m4ystep
+  elseif @function == "Astrodal Ellipsoid"
+    umin = @m5xmin
+    vmin = @m5ymin
+    ustep = @m5xstep
+    vstep = @m5ystep
+  elseif @function == "Bohemian Dome"
+    umin = @m6xmin
+    vmin = @m6ymin
+    ustep = @m6xstep
+    vstep = @m6ystep
+  elseif @function == "Boy Surface"
+    umin = @m7xmin
+    vmin = @m7ymin
+    ustep = @m7xstep
+    vstep = @m7ystep
+  elseif @function == "Dini's Surface"
+    umin = @m8xmin
+    vmin = @m8ymin
+    ustep = @m8xstep
+    vstep = @m8ystep
+  elseif @function == "Enneper's Surface"
+    umin = @m9xmin
+    vmin = @m9ymin
+    ustep = @m9xstep
+    vstep = @m9ystep
+  elseif @function == "Kuen's Surface"
+    umin = @m10xmin
+    vmin = @m10ymin
+    ustep = @m10xstep
+    vstep = @m10ystep
+  elseif @function == "Swallowtail"
+    umin = @m11xmin
+    vmin = @m11ymin
+    ustep = @m11xstep
+    vstep = @m11ystep
+  elseif @function == "Catalan's Surface"
+    umin = @m12xmin
+    vmin = @m12ymin
+    ustep = @m12xstep
+    vstep = @m12ystep
+  elseif @function == "Hennenberg's Surface"
+    umin = @m13xmin
+    vmin = @m13ymin
+    ustep = @m13xstep
+    vstep = @m13ystep
+  elseif @function == "Corkscrew"
+    umin = @m14xmin
+    vmin = @m14ymin
+    ustep = @m14xstep
+    vstep = @m14ystep
+  elseif @function == "Hyperbolic Helicoid"
+    umin = @m15xmin
+    vmin = @m15ymin
+    ustep = @m15xstep
+    vstep = @m15ystep
+  elseif @function == "Sine Surface"
+    umin = @m16xmin
+    vmin = @m16ymin
+    ustep = @m16xstep
+    vstep = @m16ystep
+  elseif @function == "Trefoil Knot"
+    umin = @m17xmin
+    vmin = @m17ymin
+    ustep = @m17xstep
+    vstep = @m17ystep
+  elseif @function == "Lissajous Knots"
+    umin = @m18xmin
+    vmin = @m18ymin
+    ustep = @m18xstep
+    vstep = @m18ystep
+  elseif @function == "Toroidal Spiral"
+    umin = @m19xmin
+    vmin = @m19ymin
+    ustep = @m19xstep
+    vstep = @m19ystep
+  elseif @function == "Klein Bottle"
+    umin = @m20xmin
+    vmin = @m20ymin
+    ustep = @m20xstep
+    vstep = @m20ystep
+  elseif @function == "Triangular Trefoil"
+    umin = @m21xmin
+    vmin = @m21ymin
+    ustep = @m21xstep
+    vstep = @m21ystep
+  elseif @function == "Bent Horns"
+    umin = @m22xmin
+    vmin = @m22ymin
+    ustep = @m22xstep
+    vstep = @m22ystep
+  elseif @function == "Pisot Triaxial"
+    umin = @m23xmin
+    vmin = @m23ymin
+    ustep = @m23xstep
+    vstep = @m23ystep
+  elseif @function == "Spherical Harmonics"
+    umin = @m24xmin
+    vmin = @m24ymin
+    ustep = @m24xstep
+    vstep = @m24ystep
+  elseif @function == "Slippers Surface"
+    umin = @m25xmin
+    vmin = @m25ymin
+    ustep = @m25xstep
+    vstep = @m25ystep
+  elseif @function == "SuperShape"
+    umin = @m26xmin
+    vmin = @m26ymin
+    ustep = @m26xstep
+    vstep = @m26ystep
+  elseif @function == "Fano Planes"
+    umin = @m27xmin
+    vmin = @m27ymin
+    ustep = @m27xstep
+    vstep = @m27ystep
+  elseif @function == "Twisted Fano"
+    umin = @m28xmin
+    vmin = @m28ymin
+    ustep = @m28xstep
+    vstep = @m28ystep
+  elseif @function == "Cresent"
+    umin = @m29xmin
+    vmin = @m29ymin
+    ustep = @m29xstep
+    vstep = @m29ystep
+  elseif @function == "Twisted Triaxial"
+    umin = @m30xmin
+    vmin = @m30ymin
+    ustep = @m30xstep
+    vstep = @m30ystep
+  elseif @function == "Maeder's Owl"
+    umin = @m31xmin
+    vmin = @m31ymin
+    ustep = @m31xstep
+    vstep = @m31ystep
+  elseif @function == "Stiletto Surface"
+    umin = @m32xmin
+    vmin = @m32ymin
+    ustep = @m32xstep
+    vstep = @m32ystep
+  elseif @function == "Verrill Surface"
+    umin = @m33xmin
+    vmin = @m33ymin
+    ustep = @m33xstep
+    vstep = @m33ystep
+  elseif @function == "Twisted Heart"
+    umin = @m34xmin
+    vmin = @m34ymin
+    ustep = @m34xstep
+    vstep = @m34ystep
+  elseif @function == "Figure 8 Torus"
+    umin = @m35xmin
+    vmin = @m35ymin
+    ustep = @m35xstep
+    vstep = @m35ystep
+  elseif @function == "Triaxial Teardrop"
+    umin = @m36xmin
+    vmin = @m36ymin
+    ustep = @m36xstep
+    vstep = @m36ystep
+  elseif @function == "Lemniscape"
+    umin = @m37xmin
+    vmin = @m37ymin
+    ustep = @m37xstep
+    vstep = @m37ystep
+  elseif @function == "Tractrix"
+    umin = @m38xmin
+    vmin = @m38ymin
+    ustep = @m38xstep
+    vstep = @m38ystep
+  elseif @function == "Triaxial Tritorus"
+    umin = @m39xmin
+    vmin = @m39ymin
+    ustep = @m39xstep
+    vstep = @m39ystep
+  elseif @function == "Saddle Torus"
+    umin = @m40xmin
+    vmin = @m40ymin
+    ustep = @m40xstep
+    vstep = @m40ystep
+  elseif @function == "Limpet Torus"
+    umin = @m41xmin
+    vmin = @m41ymin
+    ustep = @m41xstep
+    vstep = @m41ystep
+  elseif @function == "Bow Tie"
+    umin = @m42xmin
+    vmin = @m42ymin
+    ustep = @m42xstep
+    vstep = @m42ystep
+  elseif @function == "Cross Cap"
+    umin = @m43xmin
+    vmin = @m43ymin
+    ustep = @m43xstep
+    vstep = @m43ystep
+  elseif @function == "Whitney Umbrella"
+    umin = @m44xmin
+    vmin = @m44ymin
+    ustep = @m44xstep
+    vstep = @m44ystep
+  elseif @function == "Triaxial Hexatorus"
+    umin = @m45xmin
+    vmin = @m45ymin
+    ustep = @m45xstep
+    vstep = @m45ystep
+  elseif @function == "Fish Surface"
+    umin = @m46xmin
+    vmin = @m46ymin
+    ustep = @m46xstep
+    vstep = @m46ystep
+  elseif @function == "Twisted Pipe"
+    umin = @m47xmin
+    vmin = @m47ymin
+    ustep = @m47xstep
+    vstep = @m47ystep
+  endif  
+
+  while i < xlimit
+    u = umin + i*ustep
+    while j < ylimit
+      v = vmin + j*vstep
+        if @function == "Mandala"
+          csx[ii] = u*cos(v)*fscale
+          csy[ii] = u*sin(v)*fscale
+          csz[ii] = v*cos(u)*fscale
+        elseif @function == "Wiwianka"
+          csx[ii] = (1+exp(-100*u^2))*sin(#pi*u)*sin(#pi*v)*fscale
+          csy[ii] = (1+exp(-100*u^2))*sin(#pi*u)*cos(#pi*v)*fscale
+          csz[ii] = (1+exp(-100*u^2))*cos(#pi*u)*fscale
+        elseif @function == "Banchoff Klein Bottle"
+          csx[ii] = (cos(u)*(cos(u/2)*(sqrt(2)+cos(v))+(sin(u/2)*sin(v)*cos(v))))*fscale
+          csy[ii] = (sin(u)*(cos(u/2)*(sqrt(2)+cos(v))+(sin(u/2)*sin(v)*cos(v))))*fscale
+          csz[ii] = (-sin(u/2)*(sqrt(2)+cos(v))+cos(u/2)*sin(v)*cos(v))*fscale
+        elseif @function == "Seashell"
+          csx[ii] = (@seaa*(1-v/(2*pi))*cos(@sean*v)*(1+cos(u))+@seac*cos(@sean*v))*fscale
+          csy[ii] = (@seaa*(1-v/(2*pi))*sin(@sean*v)*(1+cos(u))+@seac*sin(@sean*v))*fscale
+          csz[ii] = (@seab*v/(2*pi)+@seaa*(1-v/(2*pi))*sin(u))*fscale
+        elseif @function == "Mobius Band"
+          csx[ii] = (cos(u)+v*cos(u/2)*cos(u))*fscale
+          csy[ii] = (sin(u)+v*cos(u/2)*sin(u))*fscale
+          csz[ii] = (v*sin(u/2))*fscale
+        elseif @function == "Astrodal Ellipsoid"
+          csx[ii] = (@aa*cos(u)*cos(v))^3*fscale
+          csy[ii] = (@ab*sin(u)*cos(v))^3*fscale
+          csz[ii] = (@ac*sin(v))^3*fscale     
+        elseif @function == "Bohemian Dome"
+          csx[ii] = (@ba*cos(u))*fscale
+          csy[ii] = (@bb*cos(v) + @ba*sin(u))*fscale
+          csz[ii] = (@bc*sin(v))*fscale     
+        elseif @function == "Boy Surface"
+          csx[ii] = ((2/3)*(cos(u)*cos(2*v)+sqrt(2)*sin(u)*cos(v))*cos(u) /(sqrt(2) - sin(2*u)*sin(3*v)))*fscale
+          csy[ii] = ((2/3)*(cos(u)*sin(2*v)-sqrt(2)*sin(u)*sin(v))*cos(u) /(sqrt(2)-sin(2*u)*sin(3*v)))*fscale
+          csz[ii] = (sqrt(2)*cos(u)^2 / (sqrt(2) - sin(2*u)*sin(2*v)))*fscale     
+        elseif @function == "Dini's Surface"
+          csx[ii] = (@da*cos(u)*sin(v))*fscale
+          csy[ii] = (@da*sin(u)*sin(v))*fscale
+          csz[ii] = (@da*(cos(v)+log(tan((v/2))))+@db*u)*fscale         
+        elseif @function == "Enneper's Surface"
+          csx[ii] = (u-(u*u*u/3)+u*v*v)*fscale
+          csy[ii] = (v-(v*v*v/3)+u*u*v)*fscale
+          csz[ii] = (u*u-v*v)*fscale         
+        elseif @function == "Kuen's Surface"
+          csx[ii] = (2*(cos(u)+u*sin(u))*sin(v)/(1+u*u*sin(v)*sin(v)))*fscale
+          csy[ii] = (2*(sin(u)-u*cos(u))*sin(v)/(1+u*u*sin(v)*sin(v)))*fscale
+          csz[ii] = (log(tan(v/2))+2*cos(v)/(1+u*u*sin(v)*sin(v)))*fscale         
+        elseif @function == "Swallowtail"
+          csx[ii] = (u*v^2+3*v^4)*fscale
+          csy[ii] = (-2*u*v-4*v^3)*fscale
+          csz[ii] = (u)*fscale         
+        elseif @function == "Catalan's Surface"
+          csx[ii] = (u-sin(u)*cosh(v))*fscale
+          csy[ii] = (1-cos(u)*cosh(v))*fscale
+          csz[ii] = (4*sin(u/2)*sinh(v/2))*fscale         
+        elseif @function == "Hennenberg's Surface"
+          csx[ii] = (2*sinh(u)*cos(v)-2/3*sinh(3*u)*cos(3*v))*fscale
+          csy[ii] = (2*sinh(u)*sin(v)+2/3*sinh(3*u)*sin(3*v))*fscale
+          csz[ii] = (2*cosh(2*u)*cos(2*v))*fscale                   
+        elseif @function == "Corkscrew"
+          csx[ii] = (@ta*cos(u)*cos(v))*fscale
+          csy[ii] = (@ta*sin(u)*cos(v))*fscale
+          csz[ii] = (@ta*sin(v)+@tb*u)*fscale                   
+        elseif @function == "Hyperbolic Helicoid"
+          csx[ii] = (sinh(v)*cos(@tau*u)/(1+cosh(u)*cosh(v)))*fscale
+          csy[ii] = (sinh(v)*sin(@tau*u)/(1+cosh(u)*cosh(v)))*fscale
+          csz[ii] = (cosh(v)*sinh(u)/(1+cosh(u)*cosh(v)))*fscale                   
+        elseif @function == "Sine Surface"
+          csx[ii] = (@sa*sin(u))*fscale
+          csy[ii] = (@sa*sin(v))*fscale
+          csz[ii] = (@sa*sin(u+v))*fscale                   
+        elseif @function == "Trefoil Knot"
+          csx[ii] = (sin(3*u))*fscale
+          csy[ii] = (sin(u)+2*sin(2*u))*fscale
+          csz[ii] = (cos(u)-2*cos(2*u))*fscale                     
+        elseif @function == "Lissajous Knots"
+          csx[ii] = (cos(@na*u+@la))*fscale
+          csy[ii] = (cos(@nb*u+@lb))*fscale
+          csz[ii] = (cos(@nc*u+@lc))*fscale                     
+        elseif @function == "Toroidal Spiral"
+          while k < @numcoil
+            csx[ii] = ((@tsa+sin(@nts*u+2*k*#pi/@numcoil))*cos(u))*fscale
+            csy[ii] = ((@tsa+sin(@nts*u+2*k*#pi/@numcoil))*sin(u))*fscale
+            csz[ii] = (cos(@nts*u+2*k*#pi/@numcoil))*fscale 
+            k = k + 1
+            if k < @numcoil
+              ii = ii + 1
+            endif                      
+          endwhile
+          k = 0  
+        elseif @function == "Klein Bottle"
+          kr = 4*(1-cos(u)/2)
+          if u < #pi
+            csx[ii] = (6*cos(u)*(1+sin(u))+kr*cos(u)*cos(v))*fscale
+            csy[ii] = (16*sin(u)+kr*sin(u)*cos(v))*fscale
+          else  
+            csx[ii] = (6*cos(u)*(1+sin(u))+kr*cos(v+#pi))*fscale
+            csy[ii] = (16*sin(u))*fscale
+          endif  
+          csz[ii] = (kr*sin(v))*fscale            
+        elseif @function == "Triangular Trefoil"
+          csx[ii] = (2*sin(3*u)/(2+cos(v)))*fscale
+          csy[ii] = (2*(sin(u)+2*sin(2*u))/(2+cos(v+2*#pi/3)))*fscale
+          csz[ii] = ((cos(u)-2*cos(2*u))*(2+cos(v))*(2+cos(v+2*#pi/3))/4)*fscale                     
+        elseif @function == "Bent Horns"
+          csx[ii] = ((2+cos(u))*(v/3-sin(v)))*fscale
+          csy[ii] = ((2+cos(u-2*#pi/3))*(cos(v)-1))*fscale
+          csz[ii] = ((2+cos(u+2*#pi/3))*(cos(v)-1))*fscale                     
+        elseif @function == "Pisot Triaxial"
+          csx[ii] = (0.655866*cos(1.03002+u)*(2+cos(v)))*fscale
+          csy[ii] = (0.754878*cos(1.40772-u)*(2+0.868837*cos(2.43773+v)))*fscale
+          csz[ii] = (0.868837*cos(2.43773+u)*(2+0.495098*cos(0.377696-v)))*fscale                  
+        elseif @function == "Spherical Harmonics"
+          sr = sin(@m1*u)^@m2+cos(@m3*u)^@m4+sin(@m5*v)^@m6+cos(@m7*v)^@m8
+          csx[ii] = (sr*sin(u)*cos(v))*fscale
+          csy[ii] = (sr*cos(u))*fscale
+          csz[ii] = (sr*sin(u)*sin(v))*fscale                  
+        elseif @function == "Slippers Surface"
+          csx[ii] = ((2+cos(u)*cos(v)^3*sin(v)))*fscale
+          csy[ii] = ((2+cos(u+2*#pi/3))*cos(2*#pi/3+v)^2*sin(2*#pi/3+v)^2)*fscale 
+          csz[ii] = (-(2+cos(u-2*#pi/3))*cos(2*#pi/3-v)^2*sin(2*#pi/3-v)^3)*fscale                          
+        elseif @function == "SuperShape"
+          ru = ((1/@ssa*cos(@ssm*u/4))^@ssn2+(1/@ssb*sin(@ssm*u/4))^@ssn3)^(-1/@ssn1)
+          rv = ((1/@ssa*cos(@ssm*v/4))^@ssn2+(1/@ssb*sin(@ssm*v/4))^@ssn3)^(-1/@ssn1)
+          csx[ii] = (ru*cos(u)*rv*cos(v))*fscale
+          csy[ii] = (ru*sin(u)*rv*cos(v))*fscale 
+          csz[ii] = (rv*sin(v))*fscale                                    
+        elseif @function == "Fano Planes"
+          csx[ii] = (cos(2*#pi*(u-v/3))*cos(2*#pi*(-u-v/3))*cos(2*#pi*(u-sqrt(3))))*fscale
+          csy[ii] = (cos(2*#pi*(u-v/3+2/3))*cos(2*#pi*(-u-v/3+2/3))*cos(2*#pi*(-u-v+1)))*fscale 
+          csz[ii] = (cos(2*#pi*(u-v/3-2/3))*cos(2*#pi*(-u-v/3-2/3))*cos(2*#pi*(-u+v+1)))*fscale                   
+        elseif @function == "Twisted Fano"
+          csx[ii] = (cos(2*#pi*(u-v/3))*cos(2*#pi*(-u-v/3))*cos(2*#pi*v)*cos(2*#pi*u))*fscale
+          csy[ii] = (cos(2*#pi*(u-v/3)+2*#pi/3)*cos(2*#pi*(-u-v/3)+2*#pi/3)*cos(2*#pi*(-u-v)+2*#pi/3)*cos(2*#pi*(u-1)))*fscale 
+          csz[ii] = (cos(2*#pi*(u-v/3)-2*#pi/3)*cos(2*#pi*(-u-v/3)-2*#pi/3)*cos(2*#pi*(-u+v)+2*#pi/3)*cos(2*#pi*(u-2)))*fscale                   
+        elseif @function == "Cresent"
+          csx[ii] = ((2+sin(2*#pi*u)*sin(2*#pi*v))*sin(3*#pi*v))*fscale
+          csy[ii] = ((2+sin(2*#pi*u)*sin(2*#pi*v))*cos(3*#pi*v))*fscale 
+          csz[ii] = (cos(2*#pi*u)*sin(2*#pi*v)+4*v-2)*fscale                   
+        elseif @function == "Twisted Triaxial"
+          csx[ii] = ((1-((u*u+v*v)/2)^0.5/#pi)*cos(u)*cos(v)+((u*u+v*v)/2)^0.5/#pi*sin(u)*sin(v))*fscale
+          csy[ii] = ((1-((u*u+v*v)/2)^0.5/#pi)*cos(u+2*#pi/3)*cos(v+2*#pi/3)+((u*u+v*v)/2)^0.5/#pi*sin(u+2*#pi/3)*sin(v+2*#pi/3))*fscale 
+          csz[ii] = ((1-((u*u+v*v)/2)^0.5/#pi)*cos(u+4*#pi/3)*cos(v+4*#pi/3)+((u*u+v*v)/2)^0.5/#pi*sin(u+4*#pi/3)*sin(v+4*#pi/3))*fscale                   
+        elseif @function == "Maeder's Owl"
+          csx[ii] = (v*cos(u)-0.5*v^2*cos(2*u))*fscale
+          csy[ii] = (-v*sin(u)-0.5*v^2*sin(2*u))*fscale 
+          csz[ii] = (4*v^1.5*cos(3*u/2)/3)*fscale                   
+        elseif @function == "Stiletto Surface"
+          csx[ii] = ((2+cos(u))*cos(v)^3*sin(v))*fscale
+          csy[ii] = ((2+cos(u+2*#pi/3))*cos(v+2*#pi/3)^2*sin(v+2*#pi/3)^2)*fscale 
+          csz[ii] = (-(2+cos(u-2*#pi/3))*cos(v+2*#pi/3)^2*sin(v+2*#pi/3)^2)*fscale                   
+        elseif @function == "Verrill Surface"
+          csx[ii] = (-2*u*cos(v)+2*cos(v)/u-2*u^3*cos(3*v)/3)*fscale
+          csy[ii] = (6*u*sin(v)-2*sin(v)/u-2*u^3*sin(3*v)/3)*fscale 
+          csz[ii] = (4*log(u))*fscale                   
+        elseif @function == "Twisted Heart"
+          csx[ii] = ((abs(v)-abs(u) - abs(tanh(u/sqrt(2))*sqrt(2))+abs(tanh(v/sqrt(2))*sqrt(2)))*sin(v))*fscale
+          csy[ii] = ((abs(v)+abs(u) - abs(tanh(u/sqrt(2))*sqrt(2))-abs(tanh(v/sqrt(2))*sqrt(2)))*cos(v))*fscale 
+          csz[ii] = ((u^2+v^2)/(cosh(u/sqrt(2))+cosh(v/sqrt(2)))/sqrt(2))*fscale                   
+        elseif @function == "Figure 8 Torus"
+          csx[ii] = (cos(u)*(@ftc+sin(v)*cos(u)-sin(2*v)*sin(u)/2))*fscale
+          csy[ii] = (sin(u)*(@ftc+sin(v)*cos(u)-sin(2*v)*sin(u)/2))*fscale 
+          csz[ii] = (sin(u)*sin(v)+cos(u)*sin(2*v)/2)*fscale
+        elseif @function == "Triaxial Teardrop"
+          csx[ii] = ((1-cos(u))*cos(u+2*#pi/3)*cos(v+2*#pi/3)/2)*fscale
+          csy[ii] = ((1-cos(u))*cos(u+2*#pi/3)*cos(v-2*#pi/3)/2)*fscale 
+          csz[ii] = (cos(u-2*#pi/3))*fscale
+        elseif @function == "Lemniscape"
+          csx[ii] = (cos(v)*sqrt(abs(sin(2*u)))*cos(u))*fscale
+          csy[ii] = (cos(v)*sqrt(abs(sin(2*u)))*sin(u))*fscale 
+          csz[ii] = ((csx[ii]/fscale)^2-(csy[ii]/fscale)^2+ \
+                     2*csx[ii]/fscale*csy[ii]/fscale*tan(v)^2)*fscale
+        elseif @function == "Tractrix"
+          csx[ii] = (cos(u)*(v-tanh(v)))*fscale
+          csy[ii] = (cos(u)/cosh(v))*fscale 
+          csz[ii] = ((csx[ii]/fscale)^2-(csy[ii]/fscale)^2+ \
+                     2*csx[ii]/fscale*csy[ii]/fscale*tanh(u)^2)*fscale
+        elseif @function == "Triaxial Tritorus"
+          csx[ii] = (sin(u)*(1+cos(v)))*fscale
+          csy[ii] = (sin(u+2*#pi/3)*(1+cos(v+2*#pi/3)))*fscale 
+          csz[ii] = (sin(u+4*#pi/3)*(1+cos(v+4*#pi/3)))*fscale
+        elseif @function == "Saddle Torus"
+          csx[ii] = ((2+cos(u))*cos(v))*fscale
+          csy[ii] = ((2+cos(u+2*#pi/3))*cos(v+2*#pi/3))*fscale 
+          csz[ii] = ((2+(1-cos(u)^2-cos(u+2*#pi/3)^2)/abs(1-cos(u)^2-cos(u+2*#pi/3)^2)* \
+                     sqrt(abs(1-cos(u)^2-cos(u+2*#pi/3)^2)))* \
+                     (1-cos(v)^2-cos(v+2*#pi/3)^2)/abs(1-cos(v)^2-cos(v+2*#pi/3)^2)* \
+                     sqrt(abs(1-cos(v)^2-cos(v+2*#pi/3)^2)))*fscale
+        elseif @function == "Limpet Torus"
+          csx[ii] = (cos(u)/(sqrt(2)+sin(v)))*fscale
+          csy[ii] = (sin(u)/(sqrt(2)+sin(v)))*fscale 
+          csz[ii] = (1/(sqrt(2)+cos(v)))*fscale
+        elseif @function == "Bow Tie"
+          csx[ii] = (sin(u)/(sqrt(2)+sin(v)))*fscale
+          csy[ii] = (sin(u)/(sqrt(2)+cos(v)))*fscale 
+          csz[ii] = (cos(u)/(sqrt(2)+1))*fscale
+        elseif @function == "Cross Cap"
+          csx[ii] = (cos(u)*sin(2*v))*fscale
+          csy[ii] = (sin(u)*sin(2*v))*fscale 
+          csz[ii] = (cos(v)*cos(v)-cos(u)*cos(u)*sin(v)*sin(v))*fscale
+        elseif @function == "Whitney Umbrella"
+          csx[ii] = (0.5*sin(u)^2*cos(2*v))*fscale
+          csy[ii] = (0.5*sin(u)^2*sin(2*v))*fscale 
+          csz[ii] = (sin(u)*sin(v))*fscale
+        elseif @function == "Triaxial Hexatorus"
+          csx[ii] = (sin(u)/(sqrt(2)+cos(v)))*fscale
+          csy[ii] = (sin(u+2*#pi/3)/(sqrt(2)+cos(v+2*#pi/3)))*fscale 
+          csz[ii] = (cos(u-2*#pi/3)/(sqrt(2)+cos(v-2*#pi/3)))*fscale       
+        elseif @function == "Fish Surface"
+          csx[ii] = ((cos(u)-cos(2*u))*cos(v)/4)*fscale
+          csy[ii] = ((sin(u)-sin(2*u))*sin(v)/4)*fscale 
+          csz[ii] = (cos(u))*fscale  
+        elseif @function == "Twisted Pipe"
+          csx[ii] = (cos(v)*(2+cos(u))/sqrt(1+sin(v)^2))*fscale
+          csy[ii] = (sin(v+2*#pi/3)*(2+cos(u+2*#pi/3))/sqrt(1+sin(v)^2))*fscale 
+          csz[ii] = (sin(v-2*#pi/3)*(2+cos(u-2*#pi/3))/sqrt(1+sin(v)^2))*fscale            
+        endif   
+      j = j + 1
+      ii = ii + 1
+    endwhile
+    j = 0
+    i = i + 1
+  endwhile     
+  
+  int maxi = ii-1
+;
+    iii = 0
+    while iii <= maxi
+      fx = csx[iii]
+      fy = csy[iii] 
+      zz = csz[iii]    
+      if @function == "Slippers Surface"
+        fx = fx - 6
+        fy = fy - 1
+      elseif @function == "Stiletto Surface"
+        fy = fy - 0.75  
+      elseif @function == "Triaxial Teardrop"
+        zz = zz - 1 
+      endif
+         
+
+      ffx = fx - xmin
+      ffy = fy - ymin 
+;      ffy = tymax - ffy
+      ffx = ffx/txmax    
+      ffy = ffy/tymax
+      ffz = (zmin-zz)/sqrt(txmax^2+tymax^2)
+      xx = ffx
+;
+;   rotation around the z axis
+;    
+      xx = ffx
+      ffx = 0.5 + (ffx - 0.5 - @rotoffx/txmax)*cos(#angle) - \
+            (ffy - 0.5 - @rotoffy/tymax)*sin(#angle)
+      ffy = 0.5 + (ffy - 0.5 - @rotoffy/tymax)*cos(#angle) + \
+            (xx - 0.5 - @rotoffx/txmax)*sin(#angle)
+;
+;   rotation around the y axis
+;    
+      xx = ffx
+      ffx = (0.5 + (ffz - 0.5 - @rotoffz/txmax)*sin(@zangle*pi/180) + \
+            (ffx - 0.5 - @rotoffx/txmax)*cos(@zangle*pi/180))*#width
+      ffz = (0.5 + (ffz - 0.5 - @rotoffz/tzmax)*cos(@zangle*pi/180) - \
+            (xx - 0.5 - @rotoffx/txmax)*sin(@zangle*pi/180))
+;
+;   rotation around the x axis
+;
+      yy = ffy
+      ffy = (0.5 + (ffy - 0.5 - @rotoffy/tymax)*cos(-@xangle*pi/180) - \
+            (ffz - 0.5 - @rotoffz/tzmax)*sin(-@xangle*pi/180))*#height
+      ffz = (0.5 + (yy - 0.5 - @rotoffy/tymax)*sin(-@xangle*pi/180) + \
+            (ffz - 0.5 - @rotoffz/tzmax)*cos(-@xangle*pi/180))*#height
+;
+;   final translation
+;
+      ffx = ffx + @transx*#width  
+      ffy = ffy + @transy*#height
+      ffz = ffz + @transz*#height
+    
+      csx[iii] = ffx
+      csy[iii] = ffy
+      csz[iii] = ffz
+    iii = iii + 1  
+  endwhile
+;
+; sort arrays by z value
+
+  l = round(maxi/2) + 1
+  ir = maxi
+  repeat
+    if l > 1
+      l = l-1
+      rra = csz[l-1]
+      rrb = csx[l-1]
+      rrc = csy[l-1]
+    else
+      rra = csz[ir-1]
+      rrb = csx[ir-1]
+      rrc = csy[ir-1]
+      csz[ir-1] = csz[0]
+      csx[ir-1] = csx[0]
+      csy[ir-1] = csy[0]
+      ir = ir-1
+      if ir == 0
+        csz[0] = rra
+        csx[0] = rrb
+        csy[0] = rrc
+        continue = false
+      endif
+    endif
+
+    if continue == true
+      si = l
+      sj = 2*l
+    endif  
+
+    while (sj <= ir) && (continue == true)
+      if sj < ir
+        if csz[sj-1] < csz[sj]
+          sj = sj + 1
+        endif
+      endif
+      if rra < csz[sj-1]
+        csz[si-1] = csz[sj-1]
+        csx[si-1] = csx[sj-1]
+        csy[si-1] = csy[sj-1]
+        si = sj
+        sj = sj + sj
+      else
+        sj = ir + 1
+      endif
+    endwhile
+    if (continue == true)
+      csz[si-1] = rra
+      csx[si-1] = rrb
+      csy[si-1] = rrc
+    endif  
+  until continue == false                     
+
+;
+; create the spheres
+;  
+  rds = round(radius*#width/txmax*fscale)  
+  iii = 0  
+
+;   perspective application
+;
+;  if @useproj||@useprojr
+  if @useproj
+
+    while iii <= maxi 
+;
+      zz = csz[iii]
+      ffx = csx[iii]*txmax/#width+xmin
+      ffy = tymax*(1-csy[iii]/#height)+ymin
+      ffz = zmin - 2*csz[iii]*sqrt(txmax^2+tymax^2)/#height
+      pcircum =  (cprojx/#magn*ffz-(ffx+radius)*cprojz/#magn)/(ffz-cprojz/#magn)
+      ffx = (cprojx/#magn*ffz-ffx*cprojz/#magn)/(ffz-cprojz/#magn)
+      ffy = (cprojy/#magn*ffz-ffy*cprojz/#magn)/(ffz-cprojz/#magn)
+      csx[iii] = (ffx-xmin)*#width/txmax
+      pcircum = (pcircum-xmin)*#width/txmax
+      rds = round(abs((pcircum-csx[iii])*fscale))
+      csy[iii] = #height*(1-(ffy-ymin)/tymax)
+      csz[iii] = zz
+      iii = iii+1
+    endwhile  
+  endif
+;
+transform:
+  int jj = 0
+  complex c1 = 0
+  complex z3 = #pixel
+  complex z4 = 0
+  #pixel = 0
+  float width = 0  
+  float scale = 0
+  complex z2 = 0
+  float x1 = 0
+  float y1 = 0
+  float beta = 0
+  float theta1 = 0
+  float x2 = 0
+  float tradius = 0
+  complex gpos = 0
+  float scle = 0
+;  if @ray
+;    float scle = @scle/#magn*1.1
+;  else
+    float scle = @scle/#magn
+;  endif  
+  
+  if @usecenter == true
+    gpos = -#screenmax/2
+  else
+    gpos = @gpos-#screenmax/2
+  endif    
+  
+  while jj <= maxi
+      tradius = rds
+      c1 = (csx[jj]+flip(csy[jj])+gpos)*scle/#magn/#width*4 + #center
+      width = tradius/#magn*scle/#width*4  
+      scale = @scale/width/#magn
+      complex z2 = (z3-c1)*scale
+      x1 = cabs(z2)/(width*scale)
+      if x1 < 1
+      ; refraction calcs
+        theta1 = acos(x1)
+        y1=sin(theta1)
+        beta = asin(x1/@n)
+        x2 = -y1/real(tan(theta1+beta))+ x1
+      ; move pixel
+        z4 = (z2/x1 * x2)*@scale/#magn
+        #pixel = z4
+      endif
+    jj = jj + 1
+  endwhile
+  
+  
+  if #pixel != 0
+    #pixel = z4+#center
+  else
+    #solid = true  
+  endif
+
+
+default:
+  param version
+    caption = "Formula Version"
+    default = 100
+    hint = "You should never see this parameter; it's used internally to track \
+        which version of the formula was used to create your image, so that \
+        if a bug is found which breaks backwards-compatibility, the formula \
+        can adapt transparently."
+    visible = false
+  endparam
+  heading
+    caption="Formula Plotter"
+  endheading
+  title="Formula Plotter"
+  render=false
+  param solid
+    caption="solid background?"
+    default=true
+  endparam
+  param ray
+    caption="Use with RayTrace?"
+    default=false
+    visible = false
+  endparam 
+  heading
+    caption="Transform settings"
+  endheading  
+  param n
+    caption = "Refractive index"
+    default = 2.0
+    hint = "Refactive index of 'glass'"
+  endparam
+  float param scale
+    caption = "Zoom level"
+    default = 2.0
+  endparam
+  float param scle
+    caption = "Transform Scale"
+    default = 1.0
+  endparam
+  bool param usecenter
+    caption = "Use screen center"
+    default = true
+  endparam  
+  complex param gpos
+    caption = "Formula Position"
+    default = (0,0)
+    visible=@usecenter==false
+  endparam    
+  heading
+    caption = "Function Parameters"
+  endheading   
+  param function
+    caption = "Function"
+    default = 0
+    enum = "Astrodal Ellipsoid" "Banchoff Klein Bottle" "Bent Horns" \
+           "Bohemian Dome" "Bow Tie" "Boy Surface" "Catalan's Surface" \
+           "Corkscrew" "Cresent" "Cross Cap" "Dini's Surface" "Enneper's Surface" \
+           "Fano Planes" "Figure 8 Torus" "Fish Surface" "Hennenberg's Surface" \
+           "Hyperbolic Helicoid" "Klein Bottle" "Kuen's Surface" "Lemniscape" \
+           "Limpet Torus" "Lissajous Knots" "Maeder's Owl" "Mandala" "Mobius Band" \
+           "Pisot Triaxial" "Saddle Torus" "Seashell" "Sine Surface" \
+           "Slippers Surface" "Spherical Harmonics" "Stiletto Surface" \
+           "SuperShape" "Swallowtail" "Toroidal Spiral" "Tractrix" "Trefoil Knot" \
+           "Triangular Trefoil" "Triaxial Hexatorus" "Triaxial Teardrop" \
+           "Triaxial Tritorus" "Twisted Fano" "Twisted Heart" "Twisted Pipe" \
+           "Twisted Triaxial" "Verrill Surface" "Whitney Umbrella" "Wiwianka" 
+  endparam    
+  float param m0radius
+    caption = "Sphere radius"
+    default = 0.4
+    visible = @function == "Mandala"
+  endparam  
+  float param m0fscale
+    caption = "Function scale"
+    default = 0.1
+    visible = @function == "Mandala"
+  endparam  
+  float param m0xmax
+    caption = "Max X"
+    default = 16.0
+    visible = @function == "Mandala"
+  endparam  
+  float param m0xmin
+    caption = "Min X"
+    default = -8.0
+    visible = @function == "Mandala"
+  endparam      
+  float param m0ymax
+    caption = "Max Y"
+    default = 12.56
+    visible = @function == "Mandala"
+  endparam  
+  float param m0ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Mandala"
+  endparam      
+  float param m0xstep
+    caption = "X increment"
+    default = 0.15
+    visible = @function == "Mandala"
+  endparam   
+  float param m0ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Mandala"
+  endparam   
+  float param m1radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Wiwianka"
+  endparam  
+  float param m1fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "Wiwianka"
+  endparam  
+  float param m1xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Wiwianka"
+  endparam  
+  float param m1xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Wiwianka"
+  endparam      
+  float param m1ymax
+    caption = "Max Y"
+    default = 2.0
+    visible = @function == "Wiwianka"
+  endparam  
+  float param m1ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Wiwianka"
+  endparam      
+  float param m1xstep
+    caption = "X increment"
+    default = 0.0075
+    visible = @function == "Wiwianka"
+  endparam   
+  float param m1ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Wiwianka"
+  endparam   
+  float param m2radius
+    caption = "Sphere radius"
+    default = 0.04
+    visible = @function == "Banchoff Klein Bottle"
+  endparam  
+  float param m2fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Banchoff Klein Bottle"
+  endparam  
+  float param m2xmax
+    caption = "Max X"
+    default = 9.56
+    visible = @function == "Banchoff Klein Bottle"
+  endparam  
+  float param m2xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Banchoff Klein Bottle"
+  endparam      
+  float param m2ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Banchoff Klein Bottle"
+  endparam  
+  float param m2ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Banchoff Klein Bottle"
+  endparam      
+  float param m2xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Banchoff Klein Bottle"
+  endparam   
+  float param m2ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Banchoff Klein Bottle"
+  endparam   
+  float param m3radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Seashell"
+  endparam  
+  float param m3fscale
+    caption = "Function scale"
+    default = 3.0
+    visible = @function == "Seashell"
+  endparam  
+  float param m3xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Seashell"
+  endparam  
+  float param m3xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Seashell"
+  endparam      
+  float param m3ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Seashell"
+  endparam  
+  float param m3ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Seashell"
+  endparam      
+  float param m3xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Seashell"
+  endparam   
+  float param m3ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Seashell"
+  endparam   
+  float param seaa
+    caption = "param a"
+    default = 0.2
+    visible = @function == "Seashell"
+  endparam  
+  float param seab
+    caption = "param b"
+    default = 1.0
+    visible = @function == "Seashell"
+  endparam  
+  float param seac
+    caption = "param c"
+    default = 0.1
+    visible = @function == "Seashell"
+  endparam  
+  float param sean
+    caption = "param n"
+    default = 2.0
+    visible = @function == "Seashell"
+  endparam  
+  float param m4radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Mobius Band"
+  endparam  
+  float param m4fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "Mobius Band"
+  endparam  
+  float param m4xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Mobius Band"
+  endparam  
+  float param m4xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Mobius Band"
+  endparam      
+  float param m4ymax
+    caption = "Max Y"
+    default = 0.3
+    visible = @function == "Mobius Band"
+  endparam  
+  float param m4ymin
+    caption = "Min Y"
+    default = -0.3
+    visible = @function == "Mobius Band"
+  endparam      
+  float param m4xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Mobius Band"
+  endparam   
+  float param m4ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Mobius Band"
+  endparam   
+  float param m5radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param m5fscale
+    caption = "Function scale"
+    default = 1.8
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param m5xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param m5xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Astrodal Ellipsoid"
+  endparam      
+  float param m5ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param m5ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Astrodal Ellipsoid"
+  endparam      
+  float param m5xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Astrodal Ellipsoid"
+  endparam   
+  float param m5ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Astrodal Ellipsoid"
+  endparam   
+  float param aa
+    caption = "param a"
+    default = 1.0
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param ab
+    caption = "param b"
+    default = 1.0
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param ac
+    caption = "param c"
+    default = 1.0
+    visible = @function == "Astrodal Ellipsoid"
+  endparam  
+  float param m6radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param m6fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param m6xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param m6xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Bohemian Dome"
+  endparam      
+  float param m6ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param m6ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Bohemian Dome"
+  endparam      
+  float param m6xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Bohemian Dome"
+  endparam   
+  float param m6ystep
+    caption = "Y increment"
+    default = 0.07
+    visible = @function == "Bohemian Dome"
+  endparam   
+  float param ba
+    caption = "param a"
+    default = 0.5
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param bb
+    caption = "param b"
+    default = 1.5
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param bc
+    caption = "param c"
+    default = 1.0
+    visible = @function == "Bohemian Dome"
+  endparam  
+  float param m7radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Boy Surface"
+  endparam  
+  float param m7fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Boy Surface"
+  endparam  
+  float param m7xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Boy Surface"
+  endparam  
+  float param m7xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Boy Surface"
+  endparam      
+  float param m7ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Boy Surface"
+  endparam  
+  float param m7ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Boy Surface"
+  endparam      
+  float param m7xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Boy Surface"
+  endparam   
+  float param m7ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Boy Surface"
+  endparam   
+  float param m8radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param m8fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param m8xmax
+    caption = "Max X"
+    default = 12.56
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param m8xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Dini's Surface"
+  endparam      
+  float param m8ymax
+    caption = "Max Y"
+    default = 2.0
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param m8ymin
+    caption = "Min Y"
+    default = 0.001
+    visible = @function == "Dini's Surface"
+  endparam      
+  float param m8xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Dini's Surface"
+  endparam   
+  float param m8ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Dini's Surface"
+  endparam   
+  float param da
+    caption = "param a"
+    default = 1.0
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param db
+    caption = "param b"
+    default = 0.2
+    visible = @function == "Dini's Surface"
+  endparam  
+  float param m9radius
+    caption = "Sphere radius"
+    default = 0.1
+    visible = @function == "Enneper's Surface"
+  endparam  
+  float param m9fscale
+    caption = "Function scale"
+    default = 0.25
+    visible = @function == "Enneper's Surface"
+  endparam  
+  float param m9xmax
+    caption = "Max X"
+    default = 2.0
+    visible = @function == "Enneper's Surface"
+  endparam  
+  float param m9xmin
+    caption = "Min X"
+    default = -2.0
+    visible = @function == "Enneper's Surface"
+  endparam      
+  float param m9ymax
+    caption = "Max Y"
+    default = 2.0
+    visible = @function == "Enneper's Surface"
+  endparam  
+  float param m9ymin
+    caption = "Min Y"
+    default = -2.0
+    visible = @function == "Enneper's Surface"
+  endparam      
+  float param m9xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Enneper's Surface"
+  endparam   
+  float param m9ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Enneper's Surface"
+  endparam   
+  float param m10radius
+    caption = "Sphere radius"
+    default = 0.015
+    visible = @function == "Kuen's Surface"
+  endparam  
+  float param m10fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Kuen's Surface"
+  endparam  
+  float param m10xmax
+    caption = "Max X"
+    default = 4.0
+    visible = @function == "Kuen's Surface"
+  endparam  
+  float param m10xmin
+    caption = "Min X"
+    default = -4.0
+    visible = @function == "Kuen's Surface"
+  endparam      
+  float param m10ymax
+    caption = "Max Y"
+    default = 3.09
+    visible = @function == "Kuen's Surface"
+  endparam  
+  float param m10ymin
+    caption = "Min Y"
+    default = 0.05
+    visible = @function == "Kuen's Surface"
+  endparam      
+  float param m10xstep
+    caption = "X increment"
+    default = 0.04
+    visible = @function == "Kuen's Surface"
+  endparam   
+  float param m10ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Kuen's Surface"
+  endparam   
+  float param m11radius
+    caption = "Sphere radius"
+    default = 0.05
+    visible = @function == "Swallowtail"
+  endparam  
+  float param m11fscale
+    caption = "Function scale"
+    default = 0.4
+    visible = @function == "Swallowtail"
+  endparam  
+  float param m11xmax
+    caption = "Max X"
+    default = 2.0
+    visible = @function == "Swallowtail"
+  endparam  
+  float param m11xmin
+    caption = "Min X"
+    default = -2.0
+    visible = @function == "Swallowtail"
+  endparam      
+  float param m11ymax
+    caption = "Max Y"
+    default = 0.8
+    visible = @function == "Swallowtail"
+  endparam  
+  float param m11ymin
+    caption = "Min Y"
+    default = -0.8
+    visible = @function == "Swallowtail"
+  endparam      
+  float param m11xstep
+    caption = "X increment"
+    default = 0.04
+    visible = @function == "Swallowtail"
+  endparam   
+  float param m11ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Swallowtail"
+  endparam   
+  float param m12radius
+    caption = "Sphere radius"
+    default = 0.2
+    visible = @function == "Catalan's Surface"
+  endparam  
+  float param m12fscale
+    caption = "Function scale"
+    default = 0.1
+    visible = @function == "Catalan's Surface"
+  endparam  
+  float param m12xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Catalan's Surface"
+  endparam  
+  float param m12xmin
+    caption = "Min X"
+    default = -6.28
+    visible = @function == "Catalan's Surface"
+  endparam      
+  float param m12ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Catalan's Surface"
+  endparam  
+  float param m12ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Catalan's Surface"
+  endparam      
+  float param m12xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Catalan's Surface"
+  endparam   
+  float param m12ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Catalan's Surface"
+  endparam   
+  float param m13radius
+    caption = "Sphere radius"
+    default = 0.1
+    visible = @function == "Hennenberg's Surface"
+  endparam  
+  float param m13fscale
+    caption = "Function scale"
+    default = 0.2
+    visible = @function == "Hennenberg's Surface"
+  endparam  
+  float param m13xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Hennenberg's Surface"
+  endparam  
+  float param m13xmin
+    caption = "Min X"
+    default = -1.0
+    visible = @function == "Hennenberg's Surface"
+  endparam      
+  float param m13ymax
+    caption = "Max Y"
+    default = 3.0
+    visible = @function == "Hennenberg's Surface"
+  endparam  
+  float param m13ymin
+    caption = "Min Y"
+    default = -3.0
+    visible = @function == "Hennenberg's Surface"
+  endparam      
+  float param m13xstep
+    caption = "X increment"
+    default = 0.025
+    visible = @function == "Hennenberg's Surface"
+  endparam   
+  float param m13ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Hennenberg's Surface"
+  endparam   
+  float param m14radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Corkscrew"
+  endparam  
+  float param m14fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Corkscrew"
+  endparam  
+  float param m14xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Corkscrew"
+  endparam  
+  float param m14xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Corkscrew"
+  endparam      
+  float param m14ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Corkscrew"
+  endparam  
+  float param m14ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Corkscrew"
+  endparam      
+  float param m14xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Corkscrew"
+  endparam   
+  float param m14ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Corkscrew"
+  endparam   
+  float param ta
+    caption = "param a"
+    default = 1.0
+    visible = @function == "Corkscrew"
+  endparam  
+  float param tb
+    caption = "param b"
+    default = 0.5
+    visible = @function == "Corkscrew"
+  endparam  
+  float param m15radius
+    caption = "Sphere radius"
+    default = 0.015
+    visible = @function == "Hyperbolic Helicoid"
+  endparam  
+  float param m15fscale
+    caption = "Function scale"
+    default = 1.7
+    visible = @function == "Hyperbolic Helicoid"
+  endparam  
+  float param m15xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Hyperbolic Helicoid"
+  endparam  
+  float param m15xmin
+    caption = "Min X"
+    default = -6.28
+    visible = @function == "Hyperbolic Helicoid"
+  endparam      
+  float param m15ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Hyperbolic Helicoid"
+  endparam  
+  float param m15ymin
+    caption = "Min Y"
+    default = -6.28
+    visible = @function == "Hyperbolic Helicoid"
+  endparam      
+  float param m15xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Hyperbolic Helicoid"
+  endparam   
+  float param m15ystep
+    caption = "Y increment"
+    default = 0.2
+    visible = @function == "Hyperbolic Helicoid"
+  endparam   
+  float param tau
+    caption = "torsion"
+    default = 6.0
+    visible = @function == "Hyperbolic Helicoid"
+  endparam  
+  float param m16radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Sine Surface"
+  endparam  
+  float param m16fscale
+    caption = "Function scale"
+    default = 1
+    visible = @function == "Sine Surface"
+  endparam  
+  float param m16xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Sine Surface"
+  endparam  
+  float param m16xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Sine Surface"
+  endparam      
+  float param m16ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Sine Surface"
+  endparam  
+  float param m16ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Sine Surface"
+  endparam      
+  float param m16xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Sine Surface"
+  endparam   
+  float param m16ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Sine Surface"
+  endparam   
+  float param sa
+    caption = "parameter a"
+    default = 1.0
+    visible = @function == "Sine Surface"
+  endparam  
+  float param m17radius
+    caption = "Sphere radius"
+    default = 0.15
+    visible = @function == "Trefoil Knot"
+  endparam  
+  float param m17fscale
+    caption = "Function scale"
+    default = 0.5
+    visible = @function == "Trefoil Knot"
+  endparam  
+  float param m17xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Trefoil Knot"
+  endparam  
+  float param m17xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Trefoil Knot"
+  endparam      
+  float param m17ymax
+    caption = "Max Y"
+    default = 0.01
+    visible = @function == 99
+  endparam  
+  float param m17ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == 99
+  endparam      
+  float param m17xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Trefoil Knot"
+  endparam   
+  float param m17ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == 99
+  endparam   
+  float param m18radius
+    caption = "Sphere radius"
+    default = 0.05
+    visible = @function == "Lissajous Knots"
+  endparam  
+  float param m18fscale
+    caption = "Function scale"
+    default = 1
+    visible = @function == "Lissajous Knots"
+  endparam  
+  float param m18xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Lissajous Knots"
+  endparam  
+  float param m18xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Lissajous Knots"
+  endparam      
+  float param m18ymax
+    caption = "Max Y"
+    default = 0.01
+    visible = @function == 99
+  endparam  
+  float param m18ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == 99
+  endparam      
+  float param m18xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Lissajous Knots"
+  endparam   
+  float param m18ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == 99
+  endparam   
+  int param na
+    caption = "Integer a"
+    default = 2
+    visible = @function == "Lissajous Knots"
+  endparam   
+  int param nb
+    caption = "Integer b"
+    default = 3
+    visible = @function == "Lissajous Knots"
+  endparam   
+  int param nc
+    caption = "Integer c"
+    default = 5
+    visible = @function == "Lissajous Knots"
+  endparam   
+  float param la
+    caption = "param a"
+    default = 0.5
+    visible = @function == "Lissajous Knots"
+  endparam   
+  float param lb
+    caption = "param b"
+    default = 0.5
+    visible = @function == "Lissajous Knots"
+  endparam   
+  float param lc
+    caption = "param c"
+    default = -0.5
+    visible = @function == "Lissajous Knots"
+  endparam   
+  float param m19radius
+    caption = "Sphere radius"
+    default = 0.05
+    visible = @function == "Toroidal Spiral"
+  endparam  
+  float param m19fscale
+    caption = "Function scale"
+    default = 0.6
+    visible = @function == "Toroidal Spiral"
+  endparam  
+  float param m19xmax
+    caption = "Max X"
+    default = 6.3
+    visible = @function == "Toroidal Spiral"
+  endparam  
+  float param m19xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Toroidal Spiral"
+  endparam      
+  float param m19ymax
+    caption = "Max Y"
+    default = 0.01
+    visible = @function == 99
+  endparam  
+  float param m19ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == 99
+  endparam      
+  float param m19xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Toroidal Spiral"
+  endparam   
+  float param m19ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == 99
+  endparam   
+  int param nts
+    caption = "Integer a"
+    default = 5
+    visible = @function == "Toroidal Spiral"
+  endparam   
+  float param tsa
+    caption = "param a"
+    default = 2
+    visible = @function == "Toroidal Spiral"
+  endparam   
+  int param numcoil
+    caption = "# of coils"
+    default = 3
+    visible = @function == "Toroidal Spiral"
+  endparam   
+  float param m20radius
+    caption = "Sphere radius"
+    default = 0.5
+    visible = @function == "Klein Bottle"
+  endparam  
+  float param m20fscale
+    caption = "Function scale"
+    default = 0.1
+    visible = @function == "Klein Bottle"
+  endparam  
+  float param m20xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Klein Bottle"
+  endparam  
+  float param m20xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Klein Bottle"
+  endparam      
+  float param m20ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Klein Bottle"
+  endparam  
+  float param m20ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == "Klein Bottle"
+  endparam      
+  float param m20xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Klein Bottle"
+  endparam   
+  float param m20ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Klein Bottle"
+  endparam   
+  float param m21radius
+    caption = "Sphere radius"
+    default = 0.05
+    visible = @function == "Triangular Trefoil"
+  endparam  
+  float param m21fscale
+    caption = "Function scale"
+    default = 0.4
+    visible = @function == "Triangular Trefoil"
+  endparam  
+  float param m21xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Triangular Trefoil"
+  endparam  
+  float param m21xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Triangular Trefoil"
+  endparam      
+  float param m21ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Triangular Trefoil"
+  endparam  
+  float param m21ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Triangular Trefoil"
+  endparam      
+  float param m21xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Triangular Trefoil"
+  endparam   
+  float param m21ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Triangular Trefoil"
+  endparam   
+  float param m22radius
+    caption = "Sphere radius"
+    default = 0.1
+    visible = @function == "Bent Horns"
+  endparam  
+  float param m22fscale
+    caption = "Function scale"
+    default = 0.25
+    visible = @function == "Bent Horns"
+  endparam  
+  float param m22xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Bent Horns"
+  endparam  
+  float param m22xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Bent Horns"
+  endparam      
+  float param m22ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Bent Horns"
+  endparam  
+  float param m22ymin
+    caption = "Min Y"
+    default = -6.28
+    visible = @function == "Bent Horns"
+  endparam      
+  float param m22xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Bent Horns"
+  endparam   
+  float param m22ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Bent Horns"
+  endparam   
+  float param m23radius
+    caption = "Sphere radius"
+    default = 0.025
+    visible = @function == "Pisot Triaxial"
+  endparam  
+  float param m23fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Pisot Triaxial"
+  endparam  
+  float param m23xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Pisot Triaxial"
+  endparam  
+  float param m23xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Pisot Triaxial"
+  endparam      
+  float param m23ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Pisot Triaxial"
+  endparam  
+  float param m23ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == "Pisot Triaxial"
+  endparam      
+  float param m23xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Pisot Triaxial"
+  endparam   
+  float param m23ystep
+    caption = "Y increment"
+    default = 0.1
+    visible = @function == "Pisot Triaxial"
+  endparam   
+  float param m24radius
+    caption = "Sphere radius"
+    default = 0.025
+    visible = @function == "Spherical Harmonics"
+  endparam  
+  float param m24fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Spherical Harmonics"
+  endparam  
+  float param m24xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Spherical Harmonics"
+  endparam  
+  float param m24xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Spherical Harmonics"
+  endparam      
+  float param m24ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Spherical Harmonics"
+  endparam  
+  float param m24ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == "Spherical Harmonics"
+  endparam      
+  float param m24xstep
+    caption = "X increment"
+    default = 0.01
+    visible = @function == "Spherical Harmonics"
+  endparam   
+  float param m24ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Spherical Harmonics"
+  endparam   
+  int param m1
+    caption = "Harmonic #1"
+    default = 2
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m2
+    caption = "Harmonic #2"
+    default = 3
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m3
+    caption = "Harmonic #3"
+    default =3
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m4
+    caption = "Harmonic #4"
+    default = 4
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m5
+    caption = "Harmonic #5"
+    default = 4
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m6
+    caption = "Harmonic #6"
+    default = 2
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m7
+    caption = "Harmonic #7"
+    default = 5
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  int param m8
+    caption = "Harmonic #8"
+    default = 3
+    visible = @function == "Spherical Harmonics"
+  endparam    
+  float param m25radius
+    caption = "Sphere radius"
+    default = 0.005
+    visible = @function == "Slippers Surface"
+  endparam  
+  float param m25fscale
+    caption = "Function scale"
+    default = 3
+    visible = @function == "Slippers Surface"
+  endparam  
+  float param m25xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Slippers Surface"
+  endparam  
+  float param m25xmin
+    caption = "Min X"
+    default = 0
+    visible = @function == "Slippers Surface"
+  endparam      
+  float param m25ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Slippers Surface"
+  endparam  
+  float param m25ymin
+    caption = "Min Y"
+    default = 0
+    visible = @function == "Slippers Surface"
+  endparam      
+  float param m25xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Slippers Surface"
+  endparam   
+  float param m25ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Slippers Surface"
+  endparam   
+  float param m26radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "SuperShape"
+  endparam  
+  float param m26fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "SuperShape"
+  endparam  
+  float param m26xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "SuperShape"
+  endparam  
+  float param m26xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "SuperShape"
+  endparam      
+  float param m26ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "SuperShape"
+  endparam  
+  float param m26ymin
+    caption = "Min Y"
+    default = -6.28
+    visible = @function == "SuperShape"
+  endparam      
+  float param m26xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "SuperShape"
+  endparam   
+  float param m26ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "SuperShape"
+  endparam  
+  float param ssa
+    caption = "parameter a"
+    default = 1.0
+    visible = @function == "SuperShape"
+  endparam     
+  float param ssb
+    caption = "parameter b"
+    default = 1.0
+    visible = @function == "SuperShape"
+  endparam     
+  float param ssm
+    caption = "parameter m"
+    default = 7.0
+    visible = @function == "SuperShape"
+  endparam     
+  float param ssn1
+    caption = "parameter n1"
+    default = 0.2
+    visible = @function == "SuperShape"
+  endparam     
+  float param ssn2
+    caption = "parameter n2"
+    default = 1.7
+    visible = @function == "SuperShape"
+  endparam     
+  float param ssn3
+    caption = "parameter n3"
+    default = 1.7
+    visible = @function == "SuperShape"
+  endparam     
+  float param m27radius
+    caption = "Sphere radius"
+    default = 0.007
+    visible = @function == "Fano Planes"
+  endparam  
+  float param m27fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "Fano Planes"
+  endparam  
+  float param m27xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Fano Planes"
+  endparam  
+  float param m27xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Fano Planes"
+  endparam      
+  float param m27ymax
+    caption = "Max Y"
+    default = 2.0
+    visible = @function == "Fano Planes"
+  endparam  
+  float param m27ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Fano Planes"
+  endparam      
+  float param m27xstep
+    caption = "X increment"
+    default = 0.002
+    visible = @function == "Fano Planes"
+  endparam   
+  float param m27ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Fano Planes"
+  endparam  
+  float param m28radius
+    caption = "Sphere radius"
+    default = 0.007
+    visible = @function == "Twisted Fano"
+  endparam  
+  float param m28fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "Twisted Fano"
+  endparam  
+  float param m28xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Twisted Fano"
+  endparam  
+  float param m28xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Twisted Fano"
+  endparam      
+  float param m28ymax
+    caption = "Max Y"
+    default = 2.0
+    visible = @function == "Twisted Fano"
+  endparam  
+  float param m28ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Twisted Fano"
+  endparam      
+  float param m28xstep
+    caption = "X increment"
+    default = 0.002
+    visible = @function == "Twisted Fano"
+  endparam   
+  float param m28ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Twisted Fano"
+  endparam  
+  float param m29radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Cresent"
+  endparam  
+  float param m29fscale
+    caption = "Function scale"
+    default = 0.6
+    visible = @function == "Cresent"
+  endparam  
+  float param m29xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Cresent"
+  endparam  
+  float param m29xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Cresent"
+  endparam      
+  float param m29ymax
+    caption = "Max Y"
+    default = 1.0
+    visible = @function == "Cresent"
+  endparam  
+  float param m29ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Cresent"
+  endparam      
+  float param m29xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Cresent"
+  endparam   
+  float param m29ystep
+    caption = "Y increment"
+    default = 0.005
+    visible = @function == "Cresent"
+  endparam  
+  float param m30radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Twisted Triaxial"
+  endparam  
+  float param m30fscale
+    caption = "Function scale"
+    default = 1.8
+    visible = @function == "Twisted Triaxial"
+  endparam  
+  float param m30xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Twisted Triaxial"
+  endparam  
+  float param m30xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Twisted Triaxial"
+  endparam      
+  float param m30ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Twisted Triaxial"
+  endparam  
+  float param m30ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Twisted Triaxial"
+  endparam      
+  float param m30xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Twisted Triaxial"
+  endparam   
+  float param m30ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Twisted Triaxial"
+  endparam  
+  float param m31radius
+    caption = "Sphere radius"
+    default = 0.015
+    visible = @function == "Maeder's Owl"
+  endparam  
+  float param m31fscale
+    caption = "Function scale"
+    default = 1.25
+    visible = @function == "Maeder's Owl"
+  endparam  
+  float param m31xmax
+    caption = "Max X"
+    default = 12.56
+    visible = @function == "Maeder's Owl"
+  endparam  
+  float param m31xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Maeder's Owl"
+  endparam      
+  float param m31ymax
+    caption = "Max Y"
+    default = 1.0
+    visible = @function == "Maeder's Owl"
+  endparam  
+  float param m31ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Maeder's Owl"
+  endparam      
+  float param m31xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Maeder's Owl"
+  endparam   
+  float param m31ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Maeder's Owl"
+  endparam  
+  float param m32radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Stiletto Surface"
+  endparam  
+  float param m32fscale
+    caption = "Function scale"
+    default = 1.8
+    visible = @function == "Stiletto Surface"
+  endparam  
+  float param m32xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Stiletto Surface"
+  endparam  
+  float param m32xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Stiletto Surface"
+  endparam      
+  float param m32ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Stiletto Surface"
+  endparam  
+  float param m32ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Stiletto Surface"
+  endparam      
+  float param m32xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Stiletto Surface"
+  endparam   
+  float param m32ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Stiletto Surface"
+  endparam  
+  float param m33radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Verrill Surface"
+  endparam  
+  float param m33fscale
+    caption = "Function scale"
+    default = 0.5
+    visible = @function == "Verrill Surface"
+  endparam  
+  float param m33xmax
+    caption = "Max X"
+    default = 1.0
+    visible = @function == "Verrill Surface"
+  endparam  
+  float param m33xmin
+    caption = "Min X"
+    default = 0.5
+    visible = @function == "Verrill Surface"
+  endparam      
+  float param m33ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Verrill Surface"
+  endparam  
+  float param m33ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Verrill Surface"
+  endparam      
+  float param m33xstep
+    caption = "X increment"
+    default = 0.005
+    visible = @function == "Verrill Surface"
+  endparam   
+  float param m33ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Verrill Surface"
+  endparam  
+  float param m34radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Twisted Heart"
+  endparam  
+  float param m34fscale
+    caption = "Function scale"
+    default = 0.6
+    visible = @function == "Twisted Heart"
+  endparam  
+  float param m34xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Twisted Heart"
+  endparam  
+  float param m34xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Twisted Heart"
+  endparam      
+  float param m34ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Twisted Heart"
+  endparam  
+  float param m34ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Twisted Heart"
+  endparam      
+  float param m34xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Twisted Heart"
+  endparam   
+  float param m34ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Twisted Heart"
+  endparam  
+  float param m35radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param m35fscale
+    caption = "Function scale"
+    default = 0.8
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param m35xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param m35xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Figure 8 Torus"
+  endparam      
+  float param m35ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param m35ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Figure 8 Torus"
+  endparam      
+  float param m35xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Figure 8 Torus"
+  endparam   
+  float param m35ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param ftc
+    caption = "parameter c"
+    default = 1.0
+    visible = @function == "Figure 8 Torus"
+  endparam  
+  float param m36radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Triaxial Teardrop"
+  endparam  
+  float param m36fscale
+    caption = "Function scale"
+    default = 3.0
+    visible = @function == "Triaxial Teardrop"
+  endparam  
+  float param m36xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Triaxial Teardrop"
+  endparam  
+  float param m36xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Triaxial Teardrop"
+  endparam      
+  float param m36ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Triaxial Teardrop"
+  endparam  
+  float param m36ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Triaxial Teardrop"
+  endparam      
+  float param m36xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Triaxial Teardrop"
+  endparam   
+  float param m36ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Triaxial Teardrop"
+  endparam  
+  float param m37radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Lemniscape"
+  endparam  
+  float param m37fscale
+    caption = "Function scale"
+    default = 2.0
+    visible = @function == "Lemniscape"
+  endparam  
+  float param m37xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Lemniscape"
+  endparam  
+  float param m37xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Lemniscape"
+  endparam      
+  float param m37ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Lemniscape"
+  endparam  
+  float param m37ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Lemniscape"
+  endparam      
+  float param m37xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Lemniscape"
+  endparam   
+  float param m37ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Lemniscape"
+  endparam  
+  float param m38radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Tractrix"
+  endparam  
+  float param m38fscale
+    caption = "Function scale"
+    default = 1.0
+    visible = @function == "Tractrix"
+  endparam  
+  float param m38xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Tractrix"
+  endparam  
+  float param m38xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Tractrix"
+  endparam      
+  float param m38ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Tractrix"
+  endparam  
+  float param m38ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Tractrix"
+  endparam      
+  float param m38xstep
+    caption = "X increment"
+    default = 0.03
+    visible = @function == "Tractrix"
+  endparam   
+  float param m38ystep
+    caption = "Y increment"
+    default = 0.03
+    visible = @function == "Tractrix"
+  endparam  
+  float param m39radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Triaxial Tritorus"
+  endparam  
+  float param m39fscale
+    caption = "Function scale"
+    default = 0.9
+    visible = @function == "Triaxial Tritorus"
+  endparam  
+  float param m39xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Triaxial Tritorus"
+  endparam  
+  float param m39xmin
+    caption = "Min X"
+    default = -3.14
+    visible = @function == "Triaxial Tritorus"
+  endparam      
+  float param m39ymax
+    caption = "Max Y"
+    default = 3.14
+    visible = @function == "Triaxial Tritorus"
+  endparam  
+  float param m39ymin
+    caption = "Min Y"
+    default = -3.14
+    visible = @function == "Triaxial Tritorus"
+  endparam      
+  float param m39xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Triaxial Tritorus"
+  endparam   
+  float param m39ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Triaxial Tritorus"
+  endparam  
+  float param m40radius
+    caption = "Sphere radius"
+    default = 0.03
+    visible = @function == "Saddle Torus"
+  endparam  
+  float param m40fscale
+    caption = "Function scale"
+    default = 0.5
+    visible = @function == "Saddle Torus"
+  endparam  
+  float param m40xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Saddle Torus"
+  endparam  
+  float param m40xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Saddle Torus"
+  endparam      
+  float param m40ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Saddle Torus"
+  endparam  
+  float param m40ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Saddle Torus"
+  endparam      
+  float param m40xstep
+    caption = "X increment"
+    default = 0.1
+    visible = @function == "Saddle Torus"
+  endparam   
+  float param m40ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Saddle Torus"
+  endparam  
+  float param m41radius
+    caption = "Sphere radius"
+    default = 0.025
+    visible = @function == "Limpet Torus"
+  endparam  
+  float param m41fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Limpet Torus"
+  endparam  
+  float param m41xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Limpet Torus"
+  endparam  
+  float param m41xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Limpet Torus"
+  endparam      
+  float param m41ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Limpet Torus"
+  endparam  
+  float param m41ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Limpet Torus"
+  endparam      
+  float param m41xstep
+    caption = "X increment"
+    default = 0.03
+    visible = @function == "Limpet Torus"
+  endparam   
+  float param m41ystep
+    caption = "Y increment"
+    default = 0.03
+    visible = @function == "Limpet Torus"
+  endparam  
+  float param m42radius
+    caption = "Sphere radius"
+    default = 0.025
+    visible = @function == "Bow Tie"
+  endparam  
+  float param m42fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Bow Tie"
+  endparam  
+  float param m42xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Bow Tie"
+  endparam  
+  float param m42xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Bow Tie"
+  endparam      
+  float param m42ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Bow Tie"
+  endparam  
+  float param m42ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Bow Tie"
+  endparam      
+  float param m42xstep
+    caption = "X increment"
+    default = 0.03
+    visible = @function == "Bow Tie"
+  endparam   
+  float param m42ystep
+    caption = "Y increment"
+    default = 0.03
+    visible = @function == "Bow Tie"
+  endparam  
+  float param m43radius
+    caption = "Sphere radius"
+    default = 0.015
+    visible = @function == "Cross Cap"
+  endparam  
+  float param m43fscale
+    caption = "Function scale"
+    default = 1.5
+    visible = @function == "Cross Cap"
+  endparam  
+  float param m43xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Cross Cap"
+  endparam  
+  float param m43xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Cross Cap"
+  endparam      
+  float param m43ymax
+    caption = "Max Y"
+    default = 1.571
+    visible = @function == "Cross Cap"
+  endparam  
+  float param m43ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Cross Cap"
+  endparam      
+  float param m43xstep
+    caption = "X increment"
+    default = 0.03
+    visible = @function == "Cross Cap"
+  endparam   
+  float param m43ystep
+    caption = "Y increment"
+    default = 0.03
+    visible = @function == "Cross Cap"
+  endparam  
+  float param m44radius
+    caption = "Sphere radius"
+    default = 0.01
+    visible = @function == "Whitney Umbrella"
+  endparam  
+  float param m44fscale
+    caption = "Function scale"
+    default = 2.5
+    visible = @function == "Whitney Umbrella"
+  endparam  
+  float param m44xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Whitney Umbrella"
+  endparam  
+  float param m44xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Whitney Umbrella"
+  endparam      
+  float param m44ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Whitney Umbrella"
+  endparam  
+  float param m44ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Whitney Umbrella"
+  endparam      
+  float param m44xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Whitney Umbrella"
+  endparam   
+  float param m44ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Whitney Umbrella"
+  endparam  
+  float param m45radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Triaxial Hexatorus"
+  endparam  
+  float param m45fscale
+    caption = "Function scale"
+    default = 0.75
+    visible = @function == "Triaxial Hexatorus"
+  endparam  
+  float param m45xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Triaxial Hexatorus"
+  endparam  
+  float param m45xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Triaxial Hexatorus"
+  endparam      
+  float param m45ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Triaxial Hexatorus"
+  endparam  
+  float param m45ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Triaxial Hexatorus"
+  endparam      
+  float param m45xstep
+    caption = "X increment"
+    default = 0.05
+    visible = @function == "Triaxial Hexatorus"
+  endparam   
+  float param m45ystep
+    caption = "Y increment"
+    default = 0.05
+    visible = @function == "Triaxial Hexatorus"
+  endparam  
+  float param m46radius
+    caption = "Sphere radius"
+    default = 0.005
+    visible = @function == "Fish Surface"
+  endparam  
+  float param m46fscale
+    caption = "Function scale"
+    default = 2.5
+    visible = @function == "Fish Surface"
+  endparam  
+  float param m46xmax
+    caption = "Max X"
+    default = 3.14
+    visible = @function == "Fish Surface"
+  endparam  
+  float param m46xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Fish Surface"
+  endparam      
+  float param m46ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Fish Surface"
+  endparam  
+  float param m46ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Fish Surface"
+  endparam      
+  float param m46xstep
+    caption = "X increment"
+    default = 0.03
+    visible = @function == "Fish Surface"
+  endparam   
+  float param m46ystep
+    caption = "Y increment"
+    default = 0.01
+    visible = @function == "Fish Surface"
+  endparam  
+  float param m47radius
+    caption = "Sphere radius"
+    default = 0.02
+    visible = @function == "Twisted Pipe"
+  endparam  
+  float param m47fscale
+    caption = "Function scale"
+    default = 0.6
+    visible = @function == "Twisted Pipe"
+  endparam  
+  float param m47xmax
+    caption = "Max X"
+    default = 6.28
+    visible = @function == "Twisted Pipe"
+  endparam  
+  float param m47xmin
+    caption = "Min X"
+    default = 0.0
+    visible = @function == "Twisted Pipe"
+  endparam      
+  float param m47ymax
+    caption = "Max Y"
+    default = 6.28
+    visible = @function == "Twisted Pipe"
+  endparam  
+  float param m47ymin
+    caption = "Min Y"
+    default = 0.0
+    visible = @function == "Twisted Pipe"
+  endparam      
+  float param m47xstep
+    caption = "X increment"
+    default = 0.02
+    visible = @function == "Twisted Pipe"
+  endparam   
+  float param m47ystep
+    caption = "Y increment"
+    default = 0.02
+    visible = @function == "Twisted Pipe"
+  endparam  
+  heading
+    caption = "Rotations & Translations"
+  endheading  
+  heading
+    caption = "Z Rotation is on the"
+  endheading
+  heading
+    caption = "Location Tab."
+  endheading  
+  param xangle
+    caption = "X Axis Rotation"
+    default = -20.0
+    hint = "This is the fixed (horizontal) X Axis. It is performed \
+            after the normal fractal rotation(s) and zooms." 
+  endparam   
+  param zangle
+    caption = "Y Axis Rotation"
+    default = 30.0
+    hint = "This is the fixed (vertical) Y Axis. It is performed \
+            after the normal fractal rotation(s) and zooms." 
+  endparam   
+  param rotoffx
+    caption = "Rotation Center X Offset"
+    default = 0.0
+  endparam  
+  param rotoffy
+    caption = "Rotation Center Y Offset"
+    default = 0.0
+  endparam  
+  param rotoffz
+    caption = "Rotation Center Z Offset"
+    default = 0.0
+  endparam  
+  param transx
+    caption = "X Final Translation"
+    default = 0.0
+  endparam    
+  param transy
+    caption = "Y Final Translation"
+    default = 0.0
+  endparam    
+  param transz
+    caption = "Z Final Translation"
+    default = 0.0
+  endparam
+  heading
+    caption = "Perspective"
+  endheading      
+  param useproj
+    caption = "Use Perspective"
+    default = false
+    visible=@ray==false
+  endparam  
+  param useprojr
+    caption = "Use Perspective"
+    default = false
+    visible=@ray==true
+  endparam  
+  param cprojx
+    caption = "X Center of Projection"
+    default = 0.0
+    visible=@useproj==true||(@ray==true&&@useprojr==true)
+  endparam    
+  param cprojy
+    caption = "Y Center of Projection"
+    default = 0.0
+    visible=@useproj==true||(@ray==true&&@useprojr==true)
+  endparam    
+  param cprojz
+    caption = "Z Center of Projection"
+    default = -10
+    visible=@useproj==true&&@ray==false
+  endparam    
+  param cprojzr
+    caption = "Z Center of Projection"
+    default = -1000
+    visible=@ray==true&&@useprojr==true
+  endparam    
+}
+
+RiemannSphere { ;Ron Barnett, February 16, 2006
+
+transform:
+  complex p = 0
+  if (|#pixel| <= @rad^2)
+    p = (#pixel)/(@rad/@zoom + sqrt(@rad^2 -|#pixel|))
+  else
+    #solid = true
+  endif
+  p = p*4/#magn/@zoom/@scale
+  #pixel = p
+default:
+  title = "Riemann Sphere"
+$ifdef VER40
+  heading
+    text = "This is a view of the Riemann Sphere from the South Pole. The \
+            North Pole is the point at infinity in the complex plane."
+  endheading
+$endif
+  param rad
+    caption = "Sphere radius"
+    default = 1.0
+  endparam
+  param scale
+    caption = "Scale fractal"
+    default = 1.0
+  endparam
+  param zoom
+    caption = "Zoom"
+    default = 1.0
+  endparam
+}
+
+HyperbolicMapping { ;Ron Barnett, February 16, 2006
+
+transform:
+  complex p = 0
+  if (|#pixel| <= @rad^2)
+    if @view == "Bottom"
+      p = (#pixel)/(sqrt(@rad^2 -|#pixel|))
+    else
+      p = (#pixel)/(sqrt(@rad^2 +|#pixel|))
+    endif
+  else
+    #solid = true
+  endif
+  p = p*4/#magn/@scale
+  #pixel = p
+default:
+  title = "Hyperbolic mapping"
+  param view
+    caption = "view"
+    enum = "Bottom" "Top"
+    default = 0
+  endparam
+  param rad
+    caption = "Radius"
+    default = 1.0
+  endparam
+  param scale
+    caption = "Scale fractal"
+    default = 1.0
+  endparam
+}
+
+ Klein_tri_lattice {; Ron Barnett, April 1, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float ang=#pi/3
+  float r=0.5
+  float rr=r*r
+  complex t1=sin(ang)
+  complex t2=tan(ang)
+  complex t3=exp(flip(ang))
+transform:
+  int i = 0
+  complex z = #pixel*@scale
+  complex m = round(imag(z)/t1)
+  complex n = round(real(z)-imag(z)/t2)
+  complex c0=n+m*t3
+  complex c1=n+(m-1)*t3
+  complex c2=n+(m+1)*t3
+  complex c3=(n-1)+m*t3
+  complex c4=(n+1)+m*t3
+  while i < @iter
+    if(|z-c0|<rr)
+         z=r*conj(r/(z-c0))+c0
+    elseif(|z-c1|<rr)
+         z=r*conj(r/(z-c1))+c1
+    elseif(|z-c2|<rr)
+         z=r*conj(r/(z-c2))+c2
+    elseif(|z-c3|<rr)
+         z=r*conj(r/(z-c3))+c3
+    elseif(|z-c4|<rr)
+         z=r*conj(r/(z-c4))+c4
+    endif
+    i = i + 1
+  endwhile
+  #pixel = z*@scale
+
+default:
+ title = "Klein_tri_lattice"
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1
+ endparam
+}
+
+ Inv4Klein {; Ron Barnett, March 26, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float ang = 2*#pi/3
+  complex c1 = 1
+  complex c2 = exp((0,1)*ang)
+  complex c3 = exp((0,2)*ang)
+  float rr123 = sqr(@r123)
+  float rr4 = sqr(@r4)
+transform:
+  int i = 0
+  complex k = #pixel*@scale
+  while i < @iter
+    IF (|k-c1| < rr123)
+      k = @r123*conj(@r123/(k-c1)) + c1
+    ELSEIF (|k-c2| < rr123)
+      k = @r123*conj(@r123/(k-c2)) + c2
+    ELSEIF (|k-c3| < rr123)
+      k = @r123*conj(@r123/(k-c3)) + c3
+    ELSEIF (|k-@cen| > rr4)
+      k = @r4*conj(@r4/(k-@cen)) + @cen
+   ENDIF
+    i = i + 1
+  endwhile
+  #pixel = k*@scale
+
+default:
+ title = "Inv4Klein"
+ float param r123
+   caption = "Radius for Circles 1-3"
+   default = 0.866025
+ endparam
+ float param r4
+   caption = "Radius for Circle 4"
+   default = 1.118033
+ endparam
+ complex param cen
+   caption = "Circle 4 Center"
+   default = (0.0,0.0)
+ endparam
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1
+ endparam}
+
+AppolonianGasket_II {; Ron Barnett March 27, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float ax=real(@cir1)
+  float ay=imag(@cir1)
+  float ar=@rr1
+  float bx=real(@cir2)
+  float by=imag(@cir2)
+  float br=@rr2
+  float cx=real(@cir3)
+  float cy=imag(@cir3)
+  float cr=@rr3
+
+  float h=sqr(ax)+ay^2-ar^2
+  float a=2*(ar-br)
+  float b=2*(ax-bx)
+  float c=2*(ay-by)
+  float d=h-(bx^2+by^2-br^2)
+  float ee=2*(ar-cr)
+  float f=2*(ax-cx)
+  float g=2*(ay-cy)
+  float h=h-(cx^2+cy^2-cr^2)
+
+  float l=(b*g-c*f)
+  float i=(d*g-c*h)/l
+  float j=(a*g-c*ee)/l
+  float k=(b*h-d*f)/l
+  float l=(b*ee-a*f)/l
+
+  float m=2*(1-2*l^2)
+  float n=2*(cr+(i-cx)*j+(k-cy)*l)
+  float o=2*(cr^2-(i-cx)^2-(k-cy)^2)
+
+  float r=sqrt(sqr(n)-m*o)
+  float r1=(-n-r)/m
+  float r2=(-n+r)/m
+
+  if r1>0
+    r=r1
+  else
+    r=r2
+  endif
+
+  float x=i-j*r
+  float y=k-l*r
+
+  complex ap=real(ax)+flip(ay)
+  complex bp=real(bx)+flip(by)
+  complex cp=real(cx)+flip(cy)
+  complex p=real(x)+flip(y)
+
+  float arr=ar^2
+  float brr=br^2
+  float crr=cr^2
+  float rr=r^2
+
+transform:
+
+  complex zz=#pixel*@scale
+  int ii = 0
+  while ii < @iter
+    if(|zz-ap|<arr)
+         zz=ar*conj(ar/(zz-ap))+ap
+    elseif(|zz-bp|<brr)
+         zz=br*conj(br/(zz-bp))+bp
+    elseif(|zz-cp|<crr)
+         zz=cr*conj(cr/(zz-cp))+cp
+    elseif(|zz-p|<rr)
+         zz=r*conj(r/(zz-p))+p
+    endif
+    ii = ii + 1
+  endwhile
+  #pixel=zz*@scale
+
+default:
+  title = "Appolonian Gasket II"
+ param cir1
+   caption="Circle 1 Coord"
+   default = (-0.866025,-0.5)
+ endparam
+ param rr1
+   caption="Circle 1 Radius"
+   default=0.866025
+ endparam
+ param cir2
+   caption="Circle 2 Coord"
+   default = (0.866025,-0.5)
+ endparam
+ param rr2
+   caption="Circle 2 Radius"
+   default=0.866025
+ endparam
+ param cir3
+   caption="Circle 3 Coord"
+   default = (0.0,1.0)
+ endparam
+ param rr3
+   caption="Circle 3 Radius"
+   default=0.866025
+ endparam
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1.0
+ endparam
+}
+
+ 7Klein_Group {; Ron Barnett, April 1, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float ang=#pi/3
+  complex c1=0
+  complex c2=1
+  complex c3=exp((0,1)*ang)
+  complex c4=exp((0,2)*ang)
+  complex c5=exp((0,3)*ang)
+  complex c6=exp((0,4)*ang)
+  complex c7=exp((0,5)*ang)
+  float r=1/2
+  float rr=r*r
+transform:
+  int i = 0
+  complex z=#pixel*@scale
+  while i < @iter
+    if(|z-c1|<rr)
+         z=r*conj(r/(z-c1))+c1
+    elseif(|z-c2|<rr)
+         z=r*conj(r/(z-c2))+c2
+    elseif(|z-c3|<rr)
+         z=r*conj(r/(z-c3))+c3
+    elseif(|z-c4|<rr)
+         z=r*conj(r/(z-c4))+c4
+    elseif(|z-c5|<rr)
+         z=r*conj(r/(z-c5))+c5
+    elseif(|z-c6|<rr)
+         z=r*conj(r/(z-c6))+c6
+    elseif(|z-c7|<rr)
+         z=r*conj(r/(z-c7))+c7
+endif
+    i = i + 1
+  endwhile
+  #pixel = z*@scale
+
+default:
+ title = "7Klein_Group"
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1.0
+ endparam
+}
+
+ Klein_squ_lattice {; Ron Barnett, April 1, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float r=1/2
+  float rr=r*r
+transform:
+  int i = 0
+  complex k = #pixel*@scale
+  complex c = round(k)
+  while i < @iter
+    if(|k-c|<rr)
+         k=r*conj(r/(k-c))+c
+    endif
+    i = i + 1
+  endwhile
+  #pixel = k*@scale
+
+default:
+ title = "Klein_squ_lattice"
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1.0
+ endparam
+}
+
+ Inv4Klein_Mod {; Ron Barnett, March 26, 2005
+ ; Modified from Morgan Owens' frm
+
+global:
+  float ang = 2*#pi/3
+  complex c1 = 1
+  complex c2 = exp((0,1)*ang)
+  complex c3 = exp((0,2)*ang)
+  float rr123 = sqr(@r123)
+  float rr4 = sqr(@r4)
+transform:
+  int i = 0
+  float max = 0
+  complex k = #pixel*@scale
+  while i < @iter
+    IF (|k-c1| < rr123)
+      k = @r123*conj(@r123/(k-c1)) + c1
+    ELSEIF (|k-c2| < rr123)
+      k = @r123*conj(@r123/(k-c2)) + c2
+    ELSEIF (|k-c3| < rr123)
+      k = @r123*conj(@r123/(k-c3)) + c3
+    ELSEIF (|k-@cen| > rr4)
+      k = @r4*conj(@r4/(k-@cen)) + @cen
+   ENDIF
+    i = i + 1
+    if cabs(k) > max
+      max = cabs(k)
+    endif
+  endwhile
+  if cabs(k)/max <= @upper && cabs(k)/max >= @lower
+    #pixel = k*@scale
+  endif
+
+default:
+ title = "Inv4Klein Mod"
+ float param r123
+   caption = "Radius for Circles 1-3"
+   default = 0.866025
+ endparam
+ float param r4
+   caption = "Radius for Circle 4"
+   default = 1.118033
+ endparam
+ complex param cen
+   caption = "Circle 4 Center"
+   default = (0.0,0.0)
+ endparam
+ int param iter
+   caption = "# Iterations"
+   default = 10
+ endparam
+ float param upper
+   caption = "Upper limit"
+   default = 1.0
+ endparam
+float param lower
+   caption = "Lower limit"
+   default = 0.0
+ endparam
+ float param scale
+   caption = "Scale"
+   default = 1.0
+ endparam
+}
+
+push { ; Ron Barnett January 2007
+; transform to "push" an image around
+transform:
+  complex center = @center
+  complex i = (0,1)
+  complex ang = i^((@angle+90)/90)
+  float x = 0
+  float y = 0
+  float d = 0
+  float shaper = 0
+  complex p = 0
+  if @zoom
+    p = (#pixel-center)*ang*#magn
+  else
+    p = (#pixel-center)*ang*@manzoom
+  endif
+  x = real(p)
+  y = imag(p)
+  d =  x^2+@shape*y^2-@psh*y
+  shaper = (1+d)/@scale
+  if shaper <= 1
+    #pixel = (#pixel-center)*shaper + center
+  endif
+
+default:
+  title = "Push"
+  heading
+    caption = "Push"
+  endheading
+  float param version
+    caption = "Version number"
+    default = 1.0
+    hint = "This is for backwards compatibility with old versions \
+           of the formula."
+    visible = false
+  endparam
+  bool param zoom
+    caption = "Scale to zoom"
+    default = false
+  endparam
+  float param manzoom
+    caption = "Fixed zoom"
+    default = 1.0
+    visible = !@zoom
+  endparam
+  complex param center
+    caption = "Touch point"
+    default = (0,0)
+  endparam
+  float param scale
+    caption = "Extent"
+    default = 1
+  endparam
+  float param psh
+    caption = "Push stength"
+    default = 1.0
+;    min = 0
+;    max = 1.3
+  endparam
+  float param shape
+    caption = "Shape"
+    default = 0.5
+;    min = 0.2
+;    max = 0.8
+  endparam
+  float param angle
+    caption = "Direction"
+    default = 0
+  endparam
+}
+
+camera { ; Ron Barnett March 2013
+; Creates a depth field from the camera position
+transform:
+  complex center = @center
+  float d = 0
+  complex p = 0
+  complex pp = 0
+  p = (#pixel-center)
+  d = cabs(p)
+  pp = #pixel+p*d*@scale
+  #pixel = pp
+
+default:
+  title = "Camera"
+  heading
+    Text = "Creates a depth field centered on the camera position"
+  endheading
+  float param version
+    caption = "Version number"
+    default = 1.0
+    hint = "This is for backwards compatibility with old versions \
+           of the formula."
+    visible = false
+  endparam
+  complex param center
+    caption = "Camera Position"
+    default = (0,0)
+  endparam
+  float param scale
+    caption = "Field Depth"
+    default = 1
+  endparam
+}
+
+FractalClippings {; April 2007, Ron Barnett
+;
+; Produces a clipping region from a variety of fractal formulas
+;
+transform:
+  int iteration=0
+  complex c=0
+  complex z=0
+  complex oldz=0
+  complex rot = cos(@rot*#pi/180) - flip(sin(@rot*#pi/180))
+  complex loc = 0
+  float scale = 0
+  if @smagn
+    scale = @scale/#magn
+  else
+    scale = @scale
+  endif
+  if @scrcenter
+    loc = #center
+  else
+    loc = @loc
+  endif
+;
+  if @formula_type == "Ikenaga"
+    c = (#pixel-loc)/scale*rot
+    z = ((1-c)/3)^0.5
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      z = z*z*z + (c-1)*z - c
+    endwhile
+  elseif @formula_type == "Ikenaga Julia"
+    c = @seedi
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      z = z*z*z + (c-1)*z - c
+    endwhile
+  elseif @formula_type == "Mandelbrot"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      z =  z^@power + c
+    endwhile
+  elseif @formula_type == "Mandel Julia"
+    c = @seed
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      z =  z^@power + c
+    endwhile
+  elseif @formula_type == "Spider"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      z=z*z+c
+      c=c/2+z
+    endwhile
+  elseif @formula_type == "Spider Julia"
+    c = @seeds
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      z=z*z+c
+      c=c/2+z
+    endwhile
+  elseif @formula_type == "Magnet 1"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout && |z - 1| > @bailout2
+      iteration = iteration + 1
+      z = ( (z^2 + c-1) / (2*z + c-2) ) ^2
+    endwhile
+  elseif @formula_type == "Magnet 1 Julia"
+    c = @seedm1
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout && |z - oldz| > @bailout2
+      iteration = iteration + 1
+      oldz = z
+      z = ( (z^2 + c-1) / (2*z + c-2) ) ^2
+    endwhile
+  elseif @formula_type == "Magnet 2"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout && |z - 1| > @bailout2
+      iteration = iteration + 1
+      z = ((z^3 + 3*(c-1)*z + (c-1)*(c-2))/ \
+          (3*z^2 + 3*(c-2)*z + (c-1)*(c-2) + 1))^2
+    endwhile
+  elseif @formula_type == "Magnet 2 Julia"
+    c = @seedm2
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout && |z - oldz| > @bailout2
+      iteration = iteration + 1
+      oldz = z
+      z = ((z^3 + 3*(c-1)*z + (c-1)*(c-2))/ \
+          (3*z^2 + 3*(c-2)*z + (c-1)*(c-2) + 1))^2
+    endwhile
+  elseif @formula_type == "Mandel Lambda"
+    c = (#pixel-loc)/scale*rot
+    z = (1/@power)^(1/(@power-1))
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      z = c*z*(1 - z^(@power-1))
+    endwhile
+  elseif @formula_type == "Lambda"
+    c = @seedl
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      z = c*z*(1 - z^(@power-1))
+    endwhile
+  elseif @formula_type == "Frame-Robert"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      z = z*z*z/5 + z*z + c
+    endwhile
+  elseif @formula_type == "Frame-Robert Julia"
+    c = @seedf
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      z = z*z*z/5 + z*z + c
+    endwhile
+  elseif @formula_type == "Mandel Gopalsamy"
+    c = (#pixel-loc)/scale*rot
+    z = 0
+    while iteration<@number_iterations && |z| < @bailout
+      iteration = iteration + 1
+      x = real(z)
+      y = imag(z)*@a
+      z = x + flip(y)
+      z = -(0,1)*conj(z)^@power + c
+    endwhile
+  elseif @formula_type == "Gopalsamy"
+    c = @seedg1
+    z = (#pixel-loc)/scale*rot
+    while iteration<@number_iterations  && |z| < @bailout
+      iteration = iteration + 1
+      x = real(z)
+      y = imag(z)*@a
+      z = x + flip(y)
+      z = -(0,1)*conj(z)^@power + c
+    endwhile
+  endif
+  if(@which_point=="inside") ; inside points
+    if |z| < @bailout
+      #solid=true
+    endif
+  else ; outside points
+    if |z| >= @bailout
+      #solid=true
+    endif
+  endif
+default:
+  title="Fractal Clippings"
+  param version
+    caption = "Version number"
+    default = 1.0
+    visible = false
+  endparam
+  param formula_type
+    caption="formula type"
+    default = 10
+    enum= "Frame-Robert" "Frame-Robert Julia" "Gopalsamy" "Ikenaga" \
+          "Ikenaga Julia" "Lambda" "Magnet 1" "Magnet 1 Julia" "Magnet 2" \
+          "Magnet 2 Julia" "Mandelbrot" "Mandel Gopalsamy" "Mandel Julia" \
+          "Mandel Lambda" "Spider" "Spider Julia"
+  endparam
+  complex param power
+    caption = "Power"
+    default = (2,0)
+    visible = @formula_type ==  "Mandelbrot" || @formula_type ==  "Mandel Julia" \
+              || @formula_type ==  "Mandel Lambda" || @formula_type ==  "Lambda" \
+              || @formula_type ==  "Mandel Gopalsamy" || @formula_type ==  "Gopalsamy"
+  endparam
+  complex param seed
+    caption = "Julia seed"
+    default = (-0.75,0.05)
+    visible = @formula_type == "Mandel Julia"
+  endparam
+  complex param seedi
+    caption = "Julia seed"
+    default = (0.003,0.217)
+    visible = @formula_type == "Ikenaga Julia"
+  endparam
+  complex param seeds
+    caption = "Julia seed"
+    default = (-0.5,0.4)
+    visible = @formula_type == "Spider Julia"
+  endparam
+  complex param seedm1
+    caption = "Julia seed"
+    default = (-0.4,0.4)
+    visible = @formula_type == "Magnet 1 Julia"
+  endparam
+  complex param seedm2
+    caption = "Julia seed"
+    default = (1.3,1)
+    visible = @formula_type == "Magnet 2 Julia"
+  endparam
+  complex param seedl
+    caption = "Julia seed"
+    default = (-0.237,0.995)
+    visible = @formula_type == "Lambda"
+  endparam
+  complex param seedf
+    caption = "Julia seed"
+    default = (-0.68,0.57)
+    visible = @formula_type == "Frame-Robert Julia"
+  endparam
+  float param a
+    caption = "Gopalsamy param"
+    default = 1.0
+    visible = @formula_type == "Gopalsamy" || @formula_type == "Mandel Gopalsamy"
+  endparam
+  complex param seedg1
+    caption = "Julia seed"
+    default = (0.511,0.25)
+    visible = @formula_type == "Gopalsamy"
+  endparam
+  int param number_iterations
+    caption="number of iterations"
+    default=100
+    min=0
+  endparam
+  int param bailout
+    caption = "Bailout"
+    default = 100
+  endparam
+  float param bailout2
+    caption = "Convergent Bailout"
+    default = 0.00001
+    visible = @formula_type == "Magnet 1" || @formula_type == "Magnet 1 Julia" \
+              || @formula_type == "Magnet 2" || @formula_type == "Magnet 2 Julia"
+  endparam
+  bool param smagn
+    caption = "Scale to magnification"
+    default = false
+  endparam
+  bool param scrcenter
+    caption = "Use screen center"
+    default = false
+  endparam
+  complex param loc
+    caption = "Location"
+    default = (0,0)
+    visible = !@scrcenter
+  endparam
+  param which_point
+    caption="which points"
+    default=0
+    enum="inside" "outside"
+  endparam
+  float param scale
+    caption="scale"
+    default=1.0
+  endparam
+  float param rot
+    caption="rotation"
+    default=0.0
+  endparam
+}
+

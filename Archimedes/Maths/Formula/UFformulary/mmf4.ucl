@@ -1,0 +1,348 @@
+comment {
+
+MMF4 formulae V2.0 (10th November 2007)
+
+These formulas are written for UF4 and later.
+
+(10th November 2007)
+Added the 3D Lighting direct formula.
+
+© David Makin (Makin' Magic Fractals)
+
+http://website.lineone.net/~dave_makin/
+http://makinmagic.deviantart.com/
+http://www.renderosity.com/mod/gallery/browse.php?username=MakinMagic
+
+Please send any comments/suggestions about
+these formulae to:
+makinmagic@tiscali.co.uk
+}
+
+MMF4b-LightingDirect {
+global:
+  float bias = 1.0 - @bias
+  float third = 1.0/3.0
+$ifdef VER50
+  import "common.ulb"
+  import "Standard.ulb"
+  Coloring colouring = new @colouring(0)
+$endif
+init:
+  float c = 0.0
+  float lr = 0.0
+  float lg = 0.0
+  float lb = 0.0
+  float sr = 0.0
+  float sg = 0.0
+  float sb = 0.0
+  float op = 1.0
+  int i = 0
+  color clr = rgba(0,0,0,1)
+  color fog = rgba(0,0,0,1)
+  color lights = rgba(0,0,0,0)
+  color bkgclr = rgba(0,0,0,0)
+  color temp = RGBA(0,0,0,0)
+  bool islights = true
+  bool isfog = true
+  bool isbkg = true
+  bool bkg = false
+loop:
+  if @lights && @bkg && i==0 && islights
+    if imag(#z)>=0.0
+      lr = floor(real(#z)/262144)
+      lg = floor((real(#z)-262144*lr)/512)
+      lb = real(#z)-262144*lr-512*lg
+      lights = RGBA(lr/256,lg/256,lb/256,1.0)
+    endif
+    islights = false
+  elseif @fog && i==0 && isfog
+    isfog = false
+    lr = floor(real(#z)/262144)
+    lg = floor((real(#z)-262144*lr)/512)
+    lb = real(#z)-262144*lr-512*lg
+    fog = RGBA(lr/256,lg/256,lb/256,imag(#z))
+  elseif @bkg && i==0 && isbkg
+    isbkg = false
+    if imag(#z)>0.0
+      bkg = true
+      lr = floor(real(#z)/262144)
+      lg = floor((real(#z)-262144*lr)/512)
+      lb = real(#z)-262144*lr-512*lg
+      bkgclr = RGBA(lr/256,lg/256,lb/256,1.0)
+      if @version>0
+        op = imag(#z)
+      endif
+    endif
+$ifdef VER50
+  elseif @ufcolour && i>=4
+    if i==4
+      colouring.Init(#z,#pixel)
+    else
+      colouring.Iterate(#z)
+    endif
+    i = i + 1
+$endif
+  elseif @method==0
+    if i==0
+      lr = real(#z)
+      sr = imag(#z)
+      i = i + 1
+    elseif i==1
+      c = real(#z)
+      i = i + 3
+    endif
+  elseif @method==1
+    if i==0
+      lr = real(#z)
+      sr = imag(#z)
+      i = i + 1
+    elseif i==1
+      lg = real(#z)
+      sg = imag(#z)
+      i = i + 1
+    elseif i==2
+      lb = real(#z)
+      sb = imag(#z)
+      i = i + 1
+    elseif i==3
+      c = real(#z)
+      i = i + 1
+    endif
+  endif
+final:
+  if bkg
+    clr = bkgclr
+$ifdef VER50
+  elseif @ufcolour
+    clr = colouring.Result(#z)
+    if !@colouronly
+      if @method==0
+        temp = clr*(@diff*lr+@spec*sr*bias) \
+              + rgb(1.0,1.0,1.0)*@spec*sr*@bias
+        clr = rgba(red(temp),green(temp),blue(temp),alpha(clr))
+      elseif @method==1
+        lr = red(clr)*(@diff*lr+@spec*sr*bias) + @spec*sr*@bias
+        lg = green(clr)*(@diff*lg+@spec*sg*bias) + @spec*sg*@bias
+        lb = blue(clr)*(@diff*lb+@spec*sb*bias) + @spec*sb*@bias
+        clr = rgba(lr,lg,lb,alpha(clr))
+      endif
+    endif
+$endif
+  else
+    if @fnc==0
+      c = @col*c
+    elseif @fnc==1
+      c = @col*c*c
+    elseif @fnc==2
+      c = @col*sqrt(c)
+    elseif @fnc==3
+      c = @col*c*c*c
+    elseif @fnc==4
+      c = @col*c^third
+    elseif @fnc==5
+      c = @col*exp(c)
+    elseif @fnc==6
+      c = @col*log(1.0+c)
+    elseif @fnc==7
+      c = @col*log(1.0+log(1.0+c))
+    elseif @fnc==8
+      c = @col*sin(c)
+    endif
+    if @colouronly
+      clr = gradient(c)
+      clr = rgba(red(clr),green(clr),blue(clr),alpha(gradient(c)))
+    elseif @method==0
+      clr = gradient(c)*(@diff*lr+@spec*sr*bias) \
+            + rgb(1.0,1.0,1.0)*@spec*sr*@bias
+      clr = rgba(red(clr),green(clr),blue(clr),alpha(gradient(c)))
+    elseif @method==1
+      lr = red(gradient(c))*(@diff*lr+@spec*sr*bias) + @spec*sr*@bias
+      lg = green(gradient(c))*(@diff*lg+@spec*sg*bias) + @spec*sg*@bias
+      lb = blue(gradient(c))*(@diff*lb+@spec*sb*bias) + @spec*sb*@bias
+      clr = rgba(lr,lg,lb,alpha(gradient(c)))
+    endif
+  endif
+  if @fog
+    clr = blend(clr,fog,alpha(fog))
+    if @lights
+      clr = RGBA(red(clr)+red(lights), \
+                 green(clr)+green(lights), \
+                 blue(clr)+blue(lights), alpha(clr))
+    endif
+    if bkg
+      #color = RGBA(red(clr),green(clr),blue(clr),op)
+    else
+      #color = RGBA(red(clr),green(clr),blue(clr),alpha(gradient(c)))
+    endif
+  elseif @lights
+    clr = RGBA(red(clr)+red(lights), \
+               green(clr)+green(lights), \
+               blue(clr)+blue(lights), alpha(clr))
+    if bkg
+      #color = RGBA(red(clr),green(clr),blue(clr),op)
+    else
+      #color = RGBA(red(clr),green(clr),blue(clr),alpha(gradient(c)))
+    endif
+  else
+    #color = RGBA(red(clr),green(clr),blue(clr),op)
+  endif
+default:
+  title = "3D colouring direct"
+  param version
+    caption = "Formula Version"
+    enum = "1" "2"
+    default = 1
+    hint = "The version is to ensure future backwards compatability. If an \
+            older parameter file is broken try reducing the 'Formula Version'."
+    visible = true
+  endparam
+  heading
+    caption = "Information"
+    text = "This colouring is specifically designed for use with the \
+            '3D IFS' main formula in mmf4.ufm when using the mixed lighting \
+            and colouring modes. It may be of some use with one or two other \
+            specialist formulas but not generally with 'normal' escape time \
+            formulas."
+  endheading
+  param colouronly
+    caption = "Colour only"
+    default = false
+  endparam
+  param method
+    caption = "Lighting Version"
+    enum = "Normal" "Advanced"
+    default = 0
+    hint = "Should be set to the same as the equivalent parameter in mmf4.ufm \
+            3D IFS. 'Normal' is when the light is plain white/grey light only. \
+            In 'Advanced' mode you can use coloured lights. When using \
+            'Normal' you should set 'Maximum Iterations' to 2, when using \
+            'Advanced' you should set 'Maximum Iterations' to 4."
+  endparam
+  param bkg
+    caption = "Background colour ?"
+    default = false
+    hint = "Enable if the main formula has 'Specify background colour' \
+            enabled."
+  endparam
+  param lights
+    caption = "Visible lights ?"
+    default = false
+    hint = "Enable if the main formula has 'Specify background colour' \
+            enabled *and* if using lights other than just the camera."
+    visible = @bkg
+  endparam
+  param fog
+    caption = "Fogging ?"
+    default = false
+    hint = "Enable if the main formula has the fogging option enabled."
+  endparam
+  param bias
+    caption = "Specular bias"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "This allows you to control the nature of the specular reflection. \
+            Using a bias of 0.0 means that the specular light is fully \
+            affected by the object colour. Using a bias of 1.0 means the \
+            specular light is reflected in its natural colour without being \
+            affected by the object colour."
+  endparam
+  param col
+    caption = "Colour Density"
+    default = 1.0
+    min = 0.0
+    hint = "The rate of travel through the palette for the object colour."
+  endparam
+  param fnc
+    caption = "Transfer Function"
+    enum = "linear" "sqr" "sqrt" "cube" "cubert" "exp" "log" "log(log)" "sin"
+    default = 0
+    hint = "The function applied to the object colour index before scaling."
+  endparam
+  param diff
+    caption = "Diffuse scale"
+    default = 1.0
+    min = 0.0
+    hint = "A modifier allowing you to scale the ambient/diffuse amount."
+  endparam
+  param spec
+    caption = "Specular scale"
+    default = 1.0
+    min = 0.0
+    hint = "A modifier allowing you to scale the specular amount."
+  endparam
+$ifdef VER50
+  param ufcolour
+    caption = "UF Colouring ?"
+    default = false
+    hint = "Enable when using 'Lighting + UF Colouring' in the main formula."
+  endparam
+  Coloring param colouring
+    caption = "Colouring to use"
+    default = Standard_OrbitTraps
+    visible = @ufcolour
+  endparam
+$endif
+}
+
+MMF4a-ForAttractors {
+global:
+  float twopi = 2.0*#pi
+  float dtwopi = 0.5/#pi
+final:
+  if @method==0
+    #index = real(#z)
+  elseif @method==1
+    #index = imag(#z)
+  elseif @method==2
+    #index = 0.5*(real(#z)+imag(#z))
+  elseif @method==3
+    #index = real(#z)*imag(#z)
+  elseif @method==4
+    #index = 0.5*(1.0+real(#z)-imag(#z))
+  elseif @method==5
+    #index = 2.0*real(#z)/(1.0+imag(#z))
+  elseif @method==6
+    #index = 2.0*imag(#z)/(1.0+real(#z))
+  elseif @method==7
+    float a = atan2(#z-0.5-flip(0.5))
+    if a<0.0
+      a = a + twopi
+    endif
+    #index = a*dtwopi
+  elseif @method==8
+    #index = abs(atan2(#z-0.5-flip(0.5)))/#pi
+  elseif @method==9
+    #index = cabs(#z)
+  endif
+default:
+  title = "Attractor Colouring"
+  param version
+    caption = "Formula Version"
+    enum = "1"
+    default = 0
+    hint = "The version is to ensure future backwards compatability."
+    visible = false
+  endparam
+  heading
+    caption = "Information"
+    text = "This colouring is specifically designed for use with the \
+            'Attractors' main formula in mmf4.ufm and may be of some use \
+            with one or two other specialist formulas but not generally with \
+            'normal' escape time formulas."
+  endheading
+  heading
+    caption = "Main"
+  endheading
+  param method
+    caption = "Method"
+    enum = "Real" "Imag" "Sum" "Product" "Difference" "Quotient" \
+           "Inv. Quotient" "All Angles" "Abs. angle" "Cabs()"
+    default = 0
+    hint = "Exactly what values are passed to this colouring as the real and \
+            imaginary components of z from the main formula is controlled by \
+            the main formula. The formula is specifically designed for real \
+            and imaginary components that are each normalised to a range from \
+            0 to 1."
+  endparam
+}

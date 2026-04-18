@@ -1,0 +1,458 @@
+comment {
+  
+  This file contains some special transformations that might be useful.
+  
+  Copyright (C) 1998, 1999 by Frederik Slijkerman.
+  Last updated February 2, 1999.
+  
+}
+
+
+fs-Dither {
+; Allows you to select a segment of the complex plane
+; to be visible.
+;
+; Uses the standard Bayer dither matrix:
+;
+;  0   8   2  10
+; 12   4  14   6
+;  3  11   1   9
+; 15   7  13   5
+;
+transform:    
+  int   rx = #x % 4
+  int   ry = #y % 4
+  float a  = 0
+  
+  if ry == 0
+    if rx == 0
+      a = 0
+    elseif rx == 1
+      a = 8
+    elseif rx == 2
+      a = 2
+    else
+      a = 10
+    endif
+  elseif ry == 1
+    if rx == 0
+      a = 12
+    elseif rx == 1
+      a = 4
+    elseif rx == 2
+      a = 14
+    else
+      a = 6
+    endif
+  elseif ry == 2
+    if rx == 0
+      a = 3
+    elseif rx == 1
+      a = 11
+    elseif rx == 2
+      a = 1
+    else
+      a = 9
+    endif
+  else
+    if rx == 0
+      a = 15
+    elseif rx == 1
+      a = 7
+    elseif rx == 2
+      a = 13
+    else
+      a = 5
+    endif
+  endif
+
+  float angle = atan2(#pixel) + (pi * @offset) / 180
+  
+  if angle > pi
+    angle = angle - 2*pi
+  endif
+  
+  if angle < -pi
+    angle = angle + 2*pi
+  endif
+  
+  if abs(angle) >= (pi * @width) / 360
+    #solid = true
+  else
+    float opacity = 1 - abs(angle) / ((pi * @width) / 360)
+    #solid = a > 16*opacity
+  endif
+  
+default:
+  title = "Radial Dithering"
+  param offset
+    caption = "Direction"
+    default = 0.0
+    min = -180
+    max = 180
+    hint = "This is the direction, in degrees, of the selected slice."
+  endparam
+  param width
+    caption = "Slice width"
+    default = 180.0
+    min = 1
+    max = 360
+    hint = "This is the width, in degrees, of the selected slice."
+  endparam
+}
+
+
+fs-3d-map {
+; General 3D perspective mapping.
+;
+; The 3D transformations/formulas use the left-handed coordinate
+; system, where X points to the left, Y points up, and Z points
+; into the screen. To determine the direction of a rotation, 
+; hold your left hand such that your thumb points into the direction
+; of the axis around which the rotation takes place, and then your
+; curled fingers point into the direction of positive rotation.
+;
+; Rotation is performed first around the X axis, then around the
+; Y axis, and finally around the Z axis. Scaling must be done using
+; UF's zooming feature. Translation is performed after the rotation.
+;
+; The only shapes supported now are a plane and a sphere: more shapes
+; should be added in the future. Also I intend to write a coloring
+; algorithm which would perform proper 3D shading for these shapes.
+
+transform:
+  float tt = 0
+  float lambda = 0
+  float u = 0
+  float v = 0
+  float x = 0
+  float y = 0
+  float z = 0
+
+  ; Construct a line from the current pixel on the screen through 3D space.
+  ; The line is defined by (sx, sy, sz) + lambda * (dx, dy, dz) where
+  ; lambda can be any real value > 0. So the line does not extend behind
+  ; the screen.
+  
+  float sx = -@transx
+  float sy = -@transy
+  float sz = -@transz
+  float dx = real(#pixel)
+  float dy = imag(#pixel)
+  float dz = 4
+  
+  ; Convert angles from degrees to radians.
+  float angx = (@rotx * #pi) / 180
+  float angy = (@roty * #pi) / 180
+  float angz = (@rotz * #pi) / 180
+  
+  ; Rotate the line according to the (rotx, roty, rotz) angle.
+
+  ; Apply rotation around Z axis
+  tt = cos(angz) * sy - sin(angz) * sx
+  sx = cos(angz) * sx + sin(angz) * sy
+  sy = tt  
+  tt = cos(angz) * dy - sin(angz) * dx
+  dx = cos(angz) * dx + sin(angz) * dy
+  dy = tt
+  
+  ; Apply rotation around Y axis
+  tt = cos(angy) * sx - sin(angy) * sz
+  sz = cos(angy) * sz + sin(angy) * sx
+  sx = tt
+  tt = cos(angy) * dx - sin(angy) * dz
+  dz = cos(angy) * dz + sin(angy) * dx
+  dx = tt
+  
+  ; Apply rotation around X axis
+  tt = cos(angx) * sz - sin(angx) * sy
+  sy = cos(angx) * sy + sin(angx) * sz
+  sz = tt
+  tt = cos(angx) * dz - sin(angx) * dy
+  dy = cos(angx) * dy + sin(angx) * dz
+  dz = tt
+  
+  ; Now compute the intersection of the line with the shape, and return
+  ; the intersection point in #pixel (texture coordinates).
+  ; This is the only shape-dependent part.
+  
+  if @shape == 0
+    ; Plane shape.
+    ;
+    ; This equation must be solved:
+    ; [ sx ]          [ dx ]   [ u ]
+    ; [ sy ] + lambda [ dy ] = [ 0 ]
+    ; [ sz ]          [ dz ]   [ v ]
+    ; where (u,v) are the texture coordinates to return in #pixel.
+    
+    lambda = -sy / dy
+    if lambda <= 0
+      ; The line does not intersect the plane.
+      #solid = true
+    else   
+      ; Calculate intersection point.
+      u = sx + lambda * dx
+      v = sz + lambda * dz
+    endif
+    
+  elseif @shape == 1
+    ; Sphere shape (radius 0.5)
+    ;
+    ; This must be solved:
+    ; [ sx ]          [ dx ]   [ x ]
+    ; [ sy ] + lambda [ dy ] = [ y ]
+    ; [ sz ]          [ dz ]   [ z ]
+    ; and
+    ; x^2 + y^2 + z^2 = radius^2
+    
+    float a = sqr(dx) + sqr(dy) + sqr(dz)
+    float b = 2 * sx * dx + 2 * sy * dy + 2 * sz * dz
+    float c = sqr(sx) + sqr(sy) + sqr(sz) - 0.25
+    
+    float d = sqr(b) - 4 * a * c
+    
+    if d < 0
+      ; No roots exist.
+      #solid = true
+    else
+      ; One or two roots: select smallest.
+      if a > 0
+        lambda = (-b - sqrt(d)) / (2 * a)
+      else
+        lambda = (-b + sqrt(d)) / (2 * a)
+      endif
+      
+      if lambda <= 0
+        ; Intersection point is behind the screen.
+        #solid = true
+      else
+        x = sx + lambda * dx
+        y = sy + lambda * dy
+        z = sz + lambda * dz
+        
+        if z == 0
+          if x > 0
+            u = 2
+          else
+            u = -2
+          endif
+        else
+          u = (4 / #pi) * atan(x / abs(z))
+        endif
+        
+        v = (4 / #pi) * atan(y / sqrt(sqr(x) + sqr(z)))
+      endif
+    endif
+    
+  elseif @shape == 2
+    ; Egg shape (radius 0.5..0.6667)
+    ;
+    ; This must be solved:
+    ; [ sx ]          [ dx ]   [ x ]
+    ; [ sy ] + lambda [ dy ] = [ y ]
+    ; [ sz ]          [ dz ]   [ z ]
+    ; and
+    ; 1) x^2 + (6/7 * y)^2 + z^2 = radius^2
+    ; or
+    ; 2) x^2 + (24/35 * y)^2 + z^2 - radius^2
+    ;
+    ; If y > 0, equation 2 is the right one, otherwise equation 1.
+    
+    float x1 = 0
+    float y1 = 0
+    float z1 = 0
+    float x2 = 0
+    float y2 = 0
+    float z2 = 0
+    bool  solid = false
+    bool  solid1 = false
+    bool  solid2 = false
+    
+    ; First perform hit test for equation 1; store coordinates
+    ; in (x1, y1, z1)
+    
+    sy = sy * 6/7
+    dy = dy * 6/7
+    
+    float a = sqr(dx) + sqr(dy) + sqr(dz)
+    float b = 2 * sx * dx + 2 * sy * dy + 2 * sz * dz
+    float c = sqr(sx) + sqr(sy) + sqr(sz) - 0.25    
+    float d = sqr(b) - 4 * a * c
+    
+    if d < 0
+      ; No roots exist.
+      solid1 = true
+    else
+      ; One or two roots: select smallest.
+      if a > 0
+        lambda = (-b - sqrt(d)) / (2 * a)
+      else
+        lambda = (-b + sqrt(d)) / (2 * a)
+      endif
+      
+      if lambda <= 0
+        ; Intersection point is behind the screen.
+        solid1 = true
+      else
+        x1 = sx + lambda * dx
+        y1 = sy + lambda * dy
+        z1 = sz + lambda * dz        
+      endif
+    endif
+    
+    ; Now perform hit test for equation 2; store coordinates
+    ; in (x2, y2, z2)
+    
+    sy = sy * 4/5
+    dy = dy * 4/5
+    
+    float a = sqr(dx) + sqr(dy) + sqr(dz)
+    float b = 2 * sx * dx + 2 * sy * dy + 2 * sz * dz
+    float c = sqr(sx) + sqr(sy) + sqr(sz) - 0.25    
+    float d = sqr(b) - 4 * a * c
+    
+    if d < 0
+      ; No roots exist.
+      solid2 = true
+    else
+      ; One or two roots: select smallest.
+      if a > 0
+        lambda = (-b - sqrt(d)) / (2 * a)
+      else
+        lambda = (-b + sqrt(d)) / (2 * a)
+      endif
+      
+      if lambda <= 0
+        ; Intersection point is behind the screen.
+        solid2 = true
+      else
+        x2 = sx + lambda * dx
+        y2 = sy + lambda * dy
+        z2 = sz + lambda * dz        
+      endif
+    endif
+    
+    ; Now select proper coordinates (either set 1 or set 2)
+    
+    if solid1
+      if y2 < 0
+        solid = true
+      else
+        x = x2
+        y = y2
+        z = z2
+        solid = solid2
+      endif
+    else
+      if y2 > 0
+        x = x2
+        y = y2
+        z = z2
+      else
+        x = x1
+        y = y1
+        z = z1
+      endif
+    endif
+
+    #solid = solid
+          
+    if !solid
+      if z == 0
+        if x > 0
+          u = 2
+        else
+          u = -2
+        endif
+      else
+        u = (4 / #pi) * atan(x / abs(z))
+      endif
+      v = (4 / #pi) * atan(y / sqrt(sqr(x) + sqr(z)))
+    endif
+    
+  endif
+  
+  #pixel = u + flip(v)  
+  #pixel = @fraccenter + #pixel * exp(flip((@fracangle * #pi) / 180)) / @fracmagn
+
+default:
+  title = "3D Mapping"
+  
+  param shape
+    caption = "Shape"
+    enum = "Plane" "Sphere" "Egg"
+    hint = "The fractal is mapped onto this shape."
+  endparam
+  
+  param rotx
+    caption = "X rotation"
+    default = 0.0
+    hint = "Rotation around the x-axis, in degrees. The x-axis points to \
+            the right. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing to \
+            the right. Your (curled) fingers now indicate the direction of \
+            positive X rotation."
+  endparam
+  
+  param roty
+    caption = "Y rotation"
+    default = 0.0
+    hint = "Rotation around the y-axis, in degrees. The y-axis points \
+            upwards. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing \
+            upwards. Your (curled) fingers now indicate the direction of \
+            positive Y rotation."
+  endparam
+  
+  param rotz
+    caption = "Z rotation"
+    default = 0.0
+    hint = "Rotation around the z-axis, in degrees. The z-axis points into \
+            the screen. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing into \
+            the screen. Your (curled) fingers now indicate the direction of \
+            positive Z rotation."
+  endparam
+  
+  param transx
+    caption = "X Translation"
+    default = 0.0
+    hint = "Translation along the x-axis. The x-axis points to the right, \
+            so increasing this value will move the fractal to the right, too."
+  endparam
+  
+  param transy
+    caption = "Y Translation"
+    default = -0.5
+    hint = "Translation along the y-axis. The y-axis points upwards, \
+            so increasing this value will move the fractal upwards, too."
+  endparam
+  
+  param transz
+    caption = "Z Translation"
+    default = 2.0
+    hint = "Translation along the z-axis. The z-axis points into the screen, \
+            so increasing this value will move the fractal away."
+  endparam  
+  
+  param fraccenter
+    caption = "Fractal Center"
+    default = (0,0)
+    hint = "Center of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+  
+  param fracmagn
+    caption = "Fractal Magnification"
+    default = 1.0
+    hint = "Magnification of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracangle
+    caption = "Fractal Rotation"
+    default = 0.0
+    hint = "Rotation angle (in degrees) of the fractal image. Use here \
+            what you would normally enter in the Location tab."
+  endparam
+}

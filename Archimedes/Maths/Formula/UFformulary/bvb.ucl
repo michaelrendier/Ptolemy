@@ -1,0 +1,126 @@
+interactions {
+; created by Bert van den Bosch
+; note: put the bailout of the fractal at the most large value
+; something like 10e80 will do
+; please email me at zeusooooo@hotmail.com for questions or comments
+
+init:
+
+
+float t = 0.0
+float tmpf = 0.0
+float tmax=0
+float s1 = 0.0
+float s2 = 0.0
+float s3 = 0.0
+
+int iter = 0
+int i = 0
+
+
+complex tmp[8]
+complex zhist[8]
+
+while(i<@numhist)
+    zhist[i] = #z
+    i=i+1
+endwhile
+
+complex zz
+
+loop:
+
+zz = #z 
+
+
+tmp[0] = (zz - zhist[0])
+
+i = 1
+
+while(i<@numhist)
+    tmp[i] = (zhist[i] - zhist[i-1])
+    i=i+1
+endwhile
+
+
+
+i = 0
+s1 = 1.0
+s2 = 1.0
+s3 = 0.0
+
+
+while(i<@numhist)
+
+    s1 = s1*real(tmp[i])
+    s2 = s2*imag(tmp[i])
+
+    s3 = s3 + |tmp[i]|
+    
+    i = i+1
+endwhile
+
+tmpf = (@mix*s1+(1-@mix)*s2)/s3
+
+if tmpf >tmax 
+    tmax = tmpf
+endif
+
+
+
+t = t + tmpf
+
+iter = iter + 1
+
+
+
+i = @numhist
+
+while(i>0)
+    zhist[i] = zhist[i-1]
+    i=i-1
+endwhile
+
+
+zhist[0] = zz
+
+
+ final:
+ 
+     if(@colorby == "average")
+         #index =  t/(iter + 1 - log (log  (|#z|)) / log(2))
+        ;#index =  (iter + 1 - log (log  (|#z|)) / log(2))
+    
+     elseif(@colorby == "maximum")
+        #index = tmax
+     endif
+ 
+ default:
+  title="interactions"
+  
+  param colorby
+    caption="coloring"
+    enum = "average" "maximum"
+
+    default=0
+    hint="color by"
+  endparam
+  
+
+
+  param mix
+    caption="mix"
+    default=0.8
+    hint="the weight on real or imaginary part of the generalized inner product"
+  endparam
+
+
+  param numhist
+      enum = "1" "2" "3" "4" "5" "6" "7" "8"
+    caption="history"
+    default=3
+    hint="dimension of the generalized inner product"
+  endparam
+
+
+}

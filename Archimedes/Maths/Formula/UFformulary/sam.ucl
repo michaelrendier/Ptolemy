@@ -1,0 +1,5716 @@
+comment{
+
+Coloring algorythms by Samuel Monnier, 2000-2009.
+
+You can visit my webpage and 
+update this file at
+http://www.p-gallery.net
+
+If you have questions or comments, you can mail
+me at samuel.monnier@urbanet.ch 
+
+}
+
+juliatrap(BOTH) {
+; By Samuel Monnier, 1999
+init:
+  bool first = true
+  count = 0
+  float stdz = 0.0
+  start = 0
+  if @jul == 0
+    start = (.315,0)
+  elseif @jul == 1
+    start = (.45,-.095)
+  elseif @jul == 2
+    start = (.365,-.595)
+  elseif @jul == 3
+    start = (-.315, -.715)
+  elseif @jul == 4
+    start = (-.765,-.3)
+  elseif @jul == 5
+    start = (-.8,-.22)
+  elseif @jul == 6
+    start = (-.94,.305)
+  elseif @jul == 7
+    start = (-1.44,-.045)
+  elseif @jul == 8
+    start = (-1.745,.01)
+  elseif @jul == 9 
+    start = @seed
+  endif
+loop:
+  trz = exp(flip(-pi/180*@rot))*(#z-@center)/@size
+  x = 1/sqrt(@r)*real(trz)
+  y = sqrt(@r)*imag(trz)
+  if @freq != 0
+    x = 2*sin(2*pi*@freq*x)
+    y = 2*sin(2*pi*@freq*y)
+  endif  
+  trz = x + flip(y)
+  zz = trz
+  float i = 0
+  iter = @niter
+  float dz = 0.0
+  if @jul == 10
+    start = zz
+    zz = @seed
+  endif
+;  float ac = cabs(trz)
+;  float sum = 0
+;  float sum2 = 0
+  while i < @niter
+    i = i + 1
+    zz = zz^2 + start
+    if |zz| > 1e20
+      iter = i
+      i = @niter
+    endif
+    ; TIA estimator
+;    if @est == 1
+;      sum2 = sum
+;      if i > 1
+;        float az2 = cabs(zz - trz)
+;        float lowbound = abs(az2 - ac)
+;        sum = sum + ((cabs(zz) - lowbound) \
+;        / (az2+ac - lowbound))^2
+;      endif
+;    endif
+  endwhile
+  float logp = 1/log(2)
+  float logb = log(log(1e20))
+;  if @est == 0
+    dz = real(iter + logp*logb - logp*log(log(cabs(zz))))
+;  elseif @est == 1 ; TIA estimator
+;    sum = sum/i
+;    sum2 = sum2/i
+;    float f = logp*logb - logp*log(log(cabs(zz)))
+;    dz = sum2 + (sum-sum2) * (f+1)
+;    dz = 50*dz
+;  endif
+  if @mode == 0  ; closest
+    if first
+      stdz = dz
+      first = false
+    elseif dz > stdz
+      stdz = dz
+    endif
+  elseif @mode == 1  ; mean
+    count = count + 1
+    stdz = real((count-1)*stdz/count + dz/count)
+  endif
+final:
+  #index = .1*stdz
+default:
+  title = "Julia Trap"
+  helpfile = "sam-help\juliatrap.htm"
+  param mode
+    caption = "Trap Mode"
+    enum = "Closest" "Mean"
+    default = 0
+  endparam
+;  param est
+;    caption = "Estimation Mode"
+;    default = 0
+;    enum = "Smooth Log" "Triangle Inequality"
+;  endparam
+  param jul
+    caption = "Julia Set"
+    enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" \
+    "Custom Julia" "M-set"
+    default = 1
+  endparam
+  param seed 
+    caption = "Seed (for 'custom')"
+    default = (0,0)
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  param r
+    caption = "Ratio Width/Heigh"
+    default = 1.0
+  endparam
+  param @niter
+    caption = "Julia Iterations"
+    default = 100
+  endparam
+  param freq
+    caption = "Trap Frequency"
+    default = 0.0
+  endparam
+}
+
+OctogonalGradient(BOTH) {
+; By Samuel Monnier, 27.2.00
+init:
+  z = 0
+  float arg = 0
+  float x = 0
+  float y = 0 
+  float angle = @angle*pi/180
+loop:
+  
+final:
+  z = #z
+  x = real(z)
+  y = imag(z)
+  if x < 0
+    x = -x
+  endif
+  if y < 0
+    y = -y
+  endif
+  z = x + flip(y)
+  arg = atan2(z)
+  if arg > pi/2 - angle
+    z = z*exp(-1i*pi/2)
+  elseif arg < pi/2 - angle && arg > angle
+    z = z*exp(-1i*pi/4)
+    z = z*cos(angle)/cos(pi/4-angle)
+  endif
+  #index = real(z)*.3
+default:
+  title = "Octagonal Gradient"
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "octgrad"
+  param angle
+    caption = "Angle"
+    default = 26.6
+  endparam
+}
+
+GradientForOct.Lim.I(BOTH) {
+; By Samuel Monnier, 12.3.00
+init:
+  z = #pixel
+  ztest = 0
+  zz = 0
+  float x = real(z)
+  float y = imag(z)
+  float d = 1e20 
+  float mind = 1e20
+  ; Compute the rotation angles
+  float rot12 = atan2(@p1)
+  float rot23 = atan2(@p2-@p1)
+  float rot34 = atan2(@p3-@p2)
+  float rot45 = atan2(@p4-@p3)
+  float rot56 = atan2(@p5-@p4)
+  float rot67 = atan2(@p6-@p5)
+  float rot78 = atan2(@p7-@p6)
+  float rot89 = atan2(@p8-@p7)
+  float rot910 = atan2(@p9-@p8)
+  float rot1011 = atan2(@p10-@p9)
+  float rot1112 = atan2(1-@p10)
+  ; Compute the lengths
+  float l12 = cabs(@p1)
+  float l23 = cabs(@p2-@p1)
+  float l34 = cabs(@p3-@p2)
+  float l45 = cabs(@p4-@p3)
+  float l56 = cabs(@p5-@p4)
+  float l67 = cabs(@p6-@p5)
+  float l78 = cabs(@p7-@p6)
+  float l89 = cabs(@p8-@p7)
+  float l910 = cabs(@p9-@p8)
+  float l1011 = cabs(@p10-@p9)
+  float l1112 = cabs(1-@p10)
+loop:
+  
+final:
+  z = #pixel
+  ztest = z
+      
+  ; -------------------------
+  
+  ; Test the base line of the
+  ; triangle.
+  
+  ; Point 1 - Point 2
+  zz = ztest
+  zz = zz*exp(-1i*rot12)
+  zz = zz/l12
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest)
+  elseif x > 1
+    d = cabs(@p1-ztest)
+  else
+    d = abs(y*l12)
+  endif
+  mind = d
+  
+  ; Point 2 - Point 3
+  zz = ztest - @p1
+  zz = zz*exp(-1i*rot23)
+  zz = zz/l23
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p1)
+  elseif x > 1
+    d = cabs(@p2-ztest)
+  else
+    d = abs(y*l23)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 3 - Point 4
+  zz = ztest - @p2
+  zz = zz*exp(-1i*rot34)
+  zz = zz/l34
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p2)
+  elseif x > 1
+    d = cabs(@p3-ztest)
+  else
+    d = abs(y*l34)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 4 - Point 5
+  zz = ztest - @p3
+  zz = zz*exp(-1i*rot45)
+  zz = zz/l45
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p3)
+  elseif x > 1
+    d = cabs(@p4-ztest)
+  else
+    d = abs(y*l45)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 5 - Point 6
+  zz = ztest - @p4
+  zz = zz*exp(-1i*rot56)
+  zz = zz/l56
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p4)
+  elseif x > 1
+    d = cabs(@p5-ztest)
+  else
+    d = abs(y*l56)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  
+  ; Point 6 - Point 7
+  zz = ztest - @p5
+  zz = zz*exp(-1i*rot67)
+  zz = zz/l67
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p5)
+  elseif x > 1
+    d = cabs(@p6-ztest)
+  else
+    d = abs(y*l67)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 7 - Point 8
+  zz = ztest - @p6
+  zz = zz*exp(-1i*rot78)
+  zz = zz/l78
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p6)
+  elseif x > 1
+    d = cabs(@p7-ztest)
+  else
+    d = abs(y*l78)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 8 - Point 9
+  zz = ztest - @p7
+  zz = zz*exp(-1i*rot89)
+  zz = zz/l89
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p7)
+  elseif x > 1
+    d = cabs(@p8-ztest)
+  else
+    d = abs(y*l89)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 9 - Point 10
+  zz = ztest - @p8
+  zz = zz*exp(-1i*rot910)
+  zz = zz/l910
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p8)
+  elseif x > 1
+    d = cabs(@p9-ztest)
+  else
+    d = abs(y*l910)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 10 - Point 11
+  zz = ztest - @p9
+  zz = zz*exp(-1i*rot1011)
+  zz = zz/l1011
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p9)
+  elseif x > 1
+    d = cabs(@p10-ztest)
+  else
+    d = abs(y*l1011)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 11 - Point 12
+  zz = ztest - @p10
+  zz = zz*exp(-1i*rot1112)
+  zz = zz/l1112
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p10)
+  elseif x > 1
+    d = cabs(1-ztest)
+  else
+    d = abs(y*l1112)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+      
+  
+  ; -------------------------
+
+  ; Test the left side of the
+  ; triangle.
+  
+  ztest = ztest*exp(-1i*pi/2)
+  
+  ; Point 1 - Point 2
+  zz = ztest
+  zz = zz*exp(-1i*rot12)
+  zz = zz/l12
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest)
+  elseif x > 1
+    d = cabs(@p1-ztest)
+  else
+    d = abs(y*l12)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 2 - Point 3
+  zz = ztest - @p1
+  zz = zz*exp(-1i*rot23)
+  zz = zz/l23
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p1)
+  elseif x > 1
+    d = cabs(@p2-ztest)
+  else
+    d = abs(y*l23)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 3 - Point 4
+  zz = ztest - @p2
+  zz = zz*exp(-1i*rot34)
+  zz = zz/l34
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p2)
+  elseif x > 1
+    d = cabs(@p3-ztest)
+  else
+    d = abs(y*l34)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 4 - Point 5
+  zz = ztest - @p3
+  zz = zz*exp(-1i*rot45)
+  zz = zz/l45
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p3)
+  elseif x > 1
+    d = cabs(@p4-ztest)
+  else
+    d = abs(y*l45)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 5 - Point 6
+  zz = ztest - @p4
+  zz = zz*exp(-1i*rot56)
+  zz = zz/l56
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p4)
+  elseif x > 1
+    d = cabs(@p5-ztest)
+  else
+    d = abs(y*l56)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  
+  ; Point 6 - Point 7
+  zz = ztest - @p5
+  zz = zz*exp(-1i*rot67)
+  zz = zz/l67
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p5)
+  elseif x > 1
+    d = cabs(@p6-ztest)
+  else
+    d = abs(y*l67)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 7 - Point 8
+  zz = ztest - @p6
+  zz = zz*exp(-1i*rot78)
+  zz = zz/l78
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p6)
+  elseif x > 1
+    d = cabs(@p7-ztest)
+  else
+    d = abs(y*l78)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 8 - Point 9
+  zz = ztest - @p7
+  zz = zz*exp(-1i*rot89)
+  zz = zz/l89
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p7)
+  elseif x > 1
+    d = cabs(@p8-ztest)
+  else
+    d = abs(y*l89)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 9 - Point 10
+  zz = ztest - @p8
+  zz = zz*exp(-1i*rot910)
+  zz = zz/l910
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p8)
+  elseif x > 1
+    d = cabs(@p9-ztest)
+  else
+    d = abs(y*l910)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 10 - Point 11
+  zz = ztest - @p9
+  zz = zz*exp(-1i*rot1011)
+  zz = zz/l1011
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p9)
+  elseif x > 1
+    d = cabs(@p10-ztest)
+  else
+    d = abs(y*l1011)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 11 - Point 12
+  zz = ztest - @p10
+  zz = zz*exp(-1i*rot1112)
+  zz = zz/l1112
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p10)
+  elseif x > 1
+    d = cabs(1-ztest)
+  else
+    d = abs(y*l1112)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Restore the original value of ztest
+  ztest = z
+  
+  
+  ; -------------------------
+
+  ; Test the right part of the right side 
+  ; of the triangle.
+  
+  ztest = ztest - 1
+  ztest = ztest*exp(1i*pi/4)
+  ztest = ztest*sqrt(2)
+  ztest = ztest + 1
+
+  ; Point 1 - Point 2
+  zz = ztest
+  zz = zz*exp(-1i*rot12)
+  zz = zz/l12
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest)
+  elseif x > 1
+    d = cabs(@p1-ztest)
+  else
+    d = abs(y*l12)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 2 - Point 3
+  zz = ztest - @p1
+  zz = zz*exp(-1i*rot23)
+  zz = zz/l23
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p1)
+  elseif x > 1
+    d = cabs(@p2-ztest)
+  else
+    d = abs(y*l23)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 3 - Point 4
+  zz = ztest - @p2
+  zz = zz*exp(-1i*rot34)
+  zz = zz/l34
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p2)
+  elseif x > 1
+    d = cabs(@p3-ztest)
+  else
+    d = abs(y*l34)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 4 - Point 5
+  zz = ztest - @p3
+  zz = zz*exp(-1i*rot45)
+  zz = zz/l45
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p3)
+  elseif x > 1
+    d = cabs(@p4-ztest)
+  else
+    d = abs(y*l45)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 5 - Point 6
+  zz = ztest - @p4
+  zz = zz*exp(-1i*rot56)
+  zz = zz/l56
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p4)
+  elseif x > 1
+    d = cabs(@p5-ztest)
+  else
+    d = abs(y*l56)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  
+  ; Point 6 - Point 7
+  zz = ztest - @p5
+  zz = zz*exp(-1i*rot67)
+  zz = zz/l67
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p5)
+  elseif x > 1
+    d = cabs(@p6-ztest)
+  else
+    d = abs(y*l67)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 7 - Point 8
+  zz = ztest - @p6
+  zz = zz*exp(-1i*rot78)
+  zz = zz/l78
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p6)
+  elseif x > 1
+    d = cabs(@p7-ztest)
+  else
+    d = abs(y*l78)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 8 - Point 9
+  zz = ztest - @p7
+  zz = zz*exp(-1i*rot89)
+  zz = zz/l89
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p7)
+  elseif x > 1
+    d = cabs(@p8-ztest)
+  else
+    d = abs(y*l89)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 9 - Point 10
+  zz = ztest - @p8
+  zz = zz*exp(-1i*rot910)
+  zz = zz/l910
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p8)
+  elseif x > 1
+    d = cabs(@p9-ztest)
+  else
+    d = abs(y*l910)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 10 - Point 11
+  zz = ztest - @p9
+  zz = zz*exp(-1i*rot1011)
+  zz = zz/l1011
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p9)
+  elseif x > 1
+    d = cabs(@p10-ztest)
+  else
+    d = abs(y*l1011)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 11 - Point 12
+  zz = ztest - @p10
+  zz = zz*exp(-1i*rot1112)
+  zz = zz/l1112
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p10)
+  elseif x > 1
+    d = cabs(1-ztest)
+  else
+    d = abs(y*l1112)
+  endif
+  if d < mind
+    mind = d
+  endif
+
+  
+  ; Left part of the right side
+  
+  ztest = -ztest
+   
+    ; Point 1 - Point 2
+  zz = ztest
+  zz = zz*exp(-1i*rot12)
+  zz = zz/l12
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest)
+  elseif x > 1
+    d = cabs(@p1-ztest)
+  else
+    d = abs(y*l12)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 2 - Point 3
+  zz = ztest - @p1
+  zz = zz*exp(-1i*rot23)
+  zz = zz/l23
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p1)
+  elseif x > 1
+    d = cabs(@p2-ztest)
+  else
+    d = abs(y*l23)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 3 - Point 4
+  zz = ztest - @p2
+  zz = zz*exp(-1i*rot34)
+  zz = zz/l34
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p2)
+  elseif x > 1
+    d = cabs(@p3-ztest)
+  else
+    d = abs(y*l34)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 4 - Point 5
+  zz = ztest - @p3
+  zz = zz*exp(-1i*rot45)
+  zz = zz/l45
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p3)
+  elseif x > 1
+    d = cabs(@p4-ztest)
+  else
+    d = abs(y*l45)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 5 - Point 6
+  zz = ztest - @p4
+  zz = zz*exp(-1i*rot56)
+  zz = zz/l56
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p4)
+  elseif x > 1
+    d = cabs(@p5-ztest)
+  else
+    d = abs(y*l56)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  
+  ; Point 6 - Point 7
+  zz = ztest - @p5
+  zz = zz*exp(-1i*rot67)
+  zz = zz/l67
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p5)
+  elseif x > 1
+    d = cabs(@p6-ztest)
+  else
+    d = abs(y*l67)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 7 - Point 8
+  zz = ztest - @p6
+  zz = zz*exp(-1i*rot78)
+  zz = zz/l78
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p6)
+  elseif x > 1
+    d = cabs(@p7-ztest)
+  else
+    d = abs(y*l78)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 8 - Point 9
+  zz = ztest - @p7
+  zz = zz*exp(-1i*rot89)
+  zz = zz/l89
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p7)
+  elseif x > 1
+    d = cabs(@p8-ztest)
+  else
+    d = abs(y*l89)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 9 - Point 10
+  zz = ztest - @p8
+  zz = zz*exp(-1i*rot910)
+  zz = zz/l910
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p8)
+  elseif x > 1
+    d = cabs(@p9-ztest)
+  else
+    d = abs(y*l910)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 10 - Point 11
+  zz = ztest - @p9
+  zz = zz*exp(-1i*rot1011)
+  zz = zz/l1011
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p9)
+  elseif x > 1
+    d = cabs(@p10-ztest)
+  else
+    d = abs(y*l1011)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 11 - Point 12
+  zz = ztest - @p10
+  zz = zz*exp(-1i*rot1112)
+  zz = zz/l1112
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p10)
+  elseif x > 1
+    d = cabs(1-ztest)
+  else
+    d = abs(y*l1112)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+    
+  #index = mind
+  
+  
+default:
+  title = "Gradient for Oct. Lim."
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "gradforoct"
+  
+  param p1
+    caption = "Point 1"
+    default = (1,0)
+  endparam
+  param p2
+    caption = "Point 2"
+    default = (1,0)
+  endparam
+  param p3
+    caption = "Point 3"
+    default = (1,0)
+  endparam
+  param p4
+    caption = "Point 4"
+    default = (1,0)
+  endparam
+  param p5
+    caption = "Point 5"
+    default = (1,0)
+  endparam
+  param p6
+    caption = "Point 6"
+    default = (1,0)
+  endparam
+  param p7
+    caption = "Point 7"
+    default = (1,0)
+  endparam
+  param p8
+    caption = "Point 8"
+    default = (1,0)
+  endparam
+  param p9
+    caption = "Point 9"
+    default = (1,0)
+  endparam
+  param p10
+    caption = "Point 10"
+    default = (1,0)
+  endparam
+}
+
+FamilyGradient(BOTH) {
+; By Samuel Monnier, 20.3.00
+; Designed for the "Familly formulas"
+; (Julifamilly and Pcfamilly in my file 
+; and Pinskyfamilly in kpk.ufm.
+init:
+  complex z = pixel
+  complex zc = 0
+loop:
+  
+final:
+  z = z - @tilem
+  z = z*exp(1i*pi/180*@rottile)
+  zc = round(z/@sizesq)*@sizesq
+  z = z*exp(-1i*pi/180*@rottile)
+  zc = zc*exp(-1i*pi/180*@rottile)
+  z = z + @tilem
+  zc = zc + @tilem
+  z = 2*(z - zc)/@sizesq
+  z = z*exp(1i*pi/180*@rottile)
+  if @mode == 0
+    #index = cabs(z)
+  elseif @mode == 1
+    float x = abs(real(z))
+    float y = abs(imag(z))
+    if x > y
+      #index = x
+    else
+      #index = y
+    endif
+  endif
+default:
+  title = "Gradient for <<Familly>>"
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "gradforfam"
+  
+  param mode
+    caption = "Gradient Mode"
+    default = 1
+    enum = "Circles" "Squares"
+  endparam
+  
+  param tilem
+    caption = "Tiling displacement"
+    default = (0,0)
+  endparam
+
+  param sizesq
+    caption = "Size of the tiles"
+    default = 0.6
+  endparam
+
+  param rottile
+    caption = "Tiling rotation"
+    default = 0.0
+  endparam
+}
+
+Orbits(BOTH) {
+; By Samuel Monnier, 13.6.00
+; This coloring allow you to see the
+; orbits of the points iterated by the 
+; M-set formula. It's very slow. This is
+; because UF's way of computing is not
+; designed for this kind of alghorythms. 
+; Use it with the pixel formula (in mt.ufm).
+; If you want to see which point of the M-set
+; you're actually selecting, add a layer 
+; with the M-set formula that you can see in
+; "transparency". Be sure that the two layer
+; have exactly the same location, magnification
+; and rotation.
+init:
+   z = @start
+  oldz = z
+  pixe = 0
+  int i = 0
+  float x = 0
+  float y = 0
+  float d = cabs(#pixel - @start)
+  float nd = 0
+  float arg = 0 
+  
+loop:
+  
+final:
+  
+  while i < @niter && |z| < 1000 
+  
+    i = i + 1
+    oldz = z
+    
+    z = z^@power + @pix
+    
+    ; "Point" mode
+    if @mode == 0
+      if cabs(z - #pixel) < d
+        d = cabs(z - #pixel)
+      endif
+    
+    ; "Segment" mode  
+    elseif @mode == 1
+      pixe = #pixel
+      oldz = oldz - z
+      pixe = pixe - z
+      arg = atan2(oldz)
+      oldz = oldz*exp(-1i*arg)
+      pixe = pixe*exp(-1i*arg)
+      x = real(pixe)
+      y = imag(pixe)
+      if x > real(oldz)
+        pixe = pixe - real(oldz)
+        nd = cabs(pixe)
+      elseif x < 0
+        nd = cabs(pixe)
+      else
+        nd = abs(y)
+      endif
+      if nd < d
+        d = nd
+      endif
+    endif
+    
+  endwhile
+  
+  #index = d^@power2
+  
+default:
+  title = "Orbits"
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "orbits"
+  
+  param mode
+    caption = "Mode"
+    default = 1
+    enum = "Points" "Segments"
+  endparam
+  param start
+    caption = "Starting Point"
+    default = (0,0)
+  endparam
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+  param pix
+    caption = "Point to track"
+    default = (.284,-.3376)
+  endparam
+  param niter
+    caption = "Number of Iterations"
+    default = 10
+  endparam
+  
+  param power2
+    caption = "Thickness"
+    default = 1.0
+  endparam 
+}
+
+GradientForsmall&small(BOTH) {
+; By Samuel Monnier, 6.5.00
+init:
+  z = #pixel*1.2
+  ztest = 0
+  ztest2 = 0
+  zz = 0
+  float x = real(z)
+  float y = imag(z)
+  float d = 1e20 
+  float mind = 1e20
+  int i = 0
+  int j = 0
+  ; Compute the rotation angles
+  float rot12 = atan2(@p1)
+  float rot23 = atan2(@p2-@p1)
+  float rot34 = atan2(@p3-@p2)
+  float rot45 = atan2(@p4-@p3)
+  float rot56 = atan2(@p5-@p4)
+  float rot67 = atan2(@p6-@p5)
+  float rot78 = atan2(@p7-@p6)
+  float rot89 = atan2(@p8-@p7)
+  float rot910 = atan2(@p9-@p8)
+  float rot1011 = atan2(@p10-@p9)
+  float rot1112 = atan2(1-@p10)
+  ; Compute the lengths
+  float l12 = cabs(@p1)
+  float l23 = cabs(@p2-@p1)
+  float l34 = cabs(@p3-@p2)
+  float l45 = cabs(@p4-@p3)
+  float l56 = cabs(@p5-@p4)
+  float l67 = cabs(@p6-@p5)
+  float l78 = cabs(@p7-@p6)
+  float l89 = cabs(@p8-@p7)
+  float l910 = cabs(@p9-@p8)
+  float l1011 = cabs(@p10-@p9)
+  float l1112 = cabs(1-@p10)
+  
+
+
+loop:
+  
+final:
+  z = #pixel*1.2
+  
+  while i < 4
+  i = i + 1
+  if i == 1
+    ztest2 = z
+  elseif i == 2
+    ztest2 = z*exp(1i*pi/2)
+  elseif i == 3
+    ztest2 = z*exp(-1i*pi/2)
+  elseif i == 4
+    ztest2 = z*exp(1i*pi)
+  endif
+  ztest2 = ztest2 - 2i
+  
+  j = 0
+  
+  while j < 4
+  j = j + 1
+  if j == 1
+    ztest = -ztest2 - 1
+  elseif j == 2
+    ztest = ztest2 + 1
+  elseif j == 3
+    ztest = -ztest2 + 1
+  elseif j == 4
+    ztest = ztest2 - 1
+  endif
+    
+  ; -------------------------
+  
+  ; Test the base line of the
+  ; triangle.
+  
+  ; Point 1 - Point 2
+  zz = ztest
+  zz = zz*exp(-1i*rot12)
+  zz = zz/l12
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest)
+  elseif x > 1
+    d = cabs(@p1-ztest)
+  else
+    d = abs(y*l12)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 2 - Point 3
+  zz = ztest - @p1
+  zz = zz*exp(-1i*rot23)
+  zz = zz/l23
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p1)
+  elseif x > 1
+    d = cabs(@p2-ztest)
+  else
+    d = abs(y*l23)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 3 - Point 4
+  zz = ztest - @p2
+  zz = zz*exp(-1i*rot34)
+  zz = zz/l34
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p2)
+  elseif x > 1
+    d = cabs(@p3-ztest)
+  else
+    d = abs(y*l34)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 4 - Point 5
+  zz = ztest - @p3
+  zz = zz*exp(-1i*rot45)
+  zz = zz/l45
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p3)
+  elseif x > 1
+    d = cabs(@p4-ztest)
+  else
+    d = abs(y*l45)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 5 - Point 6
+  zz = ztest - @p4
+  zz = zz*exp(-1i*rot56)
+  zz = zz/l56
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p4)
+  elseif x > 1
+    d = cabs(@p5-ztest)
+  else
+    d = abs(y*l56)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  
+  ; Point 6 - Point 7
+  zz = ztest - @p5
+  zz = zz*exp(-1i*rot67)
+  zz = zz/l67
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p5)
+  elseif x > 1
+    d = cabs(@p6-ztest)
+  else
+    d = abs(y*l67)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 7 - Point 8
+  zz = ztest - @p6
+  zz = zz*exp(-1i*rot78)
+  zz = zz/l78
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p6)
+  elseif x > 1
+    d = cabs(@p7-ztest)
+  else
+    d = abs(y*l78)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 8 - Point 9
+  zz = ztest - @p7
+  zz = zz*exp(-1i*rot89)
+  zz = zz/l89
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p7)
+  elseif x > 1
+    d = cabs(@p8-ztest)
+  else
+    d = abs(y*l89)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 9 - Point 10
+  zz = ztest - @p8
+  zz = zz*exp(-1i*rot910)
+  zz = zz/l910
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p8)
+  elseif x > 1
+    d = cabs(@p9-ztest)
+  else
+    d = abs(y*l910)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 10 - Point 11
+  zz = ztest - @p9
+  zz = zz*exp(-1i*rot1011)
+  zz = zz/l1011
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p9)
+  elseif x > 1
+    d = cabs(@p10-ztest)
+  else
+    d = abs(y*l1011)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  ; Point 11 - Point 12
+  zz = ztest - @p10
+  zz = zz*exp(-1i*rot1112)
+  zz = zz/l1112
+  x = real(zz)
+  y = imag(zz)
+  if x < 0
+    d = cabs(ztest-@p10)
+  elseif x > 1
+    d = cabs(1-ztest)
+  else
+    d = abs(y*l1112)
+  endif
+  if d < mind
+    mind = d
+  endif
+  
+  endwhile
+  
+  endwhile
+    
+  #index = mind
+  
+  
+default:
+  title = "Gradient for S.& S."
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "gradsands"
+  
+  param p1
+    caption = "Point 1"
+    default = (1,0)
+  endparam
+  param p2
+    caption = "Point 2"
+    default = (1,0)
+  endparam
+  param p3
+    caption = "Point 3"
+    default = (1,0)
+  endparam
+  param p4
+    caption = "Point 4"
+    default = (1,0)
+  endparam
+  param p5
+    caption = "Point 5"
+    default = (1,0)
+  endparam
+  param p6
+    caption = "Point 6"
+    default = (1,0)
+  endparam
+  param p7
+    caption = "Point 7"
+    default = (1,0)
+  endparam
+  param p8
+    caption = "Point 8"
+    default = (1,0)
+  endparam
+  param p9
+    caption = "Point 9"
+    default = (1,0)
+  endparam
+  param p10
+    caption = "Point 10"
+    default = (1,0)
+  endparam
+}
+
+CirclyGradient(BOTH) {
+final:
+  z = #z - @center
+  float d = cabs(z)
+  if @mode == 0
+    d = sqrt(d)
+  else
+    d = exp(-d)
+  endif  
+  #index = d
+default:
+  title = "Circly Gradient"
+  param mode 
+    caption = "Mode"
+    default = 0
+    enum = "sqrt(d)" "exp(-d)"
+  endparam
+  
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+}
+
+SFBMpix(BOTH) {
+; By Samuel Monnier, 6.5.00
+; Updated, 21.5.00
+init:
+  z = #pixel
+  int i = 0
+  float mod = 1
+  float d1 = 0
+  float d2 = 0
+  float d3 = 0
+  float d4 = 0
+  float nindex = 0
+  float sindex = 0
+  float scale = 0
+  cr1 = 0
+  cr2 = 0
+  cr3 = 0
+  cr4 = 0
+  float crp1 = 0
+  float crp2 = 0
+  float crp3 = 0
+  float crp4 = 0
+loop:
+  
+final:
+  
+  z = #z/@size
+  
+  while i < @niter
+    
+    scale = @magn^i
+    z = z*exp(1i*pi/180*@rot)
+    
+    i = i + 1
+    
+    ; Center of the square containing z
+    zc = round(scale*z)/scale
+    
+    ; Corners of this square
+    if @perturb == true
+      zc1 = zc + ((.5,.5)+12)/scale
+      zc2 = zc + ((-.5,.5)-11)/scale
+      zc3 = zc + ((.5,-.5)+4i)/scale
+      zc4 = zc + ((-.5,-.5)-5i)/scale
+    else
+      zc1 = zc + (.5,.5)/scale
+      zc2 = zc + (-.5,.5)/scale
+      zc3 = zc + (.5,-.5)/scale
+      zc4 = zc + (-.5,-.5)/scale
+    endif
+    ; Perturbation parameter in the 
+    ; random number computation
+    if @mod == 1
+      mod = sqrt(i)
+    endif
+    
+    ; Computes (pseudo-) random complex
+    ; numbers (division mode)
+    if @randmode == 0
+      cr1 = @seed/(mod*zc1+124) - floor(@seed/(mod*zc1+124))
+      cr2 = @seed/(mod*zc2+124) - floor(@seed/(mod*zc2+124))
+      cr3 = @seed/(mod*zc3+124) - floor(@seed/(mod*zc3+124))
+      cr4 = @seed/(mod*zc4+124) - floor(@seed/(mod*zc4+124))
+    elseif @randmode == 2
+      cr1 = 2*(@seed/(mod*zc1+124) - round(@seed/(mod*zc1+124)))
+      cr2 = 2*(@seed/(mod*zc2+124) - round(@seed/(mod*zc2+124)))
+      cr3 = 2*(@seed/(mod*zc3+124) - round(@seed/(mod*zc3+124)))
+      cr4 = 2*(@seed/(mod*zc4+124) - round(@seed/(mod*zc4+124)))
+    ; Computes (really pseudo-) random numbers. 
+    ; (Actually these numbers are not random
+    ; and a pattern associated with the function
+    ; used often appear.)
+    elseif @randmode == 1
+      cr1 = @f1(mod*zc1) - floor(@f1(mod*zc1))
+      cr2 = @f1(mod*zc2) - floor(@f1(mod*zc2))
+      cr3 = @f1(mod*zc3) - floor(@f1(mod*zc3))
+      cr4 = @f1(mod*zc4) - floor(@f1(mod*zc4))
+    elseif @randmode == 3
+      cr1 = 2*(@f1(mod*zc1) - round(@f1(mod*zc1)))
+      cr2 = 2*(@f1(mod*zc2) - round(@f1(mod*zc2)))
+      cr3 = 2*(@f1(mod*zc3) - round(@f1(mod*zc3)))
+      cr4 = 2*(@f1(mod*zc4) - round(@f1(mod*zc4)))
+    endif
+    
+    ; Perlin's noise
+    if @mode == 0
+      ; Corners-point vectors
+      v1 = (z - zc1)*scale
+      v2 = (z - zc2)*scale
+      v3 = (z - zc3)*scale
+      v4 = (z - zc4)*scale
+      ; Dot Product
+      crp1 = real(cr1)*real(v1) + imag(cr1)*imag(v1)
+      crp2 = real(cr2)*real(v2) + imag(cr2)*imag(v2)
+      crp3 = real(cr3)*real(v3) + imag(cr3)*imag(v3)
+      crp4 = real(cr4)*real(v4) + imag(cr4)*imag(v4)
+    endif
+    
+    ; Computes distances from the point
+    ; to the corners 
+    d1 = real(z - zc)*scale + 0.5
+    d2 = 1 - d1
+    d3 = imag(z - zc)*scale + 0.5
+    d4 = 1 - d3
+    
+    ; Powers them...
+    if @sin == 1
+      d1 = (.5 + .5*sin(pi*d1-pi/2))^@power
+      d2 = (.5 + .5*sin(pi*d2-pi/2))^@power
+      d3 = (.5 + .5*sin(pi*d3-pi/2))^@power
+      d4 = (.5 + .5*sin(pi*d4-pi/2))^@power
+    else
+      d1 = d1^@power
+      d2 = d2^@power
+      d3 = d3^@power
+      d4 = d4^@power
+    endif
+    
+    ; Computes the number associated with the 
+    ; point.
+    ; Perlin
+    if @mode == 0
+      nindex = 10 + crp1*d1*d3 + crp3*d1*d4 + crp2*d2*d3 + crp4*d2*d4
+    ; Raw
+    elseif @mode == 1
+      pixcomp = cr1*d1*d3 + cr3*d1*d4 + cr2*d2*d3 + cr4*d2*d4
+      nindex = cabs(pixcomp)
+    endif
+    
+    if @string == true
+      if @mode == 0
+        nindex = nindex - 10
+      else
+        nindex = nindex -.7
+      endif
+      nindex = abs(nindex)^@power1
+    endif
+    
+    ; Modify the scale distribution (ie the 
+    ; "weigh" of each scale in the final sum).
+    if @scaledis == 0
+      sindex = sindex + nindex/scale
+    elseif @scaledis == 1
+      sindex = sindex + nindex/sqrt(scale)
+    elseif @scaledis == 2
+      sindex = sindex + nindex/(scale^(1/scale))
+    elseif @scaledis == 3
+      sindex = sindex + nindex/i
+    endif
+    
+  endwhile
+  
+  if @mode == 0
+    #index = 0.4*sindex
+  else 
+    #index = 0.2*sindex
+  endif
+  
+default:
+  title = "S.F.B.M. Pixel"
+  helpfile = "sam-help\sfbm.htm"
+  helptopic = "sfbmp"
+  
+  param mode
+    caption = "Noise type"
+    default = 1
+    enum = "Perlin's" "Raw... (Sam's)"
+  endparam
+  
+  param niter
+    caption = "Number of Iterations"
+    default = 20
+  endparam
+  
+  param string
+    caption = "String mode ?"
+    default = false
+  endparam
+     
+  param power1
+    caption = "String Power"
+    default = .1
+  endparam
+  
+  param scaledis
+    caption = "Scale Distribution"
+    default = 0
+    enum = "1/scale" "1/sqrt(scale)" "Fancy" "1/i"
+  endparam
+  
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param magn
+    caption = "Magnification Step"
+    default = 1.2
+  endparam
+
+  param rot
+    caption = "Rotation Step"
+    default = 28.0
+  endparam
+  
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+  
+  param sin
+    caption = "Distance Estimator"
+    default = 0
+    enum = "Raw" "Sin"
+  endparam
+  
+  param perturb
+    caption = "Perturb ?"
+    default = false
+  endparam
+  
+  param seed
+    caption = "Seed"
+    default = 123094
+  endparam
+  
+  param randmode
+    caption = "Random Generator"
+    default = 0
+    enum = "Division" "Selected Function" \
+           "Division II" "Selected Function II"
+  endparam
+  
+  param mod 
+    caption = "Vary Random Numbers ?"
+    default = 1
+    enum = "No" "Use sqrt(i)"
+  endparam
+
+  func f1
+    caption = "Selected Function"
+    default = exp()
+  endfunc
+}
+
+FractalTree(BOTH) {
+; By Samuel Monnier, 11.1.00
+;
+init:
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+  if @mode == 0
+    z = #pixel
+  endif
+  float dr = pi/180*@rotincr/2
+loop:
+  if @mode == 1
+    i = i + 1
+    if i == @itertr
+      z = #z
+    endif
+  endif 
+final:
+  ; Performs translation, rotation
+  ; and magnification
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/180)
+  z = z/@size
+  i = 0
+  
+  while i < @niter
+    i = i + 1
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + 1i*y
+    arg = -atan2(z) + pi/2
+    
+    ; Estimate distance
+    if y >= -1 && y <= 0
+      d = x^@power
+    elseif y < -1
+      d = cabs(z + 1i)^@power
+    elseif y > 0
+      d = cabs(z)^@power
+    endif
+    
+    if d < dist
+      dist = d
+    endif
+    
+    ; Computes the rotation to apply 
+    j = @order-1
+    rotincr = j*dr
+    while j > 0
+      j = j - 2
+      if arg < (j+1)*dr
+        rotincr = j*dr
+      endif
+    endwhile
+    
+    ; Performs transformation
+    z = z*exp(1i*rotincr)
+    z = z*@magnincr
+    z = z - 1i
+    
+  endwhile
+  
+  #index = dist 
+   
+default:
+  title = "Fractal Tree"
+  helpfile = "sam-help\variouscol.htm"
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Pixel" "Distance Estimator"
+  endparam
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+  param order
+    caption = "Tree Order"
+    default = 2
+  endparam
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 40.0
+  endparam
+  param magnincr
+    caption = "Tree Magnification Increment"
+    default = 1.9
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+    
+}
+
+FractalTreeTrap(BOTH) {
+; By Samuel Monnier, 9.6.00
+;
+init:
+  z = 0
+  float arg = 0
+  int i = 0
+  int j = 0
+  int k = 0
+  float d = 0
+  float dist = 1e20
+  float x = 0
+  float y = 0
+  float dr = pi/180*@rotincr/2
+loop:
+  k = k + 1
+  
+  if k >= @itermin && k <= @itermax
+    z = #z
+    
+    ; Performs translation, rotation
+    ; and magnification
+    z = z - @center
+    z = z*exp(-1i*@rot*pi/180)
+    z = z/@size
+    i = 0
+  
+    while i < @niter
+      i = i + 1 
+
+      x = abs(real(z))
+      y = imag(z)
+      z = x + 1i*y
+      arg = -atan2(z) + pi/2
+    
+      ; Estimate distance
+      if y >= -1 && y <= 0
+        d = x^@power
+      elseif y < -1
+        d = cabs(z + 1i)^@power
+      elseif y > 0
+        d = cabs(z)^@power
+      endif
+     
+      if d < dist
+        dist = d
+      endif
+    
+      ; Computes the rotation to apply 
+      j = @order-1
+      rotincr = j*dr
+      while j > 0
+        j = j - 2  
+        if arg < (j+1)*dr
+          rotincr = j*dr
+        endif
+      endwhile
+    
+      ; Performs transformation
+      z = z*exp(1i*rotincr)
+      z = z*@magnincr
+      z = z - 1i
+      
+    endwhile
+  
+  endif
+ 
+final:
+    
+  #index = dist 
+   
+default:
+  title = "Fractal Tree Trap"
+  helpfile = "sam-help\variouscol.htm"
+  helptopic = "ftreetrap"
+
+  param power
+    caption = "Dist. Est. Power"
+    default = .01
+  endparam
+  param order
+    caption = "Tree Order"
+    default = 2
+  endparam
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 40.0
+  endparam
+  param magnincr
+    caption = "Tree Magnification Increment"
+    default = 1.9
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  param niter
+    caption = "Number of Iteration"
+    default = 5
+  endparam
+  param itermin
+    caption = "First Iteration to Trap"
+    default = 1
+  endparam
+  param itermax
+    caption = "Last Iteration to Trap"
+    default = 20
+  endparam
+    
+}
+
+SFBMgen(BOTH) {
+; By Samuel Monnier, 6.5.00
+; Updated, 21.5.00
+init:
+  z = #pixel
+  int i = 0
+  int j = 1
+  float mod = 1
+  float scale = 0
+  float d1 = 0
+  float d2 = 0
+  float d3 = 0
+  float d4 = 0
+  float nindex = 0
+  float sindex = 0
+  cr1 = 0
+  cr2 = 0
+  cr3 = 0
+  cr4 = 0
+  float crp1 = 0
+  float crp2 = 0
+  float crp3 = 0
+  float crp4 = 0
+  float logp = 1/log(@fpower)
+  float logb = log(log(@fbail))
+  float inter = 0
+  
+loop:
+    i = i + 1
+    
+    if i >= @niterinf && i <= @nitersup
+    
+    inter = logp*logb - logp*log(log(cabs(#z)))
+    
+    if @use == 0
+      z = #z*exp(1i*pi/180*@patrot)
+    elseif @use == 1
+      z = #pixel*exp(1i*pi/180*@patrot)
+      j = j + 1
+    endif
+    
+    if @invert == false
+      z = 2*z/@size
+    else
+      z = 2/(z*@size)
+    endif
+    
+    z = z*exp(1i*pi/180*@rot*j)
+    
+    if @scalemode == 0
+      scale = 1
+    elseif @scalemode == 1
+      scale = i
+    elseif @scalemode == 2
+      scale = 1/cabs(#z)^.02
+    elseif @scalemode == 3
+      scale = @magn^i
+    elseif @scalemode == 4
+      scale = cabs(#z)^.5  
+    endif
+    
+    ; Center of the square containing z
+    zc = round(scale*z)/scale
+
+    
+    ; Corners of this square
+    if @perturb == true
+      zc1 = zc + ((.5,.5)+12)/scale
+      zc2 = zc + ((-.5,.5)-11)/scale
+      zc3 = zc + ((.5,-.5)+4i)/scale
+      zc4 = zc + ((-.5,-.5)-5i)/scale
+    else
+      zc1 = zc + (.5,.5)/scale
+      zc2 = zc + (-.5,.5)/scale
+      zc3 = zc + (.5,-.5)/scale
+      zc4 = zc + (-.5,-.5)/scale
+    endif
+    
+    ; Perturbation parameter in the 
+    ; random number computation
+    if @mod == 1
+      mod = sqrt(i)
+    endif
+    
+    ; Computes (pseudo-) random complex
+    ; numbers (division mode)
+    if @randmode == 0
+      cr1 = @seed/(mod*zc1+124) - floor(@seed/(mod*zc1+124))
+      cr2 = @seed/(mod*zc2+124) - floor(@seed/(mod*zc2+124))
+      cr3 = @seed/(mod*zc3+124) - floor(@seed/(mod*zc3+124))
+      cr4 = @seed/(mod*zc4+124) - floor(@seed/(mod*zc4+124))
+    elseif @randmode == 2
+      cr1 = 2*(@seed/(mod*zc1+124) - round(@seed/(mod*zc1+124)))
+      cr2 = 2*(@seed/(mod*zc2+124) - round(@seed/(mod*zc2+124)))
+      cr3 = 2*(@seed/(mod*zc3+124) - round(@seed/(mod*zc3+124)))
+      cr4 = 2*(@seed/(mod*zc4+124) - round(@seed/(mod*zc4+124)))
+    ; Computes (really pseudo-) random numbers. 
+    ; (Actually these numbers are not random
+    ; and a pattern associated with the function
+    ; used often appear.)
+    elseif @randmode == 1
+      cr1 = @f1(mod*zc1) - floor(@f1(mod*zc1))
+      cr2 = @f1(mod*zc2) - floor(@f1(mod*zc2))
+      cr3 = @f1(mod*zc3) - floor(@f1(mod*zc3))
+      cr4 = @f1(mod*zc4) - floor(@f1(mod*zc4))
+    elseif @randmode == 3
+      cr1 = 2*(@f1(mod*zc1) - round(@f1(mod*zc1)))
+      cr2 = 2*(@f1(mod*zc2) - round(@f1(mod*zc2)))
+      cr3 = 2*(@f1(mod*zc3) - round(@f1(mod*zc3)))
+      cr4 = 2*(@f1(mod*zc4) - round(@f1(mod*zc4)))
+    endif
+    
+    ; Perlin's noise
+    if @mode == 0
+      ; Corners-point vectors
+      v1 = (z - zc1)*scale
+      v2 = (z - zc2)*scale
+      v3 = (z - zc3)*scale
+      v4 = (z - zc4)*scale
+      ; Dot Product
+      crp1 = real(cr1)*real(v1) + imag(cr1)*imag(v1)
+      crp2 = real(cr2)*real(v2) + imag(cr2)*imag(v2)
+      crp3 = real(cr3)*real(v3) + imag(cr3)*imag(v3)
+      crp4 = real(cr4)*real(v4) + imag(cr4)*imag(v4)
+    endif
+    
+    ; Computes distances from the point
+    ; to the corners 
+    d1 = real(z - zc)*scale + 0.5
+    d2 = 1 - d1
+    d3 = imag(z - zc)*scale + 0.5
+    d4 = 1 - d3
+    
+    ; Powers them...
+    if @sin == 1
+      d1 = (.5 + .5*sin(pi*d1-pi/2))^@power
+      d2 = (.5 + .5*sin(pi*d2-pi/2))^@power
+      d3 = (.5 + .5*sin(pi*d3-pi/2))^@power
+      d4 = (.5 + .5*sin(pi*d4-pi/2))^@power
+    else
+      d1 = d1^@power
+      d2 = d2^@power
+      d3 = d3^@power
+      d4 = d4^@power
+    endif
+    
+    ; Computes the number associated with the 
+    ; point.
+    ; Perlin
+    if @mode == 0
+      nindex = 10*abs(crp1*d1*d3 + crp3*d1*d4 + crp2*d2*d3 + crp4*d2*d4)
+    ; Raw
+    elseif @mode == 1
+      pixcomp = cr1*d1*d3 + cr3*d1*d4 + cr2*d2*d3 + cr4*d2*d4
+      nindex = cabs(pixcomp)
+    endif
+    
+    if @string == true
+      nindex = nindex - .7
+      nindex = abs(nindex)^@power1
+    endif
+    
+    ; Modify the scale distribution (ie the 
+    ; "weigh" of each scale in the final sum).
+    if @scaledis == 0
+      sindex = sindex + nindex*(inter-1)
+    elseif @scaledis == 1
+      sindex = sindex + nindex*(inter-1)/i
+    elseif @scaledis == 2
+      sindex = sindex + nindex*(inter-1)/log(i+1)
+    elseif @scaledis == 3
+      sindex = sindex + nindex*(inter-1)/(cabs(#z)+1)^2
+    elseif @scaledis == 4
+      sindex = sindex + nindex*(inter-1)/cabs(#z)
+    endif
+    
+    endif
+    
+final:
+  
+    #index = 0.01*abs(sindex)
+
+
+default:
+  title = "S.F.B.M. General"
+  helpfile = "sam-help\sfbm.htm"
+  helptopic = "sfbmg"
+  
+  param fpower
+    caption = "Formula Power"
+    default = 2.0
+  endparam
+  
+  param fbail
+    caption = "Formula Bailout"
+    default = 1e18
+  endparam
+  
+  param niterinf
+    caption = "First Iteration to trap"
+    default = 1
+  endparam
+  
+  param nitersup
+    caption = "Last Iteration to trap"
+    default = 10
+  endparam
+  
+  param use
+    caption = "Use..."
+    default = 0
+    enum = "...current z" "...pixel value"
+  endparam
+  
+  param invert
+    caption = "Invert z ?"
+    default = false
+  endparam
+  
+  param mode
+    caption = "Noise type"
+    default = 1
+    enum = "Perlin's" "Raw... (Sam's)"
+  endparam
+  
+  param string
+    caption = "String mode ?"
+    default = false
+  endparam
+  
+  param power1
+    caption = "String Power"
+    default = .1
+  endparam
+  
+  param scalemode
+    caption = "Scale Mode"
+    default = 0
+    enum = "constant" "i" "Fancy" "(Magn.Step)^i" "Fancy 2"
+  endparam
+  
+  param magn
+    caption = "Magnification Step"
+    default = 1.5
+  endparam
+  
+  param scaledis
+    caption = "Scale Distribution"
+    default = 3
+    enum = "constant" "1/i" "1/log(i+1)" "1/(|z|+1)^2" "1/|z|"
+  endparam
+  
+  param sin
+    caption = "Distance Estimator"
+    default = 0
+    enum = "Raw" "Sin"
+  endparam
+  
+  param perturb
+    caption = "Perturb ?"
+    default = false
+  endparam
+  
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+  
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param patrot
+    caption = "Pattern Rotation"
+    default = 0.0
+  endparam
+
+  param rot
+    caption = "Rotation Step"
+    default = 0.0
+  endparam
+  
+  param seed
+    caption = "Seed"
+    default = 123094
+  endparam
+  
+  param randmode
+    caption = "Random Generator"
+    default = 0
+    enum = "Division" "Selected Function" \
+           "Division II" "Selected Function II"
+  endparam
+  
+  param mod 
+    caption = "Vary Random Numbers ?"
+    default = 1
+    enum = "No" "Use sqrt(i)"
+  endparam
+  
+  func f1
+    caption = "Selected Function"
+    default = sqrt()
+  endfunc
+}
+
+ThinOrbitTraps(BOTH) {
+; By Samuel Monnier, 7.00
+init:
+  float d = 0
+  if @mode == 1 || @mode == 2
+    d = 1e20
+  endif
+  int i = 0
+  float dist = 0
+  float dist2 = 0
+loop:
+  i = i + 1
+  
+  if i >= real(@fiter) && i <= imag(@fiter)
+  
+  z = (#z - @c)*exp(1i*pi/180*@rot)/@size
+
+  float x = sqrt(@rat)*real(z)
+  float y = 1/sqrt(@rat)*imag(z)
+  if @shape == 0
+    dist = abs(x^2+y^2-1)
+  elseif @shape == 1
+    if abs(x) > abs(y)
+      dist = abs(abs(x)-1)
+    else
+      dist = abs(abs(y)-1)
+    endif
+  elseif @shape == 2
+    dist = abs(abs(x)+abs(y)-1)
+  elseif @shape == 3
+    dist = abs(sin(@a*x)+cos(@b*x)+y)
+  elseif @shape == 4
+    dist = abs(x^2-y)
+  elseif @shape == 5
+    dist = abs(x^2-y^2 + 1)
+  elseif @shape == 6
+    dist = abs(atan(x)-y)
+  elseif @shape == 7
+    dist = abs((y^2-x^2)*(x-1)*(@a*x-@b)-4*(x^2+y^2-2*x)^2)
+  elseif @shape == 8
+    dist = abs(x^4+y^4-2*@a*abs(x)*y^2)
+  elseif @shape == 9
+    dist = abs(x^4-x^2*y+y^3)
+  elseif @shape == 10
+    dist = abs(x*(x^2+y^2)-2*@a*y^2)
+  elseif @shape == 11
+    dist = abs((x^2+y^2)*atan2(x+flip(y))-@a*y)
+  elseif @shape == 12
+    dist = abs((x^2+y^2)*atan2(y/x)-@a*y)
+  elseif @shape == 13
+    dist = abs((x^2+2*@a*y-@a^2)^2-y^2*(@b^2-x^2))
+  elseif @shape == 14
+    dist = abs(y^2-@a^2*(x^4-x^6))
+  elseif @shape == 15
+    dist = abs(2*y^2*(x^2+y^2)-2*@b*y^2*(x+y)+(@b^2-3*@a^2)*y^2-@a^2*x^2)
+  elseif @shape == 16
+    dist = abs(10*sin(x)/x-y)
+  elseif @shape == 17
+    dist = abs((x^2-1)^2-y^2*(3+2*y))
+  elseif @shape == 18
+    dist = abs((x^2+y^2)^2-2*@a*(x^2-y^2))
+  elseif @shape == 19
+    dist = abs((x^2+y^2-3*x)^2-4*x^2*(2-x))
+  elseif @shape == 20
+    dist = abs(@a*@b*x/(x^2+@a^2)-y)
+  elseif @shape == 21
+    dist = abs(y^4-x^4-x*y)
+  elseif @shape == 22
+    dist = abs((x^2+y^2)*(y^2+x*(x+@a))-4*@b*x*y^2)
+  elseif @shape == 23
+    dist = abs(8*@b*@a^3/(x^2+4*@a^2)-y)
+  elseif @shape == 24
+    dist = abs((x^2+y^2)^@a%1-.5+atan2(x+flip(y))/(2*pi))
+    dist2 = abs((x^2+y^2)^@a%1-.5+atan2(x+flip(y))/(2*pi)+1)
+    if dist2 < dist
+      dist = dist2
+    endif
+    dist2 = abs((x^2+y^2)^@a%1-.5+atan2(x+flip(y))/(2*pi)-1)
+    if dist2 < dist
+      dist = dist2
+    endif
+  elseif @shape == 25
+    dist = abs(tan(x)-y)
+  elseif @shape == 26
+    dist = abs(y)
+  endif
+  
+  if @mode == 0
+    dist2 = cabs(z)+@f
+    dist = abs(dist^(@power*@pf) - dist2^@power)^2
+    d = dist/(cabs(z)+1)^@power3 + d
+  elseif @mode == 1
+    dist = dist^@power
+    if d > dist
+      d = dist
+    endif
+  elseif @mode == 2
+    dist = dist^@power/(cabs(z)+1)^@power3
+    if d > dist
+      d = dist
+    endif
+  endif
+  
+  endif
+final:
+  
+  if @mode == 0
+    #index = 1000*d
+  else
+    #index = d
+  endif
+  
+default:
+  title = "Thin Orbit Traps"
+  helpfile = "sam-help\thintraps.htm"
+  
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Sum" "Closest" "Closest (Corrected)"
+  endparam
+  
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Circle" "Square" "Diamond" "Sinus+Cosinus" "Parabola" \
+           "Hyperbola" "ArcTangent" "Ampersand Curve" "Bifolium" \
+           "Bow" "Cissoid of Diocles" "Strange Shape" "Happy Accident" \
+           "Cocked Hat" "Dumbbell Curve" "Dürer's Conchoid" "sin(x)/x" \
+           "Knot Curve" "Lemniscate" "Link Curve" "Serpentine Curve" \
+           "Twisted Cross" "Trifolium" "Witch of Agnesi" "Spiral 1" \
+           "Tangent" "Line"
+  endparam
+  
+  param a
+    caption = "Shape Parameter I"
+    default = 1.0
+  endparam
+  
+  param b
+    caption = "Shape Parameter II"
+    default = 1.0
+  endparam
+  
+  param c
+    caption = "Center"
+    default = (0,0)
+  endparam
+  
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam  
+  
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  
+  param rat
+    caption = "Ratio Width/Heigh"
+    default = 1.0
+  endparam
+  
+  param fiter
+    caption = "First/Last Iteration"
+    default = (0,1e20)
+  endparam
+  
+  param f
+    caption = "Adjust Normalization"
+    default = 1.0
+  endparam
+  
+  param pf
+    caption = "Power Factor"
+    default = .2
+  endparam
+  
+  param power
+    caption = "Main Power"
+    default = .01
+  endparam
+  
+  param power3
+    caption = "Decay Power"
+    default = 1.0
+  endparam
+  
+}
+
+3DSFBM(BOTH) {
+; By Samuel Monnier, 17-18.9.00
+init:
+  z0 = 0
+  z = 0
+  int i = 0
+  int j = 0
+  float mod = 1
+  float d1 = 0
+  float d2 = 0
+  float d3 = 0
+  float d4 = 0
+  float nindex = 0
+  float sindex = 0
+  float scale = 0
+  cr1 = 0
+  cr2 = 0
+  cr3 = 0
+  cr4 = 0
+  float crp1 = 0
+  float crp2 = 0
+  float crp3 = 0
+  float crp4 = 0
+  float h = 0
+  float h00 = 0
+  float h01 = 0
+  float h10 = 0
+loop:
+  
+final:
+  
+  z0 = #z/@size
+
+  while j < 3
+  
+  j = j + 1
+  
+  if j == 1
+    z = z0
+  elseif j == 2
+    z = z0 + @eps
+  elseif j == 3
+    z = z0 + @eps*1i
+  endif
+  
+  while i < @niter
+    
+    scale = @magn^i
+    z = z*exp(1i*pi/180*@rot)
+    
+    i = i + 1
+    
+    ; Center of the square containing z
+    zc = round(scale*z)/scale
+    
+    ; Corners of this square
+    if @perturb == true
+      zc1 = zc + ((.5,.5)+12)/scale
+      zc2 = zc + ((-.5,.5)-11)/scale
+      zc3 = zc + ((.5,-.5)+4i)/scale
+      zc4 = zc + ((-.5,-.5)-5i)/scale
+    else
+      zc1 = zc + (.5,.5)/scale
+      zc2 = zc + (-.5,.5)/scale
+      zc3 = zc + (.5,-.5)/scale
+      zc4 = zc + (-.5,-.5)/scale
+    endif
+    ; Perturbation parameter in the 
+    ; random number computation
+    if @mod == 1
+      mod = sqrt(i)
+    endif
+    
+    ; Computes (pseudo-) random complex
+    ; numbers (division mode)
+    if @randmode == 0
+      cr1 = @seed/(mod*zc1+124) - floor(@seed/(mod*zc1+124))
+      cr2 = @seed/(mod*zc2+124) - floor(@seed/(mod*zc2+124))
+      cr3 = @seed/(mod*zc3+124) - floor(@seed/(mod*zc3+124))
+      cr4 = @seed/(mod*zc4+124) - floor(@seed/(mod*zc4+124))
+    elseif @randmode == 2
+      cr1 = 2*(@seed/(mod*zc1+124) - round(@seed/(mod*zc1+124)))
+      cr2 = 2*(@seed/(mod*zc2+124) - round(@seed/(mod*zc2+124)))
+      cr3 = 2*(@seed/(mod*zc3+124) - round(@seed/(mod*zc3+124)))
+      cr4 = 2*(@seed/(mod*zc4+124) - round(@seed/(mod*zc4+124)))
+    ; Computes (really pseudo-) random numbers. 
+    ; (Actually these numbers are not random
+    ; and a pattern associated with the function
+    ; used often appear.)
+    elseif @randmode == 1
+      cr1 = @f1(mod*zc1) - floor(@f1(mod*zc1))
+      cr2 = @f1(mod*zc2) - floor(@f1(mod*zc2))
+      cr3 = @f1(mod*zc3) - floor(@f1(mod*zc3))
+      cr4 = @f1(mod*zc4) - floor(@f1(mod*zc4))
+    elseif @randmode == 3
+      cr1 = 2*(@f1(mod*zc1) - round(@f1(mod*zc1)))
+      cr2 = 2*(@f1(mod*zc2) - round(@f1(mod*zc2)))
+      cr3 = 2*(@f1(mod*zc3) - round(@f1(mod*zc3)))
+      cr4 = 2*(@f1(mod*zc4) - round(@f1(mod*zc4)))
+    endif
+    
+    ; Perlin's noise
+    if @mode == 0
+      ; Corners-point vectors
+      v1 = (z - zc1)*scale
+      v2 = (z - zc2)*scale
+      v3 = (z - zc3)*scale
+      v4 = (z - zc4)*scale
+      ; Dot Product
+      crp1 = real(cr1)*real(v1) + imag(cr1)*imag(v1)
+      crp2 = real(cr2)*real(v2) + imag(cr2)*imag(v2)
+      crp3 = real(cr3)*real(v3) + imag(cr3)*imag(v3)
+      crp4 = real(cr4)*real(v4) + imag(cr4)*imag(v4)
+    endif
+    
+    ; Computes distances from the point
+    ; to the corners 
+    d1 = real(z - zc)*scale + 0.5
+    d2 = 1 - d1
+    d3 = imag(z - zc)*scale + 0.5
+    d4 = 1 - d3
+    
+    ; Powers them...
+    if @sin == 1
+      d1 = (.5 + .5*sin(pi*d1-pi/2))^@power
+      d2 = (.5 + .5*sin(pi*d2-pi/2))^@power
+      d3 = (.5 + .5*sin(pi*d3-pi/2))^@power
+      d4 = (.5 + .5*sin(pi*d4-pi/2))^@power
+    else
+      d1 = d1^@power
+      d2 = d2^@power
+      d3 = d3^@power
+      d4 = d4^@power
+    endif
+    
+    ; Computes the number associated with the 
+    ; point.
+    ; Perlin
+    if @mode == 0
+      nindex = 10 + crp1*d1*d3 + crp3*d1*d4 + crp2*d2*d3 + crp4*d2*d4
+    ; Raw
+    elseif @mode == 1
+      pixcomp = cr1*d1*d3 + cr3*d1*d4 + cr2*d2*d3 + cr4*d2*d4
+      nindex = cabs(pixcomp)
+    endif
+    
+    if @string == true
+      if @mode == 0
+        nindex = nindex - 10
+      else
+        nindex = nindex -.7
+      endif
+      nindex = abs(nindex)^@power1
+    endif
+    
+    ; Modify the scale distribution (ie the 
+    ; "weigh" of each scale in the final sum).
+    sindex = sindex + nindex/scale^@scaledis
+    
+  endwhile
+  
+  i = 0
+  
+  if @mode == 0
+    h = 0.4*sindex
+  else 
+    h = 0.2*sindex
+  endif
+  
+  sindex = 0
+  
+  if j == 1
+    h00 = h
+  elseif j == 2
+    h01 = h
+  elseif j == 3
+    h10 = h
+  endif
+  
+  endwhile
+  
+  float e1x = @eps
+  float e1y = 0
+  float e1z = (h01 - h00)
+  
+  float e2x = 0
+  float e2y = @eps
+  float e2z = (h10 - h00)
+  
+  float ne1 = sqrt(e1x^2+e1y^2+e1z^2)
+  float ne2 = sqrt(e2x^2+e2y^2+e2z^2)
+  
+  e1x = e1x/ne1
+  e1y = e1y/ne1
+  e1z = e1z/ne1
+  
+  e2x = e2x/ne2
+  e2y = e2y/ne2
+  e2z = e2z/ne2
+  
+  float e3x = e1y*e2z - e1z*e2y
+  float e3y = e1z*e2x - e1x*e2z
+  float e3z = e1x*e2y - e1y*e2x
+  
+  float phi = real(p1)*pi/180
+  float theta = imag(p1)*pi/180
+  
+  float x = 0
+  x = (cos(phi)*cos(theta)*e3x) + (sin(phi)*cos(theta)*e3y) + \
+      (sin(theta)*e3z)         
+  x = x/2    
+  #index = x + 1000
+default:
+  title = "3D SFBM"
+  helpfile = "sam-help\sfbm.htm"
+  helptopic = "3dsfbm"
+  
+  param p1
+    caption = "Phi/Theta"
+    default = (60,30)
+  endparam
+  
+  param mode
+    caption = "Noise type"
+    default = 0
+    enum = "Perlin's" "Raw... (Sam's)"
+  endparam
+  
+  param niter
+    caption = "Number of Iterations"
+    default = 20
+  endparam
+  
+  param string
+    caption = "String mode ?"
+    default = false
+  endparam
+     
+  param power1
+    caption = "String Power"
+    default = .1
+  endparam
+  
+  param scaledis
+    caption = "Scale Distribution Power"
+    default = 1.0
+  endparam
+  
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param magn
+    caption = "Magnification Step"
+    default = 1.2
+  endparam
+
+  param rot
+    caption = "Rotation Step"
+    default = 28.0
+  endparam
+  
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+  
+  param sin
+    caption = "Distance Estimator"
+    default = 1
+    enum = "Raw" "Sin"
+  endparam
+  
+  param perturb
+    caption = "Perturb ?"
+    default = false
+  endparam
+  
+  param seed
+    caption = "Seed"
+    default = 123094
+  endparam
+  
+  param randmode
+    caption = "Random Generator"
+    default = 2
+    enum = "Division" "Selected Function" \
+           "Division II" "Selected Function II"
+  endparam
+  
+  param mod 
+    caption = "Vary Random Numbers ?"
+    default = 1
+    enum = "No" "Use sqrt(i)"
+  endparam
+  
+  param eps
+    caption = "Epsilon"
+    default = .00001
+  endparam
+  
+  func f1
+    caption = "Selected Function"
+    default = exp()
+  endfunc
+}
+
+PolygonalGradient(BOTH) {
+; By Samuel Monnier, 10.00
+init:
+  z = 0
+  float arg = 0
+loop:
+  
+final:
+  z = -(#z-@center)*1i*exp(1i*pi/180*@rot)
+  arg = atan2(z)
+  arg = -round(arg/(2*pi)*@order)/@order*(2*pi)
+  z = z*exp(1i*arg)
+  #index = abs(real(z) - @r)^@power
+default:
+  title = "Polygonal Gradient"
+  helpfile = "sam-help\variouscol2.htm"
+  
+  param order
+    caption = "Order"
+    default = 5
+  endparam
+  
+  param r
+    caption = "Radius"
+    default = 1.0
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+  
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+}
+
+GradientForAperiodicTiling(BOTH) {
+; By Samuel Monnier, 10.00
+init:
+  z = 0
+  float x = 0
+  float y = 0
+  float d = 0
+  float md = 1e20
+loop:
+  
+final:
+  z = #z
+  
+  if real(z) < 0
+    z = -conj(z)
+  endif
+  
+  if @shape == 0
+  
+    ztest = z - sqrt(3)/2*1i
+    ztest = ztest
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z + sqrt(3)/2*1i
+    ztest = ztest/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - 1 - sqrt(3)/2*1i
+    ztest = ztest*exp(1i*pi/3)/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 1
+    
+    ztest = abs(z) - 1
+    ztest = ztest*exp(-1i*2*pi/3)/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 2
+  
+    z = #z + 10
+    if real(z) < 0
+      z = -conj(z)
+    endif
+    
+    ztest = z - sqrt(3)/2*1i
+    ztest = ztest
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z + sqrt(3)/2*1i
+    ztest = ztest/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - 1 - sqrt(3)/2*1i
+    ztest = ztest*exp(1i*pi/3)/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    z = #z - 10
+    z = abs(z)
+    
+    ztest = abs(z) - 1
+    ztest = ztest*exp(-1i*2*pi/3)/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+  
+  elseif @shape == 3
+    z = #z
+    
+    ztest = z + (1,1)
+    ztest = -1i*ztest/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = 2*cabs(ztest)
+    elseif x > 1
+      d = 2*cabs(ztest-1)
+    else
+      d = 2*abs(y)
+    endif
+    if d < md
+      md = d
+    endif     
+    
+    ztest = z + (1,1)
+    ztest = ztest/2
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = 2*cabs(ztest)
+    elseif x > 1
+      d = 2*cabs(ztest-1)
+    else
+      d = 2*abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z + (1,-1)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z + (-1,1)
+    ztest = -1i*ztest
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z
+    ztest = -1i*ztest
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+  
+  #index = md^@power 
+default:
+  title = "Gradient for Aperiodic Tiling I & II"
+  helpfile = "sam-help\aperiodic.htm"
+  helptopic = "gradforap"
+  
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Trapezoid" "Rhombus" "Frame API" "L"
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+}
+
+TruchetTiles(BOTH) {
+; By Samuel Monnier, 31.10.00
+init:
+  z = 0
+  zc = 0
+  zz = 0
+  cr = 0
+  float d1 = 0
+  float d2 = 0
+loop:
+  
+final:
+  z = #z/@size*exp(1i*pi/180*@rot)
+  zc = round(z)
+  zz = z - zc
+  
+  cr = 2*(@seed/(zc+124) - round(@seed/(zc+124)))
+  
+  if real(cr) > 0
+    if @mode == 0
+      d1 = abs(cabs(zz+(.5,.5))-.5)
+      d2 = abs(cabs(zz-(.5,.5))-.5)
+    else
+      d1 = abs(real(zz) - imag(zz) -.5)
+      d2 = abs(real(zz) - imag(zz) +.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  else
+    if @mode == 0
+      d1 = abs(cabs(zz+(.5,-.5))-.5)
+      d2 = abs(cabs(zz-(.5,-.5))-.5)
+    else
+      d1 = abs(real(zz) + imag(zz) -.5)
+      d2 = abs(real(zz) + imag(zz) +.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  endif
+  
+  #index = d1^@thick
+  
+default:
+  title = "Truchet Tiles"
+  helpfile = "sam-help\variouscol2.htm"
+  helptopic = "truchet"
+  
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Roundy" "Squarry"
+  endparam
+  
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param rot
+    caption = "Pattern Rotation"
+    default = 0.0
+  endparam
+  
+  param thick
+    caption = "Thickness"
+    default = 0.1
+  endparam
+  
+  param seed
+    caption = "Seed"
+    default = 1234567890
+  endparam
+}
+
+TruchetFBM(BOTH) {
+; By Samuel Monnier, 31.10.00
+init:
+  z = 0
+  zc = 0
+  zz = 0
+  cr = 0
+  float d1 = 0
+  float d2 = 0
+  int i = 0
+  float sum = 0
+loop:
+  
+final:
+  
+  while i < @iter
+  
+  i = i + 1
+  
+  z = #z/@size*exp(1i*pi/180*@rot)
+  z = z*@mst^i*exp(1i*(i-1)*180/pi*@rotst)
+  zc = round(z)
+  zz = z - zc
+  
+  cr = 2*(@seed/(zc+124+i) - round(@seed/(zc+124+i)))
+  
+  if real(cr) > 0
+    if @mode == 0
+      d1 = abs(cabs(zz+(.5,.5))-.5)
+      d2 = abs(cabs(zz-(.5,.5))-.5)
+    else
+      d1 = abs(real(zz) - imag(zz) -.5)
+      d2 = abs(real(zz) - imag(zz) +.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  else
+    if @mode == 0
+      d1 = abs(cabs(zz+(.5,-.5))-.5)
+      d2 = abs(cabs(zz-(.5,-.5))-.5)
+    else
+      d1 = abs(real(zz) + imag(zz) -.5)
+      d2 = abs(real(zz) + imag(zz) +.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  endif
+  
+  d1 = d1^@thick
+  
+  sum = sum + d1/1.2^i
+  
+  endwhile
+  
+  #index = sum/3
+  
+default:
+  title = "Truchet FBM"
+  helpfile = "sam-help\sfbm.htm"
+  helptopic = "truchetfbm"
+  
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Roundy" "Squarry"
+  endparam
+  
+  param rotst
+    caption = "Rotation Step"
+    default = 0.0
+  endparam
+  
+  param mst
+    caption = "Magnification Step"
+    default = 2.0
+  endparam
+  
+  param thick
+    caption = "Thickness"
+    default = 0.1
+  endparam
+  
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param rot
+    caption = "Pattern Rotation"
+    default = 0.0
+  endparam
+  
+  param iter
+    caption = "Number of Iterations"
+    default = 7
+  endparam
+  
+  param seed
+    caption = "Seed"
+    default = 1234567890
+  endparam
+}
+
+GradientForPenroseTilings(BOTH) {
+; By Samuel Monnier, 10.00
+init:
+  float phi = (1+sqrt(5))/2
+  z = 0
+  float x = 0
+  float y = 0
+  float d = 0
+  float md = 1e20
+loop:
+  
+final:
+  z = #z
+  
+  if real(z) < 0
+    z = -conj(z)
+  endif
+  
+  if @shape == 0
+    z = z + 1i
+    
+    ztest = z
+    ztest = ztest*exp(-1i*3*pi/10)
+    ztest = ztest/phi
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - phi*1i
+    ztest = ztest*exp(1i*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    
+  elseif @shape == 1
+    z = z + 1/phi*1i
+    
+    ztest = z
+    ztest = ztest*exp(-1i*3*pi/10)
+    ztest = ztest/phi
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - 1i
+    ztest = ztest*exp(-1i*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 2
+    z = #z + 10 + 1i
+    
+    if real(z) < 0
+      z = -conj(z)
+    endif
+    
+    ztest = z
+    ztest = ztest*exp(-1i*3*pi/10)
+    ztest = ztest/phi
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - phi*1i
+    ztest = ztest*exp(1i*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    z = #z - 10 + 1/phi*1i
+    
+    if real(z) < 0
+      z = -conj(z)
+    endif
+    
+    ztest = z
+    ztest = ztest*exp(-1i*3*pi/10)
+    ztest = ztest/phi
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    ztest = z - 1i
+    ztest = ztest*exp(-1i*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 3
+  
+    if imag(z) < 0
+      z = conj(z)
+    endif
+    
+    z = z/1.15
+    
+    ztest = z - 1/2
+    ztest = ztest*exp(-1i*7*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 4
+  
+    if imag(z) < 0
+      z = conj(z)
+    endif
+    
+    ztest = z - sin(pi/10)
+    ztest = ztest*exp(-1i*6*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @shape == 5
+    z = #z + 10
+    z = abs(z)/1.15
+    
+    ztest = z - 1/2
+    ztest = ztest*exp(-1i*7*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    z = #z - 10
+    z = abs(z)
+    
+    ztest = z - sin(pi/10)
+    ztest = ztest*exp(-1i*6*pi/10)
+    x = real(ztest)
+    y = imag(ztest)
+    if x < 0
+      d = cabs(ztest)
+    elseif x > 1
+      d = cabs(ztest-1)
+    else
+      d = abs(y)
+    endif
+    if d < md
+      md = d
+    endif   
+    
+  endif
+      
+              
+  #index = md^@power  
+default:
+  title = "Gradient for Penrose Tilings"
+  helpfile = "sam-help\penrose.htm"
+  helptopic = "Grad"
+  
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Kite" "Dart" "Kite & Dart Frame" "Fat" "Thin" "Thin & Fat Frame"
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+}
+
+TruchetForPenroseTilings(BOTH) {
+; By Samuel Monnier, 11.00
+init:
+  z = 0
+  float d = 0
+  float md = 1e20
+loop:
+  
+final:
+  z = #z
+  
+  if imag(z) < -5  
+  
+  z = #z + 10i
+  z = abs(z)
+    
+  if @mode == 0 || @mode == 1  
+    
+    if @flavour == 0
+      ztest = z - cos(pi/5)*1i
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z - cos(pi/5)/2*1i
+      d = imag(ztest)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    if @flavour == 0
+      ztest = z + cos(pi/5)*1i
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z + cos(pi/5)/2*1i
+      d = imag(ztest)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  elseif @mode == 2
+  
+    if @flavour == 0
+      ztest = z - sin(pi/5)
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z - sin(pi/5)/2
+      d = real(ztest)/sin(pi/5)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    if @flavour == 0
+      ztest = z + sin(pi/5)
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z + sin(pi/5)/2
+      d = real(ztest)/sin(pi/5)
+    endif
+    if d < md
+      md = d
+    endif
+  
+  endif
+  
+  endif
+  
+  if real(z) < -5
+      
+  z = #z + 10
+  z = abs(z)
+  
+  if @mode == 0 || @mode == 2
+    
+    if @flavour == 0
+      ztest = z - sin(pi/5)
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z - sin(pi/5)/2
+      d = real(ztest)/sin(pi/5)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    if @flavour == 0
+      ztest = z + sin(pi/5)
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z + sin(pi/5)/2
+      d = real(ztest)/sin(pi/5)
+    endif
+    if d < md
+      md = d
+    endif
+  
+  elseif @mode == 1
+    
+    if @flavour == 0
+      ztest = z - cos(pi/5)*1i
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z - cos(pi/5)/2*1i
+      d = imag(ztest)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    if @flavour == 0
+      ztest = z + cos(pi/5)*1i
+      d = abs(cabs(ztest)-.5)
+    else
+      ztest = z + cos(pi/5)/2*1i
+      d = imag(ztest)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+    
+  endif
+      
+  if real(z) > 5   
+  
+  z = #z - 10
+  z = abs(z)
+  
+  if @flavour == 0
+    ztest = z - cos(pi/10)*1i
+    d = abs(cabs(ztest)-.5)
+  else
+    ztest = z - cos(pi/10)/2*1i
+    d = imag(ztest)
+  endif
+  if d < md
+    md = d
+  endif
+    
+  if @flavour == 0
+    ztest = z + cos(pi/10)*1i
+    d = abs(cabs(ztest)-.5)
+  else
+    ztest = z + cos(pi/10)/2*1i
+    d = imag(ztest)
+  endif
+  if d < md
+    md = d
+  endif
+    
+  endif  
+      
+              
+  #index = md^@power  
+default:
+  title = "Truchet for Penrose Tilings"
+  helpfile = "sam-help\penrose.htm"
+  helptopic = "truchet"
+
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Mix" "I" "II"
+  endparam
+  
+  param flavour
+    caption = "Flavour"
+    default = 0
+    enum = "Circly" "Squarry"
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+}
+
+LinearGradient(BOTH) {
+; By Samuel Monnier
+init:
+  
+loop:
+  
+final:
+  z = #z*exp(-1i*pi/180*@rot)
+  #index = real(z) + 10000
+default:
+  title = "Linear Gradient"
+  
+  param rot
+    caption = "Gradient Rotation"
+    default = 0.0
+  endparam
+}
+
+HilbertCurve(BOTH) {
+; By Samuel Monnier, 2.9.00
+init:
+  z = 0
+  int i = 0
+  int ttype = 0
+  float d = -1e20
+loop:
+  
+final:
+  
+  z = #z/2
+  z = abs(z) - (.5,.5)
+  while i < @niter
+    i = i + 1
+    if ttype == 0
+      if real(z) < 0 && imag(z) < 0
+        z = 2*z + (.5,.5)
+        z = -conj(z)
+      elseif real(z) > 0 && imag(z) < 0
+        z = 2*z + (-.5,.5)
+        z = 1i*z
+      elseif real(z) > 0 && imag(z) > 0
+        z = 2*z + (-.5,-.5)
+        z = 1i*conj(z)
+      elseif real(z) < 0 && imag(z) > 0
+        z = 2*z + (.5,-.5)
+        ttype = 1
+      endif
+    else
+      if real(z) < 0 && imag(z) < 0
+        z = 2*z + (.5,.5)
+        z = 1i*z
+        ttype = 0
+      elseif real(z) > 0 && imag(z) < 0
+        z = 2*z + (-.5,.5)
+        z = -1i*conj(z)
+        ttype = 0
+      elseif real(z) > 0 && imag(z) > 0
+        z = 2*z + (-.5,-.5)
+        ttype = 0
+      elseif real(z) < 0 && imag(z) > 0
+        z = 2*z + (.5,-.5)
+        z = -conj(z)
+        ttype = 0
+      endif
+    endif  
+  endwhile
+  
+  if @style == 0
+    z = z + (1,1)
+    if ttype == 0
+      if abs(real(z))-1 > d
+        d = abs(real(z))-1
+      endif
+     if abs(imag(z))-1 > d
+        d = abs(imag(z))-1
+      endif
+    else
+      d = imag(z)-1
+    endif
+  elseif @style == 1 || @style == 2
+    if ttype == 0
+      d = cabs(z+(.5,.5))-.5
+    else
+      if @style == 1
+        d = imag(z)
+      else
+        d = imag(z) - (real(z)^2-.25)^2*3
+      endif
+    endif
+  elseif @style == 3
+    
+    if ttype == 0
+      z = z + (.5,.5)
+      d = abs(real(z)) + abs(imag(z)) - .5
+    else
+      ;d = imag(z)-.5
+      d = abs(real(z)) - imag(z) - .5
+    endif
+  endif 
+   
+  #index = abs(d)^@power
+  
+default:
+  title = "Hilbert Curve"
+  helpfile = "sam-help\hilbert.htm"
+  
+  param style
+    caption = "Style"
+    default = 0
+    enum = "Square" "Round I" "Round II" "Diagonal"
+  endparam  
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+  
+  param niter
+    caption = "Number of Iterations"
+    default = 4
+  endparam
+}
+
+SFBMII(BOTH) {
+; By Samuel Monnier, 5.01
+; Convolution feature inspired 
+; by Mark Twonsend's great "Plasma
+; Convolution" coloring.
+init:
+  z = 0
+  zc1 = 0
+  zc2 = 0
+  zc3 = 0
+  zc4 = 0
+  int i = 0
+  int j = 0
+  int jmax = 0
+  int niter = 0
+  float a = 0
+  float sum = 0
+  float x = 0
+  float y = 0
+  float d1 = 0
+  float d2 = 0
+  float d3 = 0
+  float d4 = 0
+  float nindex = 0
+  float sindex = 0
+  float scale = 1
+  float cr1r = 0
+  float cr1i = 0
+  float cr2r = 0
+  float cr2i = 0
+  float cr3r = 0
+  float cr3i = 0
+  float cr4r = 0
+  float cr4i = 0
+  float crp1 = 0
+  float crp2 = 0
+  float crp3 = 0
+  float crp4 = 0
+  float norm = 1
+  
+  if @interp == 0
+    niter = ceil(real(log(real(@fmm)-imag(@fmm))/log(1+@mstep)))
+  else
+    niter = ceil((real(@fmm)-imag(@fmm))/@mstep)
+  endif
+  
+  if @mode == 0
+    jmax = 1
+  else
+    jmax = 5
+  endif
+loop:
+  
+final:
+  
+  while j < jmax
+  
+  z = #z/@size
+  
+  if @mode == 1 || @mode == 2
+    if j == 0
+      a = @cbl + @ctl + @cbr + @ctr + @cc;/20
+    elseif j == 1
+      z = z + @eps*(-1,-1)
+      a = -@cbl
+    elseif j == 2
+      z = z + @eps*(-1,1)
+      a = -@ctl
+    elseif j == 3
+      z = z + @eps*(1,-1)
+      a = -@cbr
+    elseif j == 4
+      z = z + @eps*(1,1)
+     a = -@ctr
+    endif
+  else 
+    a = 1
+  endif
+  j = j + 1
+  
+  i = 0  
+  while i < niter + 2
+    
+    
+    if i == 2
+      if @pptype == 0
+        z = (real(@pp)*(1/sqrt(imag(@ppp))*x + 1i*sqrt(imag(@ppp))*y)^real(@ppp)+(1-real(@pp))*z)*imag(@pp)
+      else
+        z = (real(@pp)*x^real(@ppp)*exp(imag(@ppp)*1i*y)+(1-real(@pp))*z)*imag(@pp)
+      endif
+    elseif i == 0
+      z = z/imag(@pp)
+    endif
+    
+
+    
+    z = z*exp(1i*pi/180*@rot) + 1 - 2i
+    
+    if i > 1
+      if @interp == 0
+        scale = (1+@mstep)^(i-2)*imag(@fmm) 
+      else
+        scale = real(@fmm)-(i-1)*(@mstep+.001)
+      endif
+    endif    
+        
+    i = i + 1
+    
+    zc = round(scale*z)/scale
+    
+    zc1 = zc + (.5,.5)/scale
+    zc2 = zc + (-.5,.5)/scale
+    zc3 = zc + (.5,-.5)/scale
+    zc4 = zc + (-.5,-.5)/scale
+    
+    cr1r = ((real(zc1)-859-i)^5 % (132+i) - (imag(zc1)+328+i)^3 % (113+i))^2 %2 - 1
+    if @noise != 6 && @noise != 8 && @noise != 10 && @noise != 12 && @noise != 14
+      cr2r = ((real(zc2)-859-i)^5 % (132+i) - (imag(zc2)+328+i)^3 % (113+i))^2 %2 - 1
+      cr3r = ((real(zc3)-859-i)^5 % (132+i) - (imag(zc3)+328+i)^3 % (113+i))^2 %2 - 1
+      cr4r = ((real(zc4)-859-i)^5 % (132+i) - (imag(zc4)+328+i)^3 % (113+i))^2 %2 - 1
+    endif
+    if @noise == 0 || @noise == 5
+      cr1i = ((real(zc1)-465+i)^3 % (120+i) - (imag(zc1)-756+i)^2 % (107+i))^2 %2 - 1
+      cr2i = ((real(zc2)-465+i)^3 % (120+i) - (imag(zc2)-756+i)^2 % (107+i))^2 %2 - 1
+      cr3i = ((real(zc3)-465+i)^3 % (120+i) - (imag(zc3)-756+i)^2 % (107+i))^2 %2 - 1
+      cr4i = ((real(zc4)-465+i)^3 % (120+i) - (imag(zc4)-756+i)^2 % (107+i))^2 %2 - 1
+    endif
+    
+    if @noise == 0
+      v1 = (z - zc1)*scale
+      v2 = (z - zc2)*scale
+      v3 = (z - zc3)*scale
+      v4 = (z - zc4)*scale
+      crp1 = cr1r*real(v1) + cr1i*imag(v1)
+      crp2 = cr2r*real(v2) + cr2i*imag(v2)
+      crp3 = cr3r*real(v3) + cr3i*imag(v3)
+      crp4 = cr4r*real(v4) + cr4i*imag(v4)
+    elseif @noise == 1
+      crp1 = cr1r
+      crp2 = cr1r
+      crp3 = cr1r
+      crp4 = cr1r
+      norm = .5
+    elseif @noise == 2
+      crp1 = cr1r
+      crp2 = cr2r
+      crp3 = cr1r
+      crp4 = cr2r
+      norm = .5
+    elseif @noise == 3
+      crp1 = cr1r
+      crp2 = cr2r
+      crp3 = cr3r
+      crp4 = cr2r
+      norm = .5
+    elseif @noise == 4
+      crp1 = -cr1r
+      crp2 = cr2r
+      crp3 = cr3r 
+      crp4 = -cr4r
+      norm = .5
+    elseif @noise == 5
+      crp1 = cr1r*abs(real(z-zc)*scale)^real(@noisep) + cr1i*abs(imag(z-zc)*scale)^imag(@noisep)
+      crp2 = cr2r*abs(real(z-zc)*scale)^real(@noisep) + cr2i*abs(imag(z-zc)*scale)^imag(@noisep)
+      crp3 = cr3r*abs(real(z-zc)*scale)^real(@noisep) + cr3i*abs(imag(z-zc)*scale)^imag(@noisep)
+      crp4 = cr4r*abs(real(z-zc)*scale)^real(@noisep) + cr4i*abs(imag(z-zc)*scale)^imag(@noisep)
+      norm = .2
+    elseif @noise == 6  
+      crp1 = (cabs(z-zc)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 7  
+      crp1 = cr1r*(cabs(z-zc)*scale-imag(@noisep))^real(@noisep)
+      crp2 = cr2r*(cabs(z-zc)*scale-imag(@noisep))^real(@noisep)
+      crp3 = cr3r*(cabs(z-zc)*scale-imag(@noisep))^real(@noisep)
+      crp4 = cr4r*(cabs(z-zc)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 8
+      arg = atan2(z-zc)
+      arg = -round(arg/(2*pi)*4)/4*(2*pi)
+      ztest = (z-zc)*exp(1i*arg)
+      crp1 = (real(ztest)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 9
+      arg = atan2(z-zc)
+      arg = -round(arg/(2*pi)*4)/4*(2*pi)
+      ztest = (z-zc)*exp(1i*arg)
+      crp1 = cr1r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp2 = cr2r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp3 = cr3r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp4 = cr4r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 10
+      arg = atan2(z-zc)
+      arg = -round(arg/(2*pi)*8)/8*(2*pi)
+      ztest = (z-zc)*exp(1i*arg)
+      crp1 = (real(ztest)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 11
+      arg = atan2(z-zc)
+      arg = -round(arg/(2*pi)*8)/8*(2*pi)
+      ztest = (z-zc)*exp(1i*arg)
+      crp1 = cr1r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp2 = cr2r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp3 = cr3r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      crp4 = cr4r*(real(ztest)*scale-imag(@noisep))^real(@noisep)
+      norm = .4
+    elseif @noise == 12  
+      ztest = z - zc
+      if real(cr1r) > 0
+        d1 = abs(cabs(ztest*scale+(.5,.5))-.5)
+        d2 = abs(cabs(ztest*scale-(.5,.5))-.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      else
+        d1 = abs(cabs(ztest*scale+(.5,-.5))-.5)
+        d2 = abs(cabs(ztest*scale-(.5,-.5))-.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      endif
+      crp1 = d1^real(@noisep)
+      norm = .4
+    elseif @noise == 13  
+      ztest = z - zc
+      if real(cr1r) > 0
+        d1 = abs(cabs(ztest*scale+(.5,.5))-.5)
+        d2 = abs(cabs(ztest*scale-(.5,.5))-.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      else
+        d1 = abs(cabs(ztest*scale+(.5,-.5))-.5)
+        d2 = abs(cabs(ztest*scale-(.5,-.5))-.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      endif
+      crp1 = cr1r*(d1^real(@noisep)-imag(@noisep))
+      crp2 = cr2r*(d1^real(@noisep)-imag(@noisep))
+      crp3 = cr3r*(d1^real(@noisep)-imag(@noisep))
+      crp4 = cr4r*(d1^real(@noisep)-imag(@noisep))
+      norm = .4
+    elseif @noise == 14  
+      ztest = (z - zc)*scale
+      if real(cr1r) > 0
+        d1 = abs(real(ztest) - imag(ztest) -.5)
+        d2 = abs(real(ztest) - imag(ztest) +.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      else
+        d1 = abs(real(ztest) + imag(ztest) -.5)
+        d2 = abs(real(ztest) + imag(ztest) +.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      endif
+      crp1 = d1^real(@noisep)
+      norm = .4
+    elseif @noise == 15  
+      ztest = (z - zc)*scale
+      if real(cr1r) > 0
+        d1 = abs(real(ztest) - imag(ztest) -.5)
+        d2 = abs(real(ztest) - imag(ztest) +.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      else
+        d1 = abs(real(ztest) + imag(ztest) -.5)
+        d2 = abs(real(ztest) + imag(ztest) +.5)
+        if d2 < d1
+          d1 = d2
+        endif
+      endif
+      crp1 = cr1r*(d1^real(@noisep)-imag(@noisep))
+      crp2 = cr2r*(d1^real(@noisep)-imag(@noisep))
+      crp3 = cr3r*(d1^real(@noisep)-imag(@noisep))
+      crp4 = cr4r*(d1^real(@noisep)-imag(@noisep))
+      norm = .4
+    elseif @noise == 16
+    endif
+    
+    if @noise == 6 || @noise == 8 || @noise == 10 || @noise == 12 || @noise == 14
+      
+      nindex = crp1
+    
+    else
+    
+      d1 = real(z - zc)*scale + 0.5
+      d2 = (1 - d1)
+      d3 = imag(z - zc)*scale + 0.5
+      d4 = (1 - d3)
+            
+      d1 = (.5 + .5*sin(pi*d1-pi/2))^@power
+      d2 = (.5 + .5*sin(pi*d2-pi/2))^@power
+      d3 = (.5 + .5*sin(pi*d3-pi/2))^@power
+      d4 = (.5 + .5*sin(pi*d4-pi/2))^@power
+
+      nindex = crp1*d1*d3 + crp3*d1*d4 + crp2*d2*d3 + crp4*d2*d4
+;      d1 = 1-cabs(z-zc1)*scale
+;      if d1 < 0
+;        d1 = 0
+;      endif
+;      d2 = 1-cabs(z-zc2)*scale
+;      if d2 < 0
+;        d2 = 0
+;      endif
+;      d3 = 1-cabs(z-zc3)*scale
+;      if d3 < 0
+;        d3 = 0
+;      endif
+;      d4 = 1-cabs(z-zc4)*scale
+;      if d4 < 0
+;        d4 = 0
+;      endif
+;      nindex = crp1*d1 + crp2*d2 + crp3*d3 + crp4*d4
+      
+      
+    endif
+
+    if @f1 == 1
+      nindex = real(sin(100*real(@fp1)*nindex+imag(@fp1)))/10
+    elseif @f1 == 2
+      nindex = real(@fp1)*10*nindex+2+imag(@fp1)
+      if abs(nindex) > 1
+        nindex = 1
+      endif 
+      nindex = real(asin(nindex))/4
+    elseif @f1 == 3
+      nindex = 20*real(@fp1)*nindex+1+imag(@fp1)
+      if abs(nindex) > 1
+        nindex = 1
+      endif
+      nindex = real(acos(nindex))/4
+    elseif @f1 == 4
+      nindex = real(atanh(20*real(@fp1)*nindex+imag(@fp1)))/8
+    elseif @f1 == 5
+      nindex = (20*nindex+imag(@fp1))^(2+real(@fp1))/160
+    elseif @f1 == 6
+      nindex = real((15*nindex+imag(@fp1))^(.1*real(@fp1)))
+    elseif @f1 == 7
+      nindex = real(exp(10*real(@fp1)*nindex+imag(@fp1)-.5))/8
+    elseif @f1 == 8
+      nindex = real(round(5*real(@fp1)*nindex+imag(@fp1)/5))/4
+    elseif @f1 == 9
+      nindex = real(round(15*real(@fp1)*nindex+imag(@fp1)/5)^.1)/3
+    elseif @f1 == 10
+      ;nindex = (sin(5*real(z)+20*nindex)+cos(5*imag(z)+20*nindex))/10
+      ;nindex = (sin(5*sqrt(real(@fp1))*(real(z)+(4+imag(@fp1))*nindex))+cos(5*1/sqrt(real(@fp1))*(imag(z)+(4+imag(@fp1))*nindex)))/15
+      if real(@fp1)<0.0
+        nindex = (sin(-(real(z)+(4+imag(@fp1))*nindex))+cos(-(imag(z)+(4+imag(@fp1))*nindex)))/15
+      else
+        nindex = (sin(5*sqrt(real(@fp1))*(real(z)+(4+imag(@fp1))*nindex))+cos(5*1/sqrt(real(@fp1))*(imag(z)+(4+imag(@fp1))*nindex)))/15
+      endif
+    endif
+    
+    if @f2 == 1
+      nindex = real(sin(100*real(@fp2)*nindex+imag(@fp2)))/10
+    elseif @f2 == 2
+      nindex = real(@fp2)*10*nindex+2+imag(@fp2)
+      if abs(nindex) > 1
+        nindex = 1
+      endif 
+      nindex = real(asin(nindex))/4
+    elseif @f2 == 3
+      nindex = 20*real(@fp2)*nindex+1+imag(@fp2)
+      if abs(nindex) > 1
+        nindex = 1
+      endif
+      nindex = real(acos(nindex))/4
+    elseif @f2 == 4
+      nindex = real(atanh(20*real(@fp2)*nindex+imag(@fp2)))/8
+    elseif @f2 == 5
+      nindex = (20*nindex+imag(@fp2))^(2+real(@fp2))/160
+    elseif @f2 == 6
+      nindex = real((15*nindex+imag(@fp2))^(.1*real(@fp2)))
+    elseif @f2 == 7
+      nindex = real(exp(10*real(@fp2)*nindex+imag(@fp2)-.5))/8
+    elseif @f2 == 8
+      nindex = real(round(5*real(@fp2)*nindex+imag(@fp2)/5))/4
+    elseif @f2 == 9
+      nindex = real(round(15*real(@fp2)*nindex+imag(@fp2)/5)^.1)/3
+    elseif @f2 == 10
+      ;nindex = (sin(5*real(z)+5*nindex)/5+cos(5*imag(z)+10*nindex))/10
+      ;nindex = (sin(5*sqrt(real(@fp2))*(real(z)+(4+imag(@fp2))*nindex))+cos(5*1/sqrt(real(@fp2))*(imag(z)+(4+imag(@fp2))*nindex)))/15
+      if real(@fp2)<0.0
+        nindex = (sin(-(real(z)+(4+imag(@fp2))*nindex))+cos(-(imag(z)+(4+imag(@fp2))*nindex)))/15
+      else
+        nindex = (sin(5*sqrt(real(@fp2))*(real(z)+(4+imag(@fp2))*nindex))+cos(5*1/sqrt(real(@fp2))*(imag(z)+(4+imag(@fp2))*nindex)))/15
+      endif
+    endif
+    
+    nindex = real(nindex^@power2)
+    
+    if i == 1
+      x = nindex
+    elseif i == 2
+      y = nindex
+    else
+      sindex = sindex + nindex/scale^@beta
+    endif
+      
+  
+  endwhile
+  
+  if @mode != 2 
+    sum = sum + a*sindex
+  else
+    sum = sum + a*abs(sindex)
+  endif
+  sindex = 0
+  scale = 1
+  
+  endwhile
+  
+  if @mode == 2
+    sum = 3*abs(sum)
+  endif
+  
+  if @mode == 1
+    sindex = sum/(10*@eps*(abs(@cbl + @ctl + @cbr + @ctr)+1))
+  else 
+    sindex = sum
+  endif
+  
+  if @interp == 0
+    #index = 2*norm*sindex/(niter)^.5 + 1000.25
+  else
+    #index = .4*norm*sindex + 1000.25
+  endif
+
+  
+default:
+  title = "S.F.B.M. II"
+  helpfile = "sam-help\sfbmii.htm"
+  
+  param noise
+    caption = "Noise Function"
+    default = 0
+    enum = "Perlin" "Raw Gird" "Strips" "Corners" "Checkerboard" \
+           "Soft Gird" "Circles" "Soft Circles" "Squares" "Soft Squares" \
+           "Octogons" "Soft Octogons" "Roundy Truchet" "Soft Roundy Truchet" \
+           "Squarry Truchet" "Soft Squarry Truchet"           
+  endparam
+  
+  param noisep
+    caption = "Noise F. Parameters"
+    default = (.2,.5)
+    hint = "Noise Function Parameters"
+  endparam
+  
+  param f1
+    caption = "Flavour 1"
+    default = 0
+    enum = "Original" "Wavy" "Blobs" "Cut" "Messy" "Soft I" "Strings" "Soft II" "Sharp" "String-Sharp" "Random Phase"
+  endparam
+  
+  param fp1
+    caption = "Flavour 1 Parameters"
+    default = (1,0)
+    hint = "Flavour 1 Parameters"
+  endparam
+  
+  param f2
+    caption = "Flavour 2"
+    default = 0
+    enum = "Original" "Wavy" "Blobs" "Cut" "Messy" "Soft I" "Strings" "Soft II" "Sharp" "String-Sharp" "Random Phase"
+  endparam
+  
+  param fp2
+    caption = "Flavour 2 Parameters"
+    default = (1,0)
+    hint = "Flavour 2 Parameters"
+  endparam
+  
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Normal" "Convolution" "Absolute Convolution"
+  endparam
+  
+  param beta
+    caption = "Beta (Spectral Density Parameter)"
+    default = 1.0
+    hint = "Spectral Density Exponent"
+  endparam
+  
+  param power
+    caption = "Power"
+    default = 2.0
+  endparam
+  
+  param power2
+    caption = "Post-Power"
+    default = 1.0
+  endparam
+    
+  param pp
+    caption = "Pre-Processing"
+    default = (0,1)
+  endparam
+  
+  param pptype
+    caption = "Pre-Processing Type"
+    default = 0
+    enum = "Cartesian" "Polar"
+    hint = "Pre-Processing Type"
+  endparam
+  
+  param ppp
+    caption = "Pre-P. Power and Aspect"
+    default = (1,1)
+    hint = "Pre-Processing Power and Aspect"
+  endparam
+
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+  
+  param rot
+    caption = "Rotation Step"
+    default = 28.0
+  endparam
+  
+  param mstep
+    caption = "Frequency Separation"
+    default = 1.0
+    hint = "Frequency Separation"
+  endparam
+  
+  param fmm
+    caption = "Inv. of max/min Frequency"
+    default = (40,1)
+    hint = "Inverse of max/min Frequency"
+  endparam
+  
+  param interp
+    caption = "Frequency Interpolation"
+    default = 0
+    enum = "Logarithmic" "Linear"
+    hint = "Frequency Interpolation"
+  endparam
+  
+  param cc
+    caption = "Center Extra Weight"
+    default = 0.0
+  endparam
+    
+  param cbl
+    caption = "Bottom Left Weight"
+    default = 1.0
+  endparam
+  
+  param ctl
+    caption = "Top Left Weight"
+    default = 0.0
+  endparam
+  
+  param cbr
+    caption = "Bottom Right Weight"
+    default = 0.0
+  endparam
+  
+  param ctr
+    caption = "Top Right Weight"
+    default = 0.0
+  endparam
+  
+  param eps
+    caption = "Epsilon"
+    default = 0.006
+  endparam
+}
+
+PolygonalTraps(BOTH) {
+; By Samuel Monnier, 10.00
+init:
+  float d = 1e20
+  int i = 0
+  int ist = 0
+  float dist = 0
+  float arg = 0
+loop:
+  i = i + 1
+  if i > @fit
+  
+    z = (#z - @c)*exp(1i*pi/180*@rot)/@size
+    z = 1/sqrt(@rat)*real(z) + 1i*sqrt(@rat)*imag(z)
+    z = -z*1i
+    arg = atan2(z)
+    arg = -round(arg/(2*pi)*@order)/@order*(2*pi)
+    z = z*exp(1i*arg)
+    
+    if @mode == 0
+      dist = abs(real(z))^@power
+    else
+      dist = abs(real(z)-1)^@power
+    endif
+    
+    if dist < d
+      d = dist
+      ist = i
+    endif
+  
+  endif
+final:
+  
+ 
+  if @mode == 0
+    if abs(d) > 1
+      #solid = true
+    endif
+  else
+    if abs(d) > @w
+      #solid = true
+    endif
+  endif
+  
+  if @colour == 1
+    #index = (ist%@ncol)/@ncol
+  else
+    #index = d*@size
+  endif
+    
+default:
+  title = "Polygonal Traps"
+  helpfile = "sam-help\polytrap.htm"
+  
+  
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Filled" "Frame"
+  endparam
+  
+  param colour
+    caption = "Color Mode"
+    default = 0
+    enum = "Distance" "Iteration"
+  endparam
+  
+  param order
+    caption = "Polygon Order"
+    default = 3
+  endparam
+  
+  param c
+    caption = "Center"
+    default = (0,0)
+  endparam
+  
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam  
+  
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  
+  param rat
+    caption = "Ratio Width/Heigh"
+    default = 1.0
+  endparam
+  
+  param w
+    caption = "Width"
+    default = .1
+  endparam
+  
+  param fit
+    caption = "First Trapped Iteration"
+    default = 0
+  endparam
+  
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+  
+  param ncol
+    caption = "Color Number"
+    default = 3
+  endparam
+  
+}
+
+GradientForAperiodicTilingIII(BOTH) {
+; By Samuel Monnier, 14.7.01
+init:
+  z = 0
+  t = 0
+  float d = 0
+  float md = 1e20
+loop:
+  
+final:
+  
+  
+  if @shape == 0 || @shape == 4
+    
+    z = #z/2
+    if @shape == 4
+      z = z + 5
+    endif
+    
+    t = (z+1)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+  
+    t = (z+1)/(0,-1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = -(z+1i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = (z+1i)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+  
+    t = (z-1)/(0,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = (z-1i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+  
+  if @shape == 1 || @shape == 4
+  
+    z = #z/2 - 1/3 + 1/3*1i
+    if @shape == 4
+      z = z + 5i
+    endif
+    
+    t = (z+1)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+    
+    t = -z
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = z/(0,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+    
+  if @shape == 2 || @shape == 4
+  
+    z = #z/2 + 1/3
+    if @shape == 4
+      z = z - 5
+    endif    
+    
+    t = (z-.5i)/(-1,-1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((-1,-1))
+    if d < md
+      md = d
+    endif
+    
+    t = (z-.5i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = (z-(1,.5))/(0,-1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = (z-(-1,-.5))/2
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*2
+    if d < md
+      md = d
+    endif
+    
+  endif
+    
+  if @shape == 3 || @shape == 4
+  
+    z = #z/2
+    if @shape == 4
+      z = z - 5i
+    endif
+    
+    t = (z-.5i)/(-1,-1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((-1,-1))
+    if d < md
+      md = d
+    endif
+    
+    t = (z-.5i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = (z+.5i)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+    
+    t = -(z+.5i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+  
+  #index = md^@power 
+default:
+  title = "Gradient for Aperiodic Tiling III"
+  helpfile = "sam-help\aperiodic.htm"
+  helptopic = "gradforap"
+  
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Hexagon" "Triangle" "Trapezoid" "Parallelogram" "Frame Mode"
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+}
+
+GradientForAperiodicTilingIV(BOTH) {
+; By Samuel Monnier, 19.7.01
+init:
+  z = 0
+  t = 0
+  float d = 0
+  float md = 1e20
+loop:
+  
+final:
+  
+  
+  if @shape == 0 || @shape == 3
+    
+    z = #z/2 + 1/4*(1,1)
+    if @shape == 3
+      z = z + 5
+    endif
+    
+    t = (z+1)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+  
+    t = -z
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = -z/1i
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = (z+1i)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+  
+    t = (z-1)/(0,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+  
+    t = (z-1i)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+  
+  if @shape == 1 || @shape == 3
+  
+    z = #z/2 - 1/3 + 1/3*1i
+    if @shape == 3
+      z = z + 5i
+    endif
+    
+    t = (z+1)/(1,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    d = d*cabs((1,1))
+    if d < md
+      md = d
+    endif
+    
+    t = -z
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = z/(0,1)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+  endif
+    
+  if @shape == 2 || @shape == 3
+  
+    z = #z/2
+    if @shape == 3
+      z = z - 5
+    endif    
+    
+    t = z+(.5,.5)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = -z+(.5,.5)
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = (-z-(.5,.5))*1i
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    t = (z-(.5,.5))*1i
+    if real(t) < 0
+      d = cabs(t)
+    elseif real(t) > 0 && real(t) < 1
+      d = abs(imag(t))
+    elseif real(t) > 1
+      d = cabs(t-1)
+    endif
+    if d < md
+      md = d
+    endif
+    
+    
+  endif
+  
+  #index = md^@power 
+default:
+  title = "Gradient for Aperiodic Tiling IV"
+  helpfile = "sam-help\aperiodic.htm"
+  helptopic = "gradforap"
+  
+  param shape
+    caption = "Shape"
+    default = 0
+    enum = "Arrow" "Triangle" "Square" "Frame Mode"
+  endparam
+  
+  param power
+    caption = "Thickness"
+    default = .1
+  endparam
+}
+
+StarGradient(BOTH) {
+; By Samuel Monnier, 14.08.01
+init:
+  z = 0
+  z1 = 0
+  z2 = 0
+  z3 = 0
+  t1 = 0
+  t2 = 0
+  float arg = 0
+  float dist = 0
+  float md = 1e20
+    
+final:
+  z = -(#z-@c)*1i*exp(1i*pi/180*@rot)/@size
+  arg = atan2(z)
+  arg = -round(arg/(2*pi)*@order)/@order*(2*pi)
+  z = z*exp(1i*arg)
+  z1 = @r*exp(1i*pi/@order)
+  z2 = @r*exp(-1i*pi/@order)
+  z3 = 1
+  t1 = (z-z3)/(z1-z3)*cabs(z1-z3)
+  t2 = (z-z3)/(z2-z3)*cabs(z2-z3)
+  if real(t1) < 0
+    md = cabs(z-z3)
+  endif
+  if real(t1) > 0
+    dist = abs(imag(t1))
+    if dist < md
+      md = dist
+    endif
+  endif
+  if real(t2) < 0
+    dist = cabs(z-z3)
+    if dist < md
+      md = dist
+    endif
+  endif
+  if real(t2) > 0
+    dist = abs(imag(t2))
+    if dist < md
+      md = dist
+    endif
+  endif
+  
+ 
+  #index = md^@thick
+  
+default:
+  title = "Star Gradient"
+  helpfile = "sam-help\variouscol2.htm"
+  helptopic = "stargrad"
+  
+  param order
+    caption = "Star Order"
+    default = 5
+  endparam
+  
+  param r
+    caption = "Aspect"
+    default = .4
+  endparam
+  
+  param thick
+    caption = "Thickness"
+    default = .5
+  endparam  
+  
+  param c
+    caption = "Center"
+    default = (0,0)
+  endparam
+  
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+  
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+}
+
+String-ArtColoring(BOTH) {
+; By Samuel Monnier, 30.9.01
+init:
+  z = 0
+  float r = 0
+  float rtest = 0
+  float arg = 0
+  float arg2 = 0
+  float d = 0
+
+final:
+  z = #z
+  r = cabs(z)
+  arg = atan2(z)
+  arg2 = arg + @phi*pi/180
+  if @shape == 0
+    rtest = (@w1/(@w1+@w2)*cos(@order1*arg)+@w2/(@w1+@w2)*cos(@order2*arg+@phi*pi/180))*(@obound-@ibound)/2+(@obound+@ibound)/2
+  elseif @shape == 1
+    rtest = (@w1/(@w1+@w2)*(2*(cos(@order1*arg)/2+.5)^@power-1)+@w2/(@w1+@w2)*(2*(cos(@order2*arg2)/2+.5)^@power-1))*(@obound-@ibound)/2+(@obound+@ibound)/2
+  elseif @shape == 2
+    rtest = (@w1/(@w1+@w2)*(2*(2*abs(arg/(2*pi)*@order1-round(arg/(2*pi)*@order1)))^@power-1)+@w2/(@w1+@w2)*(2*(2*abs(arg2/(2*pi)*@order2-round(arg2/(2*pi)*@order2)))^@power-1))*(@obound-@ibound)/2+(@obound+@ibound)/2
+  endif
+  d = abs(r-rtest)
+  #index = d^@thick
+  
+default:
+  title = "String-Art Coloring"
+  helpfile = "sam-help\stringart.htm"
+  helptopic = "strartcol"
+  
+  param shape
+    caption = "Folium Type"
+    default = 0
+    enum = "Old" "Cosinus" "Sawtooth"
+  endparam
+  
+  param power
+    caption = "Folium Power"
+    default = 1.0
+  endparam
+  
+  param order1
+    caption = "Folium 1 Order"
+    default = 5.0
+  endparam
+  
+  param w1
+    caption = "Folium 1 Weight"
+    default = 1.0
+  endparam
+  
+  param order2
+    caption = "Folium 2 Order"
+    default = 3.0
+  endparam
+  
+  param w2
+    caption = "Folium 2 Weight"
+    default = 0.0
+  endparam
+  
+  param phi
+    caption = "Dephasage"
+    default = 90.0
+  endparam
+  
+  param obound
+    caption = "Folium Outer Bound"
+    default = 2.0
+  endparam
+  
+  param ibound
+    caption = "Folium Inner Bound"
+    default = .4
+  endparam
+  
+  param thick
+    caption = "Thickness"
+    default = 1.0
+  endparam
+}
+
+VoroniColoring(BOTH) {
+; By Samuel Monnier, 3.10.01  
+final:
+  z = #z/@psize
+  zc = round(z)
+  zz = z - zc
+  nearp = 0
+  float mind = 1e20
+  float mind2 = 1e20
+  
+  zc1 = zc + (1,1)/2
+  zc2 = zc + (1,-1)/2
+  zc3 = zc + (-1,1)/2
+  zc4 = zc + (-1,-1)/2
+  
+  float rp1a = ((real(zc1)-859)^5%198 - (imag(zc1)+987)^3%168)^2 %2 - 1
+  float ip1a = ((real(zc1)-123)^5%187 - (imag(zc1)+876)^3%157)^2 %2 - 1
+  float rp1b = ((real(zc1)-234)^5%176 - (imag(zc1)+765)^3%146)^2 %2 - 1
+  float ip1b = ((real(zc1)-345)^5%165 - (imag(zc1)+654)^3%135)^2 %2 - 1
+  float rp1c = ((real(zc1)-456)^5%154 - (imag(zc1)+543)^3%124)^2 %2 - 1
+  float ip1c = ((real(zc1)-567)^5%143 - (imag(zc1)+432)^3%113)^2 %2 - 1
+  float rp1d = ((real(zc1)-357)^5%243 - (imag(zc1)+354)^3%465)^2 %2 - 1
+  float ip1d = ((real(zc1)-798)^5%687 - (imag(zc1)+576)^3%246)^2 %2 - 1
+  float rp2a = ((real(zc2)-859)^5%198 - (imag(zc2)+987)^3%168)^2 %2 - 1
+  float ip2a = ((real(zc2)-123)^5%187 - (imag(zc2)+876)^3%157)^2 %2 - 1
+  float rp2b = ((real(zc2)-234)^5%176 - (imag(zc2)+765)^3%146)^2 %2 - 1
+  float ip2b = ((real(zc2)-345)^5%165 - (imag(zc2)+654)^3%135)^2 %2 - 1
+  float rp2c = ((real(zc2)-456)^5%154 - (imag(zc2)+543)^3%124)^2 %2 - 1
+  float ip2c = ((real(zc2)-567)^5%143 - (imag(zc2)+432)^3%113)^2 %2 - 1
+  float rp2d = ((real(zc2)-357)^5%243 - (imag(zc2)+354)^3%465)^2 %2 - 1
+  float ip2d = ((real(zc2)-798)^5%687 - (imag(zc2)+576)^3%246)^2 %2 - 1
+  float rp3a = ((real(zc3)-859)^5%198 - (imag(zc3)+987)^3%168)^2 %2 - 1
+  float ip3a = ((real(zc3)-123)^5%187 - (imag(zc3)+876)^3%157)^2 %2 - 1
+  float rp3b = ((real(zc3)-234)^5%176 - (imag(zc3)+765)^3%146)^2 %2 - 1
+  float ip3b = ((real(zc3)-345)^5%165 - (imag(zc3)+654)^3%135)^2 %2 - 1
+  float rp3c = ((real(zc3)-456)^5%154 - (imag(zc3)+543)^3%124)^2 %2 - 1
+  float ip3c = ((real(zc3)-567)^5%143 - (imag(zc3)+432)^3%113)^2 %2 - 1
+  float rp3d = ((real(zc3)-357)^5%243 - (imag(zc3)+354)^3%465)^2 %2 - 1
+  float ip3d = ((real(zc3)-798)^5%687 - (imag(zc3)+576)^3%246)^2 %2 - 1
+  float rp4a = ((real(zc4)-859)^5%198 - (imag(zc4)+987)^3%168)^2 %2 - 1
+  float ip4a = ((real(zc4)-123)^5%187 - (imag(zc4)+876)^3%157)^2 %2 - 1
+  float rp4b = ((real(zc4)-234)^5%176 - (imag(zc4)+765)^3%146)^2 %2 - 1
+  float ip4b = ((real(zc4)-345)^5%165 - (imag(zc4)+654)^3%135)^2 %2 - 1
+  float rp4c = ((real(zc4)-456)^5%154 - (imag(zc4)+543)^3%124)^2 %2 - 1
+  float ip4c = ((real(zc4)-567)^5%143 - (imag(zc4)+432)^3%113)^2 %2 - 1
+  float rp4d = ((real(zc4)-357)^5%243 - (imag(zc4)+354)^3%465)^2 %2 - 1
+  float ip4d = ((real(zc4)-798)^5%687 - (imag(zc4)+576)^3%246)^2 %2 - 1
+  
+  if !@regtile
+    p1a = (rp1a + 1i*ip1a + (1,1))/2
+    p1b = (rp1b + 1i*ip1b + (1,1))/2
+    p1c = (rp1c + 1i*ip1c + (1,1))/2
+    p1d = (rp1d + 1i*ip1d + (1,1))/2
+    p2a = (rp2a + 1i*ip2a + (1,-1))/2
+    p2b = (rp2b + 1i*ip2b + (1,-1))/2
+    p2c = (rp2c + 1i*ip2c + (1,-1))/2
+    p2d = (rp2d + 1i*ip2d + (1,-1))/2
+    p3a = (rp3a + 1i*ip3a + (-1,1))/2
+    p3b = (rp3b + 1i*ip3b + (-1,1))/2
+    p3c = (rp3c + 1i*ip3c + (-1,1))/2
+    p3d = (rp3d + 1i*ip3d + (-1,1))/2
+    p4a = (rp4a + 1i*ip4a + (-1,-1))/2
+    p4b = (rp4b + 1i*ip4b + (-1,-1))/2
+    p4c = (rp4c + 1i*ip4c + (-1,-1))/2
+    p4d = (rp4d + 1i*ip4d + (-1,-1))/2
+  else  
+    p1a = (rp1a + 1i*ip1a)/real(@regpar) + (1,1)/2 + (1,1)/4
+    p1b = (rp1b + 1i*ip1b)/real(@regpar) + (1,1)/2 + (1,-1)/4
+    p1c = (rp1c + 1i*ip1c)/real(@regpar) + (1,1)/2 + (-1,1)/4
+    p1d = (rp1d + 1i*ip1d)/real(@regpar) + (1,1)/2 + (-1,-1)/4
+    p2a = (rp2a + 1i*ip2a)/real(@regpar) + (1,-1)/2 + (1,1)/4
+    p2b = (rp2b + 1i*ip2b)/real(@regpar) + (1,-1)/2 + (1,-1)/4
+    p2c = (rp2c + 1i*ip2c)/real(@regpar) + (1,-1)/2 + (-1,1)/4
+    p2d = (rp2d + 1i*ip2d)/real(@regpar) + (1,-1)/2 + (-1,-1)/4
+    p3a = (rp3a + 1i*ip3a)/real(@regpar) + (-1,1)/2 + (1,1)/4
+    p3b = (rp3b + 1i*ip3b)/real(@regpar) + (-1,1)/2 + (1,-1)/4
+    p3c = (rp3c + 1i*ip3c)/real(@regpar) + (-1,1)/2 + (-1,1)/4
+    p3d = (rp3d + 1i*ip3d)/real(@regpar) + (-1,1)/2 + (-1,-1)/4
+    p4a = (rp4a + 1i*ip4a)/real(@regpar) + (-1,-1)/2 + (1,1)/4
+    p4b = (rp4b + 1i*ip4b)/real(@regpar) + (-1,-1)/2 + (1,-1)/4
+    p4c = (rp4c + 1i*ip4c)/real(@regpar) + (-1,-1)/2 + (-1,1)/4
+    p4d = (rp4d + 1i*ip4d)/real(@regpar) + (-1,-1)/2 + (-1,-1)/4
+  endif
+  
+  if cabs(zz-p1a) < mind
+    mind2 = mind
+    mind = cabs(zz-p1a)
+    nearp = zc + p1a
+  elseif cabs(zz-p1a) < mind2
+    mind2 = cabs(zz-p1a)
+  endif
+  if cabs(zz-p1b) < mind
+    mind2 = mind
+    mind = cabs(zz-p1b)
+    nearp = zc + p1b
+  elseif cabs(zz-p1b) < mind2
+    mind2 = cabs(zz-p1b)
+  endif
+  if cabs(zz-p1c) < mind
+    mind2 = mind
+    mind = cabs(zz-p1c)
+    nearp = zc + p1c
+  elseif cabs(zz-p1c) < mind2
+    mind2 = cabs(zz-p1c)
+  endif
+  if cabs(zz-p1d) < mind
+    mind2 = mind
+    mind = cabs(zz-p1d)
+    nearp = zc + p1d
+  elseif cabs(zz-p1d) < mind2
+    mind2 = cabs(zz-p1d)
+  endif
+  
+  if cabs(zz-p2a) < mind
+    mind2 = mind
+    mind = cabs(zz-p2a)
+    nearp = zc + p2a
+  elseif cabs(zz-p2a) < mind2
+    mind2 = cabs(zz-p2a)
+  endif
+  if cabs(zz-p2b) < mind
+    mind2 = mind
+    mind = cabs(zz-p2b)
+    nearp = zc + p2b
+  elseif cabs(zz-p2b) < mind2
+    mind2 = cabs(zz-p2b)
+  endif
+  if cabs(zz-p2c) < mind
+    mind2 = mind
+    mind = cabs(zz-p2c)
+    nearp = zc + p2c
+  elseif cabs(zz-p2c) < mind2
+    mind2 = cabs(zz-p2c)
+  endif
+  if cabs(zz-p2d) < mind
+    mind2 = mind
+    mind = cabs(zz-p2d)
+    nearp = zc + p2d
+  elseif cabs(zz-p2d) < mind2
+    mind2 = cabs(zz-p2d)
+  endif
+  
+  if cabs(zz-p3a) < mind
+    mind2 = mind
+    mind = cabs(zz-p3a)
+    nearp = zc + p3a
+  elseif cabs(zz-p3a) < mind2
+    mind2 = cabs(zz-p3a)
+  endif
+  if cabs(zz-p3b) < mind
+    mind2 = mind
+    mind = cabs(zz-p3b)
+    nearp = zc + p3b
+  elseif cabs(zz-p3b) < mind2
+    mind2 = cabs(zz-p3b)
+  endif
+  if cabs(zz-p3c) < mind
+    mind2 = mind
+    mind = cabs(zz-p3c)
+    nearp = zc + p3c
+  elseif cabs(zz-p3c) < mind2
+    mind2 = cabs(zz-p3c)
+  endif
+  if cabs(zz-p3d) < mind
+    mind2 = mind
+    mind = cabs(zz-p3d)
+    nearp = zc + p3d
+  elseif cabs(zz-p3d) < mind2
+    mind2 = cabs(zz-p3d)
+  endif
+  
+  if cabs(zz-p4a) < mind
+    mind2 = mind
+    mind = cabs(zz-p4a)
+    nearp = zc + p4a
+  elseif cabs(zz-p4a) < mind2
+    mind2 = cabs(zz-p4a)
+  endif
+  if cabs(zz-p4b) < mind
+    mind2 = mind
+    mind = cabs(zz-p4b)
+    nearp = zc + p4b
+  elseif cabs(zz-p4b) < mind2
+    mind2 = cabs(zz-p4b)
+  endif
+  if cabs(zz-p4c) < mind
+    mind2 = mind
+    mind = cabs(zz-p4c)
+    nearp = zc + p4c
+  elseif cabs(zz-p4c) < mind2
+    mind2 = cabs(zz-p4c)
+  endif
+  if cabs(zz-p4d) < mind
+    mind2 = mind
+    mind = cabs(zz-p4d)
+    nearp = zc + p4d
+  elseif cabs(zz-p4d) < mind2
+    mind2 = cabs(zz-p4d)
+  endif
+  
+  nearp = nearp*@psize
+  if @dcount == 0
+    #index = mind^@thick-@offset/10
+  elseif @dcount == 1
+    #index = (mind2-mind)^@thick-@offset/10
+  elseif @dcount == 2
+    #index = (cabs(1000*nearp) + 1000*(atan2(nearp)+pi))%1
+  endif
+  
+  
+default:
+  title = "Voroni Coloring"
+  helpfile = "sam-help\voroni.htm"
+  helptopic = "vorcol"
+  
+  param dcount
+    caption = "Distance Count"
+    default = 0
+    enum = "From Center" "From Border" "Mosaic"
+  endparam
+  
+  param offset
+    caption = "Offset"
+    default = 0.0
+  endparam
+  
+  param psize
+    caption = "Pattern Size"
+    default = .5
+  endparam
+  
+  param thick
+    caption = "Thickness"
+    default = 1.0
+  endparam
+  
+  param regtile
+    caption = "Regularize Tiling ?"
+    default = true
+  endparam
+  
+  param regpar
+    caption = "Regularizing Parameter"
+    default = 4.0
+    min = 3.0
+  endparam
+}
+
+alinghi {
+; By Samuel Monnier, 24.02.03, waiting for the fourth race...
+; The logo is probably copyrighted. So it's wiser to use this 
+; only for strictly personal purposes. Thanks !
+init:
+  z = 0
+  bool bail = false
+  float d = 1e20
+  float d1 = 0
+  int i = 0
+loop:
+  z = (#z-@center)*exp(1i*pi/180*@rot)/@size
+  i = i + 1
+  if i >= @fit && (i <= @lit || @lit == 0)
+    if @mode != 3
+      if cabs(z) < 1 && cabs(z+(.3,.1)) > .88
+        bail = true
+        if @mode == 2
+          d1 = abs(cabs(z) - 1)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(.3,.1)) - .88)
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+      if (cabs(z) < 1 && cabs(z+(.3,.1)) < .88) && cabs(z+(.47,.11)) > .9 && cabs(z+(1.05,.4)) < 1.45 && imag(z) < 0
+        bail = true
+        if @mode == 2 
+          d1 = abs(cabs(z+(.47,.11)) - .9)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(1.05,.4)) - 1.45)
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+      if @mode == 2
+        if cabs(z+(1.05,.4)) < 1.45 && cabs(z+(.3,.1)) > .88 && imag(z) < 0
+          d = 1e20
+          d1 = abs(cabs(z) - 1)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(.47,.11)) - .9)
+          if d1 < d
+            d = d1
+          endif
+          d1 = cabs(z-(.375,-.663))/1.9
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+          
+      
+      if cabs(z+(.38,.21)) < .7 && cabs(z+(.18,.26)) > .53
+        bail = true
+        if @mode == 2
+          d1 = abs(cabs(z+(.38,.21)) - .7)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(.18,.26)) - .53)
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+      if (cabs(z+(.38,.21)) > .7 && cabs(z+(.18,.26)) > .53) && cabs(z+(.37,0.05)) < .7 && cabs(z+(1.2,0)) > 1.3 && imag(z) > -.2
+        bail = true
+        if @mode == 2 
+          d1 = abs(cabs(z+(.37,0.05)) - .7)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(1.2,0)) - 1.3)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(.18,.26)) - .53)
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+      if @mode == 2
+        if cabs(z+(.38,.21)) < .7 && cabs(z+(1.2,0)) > 1.3 && imag(z) > -.2
+          d = 1e20
+          d1 = abs(cabs(z+(.18,.26)) - .53)
+          if d1 < d
+            d = d1
+          endif
+          d1 = abs(cabs(z+(.47,.11)) - .9)
+          if d1 < d
+            d = d1
+          endif
+          d1 = cabs(z-(.056,.338))/1.8
+          if d1 < d
+            d = d1
+          endif
+        endif
+      endif
+    endif
+    
+    if @mode == 3
+      if abs(cabs(z) - 1) < @fw && cabs(z+(.3,.1)) > .88-@fw && (cabs(z+(.47,.11)) > .9-@fw || imag(z) > 0)
+        bail = true
+      endif
+      if abs(cabs(z+(.3,.1)) - .88) < @fw && cabs(z) < 1+@fw && (cabs(z+(1.05,.4)) > 1.45 - @fw || imag(z) > 0)
+        bail = true
+      endif
+      if (cabs(z) < 1+@fw && cabs(z+(.3,.1)) < .9-@fw) && abs(cabs(z+(.47,.11)) - .9) < @fw && cabs(z+(1.05,.4)) < 1.45 +@fw && imag(z) < 0
+        bail = true
+      endif
+      if (cabs(z) < 1-@fw && cabs(z+(.3,.1)) < .9-@fw) && cabs(z+(.47,.11)) > .9-@fw && abs(cabs(z+(1.05,.4)) - 1.45) < @fw && imag(z) < 0
+        bail = true
+      endif
+      if abs(cabs(z+(.38,.21)) - .7) < @fw && cabs(z+(.18,.26)) > .53 - @fw && (cabs(z+(1.2,0)) < 1.3+@fw || imag(z) < -.4)
+        bail = true
+      endif
+      if (cabs(z+(.38,.21)) < .7+@fw || imag(z) > -.4) && abs(cabs(z+(.18,.26)) - .53) < @fw && (cabs(z+(.37,0.05)) < .7+@fw || imag(z) < -.4)
+        bail = true
+      endif
+      if (cabs(z+(.38,.21)) > .7-@fw && cabs(z+(.18,.26)) > .53-@fw) && abs(cabs(z+(.37,0.05)) - .7) < @fw && cabs(z+(1.2,0)) > 1.3-@fw && imag(z) > -.4
+        bail = true
+      endif
+      if (cabs(z+(.38,.21)) > .7-@fw && cabs(z+(.18,.26)) > .53-@fw) && cabs(z+(.37,0.05)) < .7+@fw && abs(cabs(z+(1.2,0)) - 1.3) < @fw && imag(z) > -.4
+        bail = true
+      endif
+
+    endif
+    
+  endif  
+final:
+  if bail && (@mode == 0)
+    #solid = true
+  endif
+  if !bail && (@mode == 1 || @mode == 2 || @mode == 3)
+    #solid = true
+  endif
+  
+  if @mode == 2
+    #index = d
+  endif
+default:
+  title = "alinghi Traps"
+  
+  param mode
+    caption = "Mode"
+    default = 1
+    enum = "Inside Solid" "Outside Solid" "Inside Distance" "Frame"
+  endparam
+  
+  param center
+    caption = "Trap Center"
+    default = (0,0)
+  endparam
+  
+  param rot
+    caption = "Trap Rotation"
+    default = 0.0
+  endparam
+  
+  param size
+    caption = "Trap Size"
+    default = 1.0
+  endparam
+  
+  param fit
+    caption = "First Iteration"
+    default = 1
+  endparam
+  
+  param lit
+    caption = "Last Iteration"
+    default = 0
+  endparam
+  
+  param fw
+    caption = "Frame Width"
+    default = .02
+  endparam
+}
+
+TrapView {
+; Samuel Monnier, 2008
+global:
+TrapShape TS = new @TrapShape(0)
+import "common.ulb"
+import "Standard.ulb"
+
+final:
+float indfin = 0
+TS.Init(#z)
+indfin = TS.Iterate(#z)
+#index = indfin
+
+default:
+  title = "Trap Shape viewer"
+
+  TrapShape param TrapShape
+    caption = "Trap Shape"
+    default = Standard_TrapShapeGaussianInteger
+  endparam
+}

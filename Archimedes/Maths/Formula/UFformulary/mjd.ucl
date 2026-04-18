@@ -1,0 +1,1800 @@
+Functions { ;20000322
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2000 Mark Jeronimus
+;
+; Last modification 20000418
+init:
+  complex zl=(1e+20,1e+20)
+  complex zg=0
+  complex za=0
+  float absz=0
+  complex lastz=0
+  float iter=0
+loop:
+  if iter>=@skip
+    if @source==5
+      za=za+#z
+    elseif @source==6
+      za=za+#z/(iter+1)^2
+    endif
+    absz=|#z|
+    if absz<|zl|
+      zl=#z
+    endif
+    if absz>|zg|
+      zg=#z
+    endif
+  endif
+  lastz=#z
+  iter=iter+1
+final:
+  complex a=@prefactor
+
+  if @source==0       ;pixel
+    a=a*#pixel
+  elseif @source==1 ;z last
+    a=a*lastz
+  elseif @source==2 ;z min
+    a=a*zl
+  elseif @source==3 ;z max
+    a=a*zg
+  elseif @source==4 ;z sum
+    a=a*za
+  elseif @source==5 || @source==6  ;z average
+    a=a*za/iter
+  else
+    a=a*#numiter
+  endif
+
+  a=@fnbefore(a)
+
+  ;#####################################
+  ;Special functions -- for personal use
+  if @special==1
+    float x=real(a)
+    float y=imag(a)
+    a=@p4/@p5*(1+@p2/@p3)*(x-y)+(1+@p4/@p3)*x+(1+@p2/@p1)*y
+  elseif @special==2
+    complex c=a-@p1
+    float cr=cabs(c)*real(@p2)
+    a=a/(cr+1/cr)
+  elseif @special==3
+    complex c=a-@p1
+    float cr=cabs(c)/real(@p2)
+    float cang=atan2(c)
+    cr=cr+imag(@p2)*(1/cr+cr)^-1
+    a=real(@p2)*cr*exp((0,1)*cang)
+  elseif @special==4
+    float qa=|@p2-@p1|
+    float qb=|@p2-a|
+    float qc=sqrt(qb)
+    a=(qa+qb-|@p1-a|)/sqrt(qa)/qc/2
+    a=sqrt(1-a^2)*qc
+  elseif @special==5
+    a=a+@p1
+    a=sqrt(a/sqr(a-@p1))
+  elseif @special==6
+    int n=0
+    complex xz=0
+    while n<10000
+      xz=xz+e^((imag(a)+flip(real(a)))*-n)
+      n=n+1
+    endwhile
+;    xz=1/(imag(a)+flip(real(a)))
+    a=xz
+  elseif @special==7
+    a=e^(real(p1)*a)*e^(-imag(p1)*a)-e^((real(p1)-imag(p1))*a)
+  endif
+  ;#####################################
+
+  a=@fnafter(a)
+
+  a=a*@postfactor+(1e+3,1e+3)+@offset
+
+  if @realimag==0
+    #index=real(a)
+  elseif @realimag==1
+    #index=imag(a)
+  else
+    a=floor(a*20)/20
+    #index=imag(a)+.05*(real(a)-floor(real(a)))
+  endif
+
+  complex ccenter=(#pixel-@center)*@csize
+  if @usecenter
+    ccenter=(#pixel-#center)*@csize
+  endif
+
+  if @crosshair%2>0
+    if abs(cabs(ccenter)-1)<@thickness
+      #index=real(#random)*2
+    endif
+  endif
+
+  if @crosshair%4>1
+    if abs(abs(real(ccenter))-1)<@thickness || abs(abs(imag(ccenter))-1)<@thickness
+      #index=real(#random)*2
+    endif
+  endif
+
+  if @crosshair%8>3
+    if abs(abs(real(ccenter))-pi)<@thickness*pi || abs(abs(imag(ccenter))-pi)<@thickness*pi
+      #index=real(#random)*2
+    endif
+    if abs(abs(real(ccenter))-(pi/2))<@thickness*(pi/2) || abs(abs(imag(ccenter))-(pi/2))<@thickness*(pi/2)
+      #index=real(#random)*2
+    endif
+  endif
+
+default:
+  title = "Functions"
+  param special
+    caption = "Special function"
+    default = 0
+    enum="None"\
+    "Special function 1"\
+    "Special function 2"\
+    "Special function 3"\
+    "Special function 4"\
+    "Special function 5"\
+    "Special function 6"\
+    "Special function 7"
+    hint="Special functions are for personal use. You can edit the special functions in this coloring to experiment for new colorings. Use ''Special p#'' for passing a variable to the function."
+  endparam
+
+  param skip
+    caption="Iteration skip"
+    default=0
+  endparam
+
+  param source
+    caption="Source"
+    default=0
+    enum="#pixel" "#z last" "#z min" "#z max" "#z sum" "#z average" "#z scaled avarage" "Iterations"
+  endparam
+  param prefactor
+    caption="PreFactor"
+    default=(1,0)
+    hint="Complex multiplier of source (before function is applied)"
+  endparam
+  param postfactor
+    caption="PostFactor"
+    default=(1,0)
+    hint="Complex multiplier of result (after function is applied)"
+  endparam
+  param offset
+    caption="Offset"
+    default=(0,0)
+    hint="Offset to add to the final complex color"
+  endparam
+
+  param realimag
+    caption="Coloring mode"
+    enum="Real" "Imag" "Complex"
+    hint="'Complex mode requires 'red/blue for semi-complex' gradient from mjd.ugr !! Use of 'sign shade' with color density 0.5 for real or imag recommended."
+    default=2
+  endparam
+
+  param crosshair
+    caption="Crosshair style"
+    enum="None" "Cabs=1" "Abs=1" "Cabs=1 | Abs=1" "Abs=Pi" "Cabs=1 | Abs=Pi" "Abs=1 | Abs=Pi" "Cabs=1 | Abs=1| Pi"
+    default=0
+  endparam
+  param csize
+    caption="Crosshair magnification"
+    default=1.0
+    hint="Make this equal to screen magnitude you lost the crosshair"
+  endparam
+  param center
+    caption="Crosshair center"
+    default=(0,0)
+    hint="Use eyedropper to point crosshair center"
+  endparam
+  param usecenter
+    caption="Use screen center"
+    default=false
+    hint="Use screen center for crosshair center"
+  endparam
+  param thickness
+    caption="Crosshair thickness"
+    default=.01
+    hint="Shrink this when zooming"
+  endparam
+
+  func fnbefore
+    caption="Pre function"
+    default=ident()
+    hint="Function applied to source, after prescaling, before special function (if any)"
+  endfunc
+  func fnafter
+    caption="Post function"
+    default=ident()
+    hint="Function applied to source, after special function (if any), before postscaling"
+  endfunc
+
+  ;#####################################
+  ;Parameters for special functions
+  ;Add more p#'s if you want.
+  param p1
+    caption="Special p1"
+    default=(8,0)
+    hint="For use of the special functions"
+  endparam
+  param p2
+    caption="Special p2"
+    default=(5,0)
+    hint="For use of the special functions"
+  endparam
+  param p3
+    caption="Special p3"
+    default=(5,0)
+    hint="For use of the special functions"
+  endparam
+  param p4
+    caption="Special p4"
+    default=(8,0)
+    hint="For use of the special functions"
+  endparam
+  param p5
+    caption="Special p5"
+    default=(0,0)
+    hint="For use of the special functions"
+  endparam
+}
+
+;##################################################################
+
+StrangeAttractors {; Ron Barnett+mjd, January 2001
+; This is a "cludge" to support strange
+; attractor formulas
+;
+; Translated to coloring formula by Mark Jeronimus (20010123)
+; mjd: added latooncarfian from reb's update (20010127)
+; mjd: added Attractor value (mode)          (20010127)
+init:
+  float x = 0
+  float y = 0
+  float xx = 0
+  float zz = 0
+
+  complex orbit=(0,0)
+  complex diff=(0,0)
+  float dist=0
+  complex iterz=(0,0)
+
+  float sum=0
+  float mindist=1e20
+  float maxdist=0
+  complex diffsum=(0,0)
+
+  int pixelcheck=0
+  int iter=0
+  bool done=false
+loop:
+  orbit=(#z-@center)*@mag*exp(flip(@rot*#pi/180))
+  x = real(orbit)
+  y = imag(orbit)
+
+  int i=0
+  while i<#maxiter && done==false
+    xx = x
+    IF @type == 0
+      IF x != 0
+        x = y - x/abs(x)*sqrt(abs(@b*x-@c))
+      ELSE
+        x = y - sqrt(abs(@b*x-@c))
+      ENDIF
+      y = @a - xx
+    ELSEIF @type == 1
+      IF x != 0
+        x = y - x/abs(x)*cos(sqr(log(abs(@b*x-@c)))) \
+          *atan(sqr(log(abs(@c*x-@b))))
+      ELSE
+        x = y - cos(sqr(log(abs(@b*x-@c)))) \
+          *atan(sqr(log(abs(@c*x-@b))))
+      ENDIF
+      y = @a - xx
+    ELSEIF @type == 2
+      x = y - sin(x)
+      y = @a - xx
+    ELSEIF @type == 3
+      x = sin(@a*y) - zz*cos(@b*x)
+      y = zz*sin(@c*xx) - cos(@d*y)
+      zz = sin(xx)
+    ELSEIF @type == 4
+      IF x != 0
+        x = y - x/abs(x)*(abs(sin(x)*cos(@b) + @c \
+          - x*sin(@a + @b + @c)))
+      ELSE
+        x = y - (abs(sin(x)*cos(@b) + @c \
+          - x*sin(@a + @b + @c)))
+      ENDIF
+      y = @a - xx
+    ELSEIF @type == 5
+      IF x != 0
+        x = y - x/abs(x)*sin(log(abs(@b*x-@c))) \
+          *atan(sqr(log(abs(@c*x-@b))))
+      ELSE
+        x = y - sin(log(abs(@b*x-@c))) \
+          *atan(sqr(log(abs(@c*x-@b))))
+      ENDIF
+      y = @a - xx
+    ELSEIF @type == 6
+      x = real(@fn1(y*@b)) + @c*real(@fn2(x*@b))
+      y = real(@fn3(xx*@a)) + @d*real(@fn4(y*@a))
+    ENDIF
+
+    orbit = x + flip(y)
+    IF cabs(orbit-#z) <= @closeness
+      pixelcheck = pixelcheck + 1
+      IF (pixelcheck >= @findpixel)
+        done = true
+      ENDIF
+    ENDIF
+
+    i=i+1
+  endwhile
+  diff=orbit-#z
+  dist=cabs(diff)
+
+  sum=sum+dist
+  diffsum=diffsum+diff
+
+  iter=iter+1
+  IF iter <= @iterate
+    iterz = diff
+  ENDIF
+  if dist<mindist
+    mindist=dist
+  endif
+  if dist>maxdist
+    maxdist=dist
+  endif
+
+final:
+  if @mode==0     ;min
+    #index=@randfactor*real(#rand-.5)+mindist
+  elseif @mode==1 ;sum
+    #index=@randfactor*real(#rand-.5)+sum
+  elseif @mode==2 ;last
+    #index=@randfactor*real(#rand-.5)+dist
+  elseif @mode==3 ;max
+    #index=@randfactor*real(#rand-.5)+maxdist
+  elseif @mode==4 ;min+max
+    #index=@randfactor*real(#rand-.5)+(mindist+maxdist)/2
+  elseif @mode==5 ;diff
+    #index=@randfactor*real(#rand-.5)+cabs(diffsum)
+  elseif @mode==6 ;attractor value
+    #index=@randfactor*real(#rand-.5)+cabs(iterz)
+  endif
+default:
+  title = "Strange Attractors Trap"
+param type
+  caption = "attractor type"
+  enum = "hopalong" "chip" "martin" "pickover" \
+    "threeply" "quadruptwo" "latoocarfian"
+  default = 1
+endparam
+param a
+  caption = "parameter a"
+  default = 1.0
+endparam
+param b
+  caption = "parameter b"
+  default = 1.0
+endparam
+param c
+  caption = "parameter c"
+  default = 1.0
+endparam
+param d
+  caption = "parameter d"
+  default = 1.0
+endparam
+param closeness
+  caption = "closeness"
+  default = 12.5
+endparam
+param findpixel
+  caption = "find pixel attempts"
+  default = 5.0
+endparam
+
+param @center
+  caption="Trap center"
+  default=(0,0)
+endparam
+param @mag
+  caption="Trap magnitude"
+  default=3.0
+endparam
+param @rot
+  caption="Trap rotation"
+  default=0.0
+endparam
+
+param mode
+  caption = "Trap mode"
+  enum="Min" "Sum" "Last" "Max" "Min+Max" "Diff" "Attractor value"
+  default = 0
+endparam
+param iterate
+  caption = "Iteration # for attractor value"
+  default = 10
+  hint = "Number of iterations to determine the \
+    attractor value."
+endparam
+
+param randfactor
+  caption = "Random"
+  default = 0.0
+endparam
+
+func fn1
+  caption = "function 1"
+  default = sin()
+  hint = "for latoocarfian only"
+endfunc
+func fn2
+  caption = "function 2"
+  default = sin()
+  hint = "for latoocarfian only"
+endfunc
+func fn3
+  caption = "function 3"
+  default = sin()
+  hint = "for latoocarfian only"
+endfunc
+func fn4
+  caption = "function 4"
+  default = sin()
+  hint = "for latoocarfian only"
+endfunc
+}
+
+;##################################################################
+
+Text { ;20000409
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+;
+; Last modification 20040118: Optimized for UF3
+global:
+  int connected=0  ;0..5      
+  int segments=0  ;0..2
+  int circles=0    ;0..2 
+      
+  float xa=0
+  float ya=0
+  float xb=0
+  float yb=0
+  float xc=0
+  float yc=0
+  float xd=0
+  float yd=0
+  float xe=0
+  float ye=0
+  float xf=0
+  float yf=0
+  float xg=0
+  float yg=0
+  float xh=0
+  float yh=0
+  float xk=0
+  float yk=0
+  float xl=0
+  float yl=0
+  
+  float xi=0  ;center x
+  float yi=0  ;center y
+  float ri=0  ;radius
+  int   hi=0  ;hemisphere (0=closed, 1=left, 2=right)
+  float ai=1  ;aspect ratio (1=circle, else ellips)
+  float xj=0
+  float yj=0
+  float rj=0
+  int   hj=0
+  float aj=1
+
+  if @char=="Build-your-own"
+    connected=@conn
+    xa=real(@za),ya=imag(@za)
+    xb=real(@zb),yb=imag(@zb)
+    xc=real(@zc),yc=imag(@zc)
+    xd=real(@zd),yd=imag(@zd)
+    xe=real(@ze),ye=imag(@ze)
+    xf=real(@zf),yf=imag(@zf)
+    segments=@segm
+    xg=real(@zg),yg=imag(@zg)
+    xh=real(@zh),yh=imag(@zh)
+    xk=real(@zk),yk=imag(@zk)
+    xl=real(@zl),yl=imag(@zl)
+    circles=@circ
+    xi=real(@zi),yi=imag(@zi)
+    ri=@radi    ,hi=@mi
+    ai=@aspi
+    xj=real(@zj),yj=imag(@zj)
+    rj=@radj    ,hj=@mj
+    aj=@aspj
+  elseif @char=="A"
+    connected=2
+    xa=-.4,ya=-.5
+    xb=0  ,yb=.5
+    xc=.4 ,yc=-.5
+    segments=1
+    xg=-.2,yg=-.1
+    xh=.2 ,yh=-.1
+  elseif @char=="B"
+    connected=3
+    xa=0  ,ya=.5
+    xb=-.3,yb=.5
+    xc=-.3,yc=-.5
+    xd=0  ,yd=-.5
+    segments=1
+    xg=-.3,yg=.1
+    xh=0  ,yh=.1
+    circles=2
+    xi=0  ,yi=-.2
+    ri=.3 ,hi=2
+    xj=0  ,yj=.3
+    rj=.2 ,hj=2
+  elseif @char=="C"
+    connected=1
+    xa=-.3,ya=-.2
+    xb=-.3,yb=.2
+    circles=2
+    xi=0  ,yi=-.2
+    ri=.3 ,hi=4
+    xj=0  ,yj=.2
+    rj=.3 ,hj=3
+  elseif @char=="D"
+    connected=3
+    xa=0  ,ya=.5
+    xb=-.3,yb=.5
+    xc=-.3,yc=-.5
+    xd=0  ,yd=-.5
+    segments=1
+    xg=.3 ,yg=.2
+    xh=.3 ,yh=-.2
+    circles=2
+    xi=0  ,yi=.2
+    ri=.3 ,hi=5
+    xj=0  ,yj=-.2
+    rj=.3 ,hj=7
+  elseif @char=="E"
+    connected=3
+    xa=.3 ,ya=.5
+    xb=-.3,yb=.5
+    xc=-.3,yc=-.5
+    xd=.3 ,yd=-.5
+    segments=1
+    xg=-.3,yg=0
+    xh=.1 ,yh=0
+  elseif @char=="F"
+    connected=2
+    xa=.3 ,ya=.5
+    xb=-.3,yb=.5
+    xc=-.3,yc=-.5
+    segments=1
+    xg=-.3,yg=0
+    xh=.1 ,yh=0
+  elseif @char=="G"
+
+    connected=2
+    xa=0  ,ya=0 
+    xb=.3 ,yb=0 
+    xc=.3 ,yc=-.5
+    segments=2
+    xg=-.3,yg=.2
+    xh=-.3,yh=-.2
+    xk=0  ,yk=.5
+    xl=.3 ,yl=.5
+    circles=2
+    xi=0  ,yi=.2
+    ri=.3 ,hi=6
+    xj=0  ,yj=-.2
+    rj=.3 ,hj=4
+  elseif @char=="H"
+    connected=1
+    xa=-.3,ya=0
+    xb=.3 ,yb=0
+    segments=2
+    xg=-.3,yg=.5
+    xh=-.3,yh=-.5
+    xk=.3 ,yk=-.5
+    xl=.3 ,yl=.5
+  elseif @char=="I"
+    connected=1
+    xa=0  ,ya=-.5
+    xb=0  ,yb=.5
+  elseif @char=="J"
+    connected=1
+    xa=.2 ,ya=.5
+    xb=.2 ,yb=-.3
+    circles=1
+    xi=0  ,yi=-.3
+    ri=.2 ,hi=4
+  elseif @char=="K"
+    connected=1
+    xa=-.3,ya=.5
+    xb=-.3,yb=-.5
+    segments=2
+    xg=-.3,yg=-.1
+    xh=.3 ,yh=.5
+    xk=.3 ,yk=-.5
+    xl=-.2,yl=0
+  elseif @char=="L"
+    connected=2
+    xa=-.3,ya=.5
+    xb=-.3,yb=-.5
+    xc=.3 ,yc=-.5
+  elseif @char=="M"
+    connected=4
+    xa=-.3,ya=-.5
+    xb=-.3,yb=.5
+    xc=0  ,yc=.1
+    xd=.3 ,yd=.5
+    xe=.3 ,ye=-.5
+  elseif @char=="N"
+    connected=2
+    xa=-.3,ya=-.5
+    xb=-.3,yb=.5
+    xc=.3 ,yc=-.5
+    segments=1
+    xg=.3 ,yg=-.5
+    xh=.3 ,yh=.5
+  elseif @char=="O"
+    connected=1
+    xa=-.3,ya=-.2
+    xb=-.3,yb=.2
+    segments=1
+    xg=.3 ,yg=.2
+    xh=.3 ,yh=-.2
+    circles=2
+    xi=0  ,yi=.2
+    ri=.3 ,hi=3
+    xj=0  ,yj=-.2
+    rj=.3 ,hj=4
+  elseif @char=="P"
+    connected=2
+    xa=-.25,ya=-.5
+    xb=-.25,yb=.5
+    xc=0   ,yc=.5
+    segments=1
+    xg=-.25,yg=0
+    xh=0   ,yh=0
+    circles=1
+    xi=0   ,yi=.25
+    ri=.25 ,hi=2
+  elseif @char=="Q"
+    connected=1
+    xa=0  ,ya=-.4
+    xb=.3 ,yb=-.5
+    segments=2
+    xg=.3 ,yg=.2
+    xh=.3 ,yh=-.2
+    xk=-.3,yk=-.2
+    xl=-.3,yl=.2
+    circles=2
+    xi=0  ,yi=.2
+    ri=.3 ,hi=3
+    xj=0  ,yj=-.2
+    rj=.3 ,hj=4
+  elseif @char=="R"
+    connected=2
+    xa=-.3,ya=-.5
+    xb=-.3,yb=.5
+    xc=.05,yc=.5
+    segments=2
+    xg=-.3,yg=0
+    xh=.05,yh=0
+    xk=0  ,yk=0
+    xl=.3 ,yl=-.5
+    circles=1
+    xi=.05,yi=.25
+    ri=.25,hi=2
+  elseif @char=="S"
+    connected=1
+    xa=0  ,ya=.5
+    xb=.2 ,yb=.5
+    segments=1
+    xg=0   ,yg=-.5
+    xh=-.2 ,yh=-.5
+    circles=2
+    xi=0  ,yi=.25
+    ri=.25,hi=1
+    xj=0  ,yj=-.25
+    rj=.25,hj=2
+  elseif @char=="T"
+    connected=1
+    xa=0  ,ya=-.5
+    xb=0  ,yb=.5
+    segments=1
+    xg=-.3 ,yg=.5
+    xh=.3  ,yh=.5
+  elseif @char=="U"
+    connected=1
+    xa=-.3,ya=-.2
+    xb=-.3,yb=.5
+    segments=1
+    xg=.3 ,yg=.5
+    xh=.3 ,yh=-.2
+    circles=1
+    xi=0  ,yi=-.2
+    ri=.3 ,hi=4
+  elseif @char=="V"
+    connected=2
+    xa=-.3,ya=.5
+    xb=0  ,yb=-.5
+    xc=.3 ,yc=.5
+  elseif @char=="W"
+    connected=4
+    xa=-.3,ya=.5
+    xb=-.2,yb=-.5
+    xc=0  ,yc=-.1
+    xd=.2 ,yd=-.5
+    xe=.3 ,ye=.5
+  elseif @char=="X"
+    connected=1
+    xa=-.3,ya=-.5
+    xb=.3 ,yb=.5
+    segments=1
+    xg=-.3,yg=.5
+    xh=.3 ,yh=-.5
+  elseif @char=="Y"
+    connected=1
+    xa=-.3,ya=-.5
+    xb=.3 ,yb=.5
+    segments=1
+    xg=0  ,yg=0
+    xh=-.3,yh=.5
+  elseif @char=="Z"
+    connected=3
+    xa=-.3,ya=.5
+    xb=.3 ,yb=.5
+    xc=-.3,yc=-.5
+    xd=.3 ,yd=-.5
+  endif
+init:  
+  complex p=(0,0)
+
+  float dx=0
+  float dy=0
+  float du=0
+  float dv=0
+
+  float det=0
+  float dist=1e300
+  float dist2=0
+
+  float x=real(#pixel)
+  float y=imag(#pixel)
+loop:
+  p=(#z-@offset)/@magn*1i^(@rot/90)
+  float x=real(p)
+  float y=imag(p)
+
+  if connected>=1
+    dx=xa-xb
+    dy=ya-yb
+    du=x-(xa+xb)/2
+    dv=y-(ya+yb)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xa)^2+(y-ya)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+    dist2=sqrt((x-xb)^2+(y-yb)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  if connected>=2
+    dx=xb-xc
+    dy=yb-yc
+    du=x-(xb+xc)/2
+    dv=y-(yb+yc)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xc)^2+(y-yc)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  if connected>=3
+    dx=xc-xd
+    dy=yc-yd
+    du=x-(xc+xd)/2
+    dv=y-(yc+yd)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xd)^2+(y-yd)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  if connected>=4
+    dx=xd-xe
+    dy=yd-ye
+    du=x-(xd+xe)/2
+    dv=y-(yd+ye)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xe)^2+(y-ye)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  if connected>=5
+    dx=xe-xf
+    dy=ye-yf
+    du=x-(xe+xf)/2
+    dv=y-(ye+yf)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xf)^2+(y-yf)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  
+  if segments>=1
+    dx=xg-xh
+    dy=yg-yh
+    du=x-(xg+xh)/2
+    dv=y-(yg+yh)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xg)^2+(y-yg)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+    dist2=sqrt((x-xh)^2+(y-yh)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  if segments>=2
+    dx=xk-xl
+    dy=yk-yl
+    du=x-(xk+xl)/2
+    dv=y-(yk+yl)/2
+    det=sqrt(dx*dx+dy*dy)
+    dist2=abs((dx*du)+(dy*dv))/det
+    if dist2<det/2
+      dist2=abs((dy*du)-(dx*dv))/det
+      if dist2<dist
+        dist=dist2
+      endif
+    endif
+    dist2=sqrt((x-xk)^2+(y-yk)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+    dist2=sqrt((x-xl)^2+(y-yl)^2)
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+  
+  if circles>=1
+    if hi==0
+      dist2=abs(sqrt((x-xi)^2+((y-yi)*ai)^2)-ri)
+    else
+      dx=x-xi
+      dy=y-yi
+      if hi<=4
+        if hi==1 && dx<0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==2 && dx>0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==3 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==4 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        endif
+        if dist2<dist
+          dist=dist2
+        endif
+        if hi<=2
+          dx=dx^2
+          dy=dy*ai
+          dist2=sqrt(dx+(dy-ri)^2)
+          if dist2<dist
+            dist=dist2
+
+          endif
+          dist2=sqrt(dx+(dy+ri)^2)
+        else
+          dy=(dy*ai)^2
+          dist2=sqrt((dx-ri)^2+dy)
+          if dist2<dist
+            dist=dist2
+          endif
+          dist2=sqrt((dx+ri)^2+dy)
+        endif
+      else
+        if hi==5 && dx>0 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==6 && dx<0 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==7 && dx>0 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        elseif hi==8 && dx<0 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*ai)^2)-ri)
+        endif
+        if dist2<dist
+          dist=dist2
+        endif
+        if hi<=6
+          dist2=sqrt(dx^2+(dy*ai-ri)^2)
+        else
+          dist2=sqrt(dx^2+(dy*ai+ri)^2)
+        endif
+        if dist2<dist
+          dist=dist2
+        endif
+        if hi%2==1
+          dist2=sqrt((dx-ri)^2+(dy*ai)^2)
+        else
+          dist2=sqrt((dx+ri)^2+(dy*ai)^2)
+        endif
+      endif
+    endif     
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+
+  if circles>=2
+    if hj==0
+      dist2=abs(sqrt((x-xj)^2+((y-yj)*aj)^2)-rj)
+    else
+      dx=x-xj
+      dy=y-yj
+      if hj<=4
+        if hj==1 && dx<0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==2 && dx>0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==3 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==4 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        endif
+        if dist2<dist
+          dist=dist2
+        endif
+        if hj<=2
+          dx=dx^2
+          dy=dy*aj
+          dist2=sqrt(dx+(dy-rj)^2)
+          if dist2<dist
+            dist=dist2
+          endif
+          dist2=sqrt(dx+(dy+rj)^2)
+        else
+          dy=(dy*aj)^2
+          dist2=sqrt((dx-rj)^2+dy)
+          if dist2<dist
+            dist=dist2
+          endif
+          dist2=sqrt((dx+rj)^2+dy)
+        endif
+      else
+        if hj==5 && dx>0 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==6 && dx<0 && dy>0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==7 && dx>0 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        elseif hj==8 && dx<0 && dy<0
+          dist2=abs(sqrt(dx^2+(dy*aj)^2)-rj)
+        endif
+        if dist2<dist
+          dist=dist2
+        endif
+        if hj<=6
+          dist2=sqrt(dx^2+(dy*aj-rj)^2)
+        else
+          dist2=sqrt(dx^2+(dy*aj+rj)^2)
+        endif
+
+        if dist2<dist
+          dist=dist2
+        endif
+        if hj%2==1
+          dist2=sqrt((dx-rj)^2+(dy*aj)^2)
+        else
+          dist2=sqrt((dx+rj)^2+(dy*aj)^2)
+        endif
+      endif
+    endif     
+    if dist2<dist
+      dist=dist2
+    endif
+  endif
+final:
+  #index = dist
+default:
+  title = "Text"
+
+  param char
+    caption="Character"
+    enum="Build-your-own" \
+          "A""B""C""D""E""F""G""H""I""J""K""L""M" \
+          "N""O""P""Q""R""S""T""U""V""W""X""Y""Z"
+    default=2
+  endparam
+   
+  param offset
+    caption="Center"
+    default=(0,0)
+  endparam
+  param magn
+    caption="Magnitude"
+    default=1.0
+  endparam
+  param rot
+    caption="Rotation"
+    default=0.0
+  endparam
+
+  heading
+    caption="Parameters for: Build-your-own"
+    visible=@char=="Build-your-own"
+  endheading
+  param conn
+    caption="Connected lines"
+    default=1
+    min=1
+    max=5
+    visible=@char=="Build-your-own"
+  endparam
+  heading
+    caption="Connected line endpoints"
+    visible=@char=="Build-your-own"
+  endheading
+  param za
+    caption= "Startpoint"
+    default=(0,-.7)
+    visible=@char=="Build-your-own"
+  endparam
+  param zb
+    caption= "Endoint 1"
+    default=(.5,-.5)
+    visible=@char=="Build-your-own"
+  endparam
+  param zc
+    caption= "Endoint 2"
+    default=(0,0)
+    visible=@char=="Build-your-own" && @conn > 1
+  endparam
+  param zd
+    caption= "Endoint 3"
+    default=(0,0)
+    visible=@char=="Build-your-own" && @conn > 2
+  endparam
+  param ze
+    caption= "Endoint 4"
+    default=(0,0)
+    visible=@char=="Build-your-own" && @conn > 3
+  endparam
+  param zf
+    caption= "Endoint 5"
+    default=(0,0)
+    visible=@char=="Build-your-own" && @conn > 4
+  endparam
+
+  heading
+    caption="Line segments"
+    visible=@char=="Build-your-own"
+  endheading
+  param segm
+    caption="Line segments"
+    default=2
+    min=0
+    max=2
+    visible=@char=="Build-your-own"
+  endparam
+  heading
+    caption="Line segment 1"
+    visible=@char=="Build-your-own" && @segm > 0 
+  endheading
+  param zg
+    caption= "Line 1 start"
+    default=(-.3,0)
+    visible=@char=="Build-your-own" && @segm > 0 
+  endparam
+  param zh
+    caption= "Line 1 end"
+    default=(.3,0)
+    visible=@char=="Build-your-own" && @segm > 0 
+  endparam
+  heading
+    caption="Line segment 2"
+    visible=@char=="Build-your-own" && @segm > 1 
+  endheading
+  param zk
+    caption= "Line 2 start"
+    default=(0,-.3)
+    visible=@char=="Build-your-own" && @segm > 1 
+  endparam
+  param zl
+    caption= "Line 2 end"
+    default=(0,.3)
+    visible=@char=="Build-your-own" && @segm > 1 
+  endparam
+
+  heading
+    caption="Circles"
+    visible=@char=="Build-your-own"
+  endheading
+  param circ
+    caption="Circles"
+    default=2
+    min=0
+    max=2
+    visible=@char=="Build-your-own"
+  endparam
+  heading
+    caption="Circle 1"
+    visible=@char=="Build-your-own" && @circ > 0
+  endheading
+  param zi
+    caption= "Circle1 center"
+    default=(0,.25)
+    visible=@char=="Build-your-own" && @circ > 0
+  endparam
+  param radi
+    caption= "Circle1 radius"
+    default=.25
+    visible=@char=="Build-your-own" && @circ > 0
+  endparam
+  param mi
+    caption= "Circle1 mode"
+    enum="Full" \
+          "Left half" \
+          "Right half" \
+          "Upper half" \
+          "Lower half" \
+          "Upper-right quadrant" \
+          "Upper-left quadrant" \
+          "Lower-right quadrant" \
+          "Lower-left quadrant"
+    default=1
+    visible=@char=="Build-your-own" && @circ > 0
+  endparam
+  param aspi
+    caption= "Circle1 aspect"
+    default=1.0
+    visible=@char=="Build-your-own" && @circ > 0
+  endparam
+
+  heading
+    caption="Circle 2"
+    visible=@char=="Build-your-own" && @circ > 1
+  endheading
+  param zj
+    caption= "Circle2 center"
+    default=(0,-.25)
+    visible=@char=="Build-your-own" && @circ > 1
+  endparam
+  param radj
+    caption= "Circle2 radius"
+    default=.25
+    visible=@char=="Build-your-own" && @circ > 1
+  endparam
+  param mj
+    caption= "Circle2 mode"
+    enum="Full" \
+          "Left half" \
+          "Right half" \
+          "Upper half" \
+          "Lower half" \
+          "Upper-right quadrant" \
+          "Upper-left quadrant" \
+          "Lower-right quadrant" \
+          "Lower-left quadrant"
+    default=2
+    visible=@char=="Build-your-own" && @circ > 1
+  endparam
+  param aspj
+    caption= "Circle2 aspect"
+    default=1.0
+    visible=@char=="Build-your-own" && @circ > 1
+  endparam
+}
+
+;##################################################################
+
+Initials { ;20040118
+; Made by Mark jeronimus <Mark.Jeronimus@hva.nl>
+; © 2004 Mark Jeronimus
+global:
+  int connected[4],connected[0]=0,connected[1]=0,connected[2]=0,connected[3]=0
+  int segments[4],segments[0]=0,segments[1]=0,segments[2]=0,segments[3]=0
+  int circles[4],circles[0]=0,circles[1]=0,circles[2]=0,circles[3]=0
+  float xa[4],float ya[4],float xb[4],float yb[4],float xc[4],float yc[4]
+  float xd[4],float yd[4],float xe[4],float ye[4],float xf[4],float yf[4]
+  float xg[4],float yg[4],float xh[4],float yh[4],float xi[4],float yi[4]
+  float ri[4],float hi[4],float xj[4],float yj[4],float rj[4],float hj[4]
+  float xk[4],float yk[4],float xl[4],float yl[4],if @char0=="A",connected[0]=2
+  xa[0]=-.4,ya[0]=-.5,xb[0]=0,yb[0]=.5,xc[0]=.4,yc[0]=-.5,segments[0]=1
+  xg[0]=-.2,yg[0]=-.1,xh[0]=.2,yh[0]=-.1,elseif@char0=="B",connected[0]=3
+  xa[0]=0,ya[0]=.5,xb[0]=-.3,yb[0]=.5,xc[0]=-.3,yc[0]=-.5,xd[0]=0,yd[0]=-.5
+  segments[0]=1,xg[0]=-.3,yg[0]=.1,xh[0]=0,yh[0]=.1,circles[0]=2,xi[0]=0
+  yi[0]=-.2,ri[0]=.3,hi[0]=2,xj[0]=0,yj[0]=.3,rj[0]=.2,hj[0]=2
+  elseif@char0=="C",connected[0]=1,xa[0]=-.3,ya[0]=-.2,xb[0]=-.3,yb[0]=.2
+  circles[0]=2,xi[0]=0,yi[0]=-.2,ri[0]=.3,hi[0]=4,xj[0]=0,yj[0]=.2,rj[0]=.3
+  hj[0]=3,elseif@char0=="D",connected[0]=3,xa[0]=0,ya[0]=.5,xb[0]=-.3,yb[0]=.5
+  xc[0]=-.3,yc[0]=-.5,xd[0]=0,yd[0]=-.5,segments[0]=1,xg[0]=.3,yg[0]=.2
+  xh[0]=.3,yh[0]=-.2,circles[0]=2,xi[0]=0,yi[0]=.2,ri[0]=.3,hi[0]=5,xj[0]=0
+  yj[0]=-.2,rj[0]=.3,hj[0]=7,elseif@char0=="E",connected[0]=3,xa[0]=.3,ya[0]=.5
+  xb[0]=-.3,yb[0]=.5,xc[0]=-.3,yc[0]=-.5,xd[0]=.3,yd[0]=-.5,segments[0]=1
+  xg[0]=-.3,yg[0]=0,xh[0]=.1,yh[0]=0,elseif@char0=="F",connected[0]=2,xa[0]=.3
+  ya[0]=.5,xb[0]=-.3,yb[0]=.5,xc[0]=-.3,yc[0]=-.5,segments[0]=1,xg[0]=-.3
+  yg[0]=0,xh[0]=.1,yh[0]=0,elseif@char0=="G",connected[0]=2,xa[0]=0,ya[0]=0
+  xb[0]=.3,yb[0]=0,xc[0]=.3,yc[0]=-.5,segments[0]=2,xg[0]=-.3,yg[0]=.2
+  xh[0]=-.3,yh[0]=-.2,xk[0]=0,yk[0]=.5,xl[0]=.3,yl[0]=.5,circles[0]=2,xi[0]=0
+  yi[0]=.2,ri[0]=.3,hi[0]=6,xj[0]=0,yj[0]=-.2,rj[0]=.3,hj[0]=4
+  elseif@char0=="H",connected[0]=1,xa[0]=-.3,ya[0]=0,xb[0]=.3,yb[0]=0
+  segments[0]=2,xg[0]=-.3,yg[0]=.5,xh[0]=-.3,yh[0]=-.5,xk[0]=.3,yk[0]=-.5
+  xl[0]=.3,yl[0]=.5,elseif@char0=="I",connected[0]=1,xa[0]=0,ya[0]=-.5,xb[0]=0
+  yb[0]=.5,elseif@char0=="J",connected[0]=1,xa[0]=.2,ya[0]=.5,xb[0]=.2
+  yb[0]=-.3,circles[0]=1,xi[0]=0,yi[0]=-.3,ri[0]=.2,hi[0]=4,elseif@char0=="K"
+  connected[0]=1,xa[0]=-.3,ya[0]=.5,xb[0]=-.3,yb[0]=-.5,segments[0]=2,xg[0]=-.3
+  yg[0]=-.1,xh[0]=.3,yh[0]=.5,xk[0]=.3,yk[0]=-.5,xl[0]=-.2,yl[0]=0
+  elseif@char0=="L",connected[0]=2,xa[0]=-.3,ya[0]=.5,xb[0]=-.3,yb[0]=-.5
+  xc[0]=.3,yc[0]=-.5,elseif@char0=="M",connected[0]=4,xa[0]=-.3,ya[0]=-.5
+  xb[0]=-.3,yb[0]=.5,xc[0]=0,yc[0]=.1,xd[0]=.3,yd[0]=.5,xe[0]=.3,ye[0]=-.5
+  elseif@char0=="N",connected[0]=2,xa[0]=-.3,ya[0]=-.5,xb[0]=-.3,yb[0]=.5
+  xc[0]=.3,yc[0]=-.5,segments[0]=1,xg[0]=.3,yg[0]=-.5,xh[0]=.3,yh[0]=.5
+  elseif@char0=="O",connected[0]=1,xa[0]=-.3,ya[0]=-.2,xb[0]=-.3,yb[0]=.2
+  segments[0]=1,xg[0]=.3,yg[0]=.2,xh[0]=.3,yh[0]=-.2,circles[0]=2,xi[0]=0
+  yi[0]=.2,ri[0]=.3,hi[0]=3,xj[0]=0,yj[0]=-.2,rj[0]=.3,hj[0]=4
+  elseif@char0=="P",connected[0]=2,xa[0]=-.25,ya[0]=-.5,xb[0]=-.25,yb[0]=.5
+  xc[0]=0  ,yc[0]=.5,segments[0]=1,xg[0]=-.25,yg[0]=0,xh[0]=0  ,yh[0]=0
+  circles[0]=1,xi[0]=0  ,yi[0]=.25,ri[0]=.25,hi[0]=2,elseif@char0=="Q"
+  connected[0]=1,xa[0]=0,ya[0]=-.4,xb[0]=.3,yb[0]=-.5,segments[0]=2,xg[0]=.3
+  yg[0]=.2,xh[0]=.3,yh[0]=-.2,xk[0]=-.3,yk[0]=-.2,xl[0]=-.3,yl[0]=.2
+  circles[0]=2,xi[0]=0,yi[0]=.2,ri[0]=.3,hi[0]=3,xj[0]=0,yj[0]=-.2,rj[0]=.3
+  hj[0]=4,elseif@char0=="R",connected[0]=2,xa[0]=-.3,ya[0]=-.5,xb[0]=-.3
+  yb[0]=.5,xc[0]=.05,yc[0]=.5,segments[0]=2,xg[0]=-.3,yg[0]=0,xh[0]=.05,yh[0]=0
+  xk[0]=0,yk[0]=0,xl[0]=.3,yl[0]=-.5,circles[0]=1,xi[0]=.05,yi[0]=.25,ri[0]=.25
+  hi[0]=2,elseif@char0=="S",connected[0]=1,xa[0]=0,ya[0]=.5,xb[0]=.2,yb[0]=.5
+  segments[0]=1,xg[0]=0  ,yg[0]=-.5,xh[0]=-.2,yh[0]=-.5,circles[0]=2,xi[0]=0
+  yi[0]=.25,ri[0]=.25,hi[0]=1,xj[0]=0,yj[0]=-.25,rj[0]=.25,hj[0]=2
+  elseif@char0=="T",connected[0]=1,xa[0]=0,ya[0]=-.5,xb[0]=0,yb[0]=.5
+  segments[0]=1,xg[0]=-.3,yg[0]=.5,xh[0]=.3,yh[0]=.5,elseif@char0=="U"
+  connected[0]=1,xa[0]=-.3,ya[0]=-.2,xb[0]=-.3,yb[0]=.5,segments[0]=1,xg[0]=.3
+  yg[0]=.5,xh[0]=.3,yh[0]=-.2,circles[0]=1,xi[0]=0,yi[0]=-.2,ri[0]=.3,hi[0]=4
+  elseif@char0=="V",connected[0]=2,xa[0]=-.3,ya[0]=.5,xb[0]=0,yb[0]=-.5
+  xc[0]=.3,yc[0]=.5,elseif@char0=="W",connected[0]=4,xa[0]=-.3,ya[0]=.5
+  xb[0]=-.2,yb[0]=-.5,xc[0]=0,yc[0]=-.1,xd[0]=.2,yd[0]=-.5,xe[0]=.3,ye[0]=.5
+  elseif@char0=="X",connected[0]=1,xa[0]=-.3,ya[0]=-.5,xb[0]=.3,yb[0]=.5
+  segments[0]=1,xg[0]=-.3,yg[0]=.5,xh[0]=.3,yh[0]=-.5,elseif@char0=="Y"
+  connected[0]=1,xa[0]=-.3,ya[0]=-.5,xb[0]=.3,yb[0]=.5,segments[0]=1,xg[0]=0
+  yg[0]=0,xh[0]=-.3,yh[0]=.5,elseif@char0=="Z",connected[0]=3,xa[0]=-.3
+  ya[0]=.5,xb[0]=.3,yb[0]=.5,xc[0]=-.3,yc[0]=-.5,xd[0]=.3,yd[0]=-.5,endif
+  if@char1=="A",connected[1]=2,xa[1]=-.4,ya[1]=-.5,xb[1]=0,yb[1]=.5,xc[1]=.4
+  yc[1]=-.5,segments[1]=1,xg[1]=-.2,yg[1]=-.1,xh[1]=.2,yh[1]=-.1
+  elseif@char1=="B",connected[1]=3,xa[1]=0,ya[1]=.5,xb[1]=-.3,yb[1]=.5
+  xc[1]=-.3,yc[1]=-.5,xd[1]=0,yd[1]=-.5,segments[1]=1,xg[1]=-.3,yg[1]=.1
+  xh[1]=0,yh[1]=.1,circles[1]=2,xi[1]=0,yi[1]=-.2,ri[1]=.3,hi[1]=2,xj[1]=0
+  yj[1]=.3,rj[1]=.2,hj[1]=2,elseif@char1=="C",connected[1]=1,xa[1]=-.3
+  ya[1]=-.2,xb[1]=-.3,yb[1]=.2,circles[1]=2,xi[1]=0,yi[1]=-.2,ri[1]=.3,hi[1]=4
+  xj[1]=0,yj[1]=.2,rj[1]=.3,hj[1]=3,elseif@char1=="D",connected[1]=3,xa[1]=0
+  ya[1]=.5,xb[1]=-.3,yb[1]=.5,xc[1]=-.3,yc[1]=-.5,xd[1]=0,yd[1]=-.5
+  segments[1]=1,xg[1]=.3,yg[1]=.2,xh[1]=.3,yh[1]=-.2,circles[1]=2,xi[1]=0
+  yi[1]=.2,ri[1]=.3,hi[1]=5,xj[1]=0,yj[1]=-.2,rj[1]=.3,hj[1]=7
+  elseif@char1=="E",connected[1]=3,xa[1]=.3,ya[1]=.5,xb[1]=-.3,yb[1]=.5
+  xc[1]=-.3,yc[1]=-.5,xd[1]=.3,yd[1]=-.5,segments[1]=1,xg[1]=-.3,yg[1]=0
+  xh[1]=.1,yh[1]=0,elseif@char1=="F",connected[1]=2,xa[1]=.3,ya[1]=.5,xb[1]=-.3
+  yb[1]=.5,xc[1]=-.3,yc[1]=-.5,segments[1]=1,xg[1]=-.3,yg[1]=0,xh[1]=.1,yh[1]=0
+  elseif@char1=="G",connected[1]=2,xa[1]=0,ya[1]=0,xb[1]=.3,yb[1]=0,xc[1]=.3
+  yc[1]=-.5,segments[1]=2,xg[1]=-.3,yg[1]=.2,xh[1]=-.3,yh[1]=-.2,xk[1]=0
+  yk[1]=.5,xl[1]=.3,yl[1]=.5,circles[1]=2,xi[1]=0,yi[1]=.2,ri[1]=.3,hi[1]=6
+  xj[1]=0,yj[1]=-.2,rj[1]=.3,hj[1]=4,elseif@char1=="H",connected[1]=1,xa[1]=-.3
+  ya[1]=0,xb[1]=.3,yb[1]=0,segments[1]=2,xg[1]=-.3,yg[1]=.5,xh[1]=-.3,yh[1]=-.5
+  xk[1]=.3,yk[1]=-.5,xl[1]=.3,yl[1]=.5,elseif@char1=="I",connected[1]=1,xa[1]=0
+  ya[1]=-.5,xb[1]=0,yb[1]=.5,elseif@char1=="J",connected[1]=1,xa[1]=.2,ya[1]=.5
+  xb[1]=.2,yb[1]=-.3,circles[1]=1,xi[1]=0,yi[1]=-.3,ri[1]=.2,hi[1]=4
+  elseif@char1=="K",connected[1]=1,xa[1]=-.3,ya[1]=.5,xb[1]=-.3,yb[1]=-.5
+  segments[1]=2,xg[1]=-.3,yg[1]=-.1,xh[1]=.3,yh[1]=.5,xk[1]=.3,yk[1]=-.5
+  xl[1]=-.2,yl[1]=0,elseif@char1=="L",connected[1]=2,xa[1]=-.3,ya[1]=.5
+  xb[1]=-.3,yb[1]=-.5,xc[1]=.3,yc[1]=-.5,elseif@char1=="M",connected[1]=4
+  xa[1]=-.3,ya[1]=-.5,xb[1]=-.3,yb[1]=.5,xc[1]=0,yc[1]=.1,xd[1]=.3,yd[1]=.5
+  xe[1]=.3,ye[1]=-.5,elseif@char1=="N",connected[1]=2,xa[1]=-.3,ya[1]=-.5
+  xb[1]=-.3,yb[1]=.5,xc[1]=.3,yc[1]=-.5,segments[1]=1,xg[1]=.3,yg[1]=-.5
+  xh[1]=.3,yh[1]=.5,elseif@char1=="O",connected[1]=1,xa[1]=-.3,ya[1]=-.2
+  xb[1]=-.3,yb[1]=.2,segments[1]=1,xg[1]=.3,yg[1]=.2,xh[1]=.3,yh[1]=-.2
+  circles[1]=2,xi[1]=0,yi[1]=.2,ri[1]=.3,hi[1]=3,xj[1]=0,yj[1]=-.2,rj[1]=.3
+  hj[1]=4,elseif@char1=="P",connected[1]=2,xa[1]=-.25,ya[1]=-.5,xb[1]=-.25
+  yb[1]=.5,xc[1]=0  ,yc[1]=.5,segments[1]=1,xg[1]=-.25,yg[1]=0,xh[1]=0  
+  yh[1]=0,circles[1]=1,xi[1]=0  ,yi[1]=.25,ri[1]=.25,hi[1]=2,elseif@char1=="Q"
+  connected[1]=1,xa[1]=0,ya[1]=-.4,xb[1]=.3,yb[1]=-.5,segments[1]=2,xg[1]=.3
+  yg[1]=.2,xh[1]=.3,yh[1]=-.2,xk[1]=-.3,yk[1]=-.2,xl[1]=-.3,yl[1]=.2
+  circles[1]=2,xi[1]=0,yi[1]=.2,ri[1]=.3,hi[1]=3,xj[1]=0,yj[1]=-.2,rj[1]=.3
+  hj[1]=4,elseif@char1=="R",connected[1]=2,xa[1]=-.3,ya[1]=-.5,xb[1]=-.3
+  yb[1]=.5,xc[1]=.05,yc[1]=.5,segments[1]=2,xg[1]=-.3,yg[1]=0,xh[1]=.05,yh[1]=0
+  xk[1]=0,yk[1]=0,xl[1]=.3,yl[1]=-.5,circles[1]=1,xi[1]=.05,yi[1]=.25,ri[1]=.25
+  hi[1]=2,elseif@char1=="S",connected[1]=1,xa[1]=0,ya[1]=.5,xb[1]=.2,yb[1]=.5
+  segments[1]=1,xg[1]=0  ,yg[1]=-.5,xh[1]=-.2,yh[1]=-.5,circles[1]=2,xi[1]=0
+  yi[1]=.25,ri[1]=.25,hi[1]=1,xj[1]=0,yj[1]=-.25,rj[1]=.25,hj[1]=2
+  elseif@char1=="T",connected[1]=1,xa[1]=0,ya[1]=-.5,xb[1]=0,yb[1]=.5
+  segments[1]=1,xg[1]=-.3,yg[1]=.5,xh[1]=.3,yh[1]=.5,elseif@char1=="U"
+  connected[1]=1,xa[1]=-.3,ya[1]=-.2,xb[1]=-.3,yb[1]=.5,segments[1]=1,xg[1]=.3
+  yg[1]=.5,xh[1]=.3,yh[1]=-.2,circles[1]=1,xi[1]=0,yi[1]=-.2,ri[1]=.3,hi[1]=4
+  elseif@char1=="V",connected[1]=2,xa[1]=-.3,ya[1]=.5,xb[1]=0,yb[1]=-.5
+  xc[1]=.3,yc[1]=.5,elseif@char1=="W",connected[1]=4,xa[1]=-.3,ya[1]=.5
+  xb[1]=-.2,yb[1]=-.5,xc[1]=0,yc[1]=-.1,xd[1]=.2,yd[1]=-.5,xe[1]=.3,ye[1]=.5
+  elseif@char1=="X",connected[1]=1,xa[1]=-.3,ya[1]=-.5,xb[1]=.3,yb[1]=.5
+  segments[1]=1,xg[1]=-.3,yg[1]=.5,xh[1]=.3,yh[1]=-.5,elseif@char1=="Y"
+  connected[1]=1,xa[1]=-.3,ya[1]=-.5,xb[1]=.3,yb[1]=.5,segments[1]=1,xg[1]=0
+  yg[1]=0,xh[1]=-.3,yh[1]=.5,elseif@char1=="Z",connected[1]=3,xa[1]=-.3
+  ya[1]=.5,xb[1]=.3,yb[1]=.5,xc[1]=-.3,yc[1]=-.5,xd[1]=.3,yd[1]=-.5,endif
+  if@char2=="A",connected[2]=2,xa[2]=-.4,ya[2]=-.5,xb[2]=0,yb[2]=.5,xc[2]=.4
+  yc[2]=-.5,segments[2]=1,xg[2]=-.2,yg[2]=-.1,xh[2]=.2,yh[2]=-.1
+  elseif@char2=="B",connected[2]=3,xa[2]=0,ya[2]=.5,xb[2]=-.3,yb[2]=.5
+  xc[2]=-.3,yc[2]=-.5,xd[2]=0,yd[2]=-.5,segments[2]=1,xg[2]=-.3,yg[2]=.1
+  xh[2]=0,yh[2]=.1,circles[2]=2,xi[2]=0,yi[2]=-.2,ri[2]=.3,hi[2]=2,xj[2]=0
+  yj[2]=.3,rj[2]=.2,hj[2]=2,elseif@char2=="C",connected[2]=1,xa[2]=-.3
+  ya[2]=-.2,xb[2]=-.3,yb[2]=.2,circles[2]=2,xi[2]=0,yi[2]=-.2,ri[2]=.3,hi[2]=4
+  xj[2]=0,yj[2]=.2,rj[2]=.3,hj[2]=3,elseif@char2=="D",connected[2]=3,xa[2]=0
+  ya[2]=.5,xb[2]=-.3,yb[2]=.5,xc[2]=-.3,yc[2]=-.5,xd[2]=0,yd[2]=-.5
+  segments[2]=1,xg[2]=.3,yg[2]=.2,xh[2]=.3,yh[2]=-.2,circles[2]=2,xi[2]=0
+  yi[2]=.2,ri[2]=.3,hi[2]=5,xj[2]=0,yj[2]=-.2,rj[2]=.3,hj[2]=7
+  elseif@char2=="E",connected[2]=3,xa[2]=.3,ya[2]=.5,xb[2]=-.3,yb[2]=.5
+  xc[2]=-.3,yc[2]=-.5,xd[2]=.3,yd[2]=-.5,segments[2]=1,xg[2]=-.3,yg[2]=0
+  xh[2]=.1,yh[2]=0,elseif@char2=="F",connected[2]=2,xa[2]=.3,ya[2]=.5,xb[2]=-.3
+  yb[2]=.5,xc[2]=-.3,yc[2]=-.5,segments[2]=1,xg[2]=-.3,yg[2]=0,xh[2]=.1,yh[2]=0
+  elseif@char2=="G",connected[2]=2,xa[2]=0,ya[2]=0,xb[2]=.3,yb[2]=0,xc[2]=.3
+  yc[2]=-.5,segments[2]=2,xg[2]=-.3,yg[2]=.2,xh[2]=-.3,yh[2]=-.2,xk[2]=0
+  yk[2]=.5,xl[2]=.3,yl[2]=.5,circles[2]=2,xi[2]=0,yi[2]=.2,ri[2]=.3,hi[2]=6
+  xj[2]=0,yj[2]=-.2,rj[2]=.3,hj[2]=4,elseif@char2=="H",connected[2]=1,xa[2]=-.3
+  ya[2]=0,xb[2]=.3,yb[2]=0,segments[2]=2,xg[2]=-.3,yg[2]=.5,xh[2]=-.3,yh[2]=-.5
+  xk[2]=.3,yk[2]=-.5,xl[2]=.3,yl[2]=.5,elseif@char2=="I",connected[2]=1,xa[2]=0
+  ya[2]=-.5,xb[2]=0,yb[2]=.5,elseif@char2=="J",connected[2]=1,xa[2]=.2,ya[2]=.5
+  xb[2]=.2,yb[2]=-.3,circles[2]=1,xi[2]=0,yi[2]=-.3,ri[2]=.2,hi[2]=4
+  elseif@char2=="K",connected[2]=1,xa[2]=-.3,ya[2]=.5,xb[2]=-.3,yb[2]=-.5
+  segments[2]=2,xg[2]=-.3,yg[2]=-.1,xh[2]=.3,yh[2]=.5,xk[2]=.3,yk[2]=-.5
+  xl[2]=-.2,yl[2]=0,elseif@char2=="L",connected[2]=2,xa[2]=-.3,ya[2]=.5
+  xb[2]=-.3,yb[2]=-.5,xc[2]=.3,yc[2]=-.5,elseif@char2=="M",connected[2]=4
+  xa[2]=-.3,ya[2]=-.5,xb[2]=-.3,yb[2]=.5,xc[2]=0,yc[2]=.1,xd[2]=.3,yd[2]=.5
+  xe[2]=.3,ye[2]=-.5,elseif@char2=="N",connected[2]=2,xa[2]=-.3,ya[2]=-.5
+  xb[2]=-.3,yb[2]=.5,xc[2]=.3,yc[2]=-.5,segments[2]=1,xg[2]=.3,yg[2]=-.5
+  xh[2]=.3,yh[2]=.5,elseif@char2=="O",connected[2]=1,xa[2]=-.3,ya[2]=-.2
+  xb[2]=-.3,yb[2]=.2,segments[2]=1,xg[2]=.3,yg[2]=.2,xh[2]=.3,yh[2]=-.2
+  circles[2]=2,xi[2]=0,yi[2]=.2,ri[2]=.3,hi[2]=3,xj[2]=0,yj[2]=-.2,rj[2]=.3
+  hj[2]=4,elseif@char2=="P",connected[2]=2,xa[2]=-.25,ya[2]=-.5,xb[2]=-.25
+  yb[2]=.5,xc[2]=0  ,yc[2]=.5,segments[2]=1,xg[2]=-.25,yg[2]=0,xh[2]=0  
+  yh[2]=0,circles[2]=1,xi[2]=0  ,yi[2]=.25,ri[2]=.25,hi[2]=2,elseif@char2=="Q"
+  connected[2]=1,xa[2]=0,ya[2]=-.4,xb[2]=.3,yb[2]=-.5,segments[2]=2,xg[2]=.3
+  yg[2]=.2,xh[2]=.3,yh[2]=-.2,xk[2]=-.3,yk[2]=-.2,xl[2]=-.3,yl[2]=.2
+  circles[2]=2,xi[2]=0,yi[2]=.2,ri[2]=.3,hi[2]=3,xj[2]=0,yj[2]=-.2,rj[2]=.3
+  hj[2]=4,elseif@char2=="R",connected[2]=2,xa[2]=-.3,ya[2]=-.5,xb[2]=-.3
+  yb[2]=.5,xc[2]=.05,yc[2]=.5,segments[2]=2,xg[2]=-.3,yg[2]=0,xh[2]=.05,yh[2]=0
+  xk[2]=0,yk[2]=0,xl[2]=.3,yl[2]=-.5,circles[2]=1,xi[2]=.05,yi[2]=.25,ri[2]=.25
+  hi[2]=2,elseif@char2=="S",connected[2]=1,xa[2]=0,ya[2]=.5,xb[2]=.2,yb[2]=.5
+  segments[2]=1,xg[2]=0  ,yg[2]=-.5,xh[2]=-.2,yh[2]=-.5,circles[2]=2,xi[2]=0
+  yi[2]=.25,ri[2]=.25,hi[2]=1,xj[2]=0,yj[2]=-.25,rj[2]=.25,hj[2]=2
+  elseif@char2=="T",connected[2]=1,xa[2]=0,ya[2]=-.5,xb[2]=0,yb[2]=.5
+  segments[2]=1,xg[2]=-.3,yg[2]=.5,xh[2]=.3,yh[2]=.5,elseif@char2=="U"
+  connected[2]=1,xa[2]=-.3,ya[2]=-.2,xb[2]=-.3,yb[2]=.5,segments[2]=1,xg[2]=.3
+  yg[2]=.5,xh[2]=.3,yh[2]=-.2,circles[2]=1,xi[2]=0,yi[2]=-.2,ri[2]=.3,hi[2]=4
+  elseif@char2=="V",connected[2]=2,xa[2]=-.3,ya[2]=.5,xb[2]=0,yb[2]=-.5
+  xc[2]=.3,yc[2]=.5,elseif@char2=="W",connected[2]=4,xa[2]=-.3,ya[2]=.5
+  xb[2]=-.2,yb[2]=-.5,xc[2]=0,yc[2]=-.1,xd[2]=.2,yd[2]=-.5,xe[2]=.3,ye[2]=.5
+  elseif@char2=="X",connected[2]=1,xa[2]=-.3,ya[2]=-.5,xb[2]=.3,yb[2]=.5
+  segments[2]=1,xg[2]=-.3,yg[2]=.5,xh[2]=.3,yh[2]=-.5,elseif@char2=="Y"
+  connected[2]=1,xa[2]=-.3,ya[2]=-.5,xb[2]=.3,yb[2]=.5,segments[2]=1,xg[2]=0
+  yg[2]=0,xh[2]=-.3,yh[2]=.5,elseif@char2=="Z",connected[2]=3,xa[2]=-.3
+  ya[2]=.5,xb[2]=.3,yb[2]=.5,xc[2]=-.3,yc[2]=-.5,xd[2]=.3,yd[2]=-.5,endif
+  if@char3=="A",connected[3]=2,xa[3]=-.4,ya[3]=-.5,xb[3]=0,yb[3]=.5,xc[3]=.4
+  yc[3]=-.5,segments[3]=1,xg[3]=-.2,yg[3]=-.1,xh[3]=.2,yh[3]=-.1
+  elseif@char3=="B",connected[3]=3,xa[3]=0,ya[3]=.5,xb[3]=-.3,yb[3]=.5
+  xc[3]=-.3,yc[3]=-.5,xd[3]=0,yd[3]=-.5,segments[3]=1,xg[3]=-.3,yg[3]=.1
+  xh[3]=0,yh[3]=.1,circles[3]=2,xi[3]=0,yi[3]=-.2,ri[3]=.3,hi[3]=2,xj[3]=0
+  yj[3]=.3,rj[3]=.2,hj[3]=2,elseif@char3=="C",connected[3]=1,xa[3]=-.3
+  ya[3]=-.2,xb[3]=-.3,yb[3]=.2,circles[3]=2,xi[3]=0,yi[3]=-.2,ri[3]=.3,hi[3]=4
+  xj[3]=0,yj[3]=.2,rj[3]=.3,hj[3]=3,elseif@char3=="D",connected[3]=3,xa[3]=0
+  ya[3]=.5,xb[3]=-.3,yb[3]=.5,xc[3]=-.3,yc[3]=-.5,xd[3]=0,yd[3]=-.5
+  segments[3]=1,xg[3]=.3,yg[3]=.2,xh[3]=.3,yh[3]=-.2,circles[3]=2,xi[3]=0
+  yi[3]=.2,ri[3]=.3,hi[3]=5,xj[3]=0,yj[3]=-.2,rj[3]=.3,hj[3]=7
+  elseif@char3=="E",connected[3]=3,xa[3]=.3,ya[3]=.5,xb[3]=-.3,yb[3]=.5
+  xc[3]=-.3,yc[3]=-.5,xd[3]=.3,yd[3]=-.5,segments[3]=1,xg[3]=-.3,yg[3]=0
+  xh[3]=.1,yh[3]=0,elseif@char3=="F",connected[3]=2,xa[3]=.3,ya[3]=.5,xb[3]=-.3
+  yb[3]=.5,xc[3]=-.3,yc[3]=-.5,segments[3]=1,xg[3]=-.3,yg[3]=0,xh[3]=.1,yh[3]=0
+  elseif@char3=="G",connected[3]=2,xa[3]=0,ya[3]=0,xb[3]=.3,yb[3]=0,xc[3]=.3
+  yc[3]=-.5,segments[3]=2,xg[3]=-.3,yg[3]=.2,xh[3]=-.3,yh[3]=-.2,xk[3]=0
+  yk[3]=.5,xl[3]=.3,yl[3]=.5,circles[3]=2,xi[3]=0,yi[3]=.2,ri[3]=.3,hi[3]=6
+  xj[3]=0,yj[3]=-.2,rj[3]=.3,hj[3]=4,elseif@char3=="H",connected[3]=1,xa[3]=-.3
+  ya[3]=0,xb[3]=.3,yb[3]=0,segments[3]=2,xg[3]=-.3,yg[3]=.5,xh[3]=-.3,yh[3]=-.5
+  xk[3]=.3,yk[3]=-.5,xl[3]=.3,yl[3]=.5,elseif@char3=="I",connected[3]=1,xa[3]=0
+  ya[3]=-.5,xb[3]=0,yb[3]=.5,elseif@char3=="J",connected[3]=1,xa[3]=.2,ya[3]=.5
+  xb[3]=.2,yb[3]=-.3,circles[3]=1,xi[3]=0,yi[3]=-.3,ri[3]=.2,hi[3]=4
+  elseif@char3=="K",connected[3]=1,xa[3]=-.3,ya[3]=.5,xb[3]=-.3,yb[3]=-.5
+  segments[3]=2,xg[3]=-.3,yg[3]=-.1,xh[3]=.3,yh[3]=.5,xk[3]=.3,yk[3]=-.5
+  xl[3]=-.2,yl[3]=0,elseif@char3=="L",connected[3]=2,xa[3]=-.3,ya[3]=.5
+  xb[3]=-.3,yb[3]=-.5,xc[3]=.3,yc[3]=-.5,elseif@char3=="M",connected[3]=4
+  xa[3]=-.3,ya[3]=-.5,xb[3]=-.3,yb[3]=.5,xc[3]=0,yc[3]=.1,xd[3]=.3,yd[3]=.5
+  xe[3]=.3,ye[3]=-.5,elseif@char3=="N",connected[3]=2,xa[3]=-.3,ya[3]=-.5
+  xb[3]=-.3,yb[3]=.5,xc[3]=.3,yc[3]=-.5,segments[3]=1,xg[3]=.3,yg[3]=-.5
+  xh[3]=.3,yh[3]=.5,elseif@char3=="O",connected[3]=1,xa[3]=-.3,ya[3]=-.2
+  xb[3]=-.3,yb[3]=.2,segments[3]=1,xg[3]=.3,yg[3]=.2,xh[3]=.3,yh[3]=-.2
+  circles[3]=2,xi[3]=0,yi[3]=.2,ri[3]=.3,hi[3]=3,xj[3]=0,yj[3]=-.2,rj[3]=.3
+  hj[3]=4,elseif@char3=="P",connected[3]=2,xa[3]=-.25,ya[3]=-.5,xb[3]=-.25
+  yb[3]=.5,xc[3]=0  ,yc[3]=.5,segments[3]=1,xg[3]=-.25,yg[3]=0,xh[3]=0  
+  yh[3]=0,circles[3]=1,xi[3]=0  ,yi[3]=.25,ri[3]=.25,hi[3]=2,elseif@char3=="Q"
+  connected[3]=1,xa[3]=0,ya[3]=-.4,xb[3]=.3,yb[3]=-.5,segments[3]=2,xg[3]=.3
+  yg[3]=.2,xh[3]=.3,yh[3]=-.2,xk[3]=-.3,yk[3]=-.2,xl[3]=-.3,yl[3]=.2
+  circles[3]=2,xi[3]=0,yi[3]=.2,ri[3]=.3,hi[3]=3,xj[3]=0,yj[3]=-.2,rj[3]=.3
+  hj[3]=4,elseif@char3=="R",connected[3]=2,xa[3]=-.3,ya[3]=-.5,xb[3]=-.3
+  yb[3]=.5,xc[3]=.05,yc[3]=.5,segments[3]=2,xg[3]=-.3,yg[3]=0,xh[3]=.05,yh[3]=0
+  xk[3]=0,yk[3]=0,xl[3]=.3,yl[3]=-.5,circles[3]=1,xi[3]=.05,yi[3]=.25,ri[3]=.25
+  hi[3]=2,elseif@char3=="S",connected[3]=1,xa[3]=0,ya[3]=.5,xb[3]=.2,yb[3]=.5
+  segments[3]=1,xg[3]=0  ,yg[3]=-.5,xh[3]=-.2,yh[3]=-.5,circles[3]=2,xi[3]=0
+  yi[3]=.25,ri[3]=.25,hi[3]=1,xj[3]=0,yj[3]=-.25,rj[3]=.25,hj[3]=2
+  elseif@char3=="T",connected[3]=1,xa[3]=0,ya[3]=-.5,xb[3]=0,yb[3]=.5
+  segments[3]=1,xg[3]=-.3,yg[3]=.5,xh[3]=.3,yh[3]=.5,elseif@char3=="U"
+  connected[3]=1,xa[3]=-.3,ya[3]=-.2,xb[3]=-.3,yb[3]=.5,segments[3]=1,xg[3]=.3
+  yg[3]=.5,xh[3]=.3,yh[3]=-.2,circles[3]=1,xi[3]=0,yi[3]=-.2,ri[3]=.3,hi[3]=4
+  elseif@char3=="V",connected[3]=2,xa[3]=-.3,ya[3]=.5,xb[3]=0,yb[3]=-.5
+  xc[3]=.3,yc[3]=.5,elseif@char3=="W",connected[3]=4,xa[3]=-.3,ya[3]=.5
+  xb[3]=-.2,yb[3]=-.5,xc[3]=0,yc[3]=-.1,xd[3]=.2,yd[3]=-.5,xe[3]=.3,ye[3]=.5
+  elseif@char3=="X",connected[3]=1,xa[3]=-.3,ya[3]=-.5,xb[3]=.3,yb[3]=.5
+  segments[3]=1,xg[3]=-.3,yg[3]=.5,xh[3]=.3,yh[3]=-.5,elseif@char3=="Y"
+  connected[3]=1,xa[3]=-.3,ya[3]=-.5,xb[3]=.3,yb[3]=.5,segments[3]=1,xg[3]=0
+  yg[3]=0,xh[3]=-.3,yh[3]=.5,elseif@char3=="Z",connected[3]=3,xa[3]=-.3
+  ya[3]=.5,xb[3]=.3,yb[3]=.5,xc[3]=-.3,yc[3]=-.5,xd[3]=.3,yd[3]=-.5,endif
+init:  
+  float dx = 0,float dy = 0,float du = 0,float dv = 0,float det = 0
+  float dist = 1e300,float dist2 = 0,float x = real(#pixel),float y = imag(#pixel)
+loop:
+  float x=real(#z) + @spc*1.5,float y=imag(#z),int a=0,repeat
+  if connected[a]>=1,dx=xa[a]-xb[a],dy=ya[a]-yb[a],du=x-(xa[a]+xb[a])/2
+  dv=y-(ya[a]+yb[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xa[a])^2+(y-ya[a])^2),if dist2<dist,dist=dist2,endif
+  dist2=sqrt((x-xb[a])^2+(y-yb[a])^2),if dist2<dist,dist=dist2,endif,endif
+  if connected[a]>=2,dx=xb[a]-xc[a],dy=yb[a]-yc[a],du=x-(xb[a]+xc[a])/2
+  dv=y-(yb[a]+yc[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xc[a])^2+(y-yc[a])^2),if dist2<dist,dist=dist2,endif
+  endif,if connected[a]>=3,dx=xc[a]-xd[a],dy=yc[a]-yd[a],du=x-(xc[a]+xd[a])/2
+  dv=y-(yc[a]+yd[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xd[a])^2+(y-yd[a])^2),if dist2<dist,dist=dist2,endif
+  endif,if connected[a]>=4,dx=xd[a]-xe[a],dy=yd[a]-ye[a],du=x-(xd[a]+xe[a])/2
+  dv=y-(yd[a]+ye[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xe[a])^2+(y-ye[a])^2),if dist2<dist,dist=dist2,endif
+  endif,if connected[a]>=5,dx=xe[a]-xf[a],dy=ye[a]-yf[a],du=x-(xe[a]+xf[a])/2
+  dv=y-(ye[a]+yf[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xf[a])^2+(y-yf[a])^2),if dist2<dist,dist=dist2,endif
+  endif,if segments[a]>=1,dx=xg[a]-xh[a],dy=yg[a]-yh[a],du=x-(xg[a]+xh[a])/2
+  dv=y-(yg[a]+yh[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xg[a])^2+(y-yg[a])^2),if dist2<dist,dist=dist2,endif
+  dist2=sqrt((x-xh[a])^2+(y-yh[a])^2),if dist2<dist,dist=dist2,endif,endif
+  if segments[a]>=2,dx=xk[a]-xl[a],dy=yk[a]-yl[a],du=x-(xk[a]+xl[a])/2
+  dv=y-(yk[a]+yl[a])/2,det=sqrt(dx*dx+dy*dy),dist2=abs((dx*du)+(dy*dv))/det
+  if dist2<det/2,dist2=abs((dy*du)-(dx*dv))/det,if dist2<dist,dist=dist2,endif
+  endif,dist2=sqrt((x-xk[a])^2+(y-yk[a])^2),if dist2<dist,dist=dist2,endif
+  dist2=sqrt((x-xl[a])^2+(y-yl[a])^2),if dist2<dist,dist=dist2,endif,endif
+  if circles[a]>=1,if hi[a]==0,dist2=abs(sqrt((x-xi[a])^2+(y-yi[a])^2)-ri[a])
+  else,dx=x-xi[a],dy=y-yi[a],if hi[a]<=4,if hi[a]==1&&dx<0
+  dist2=abs(sqrt(dx^2+dy^2)-ri[a]),elseif hi[a]==2&&dx>0
+  dist2=abs(sqrt(dx^2+dy^2)-ri[a]),elseif hi[a]==3&&dy>0
+  dist2=abs(sqrt(dx^2+dy^2)-ri[a]),elseif hi[a]==4&&dy<0
+  dist2=abs(sqrt(dx^2+dy^2)-ri[a]),endif,if dist2<dist,dist=dist2,endif
+  if hi[a]<=2,dx=dx^2,dist2=sqrt(dx+(dy-ri[a])^2),if dist2<dist,dist=dist2
+  endif,dist2=sqrt(dx+(dy+ri[a])^2),else,dy=dy^2,dist2=sqrt((dx-ri[a])^2+dy)
+  if dist2<dist,dist=dist2,endif,dist2=sqrt((dx+ri[a])^2+dy),endif,else
+  if hi[a]==5&&dx>0&&dy>0,dist2=abs(sqrt(dx^2+dy^2)-ri[a])
+  elseif hi[a]==6&&dx<0&&dy>0,dist2=abs(sqrt(dx^2+dy^2)-ri[a])
+  elseif hi[a]==7&&dx>0&&dy<0,dist2=abs(sqrt(dx^2+dy^2)-ri[a])
+  elseif hi[a]==8&&dx<0&&dy<0,dist2=abs(sqrt(dx^2+dy^2)-ri[a]),endif
+  if dist2<dist,dist=dist2,endif,if hi[a]<=6,dist2=sqrt(dx^2+(dy-ri[a])^2),else
+  dist2=sqrt(dx^2+(dy+ri[a])^2),endif,if dist2<dist,dist=dist2,endif
+  if hi[a]%2==1,dist2=sqrt((dx-ri[a])^2+dy^2),else
+  dist2=sqrt((dx+ri[a])^2+dy^2),endif,endif,endif,if dist2<dist,dist=dist2
+  endif,endif,if circles[a]>=2,if hj[a]==0
+  dist2=abs(sqrt((x-xj[a])^2+(y-yj[a])^2)-rj[a]),else,dx=x-xj[a],dy=y-yj[a]
+  if hj[a]<=4,if hj[a]==1&&dx<0,dist2=abs(sqrt(dx^2+dy^2)-rj[a])
+  elseif hj[a]==2&&dx>0,dist2=abs(sqrt(dx^2+dy^2)-rj[a]),elseif hj[a]==3&&dy>0
+  dist2=abs(sqrt(dx^2+dy^2)-rj[a]),elseif hj[a]==4&&dy<0
+  dist2=abs(sqrt(dx^2+dy^2)-rj[a]),endif,if dist2<dist,dist=dist2,endif
+  if hj[a]<=2,dx=dx^2,dist2=sqrt(dx+(dy-rj[a])^2),if dist2<dist,dist=dist2
+  endif,dist2=sqrt(dx+(dy+rj[a])^2),else,dy=dy^2,dist2=sqrt((dx-rj[a])^2+dy)
+  if dist2<dist,dist=dist2,endif,dist2=sqrt((dx+rj[a])^2+dy),endif,else
+  if hj[a]==5&&dx>0&&dy>0,dist2=abs(sqrt(dx^2+dy^2)-rj[a])
+  elseif hj[a]==6&&dx<0&&dy>0,dist2=abs(sqrt(dx^2+dy^2)-rj[a])
+  elseif hj[a]==7&&dx>0&&dy<0,dist2=abs(sqrt(dx^2+dy^2)-rj[a])
+  elseif hj[a]==8&&dx<0&&dy<0,dist2=abs(sqrt(dx^2+dy^2)-rj[a]),endif
+  if dist2<dist,dist=dist2,endif,if hj[a]<=6,dist2=sqrt(dx^2+(dy-rj[a])^2),else
+  dist2=sqrt(dx^2+(dy+rj[a])^2),endif,if dist2<dist,dist=dist2,endif
+  if hj[a]%2==1,dist2=sqrt((dx-rj[a])^2+dy^2),else
+  dist2=sqrt((dx+rj[a])^2+dy^2),endif,endif,endif,if dist2<dist,dist=dist2
+  endif,endif,x = x - @spc,a = a + 1,until a == 4
+final:
+  #index = dist
+default:
+  title = "Initials"
+
+  param char0
+    caption="Character 1"
+    enum= " ""A""B""C""D""E""F""G""H""I""J""K""L""M" \
+          "N""O""P""Q""R""S""T""U""V""W""X""Y""Z"
+    default=13
+  endparam
+  param char1
+    caption="Character 2"
+    enum= " ""A""B""C""D""E""F""G""H""I""J""K""L""M" \
+          "N""O""P""Q""R""S""T""U""V""W""X""Y""Z"
+    default=10
+  endparam
+  param char2
+    caption="Character 3"
+    enum= " ""A""B""C""D""E""F""G""H""I""J""K""L""M" \
+          "N""O""P""Q""R""S""T""U""V""W""X""Y""Z"
+    default=0
+  endparam
+  param char3
+    caption="Character 4"
+    enum= " ""A""B""C""D""E""F""G""H""I""J""K""L""M" \
+          "N""O""P""Q""R""S""T""U""V""W""X""Y""Z"
+    default=4
+  endparam
+  heading
+    caption="Font Parameters"
+  endheading
+  param spc
+    caption="Character spacing"
+    default=0.3
+    min=0.0
+  endparam
+}
+
+ComplexPlane {
+;20040116
+;Draws the complex plane as a color
+; red = real part of #z
+; blue = imag part of #z
+; green = radius / cabs(z)
+init:
+  complex z1=(0,0)
+loop:
+  z1=#z
+final:
+  complex p
+  if @previous
+    p=z1*@scale
+  else
+    p=#z*@scale
+  endif
+  p = @fn(p)
+
+  float r = 0
+  float g  = 0
+  float b = 0
+  
+  if @dist
+    g = cabs(p)
+  endif 
+  if @cart
+    r = real(p)
+    b = imag(p)
+  endif
+  
+  if @coloring == "ArcTan normalized"
+    r = atan(r)*2/#pi + 1
+    g = atan(g)*2/#pi + 1
+    b = atan(b)*2/#pi + 1
+  elseif @coloring == "ArcTan normalized (fixed)"
+    r = atan(r)/#pi + 0.5
+    if (@dist)
+       g = atan(g)/#pi + 0.5
+    endif
+    b = atan(b)/#pi + 0.5
+  else
+    r = r - floor(r)
+    g = g - floor(g)
+    b = b - floor(b)
+  endif
+
+  if (!@r)
+    r=0
+  endif
+  if (!@i)
+    b=0
+  endif
+
+  #color=rgb(r,g,b)
+default:
+  title = "Complex plane"
+  param scale
+    caption = "Scale"
+    default=(1,0)
+  endparam
+  param cart
+    caption="Draw cartesian grid?"
+    default=true
+  endparam
+  param r
+    caption="Draw real part?"
+    default=true
+    visible = @cart
+  endparam
+  param i
+    caption="Draw imaginary part?"
+    default=true
+    visible = @cart
+  endparam
+  param dist
+    caption="Draw cabs in green?"
+    default=false
+  endparam
+  param coloring
+    caption = "Coloring mode"
+    enum = "Linear" "ArcTan normalized" \
+    "ArcTan normalized (fixed)"
+    default = 0
+  endparam
+  param previous
+    caption="Use previous iteration?"
+    default=false
+  endparam
+  func fn
+    caption = "Complex function"
+    default = ident()
+  endfunc
+}
+
+LavaSimple (OUTSIDE) { ;20040119
+init:
+  float bail=sqrt(@bailout)
+  complex z1=bail
+loop:
+  z1=#z
+final:
+  float c=(cabs(#z)-bail)/bail*@scale1
+  float c2=(bail-cabs(z1))/bail*@scale2
+
+  if @step=="Step 1 - bailout"
+    complex il = 1/log(2)
+    float lp = log(log(@bailout))
+    float f = -real(il*lp - il*log(log(cabs(#z))))
+    float r=f
+    if f>1
+      r=1
+      f=0
+    endif
+    
+    #color=rgb(r,f,f)
+  elseif @step=="Step 2 - outer faloff"
+    c=c/2
+    float r=c
+    if r>1
+      r=1
+      c=0
+    else
+      c=c-floor(c)
+    endif
+    #color=rgb(r,c,c)
+  elseif @step=="Step 3 - inner faloff"
+    c2=c2/2
+    float r=c2
+
+    if r>1
+
+      r=1
+      c2=0
+    else
+      c2=c2-floor(c2)
+    endif
+    #color=rgb(r,c2,c2)
+  elseif @step=="Step 4 - Amplitude"
+    float f=c*c2*@scale3
+    r=f
+    if r>1
+      r=1
+      f=0
+    endif    
+    #color=rgb(r,f,f)
+  else
+    float f=c*c2*@scale3
+    if f>1
+      f=1
+    endif    
+    color g=gradient(#numiter/10)
+    #color = rgb(red(g)*f,green(g)*f,blue(g)*f)
+  endif
+ 
+default:
+  title="Lava (Simple)"
+  param step
+    caption = "Calibration step"
+    enum = "Step 1 - bailout""Step 2 - outer faloff""Step 3 - inner faloff""Step 4 - Amplitude""Step 5 - Show result"
+    default=4
+  endparam
+  heading
+    caption="Set to fractal's baulout value"
+    visible=@step=="Step 1 - bailout"
+  endheading
+  param bailout
+    caption="Bailout"
+    default=4.0
+    min=0
+    visible=@step=="Step 1 - bailout"
+  endparam
+  heading
+    caption="Adjust until red is almost gone"
+    visible=@step=="Step 2 - outer faloff"
+  endheading
+  param scale1
+    caption="Outer faloff"
+    default=1.0
+    min=0
+    visible=@step=="Step 2 - outer faloff"
+  endparam
+  heading
+    caption="Adjust until red is almost gone"
+    visible=@step=="Step 3 - inner faloff"
+  endheading
+  param scale2
+    caption="Inner faloff"
+    default=4.0
+    min=0
+    visible=@step=="Step 3 - inner faloff"
+  endparam
+  heading
+    caption="Adjust until red is almost gone"
+    visible=@step=="Step 4 - Amplitude"
+  endheading
+  param scale3
+    caption="Amplitude"
+    default=1.0
+    min=0
+    visible=@step=="Step 4 - Amplitude"
+  endparam
+}

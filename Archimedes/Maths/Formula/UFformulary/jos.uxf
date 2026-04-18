@@ -1,0 +1,983 @@
+BlackHole {
+; Jos Leys December 2002
+transform:
+  if @to==false
+  complex c=@c
+  if @c2
+  complex c=#center
+  endif
+  complex q= #pixel-c
+  h=atan2(q)
+  complex i = (0,1)
+    if cabs(q)<@r1
+    #pixel=c+@r1*exp(i*h)*log((cabs(q)+@r1)/(@r1-cabs(q))) 
+    else
+    #solid = true;#pixel=0
+    endif
+    endif
+default:
+  title = "Black Hole"
+    
+    param r1
+    caption = "Poincaré radius"
+    default = 1.0  
+  endparam
+  param c
+    caption = "Center"
+    default = (0.0,0.0)  
+  endparam
+  param c2
+    caption = "Use image center"
+    default = False
+  endparam
+  param to
+    caption = "Turn off"
+    default = False
+  endparam
+
+param niter
+    caption = "Iteration Number"
+    default = 5
+  endparam
+
+ 
+  
+}
+
+Doylespiral {
+; Jos Leys March 2005
+; Transformation for two kinds of Doyle spirals
+; P param: controls degree of symmetry
+; #inward and "outward : how far the spirals should go
+; image radius an image center: location of the image that will be
+; duplicated in the spiral . This image has to be on screen :
+; check by turning the transform off.
+
+ $define debug
+global:
+complex i = (0,1)
+int pee=@pq
+complex doylew=0,complex doylel=0
+complex lambda=0,complex kappa=0
+float doylec=0,int ndoyle=0
+float alfa=0,float beta=0
+if @patdoyle==0
+ndoyle=2
+doylec=cos(#pi/pee)
+doylew=sqrt((sqrt(5+4*doylec)-2*doylec-1)/2)
+doylel=(1+doylew)/(doylec+doylew*doylew)
+lambda=doylel*exp(i*#pi/pee)
+kappa=doylel^2
+endif
+
+if @patdoyle==1
+ndoyle=1
+doylew=tan(#pi/pee)*tan(#pi/pee)+1/cos(#pi/pee)
+doylel=doylew+sqrt(doylew*doylew-1)
+lambda=doylel*exp(i*#pi/pee)
+kappa=conj(lambda)
+endif
+
+float kap=cabs(kappa), float lam=cabs(lambda)
+
+if @hex && @patdoyle==0
+alfa=acos( ((1+kap)^2+(1+lam)^2-(kap+lam)^2)/(2*(1+kap)*(1+lam)))
+beta=acos( ((1+1/kap)^2+(1+lam/kap)^2-(1/kap+lam/kap)^2)/(2*(1+1/kap)*(1+lam/kap)))
+endif
+
+float rcen=cabs(lambda - 1)/(1+cabs(lambda))
+
+transform:
+if @to==false
+complex qq= 0
+complex q= #pixel
+int j=0,int n=0,int ang=0,int f=0,int rad=0,int sign=0
+float h=atan2(q)
+  if h<0
+  h=h+2*#pi
+  endif
+int hoek=trunc(h/((3-ndoyle)*2*#pi/pee)+(3-ndoyle)*#pi/pee )
+ang=hoek-(3-ndoyle)
+
+if cabs(q)<1+rcen
+rad=@radin,sign=1
+else
+rad=@radout,sign=-1
+endif
+
+while ang<hoek+(4-ndoyle)
+j=0
+while j<3
+  n=0
+while n<rad+1
+qq=q*lambda^(-j)*kappa^(n*sign)*exp(-i*2*#pi*(3-ndoyle)*ang/pee)
+ if !@hex || @patdoyle==1
+  if cabs(qq-1)<rcen
+  #pixel=@imcen+(qq-1)*@imrad/rcen
+  ang=hoek+(4-ndoyle),n=rad+1,j=3,f=0
+  else
+  f=1
+  endif
+ endif
+ if @hex && @patdoyle==0
+   if real(qq)>1-rcen && real(qq)<1+rcen && \
+   abs(imag(qq))<imag(rcen*exp(i*alfa))+tan(alfa+#pi/2)*(real(qq)-real(1+rcen*exp(i*alfa))) && \
+   abs(imag(qq))<imag(rcen*exp(i*(#pi-beta)))+tan(#pi/2-beta)*(real(qq)-real(1+rcen*exp(i*(#pi-beta))))
+   #pixel=@imcen+(qq-1)*@imrad/rcen
+  ang=hoek+(4-ndoyle),n=rad+1,j=3,f=0
+  else
+  f=1
+  endif
+ endif
+n=n+1
+endwhile
+
+j=j+1
+endwhile
+ang=ang+1
+endwhile
+
+ if f==1
+ #solid=true
+ endif
+ 
+endif ; voor @to
+
+default:
+  title = "Doyle spiral"
+  param patdoyle
+   Caption = "Doyle "
+   Enum="Q=2*P" "Q=P"
+   Default = 0
+  endparam
+    param pq
+   Caption = "P Param"
+   Default = 10
+      endparam
+  param radin
+   Caption = "#inward"
+   Default = 2
+  endparam
+  param radout
+   Caption = "#outward"
+   Default = 2
+   endparam
+   param hex
+   Caption = "Hex.tiling?"
+   Default = false
+   visible=@patdoyle==0
+   endparam
+   param imrad
+   Caption = "image radius"
+   Default = 1.0
+   endparam
+   param imcen
+   Caption = "image center"
+   Default = (0,0)
+   endparam
+  param to
+    caption = "Turn off"
+    default = False
+  endparam
+
+}
+
+Circleinversions {
+; Jos Leys March 2005
+; Transformation that generates a set of circles around a central circle.
+; The gaps between the circles are filled with even more circles
+; Every one of these circles contains the same image, defined by the UFM and UCL,
+; and located at parameter 'Image center' and 'Image radius'
+; Rendering time increases exponentially with higher "Number of circles" and
+; higher "Number of iterations".
+
+ $define debug
+global:
+complex i = (0,1)
+complex p[50]
+complex V[50]
+float RV[50]
+float r[50]
+int di=@ac
+while di>0
+V[di]=1/cos(#pi/2-#pi/@ac)*(cos(2*(di-1)*#pi/@ac+#pi/@ac)+i*sin(2*(di-1)*#pi/@ac+#pi/@ac))
+RV[di]=1
+di=di-1
+endwhile
+V[0]=0, RV[0]=1/cos(#pi/2-#pi/@ac)-1 ; CIRKEL INSIDE
+
+di=@ac ; aantal cirkels
+while di>0
+p[di]=RV[0]/cos(#pi/@ac)*(cos(2*(di)*#pi/@ac)+i*sin(2*(di)*#pi/@ac))
+r[di]=RV[0]*tan(#pi/@ac)
+di=di-1
+endwhile
+
+int n=@ac ; generators, van 0 tot @ac (@ac=6, n=6, dus 7 cirkels)
+int a=@ac+1 ; orthogonale cirkels van 1 tot @ac ( @ac=6, dus 6 cirkels)
+p[a]=0, r[a]=1/cos(#pi/2-#pi/@ac)*cos(#pi/@ac)-2*r[1] ; cirkel door raakpunten
+
+transform:
+;print("n=",n)
+if @to==false
+complex q=#pixel,float h=0 ,float RR=0,complex PPP=0
+int f=0,int m=0,int j=0,complex POLD=0 ,float ROLD=0
+int g=0
+if cabs(q)<cabs(p[1])+r[1]
+ int tag[50]
+ complex pp[20], pp[0]=q
+ int lev =1, tag[lev]=0
+ while lev>0
+ pp[lev]=V[tag[lev]]-RV[tag[lev]]*RV[tag[lev]]/conj(V[tag[lev]]-pp[lev-1])
+    m=1
+    while m<a+1
+    if cabs(pp[lev]-p[m])<r[m]
+         j=lev, POLD=p[m],ROLD=r[m]
+        while j>0
+        h=atan2(POLD-V[tag[j]]), if h<0, h=h+2*#pi, endif
+        PPP=V[tag[j]]+RV[tag[j]]*RV[tag[j]]*cabs(POLD-V[tag[j]])*exp(i*(h))/abs(|(POLD-V[tag[j]])|-ROLD*ROLD)
+        if ROLD>RV[tag[j]] && cabs(POLD-V[tag[j]])<ROLD || ROLD<RV[tag[j]] && cabs(POLD-V[tag[j]])<ROLD
+       PPP=V[tag[j]]+RV[tag[j]]*RV[tag[j]]*cabs(POLD-V[tag[j]])*exp(i*(h-#pi))/abs(|(POLD-V[tag[j]])|-ROLD*ROLD)
+        endif
+       RR=RV[tag[j]]*RV[tag[j]]*ROLD/abs(|(POLD-V[tag[j]])|-ROLD*ROLD)
+       POLD=PPP,ROLD=RR
+          j=j-1
+       endwhile
+      #pixel=@imcen+(q-POLD)*@imrad/ROLD
+       m=a+1
+        lev=0
+        f=1
+    endif
+    m=m+1
+    endwhile
+ if lev<@its && lev>0
+ lev=lev+1
+  tag[lev]=0
+;    if tag[lev]==tag[lev-1]
+;    tag[lev]=tag[lev]+1
+;    endif
+endif
+ if lev==@its
+ tag[lev]=tag[lev]+1
+;    print("lev=its tag[lev]=",tag[lev])
+ endif
+tag[0]= 0
+ if  lev >0
+ g=0
+  while g<1
+   if tag[lev]>n
+   lev=lev-1
+;      IF lev==0
+;          print("tag[lev]=",tag[lev])
+;     endif
+     tag[lev]=tag[lev]+1
+     endif
+   if tag[lev]<n+1
+   g=1
+   endif
+;    print("g=",g)
+;   print("tag[lev]=",tag[lev])
+;    print("lev=",lev)
+
+  endwhile
+   g=0
+  endif
+ endwhile
+endif
+
+ if f==0
+ #solid=true
+ endif
+
+endif ; voor @to
+
+default:
+  title = "Circle inversions"
+
+    param ac
+   Caption = "# circles"
+   Default = 4
+   Max=48
+   endparam
+   param imrad
+   Caption = "image radius"
+   Default = 1.0
+   endparam
+   param imcen
+   Caption = "image center"
+   Default = (0.0,0.0)
+   endparam
+   param its
+   Caption = "# iterations"
+   Default = 4
+   Max=19
+   endparam
+  param to
+    caption = "Turn off"
+    default = False
+  endparam
+
+}
+
+FordCircles {
+; Jos Leys March 2005
+; This transform replicates an image on a set of Ford circles.
+; Choose the image with 'image radius' and 'image center'
+;
+; $define debug
+global:
+complex i = (0,1)
+
+transform:
+
+if @to==false
+
+complex q=#pixel
+float R=0
+complex PT=0
+complex PB=0
+int f=0
+int h=1
+int k=1
+
+while h<@its+1
+k=1
+while k<@its+1
+IF  (k>h );|| (k==h && k==1)
+
+R=@scale/2/k/k
+PT=(-.5+h/k)*@scale+i*R,PB=(-.5+h/k)*@scale-i*R
+if @draw=="Top" || @draw=="Both"
+if cabs(q-PT)<R
+  #pixel=@imcen+(q-PT)*@imrad/R
+  k=@its
+  h=@its
+  f=1
+endif
+endif
+if @draw=="Bottom" || @draw=="Both"
+if cabs(q-PB)<R
+  #pixel=@imcen+(q-PB)*@imrad/R
+  k=@its
+  h=@its
+  f=1
+endif
+endif
+endif
+k=k+1
+endwhile
+h=h+1
+endwhile
+
+
+ if f==0
+ #solid=true
+ endif
+
+endif ; voor @to
+
+default:
+  title = "Ford Circles"
+   param imrad
+   Caption = "image radius"
+   Default = 1.0
+   Min=0
+   endparam
+   param imcen
+   Caption = "image center"
+   Default = (0.0,0.0)
+   endparam
+   param its
+   Caption = "# iterations"
+   Default = 4
+   endparam
+   param draw
+   Caption = "Draw"
+   Enum="Top" "Bottom" "Both"
+   Default = 2
+    endparam
+    param scale
+   Caption = "Scale"
+   Default = 5.0
+   endparam
+  param to
+    caption = "Turn off"
+    default = False
+  endparam
+
+}
+
+Droste_effect {
+;by Jos Leys, March 2006
+; Suitable for turning any ring shape into a spiral,
+; or for making "Droste effect" movies
+;Mini tutorial
+; MODE :
+;      "Crop" to determine area to be transformed.
+;      "Transform" to kick off the transformation.
+; The small rectangle or circle should be inside the large one.
+; Results are not guaranteed if this condition is not met.
+;PATTERN :
+;      "Circular" for a circular area within a circular area.
+;      "Rectangular" for a rectangular area within a rectangular area.
+;VARIATION : ( put STAGE parameter on "TWO"
+;   "Zero" produces endless repetition of a large image in a small image
+;   "Alfa" produces a spiral with seamless repetition.
+;   "180-alfa" "180" and "180+alfa" produce more distorted "inside out" images
+;STAGE :
+; "one" is an intermediate stage in the transform, but can produce interesting
+;     results.
+; "two" is the intended end result stage
+;"RADIUS": (Pattern=Circular): radius of large circle.
+;"WIDTH/HEIGHT" :(Pattern=Rectangular) for large rectangle
+;"CONTRACTION":  ratio of dimension of small circle/rectangle over large one
+;"ROTATION" :(Pattern=Rectangular) ccw. rotation in degrees of small rectangle
+;"CENTER LARGE/SMALL": coordinates of centers : shown as crosshairs in CROP mode
+;The third crosshair shows the position of the limit centre.
+; "COMPILER MESSAGES": turn on or off
+; For a "Droste effect",read calculated values in the compiler messages :
+; ( c= limit centre (center of spiral/picture in picture) for information )
+; An identical image is obtained with the values from the compiler messages!
+; set image center to 'new center'
+; set magnification to 'new magnification'
+; set rotation angle to 'new rotation'
+; This will produce an identical image to the original.
+; interpolation via animation between the original and the new image
+; produces a Droste effect movie ( play in loop mode)
+;
+;
+global:
+if @cm
+$define debug
+endif
+float rot=@rot*#pi/180
+complex plar=0,float rad=0,float radin=0
+if @pat==0,rot=0,endif
+complex i= (0.0,1.0)
+complex c=@cenlarge+(@censmall-@cenlarge)/(1-@fac*exp(i*rot))
+IF @pat==1
+plar=@cenlarge+@wid/2+i*@heig/2
+rad=real(plar-c), radin=rad*@fac
+endif
+if @pat==0
+rad=@rad-cabs(c-@cenlarge),radin=rad*@fac
+endif
+
+float d=1/@fac
+complex m= 0
+float alfa=0
+float sc=0
+
+if @var==0 ;zero
+sc=1,alfa=0
+elseif @var==1 ;alfa
+m= 2*#pi-rot+i*log(d)
+alfa=atan2(m)
+sc=cos(alfa)*2*#pi/(2*#pi-rot)
+elseif @var==2 ; 180-alfa
+m= 2*#pi-rot+i*log(d)
+alfa=atan2(m)
+sc=cos(alfa)*2*#pi/(2*#pi-rot),alfa=#pi+alfa
+elseif @var==3 ;180
+sc=1,alfa=#pi
+elseif @var==4; 180+alfa
+m= 2*#pi+rot+i*log(d)
+alfa=atan2(m)
+sc=cos(alfa)*2*#pi/(2*#pi+rot),alfa=#pi-alfa
+elseif @var==5 ; -alfa
+m= 2*#pi+rot+i*log(d)
+alfa=atan2(m)
+sc=cos(alfa)*2*#pi/(2*#pi+rot),alfa=2*#pi-alfa
+endif
+float beta=atan(rot/log(d))
+
+COMPLEX scale=d^(sc*exp(i*(alfa-beta))/cos(beta))
+if cabs(scale)<1,scale=1/scale,endif
+float scalesize=cabs(scale)
+float scaleangle=atan2(scale)
+print("c=",c)
+print("scaleangle=",-scaleangle*180/#pi)
+print("new center=",c+(#center-c)/scale)
+print("new magnification=",scalesize*#magn)
+print("new rotation=",(#angle-scaleangle)*180/#pi)
+
+transform:
+float dist=0
+float dik=@wid/100
+if @pat==0
+dik=@rad/100
+endif
+FLOAT x=0
+FLOAT y=0
+float os=0
+float os1=0
+complex pt1=0,complex pt2=0
+float h1=0
+float h2=0
+float h3=0
+float h4=0
+
+   z=#pixel
+
+if @mode=="Crop"
+if @pat==1
+if ((abs(real(z-@cenlarge))<@wid/2 && abs(imag(z-@cenlarge))<@heig/2 ) && \
+(abs(real((z-@censmall)*exp(-i*rot)))>@wid*@fac/2 || \
+abs(imag((z-@censmall)*exp(-i*rot)))>@heig*@fac/2) ) || \
+(abs(real((z-@censmall)*exp(-i*rot)))<@wid*@fac/2 && \
+abs(imag((z-@censmall)*exp(-i*rot)))<@heig*@fac/2 && \
+(abs(real(z-@cenlarge))>@wid/2 || abs(imag(z-@cenlarge))>@heig/2 ))
+
+        if (real(#screenpixel) + imag(#screenpixel))%2 == 0
+          #solid = true
+        endif
+endif
+ endif
+if @pat==0
+if (cabs(z-@cenlarge)<@rad && cabs(z-@censmall)>@rad*@fac) || \
+(cabs(z-@cenlarge)>@rad && cabs(z-@censmall)<@rad*@fac)
+        if (real(#screenpixel) + imag(#screenpixel))%2 == 0
+          #solid = true
+        endif
+endif
+ENDIF
+float ptn=0
+if @pat==0
+ptn=@rad
+else
+ptn=@wid
+endif
+int cnt=1
+while cnt<7
+if cnt==1,    pt1=@cenlarge+ptn/25,  pt2=@cenlarge-ptn/25
+elseif cnt==2,pt1=@cenlarge+i*ptn/25,pt2=@cenlarge-i*ptn/25
+elseif cnt==3,pt1=@censmall+ptn/25, pt2=@censmall-ptn/25
+elseif cnt==4,pt1=@censmall+i*ptn/25,pt2=@censmall-i*ptn/25
+elseif cnt==5,pt1=c+ptn/25, pt2=c-ptn/25
+elseif cnt==6,pt1=c+i*ptn/25,pt2=c-i*ptn/25
+endif
+ test1 = (z-pt2)/(pt1-pt2)
+ if real(test1)<0
+ dist=cabs(test1)
+ elseif real(test1)>1
+ dist=cabs(test1-1)
+ else
+   dist=abs(imag(test1))
+ endif
+     dist=dist*cabs(pt2-pt1)
+     if dist<dik/2
+      #solid = true
+     endif
+cnt=cnt+1
+endwhile
+
+endif
+
+ if @mode=="Transform"
+ if @stage==0
+  z=((#pixel-c))*exp(-i*alfa)/sc
+  else
+  z=log(#pixel-c+1E-20)*exp(-i*alfa)/sc
+ endif
+if @pat==1
+h1=atan2(plar-c),if h1<0,h1=h1+2*#pi,endif
+h2=atan2(plar-@wid-c),if h2<0,h2=h2+2*#pi,endif
+h3=atan2(plar-@wid-i*@heig-c),if h3<0,h3=h3+2*#pi,endif
+h4=atan2(plar-i*@heig-c),if h4<0,h4=h4+2*#pi,endif
+endif
+if real(z)>0
+x=real(z)-(log(d))*trunc((real(z))/log(d))
+y=imag(z)+rot*trunc((real(z))/log(d))
+else
+x=real(z)-(log(d))*floor((real(z))/log(d))
+y=imag(z)+rot*floor((real(z))/log(d))
+endif
+if y>0
+y=y-2*#pi*trunc(y/(2*#pi))
+else
+y=y-2*#pi*floor(y/(2*#pi))
+endif
+float yy=0
+float yyy=0
+bool cond=true
+float rot1=0
+while cond==true
+IF @pat==1
+float yy=y-rot,  if yy<0,yy=yy+2*pi,endif
+ if yy<=h1 || yy>h4
+ os=log(1/abs(cos(yy)))
+ elseif ( yy>h1 && yy<=h2)
+ os=log(tan(h1)/abs(sin(yy)))
+  elseif ( yy>h2 && yy<=h3)
+ os=log((tan(h1)/tan(#pi-h2)/abs(cos(yy))))
+  elseif ( yy>h3 && yy<=h4)
+ os=log(tan(h1)/tan(#pi-h2)/tan(3*#pi/2-h3)/abs(sin(yy)))
+ endif
+float yyy=y, if yyy>2*pi,yyy=yyy-2*pi,endif, if yyy<0,yyy=yyy+2*pi,endif
+ if yyy<=h1 || yyy>h4
+ os1=log(1/abs(cos(yyy)))
+ elseif ( yyy>h1 && yyy<=h2)
+ os1=log(tan(h1)/abs(sin(yyy)))
+  elseif ( yyy>h2 && yyy<=h3)
+ os1=log((tan(h1)/tan(#pi-h2)/abs(cos(yyy))))
+  elseif ( yyy>h3 && yyy<=h4)
+ os1=log(tan(h1)/tan(#pi-h2)/tan(3*#pi/2-h3)/abs(sin(yyy)))
+ endif
+ if x<os
+x=x+log(d), y=y-rot
+elseif x>os1 + log(d)
+x=x-log(d), y=y+rot,
+else
+cond=false
+endif
+endif ; voor pat==1
+if @pat==0
+rot1=atan2(c-@cenlarge),if rot1<0,rot1=rot1+2*#pi,endif
+float cc=cabs(c-@cenlarge)
+float yy=y-rot1,  if yy<0,yy=yy+2*pi,endif
+os=log((sqrt(@rad^2-cc*cc*sin(yy)*sin(yy))- cc*cos(yy))/(rad)) ;
+ if x<os
+x=x+log(d)
+else
+cond=false
+endif
+endif ; voor pat==0
+
+endwhile
+
+     z=x+i*y
+
+ #pixel=c+radin*exp(z)
+
+
+endif
+default:
+  title = "Droste effect"
+
+   param mode
+   caption = "Mode"
+        enum="Crop" "Transform"
+    default = 0
+  endparam
+   param pat
+    caption = "Pattern?"
+    enum="Circular" "Rectangular"
+    default = 1
+  endparam
+    param var
+    caption = "Variation?"
+    enum="Zero" "Alfa" "180-alfa""180""180+alfa""-Alfa"
+    default = 0
+  endparam
+    param stage
+    caption = "Stage?"
+    enum="One" "Two"
+    default = 1
+  endparam
+  param rad
+    caption = "Radius"
+    default = 1.0
+    visible=@pat==0
+     endparam
+  param wid
+    caption = "Width"
+    default = 2.0
+    visible=@pat==1
+     endparam
+  param heig
+    caption = "Height"
+    default = 2.0
+    visible=@pat==1
+    endparam
+    param fac
+    caption = "Contraction"
+    default = .25
+    min=0.0
+    max=1.0
+    endparam
+    param rot
+    caption = "Rotation"
+    default = .0
+    visible=@pat==1
+    endparam
+    param cenlarge
+    caption = "Center large"
+    default = (0.0,0.0)
+  endparam
+   param censmall
+    caption = "Center small"
+    default = (.5,.5)
+  endparam
+  param cm
+    caption = "Compiler messages?"
+    default = false
+  endparam
+
+}
+
+Hexagonal_tiling_2 {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; February 4, 1999 - Updated May 2, 1999
+; Modified by Jos Leys September 2006:
+; Added parameter so the basic tile can be rotated.
+; posted in jos.uxf at the  request of Sylvie Gallet
+
+transform:
+complex i=(0,1)
+     float ang=@ang*#pi/180
+  IF (@mode == 0)
+     #pixel =  (#pixel - @center)*exp(-i*ang)
+     float sq3 = sqrt(3)
+     float h = @tw * sq3
+     float th = h / 2
+     w3 = 3 * @tw
+     c = - 1.5 * @tw - flip(th)
+     new_y = imag(#pixel) - floor(imag(#pixel) / h) * h
+     if real(new_y) > th
+        new_y = h - new_y
+     endif
+     dx = new_y / sq3
+     new_x = real(#pixel) - floor(real(#pixel - dx) / w3) * w3
+     #pixel = new_x + flip(new_y)
+     if real(new_y) > -sq3 * real(new_x) + 2 * h
+        #pixel = conj(#pixel + c)
+     endif
+     if imag(#pixel) < sq3 * real(#pixel) - h
+        #pixel = (#pixel + c) * e^(flip(pi / 1.5))
+     endif
+     if imag(#pixel) > -sq3 * real(#pixel) + h
+        #pixel = conj(#pixel + c) * e^(flip(-pi / 1.5))
+     endif
+     #pixel = #pixel*exp(i*ang) + @center ;*exp(i*ang)
+   ELSEIF (@mode == 1)
+     #pixel = (#pixel - @center);*exp(-i*ang)
+     sq3 = sqrt(3)
+     h = @tw * sq3
+     if atan2(#pixel)<ang ||   \
+        atan2(#pixel)>ang+#pi/3 || \
+        cabs(#pixel)*cos(atan2(#pixel)-ang-#pi/6)>@tw*sq3/2
+;      if imag(#pixel) > -sq3 * real(#pixel) + h  ||    \
+;         imag(#pixel) >  sq3 * real(#pixel)      ||    \
+;         imag(#pixel) < 0
+       if (real(#screenpixel) + imag(#screenpixel)) % 2 == 0
+          #solid = true
+       endif
+    endif
+    #pixel = #pixel + @center
+  ENDIF
+
+default:
+  title = "Hexagonal Tiling 2"
+  param mode
+    caption = "Tiling Mode"
+    default = 0
+    enum = "hexagonal tiling" "Main tile" "none"
+    hint = "Use 'Main tile' to see the main tile and to adjust \
+            'Center' and 'Tile width'"
+  endparam
+  param tw
+    caption = "Tile width"
+    default = 1.0
+    min = 0.0
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+    hint = "Coordinates of the bottom left corner of the main tile"
+  endparam
+   param ang
+    caption = "Angle"
+    default = 0.0
+    hint = "Counterclockwise rotation"
+  endparam
+}
+
+Rectangular_tiling_2 {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; February 3, 1999 - Updated May 2, 1999
+; Modified by Jos Leys September 2006:
+; Added parameter so the basic tile can be rotated.
+; posted in jos.uxf at the  request of Sylvie Gallet
+transform:
+;float new_x=0
+;float new_y=0
+  complex i=(0,1)
+  float ang=@ang*#pi/180
+  IF (@mode == 0)             ; normal
+    #pixel =  (#pixel - @center)*exp(-i*ang)
+     new_x = real(#pixel) - floor(real(#pixel)/@tw) * @tw
+     new_y = imag(#pixel) - floor(imag(#pixel)/@th) * @th
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 1)         ; horizontal symmetry
+     w = 2 * @tw
+     #pixel =  (#pixel - @center)*exp(-i*ang)
+     new_x = real(#pixel) - floor(real(#pixel)/w) * w
+     new_y = imag(#pixel) - floor(imag(#pixel)/@th) * @th
+     if real(new_x) > @tw
+       new_x = w - new_x
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 2)         ; vertical symmetry
+     h = 2 * @th
+     #pixel =  (#pixel - @center)*exp(-i*ang)
+     new_x = real(#pixel) - floor(real(#pixel)/@tw) * @tw
+     new_y = imag(#pixel) - floor(imag(#pixel)/h) * h
+     if real(new_y) > @th
+       new_y = h - new_y
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 3)         ; horizontal + vertical symmetry
+     w = 2 * @tw
+     h = 2 * @th
+     #pixel =  (#pixel - @center)*exp(-i*ang)
+     new_x = real(#pixel) - floor(real(#pixel)/w) * w
+     new_y = imag(#pixel) - floor(imag(#pixel)/h) * h
+     if real(new_x) > @tw
+       new_x = w - new_x
+     endif
+     if real(new_y) > @th
+       new_y = h - new_y
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 4)         ; Main tile
+    #pixel =  (#pixel - @center)*exp(-i*ang)
+     if real(#pixel) < 0  ||  real(#pixel) > @tw  ||     \
+        imag(#pixel) < 0  ||  imag(#pixel) > @th
+       if (real(#screenpixel) + imag(#screenpixel)) % 2 == 0
+          #solid = true
+       endif
+     endif
+     #pixel = #pixel*exp(i*ang) + @center
+  ENDIF
+
+default:
+  title = "Rectangular Tiling 2"
+  param mode
+    caption = "Tiling Mode"
+    default = 0
+    enum = "normal" "horizontal symmetry" "vertical symmetry" \
+           "horz + vert symmetry" "Main tile" "none"
+    hint = "Style of symmetry.  Use 'Main tile' to see the main \
+            tile and to adjust 'Center', 'Tile height', and \
+            'Tile width'"
+
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+    hint = "Coordinates of the bottom left corner of the main tile"
+  endparam
+  param tw
+    caption = "Tile width"
+    default = 2.0
+    min = 0.0
+  endparam
+  param th
+    caption = "Tile height"
+    default = 1.5
+    min = 0.0
+  endparam
+   param ang
+    caption = "Angle"
+    default = 0.0
+    hint = "Counterclockwise rotation"
+  endparam
+}
+
+Photomaton {
+; Jos Leys  October 2009
+transform:
+
+  int x1=#x,int y1=#y
+  int x=#x,int y=#y
+  float ratio=#height/#width
+if ratio<.75
+float sx=1.5/#magn/ratio
+float sy=1.5/#magn
+else
+float sx=2/#magn
+float sy=2*ratio/#magn
+endif
+complex i = (0.0,1.0)
+;print (sx)
+int j=0,while (j<@its)
+   x=x1,y=y1
+  if x<=#width/2 && y<=#height/2
+        x1=2*x
+        y1=2*y
+     endif
+     
+   if x>#width/2 && y<=#height/2
+     x1=2*x-#width-1
+     y1=2*y
+      endif
+      
+   if x<=#width/2 && y>#height/2
+     x1=2*x
+     y1=2*y-#height-1
+      endif
+   if x>#width/2 && y>#height/2
+    x1=2*x-#width-1
+    y1=2*y-#height-1
+    endif
+
+    ;z=x1+y1*i
+    j=j+1
+    endwhile
+  #pixel = #center-(sx-2*sx*x1/#width)+i*(sy-2*sy*y1/#height)
+
+default:
+  title = "Photomaton"
+
+    param @its
+    caption = "iterations"
+    default = 0
+  endparam
+
+
+  
+}
+
+Turn_Scale {
+; Jos Leys october 2009
+transform:
+  float ax=@ax*#PI/180
+  float sc=@sc
+  complex i = (0.0,1.0)
+  complex c=@cen
+  if @usecen,z=#center,endif
+   z=#pixel-c
+
+  z=z*exp(-i*ax)/sc
+   
+  #pixel = z
+  
+default:
+  title = "Turn_Scale"
+
+    param ax
+    caption = "Angle"
+    default = 0.0
+      endparam
+   param sc
+    caption = "Scale"
+    default = 1.0
+    endparam
+   param cen
+    caption = "Center"
+    default = (0.0,0.0)
+  endparam
+   param usecen
+    caption = "Use Image Center"
+    default = False
+  endparam
+  
+}

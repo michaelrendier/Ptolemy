@@ -1,0 +1,1623 @@
+sg_ifs_45_J { ; Sylvie Gallet
+a0=0.40944,b0=0.63556,c0=0.69977,d0=-0.36429,
+a1=0.44003,b1=-0.21839,c1=0.41333,d1=0.37676,
+a2=0.10788,b2=0.43864,c2=0.08479,d2=0.25711,
+al0=-0.59391,k0=3.91945,l0=-3.79794,
+al1=0.25605,k1=0.47092,l1=-2.67077,
+al2=-0.00946,k2=1.93894,l2=-0.59695,
+z=pixel:
+x=real(z)
+y=imag(z)
+o0=(d0*x-b0*y+k0)/al0+flip((-c0*x+a0*y+l0)/al0)
+op0=|o0-p2|
+o1=(d1*x-b1*y+k1)/al1+flip((-c1*x+a1*y+l1)/al1)
+op1=|o1-p2|
+o2=(d2*x-b2*y+k2)/al2+flip((-c2*x+a2*y+l2)/al2)
+op2=|o2-p2|
+IF (op0<op1 && op0<op2)
+z=o0
+ELSEIF (op1<op0 && op1<op2)
+z=o1
+ELSEIF (op2<op1 && op2<op0)
+z=o2
+ENDIF
+|z|<=p1
+}
+
+Gallet-9-05-UFv { ; Sylvie Gallet, sylvie_gallet@compuserve.com,
+                  ; Aug 1997 - Jan 99
+; Parameters:  Ultra Fractal   Fractint
+;              Bailout         real part of p2
+;              Exponent        imaginary part of p2
+;              Parameter 1     real part of p1
+;              Parameter 2     imaginary part of p1
+;              Parameter 3     p3
+init:
+   z1 = c = #pixel , r1 = |@p1*z1|
+   r2 = sqr(@p2) , z = (0,0)
+loop:
+   z1 = fn1(z1) + c
+   mz1 = |z1|
+   if (mz1 <= r1)
+      z1 = z1 + @p3 , mz1 = cabs(z1)
+   endif
+   if (mz1 < r2)
+      z = z1^@exponent
+   endif
+bailout:
+   mz1 <= @bailout
+default:
+  title = "Gallet 9 05 - UF version"
+  center = (0,0)
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Must be > 1"
+  endparam
+  param exponent
+    caption = "Exponent"
+    default = 2.0
+    hint = "Any non-zero value"
+  endparam
+  param p1
+    caption = "Parameter 1"
+    default = 4.0
+    hint = "Must be > 0"
+   min = 0.0
+  endparam
+  param p2
+    caption = "Parameter 2"
+    default = 4.0
+    hint = "Must be > 0"
+    min = 0.0
+  endparam
+  param p3
+    caption = "Parameter 3"
+    default = (0.5,0.0)
+    hint = "Any complex number"
+  endparam
+}
+
+Carr2821b-UF-version  {
+            ; This is one-half of Bob Carr's Carr2821 PHC formula
+            ; as modified and optimized by Sylvie Gallet
+            ; Half the formula extracted by Paul Carlson
+            ; Converted to Ultra Fractal by Sylvie Gallet, May 4, 1999
+
+init:
+   m = 0.1/#pixel , z = c = conj(m) - #pixel , r = |z|
+   k = m*(-0.9) , p = k + flip(m) + conj(0.01*m) - #pixel
+   iter = 0.0
+
+loop:
+   IF iter == @limit_1
+      p = (c^1.2)*1.5 + k , r = z = 0
+   ELSEIF iter == @limit_2
+      p = conj(c)*2.25 + k , r = z = 0
+   ELSEIF iter == @limit_3
+      p = flip(c)*3.375 + k , r = z = 0
+   ELSEIF iter == @limit_4
+      p = flip(c)*5.0625 + k , r = z = 0
+   ENDIF
+   z = real(r)*0.2 + sqr(z) + p , r = |z|
+   iter = iter + 1
+
+bailout:
+   r <= @bailout
+
+default:
+   title = "Carr2821b UF version"
+
+Param limit_1
+   caption = "Limit 1"
+   default = 1.0
+endparam
+
+Param limit_2
+   caption = "Limit 2"
+   default = 1.0
+endparam
+
+Param limit_3
+   caption = "Limit 3"
+   default = 1.0
+endparam
+
+Param limit_4
+   caption = "Limit 4"
+   default = 1.0
+endparam
+
+Param bailout
+   Caption = "Bailout Value"
+   default = 16.0
+endparam
+
+}
+
+Slope_Pokorny { ; modified from Ron Barnett version
+                  ; by Sylvie Gallet - November 27, 1999
+init:
+  complex c1 = #pixel			         ; primary iterated point
+  complex c2 = #pixel + @offset        ; horizontally offset point
+  complex c3 = #pixel + flip(@offset)  ; vertically offset point
+  complex z1 = @start         ; starting value
+  complex z2 = @start
+  complex z3 = @start
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+  z1 = 1 / (z1*z1 + c1)
+  z2 = 1 / (z2*z2 + c2)
+  z3 = 1 / (z3*z3 + c3)
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE             ; didn't compute z this time
+    z = z1         ; use primary iteration value to keep periodicity working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope Pokorny"
+  center = (0.0, 0.0)
+  maxiter = 1000
+
+  param start
+    caption = "Starting Point"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.  Smaller \
+            distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" "sin" "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+switch:
+  type = "Slope_Pokorny-j"
+  seed = #pixel
+  bailout = bailout
+  offset = offset
+  xfer = xfer
+  zscale = zscale
+  zscale2 = zscale2
+  everyiter = everyiter
+}
+
+Slope_Pokorny-j { ; modified from Ron Barnett version
+                  ; by Sylvie Gallet - November 27, 1999
+init:
+  complex z1 = #pixel                   ; primary iterated point
+  complex z2 = #pixel + @offset         ; horizontally offset point
+  complex z3 = #pixel + flip(@offset)   ; vertically offset point
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+  z1 = 1 / (z1*z1 + @seed)
+  z2 = 1 / (z2*z2 + @seed)
+  z3 = 1 / (z3*z3 + @seed)
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE             ; didn't compute z this time
+    z = z1         ; use primary iteration value to keep periodicity working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope Pokorny Julia"
+  center = (0.0, 0.0)
+  maxiter = 1000
+
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.  Smaller \
+            distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" "sin" "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+switch:
+  type = "Slope_Pokorny"
+  bailout = bailout
+  offset = offset
+  xfer = xfer
+  zscale = zscale
+  zscale2 = zscale2
+  everyiter = everyiter
+}
+
+Pokorny {   ; Sylvie Gallet - November 27, 1999
+init:
+  complex c = #pixel
+  complex z = @start
+
+loop:
+  z = 1 / (z*z + c)
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Pokorny"
+  center = (0.0, 0.0)
+  maxiter = 1000
+
+  param start
+    caption = "Starting Point"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+switch:
+  type = "Pokorny-j"
+  seed = #pixel
+  bailout = bailout
+}
+
+Pokorny-j {   ; Sylvie Gallet - November 27, 1999
+init:
+  complex z = #pixel
+
+loop:
+  z = 1 / (z*z + @seed)
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Pokorny Julia"
+  center = (0.0, 0.0)
+  maxiter = 1000
+
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+switch:
+  type = "Pokorny"
+  bailout = bailout
+}
+
+Slope_Lambda-fn { ; modified from Ron Barnett version
+                  ; by Sylvie Gallet - November 28, 1999
+init:
+  complex z1 = #pixel                   ; primary iterated point
+  complex z2 = #pixel + @offset         ; horizontally offset point
+  complex z3 = #pixel + flip(@offset)   ; vertically offset point
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+  z1 = @seed * @fn1(z1)
+  z2 = @seed * @fn1(z2)
+  z3 = @seed * @fn1(z3)
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE             ; didn't compute z this time
+    z = z1         ; use primary iteration value to keep periodicity working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope Lambda-fn"
+  center = (0.0, 0.0)
+  maxiter = 250
+
+  param bailout
+    caption = "Bailout Value"
+    default = 2048.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.  Smaller \
+            distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" "sin" \
+    "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+  func fn1
+    caption = "Function 1"
+    default = sin()
+  endfunc
+switch:
+  type = "Slope_Mandel-fn"
+  bailout = bailout
+  offset = offset
+  xfer = xfer
+  zscale = zscale
+  zscale2 = zscale2
+  everyiter = everyiter
+  fn1 = fn1
+}
+
+Slope_Mandel-fn { ; modified from Ron Barnett version
+                  ; by Sylvie Gallet - November 28, 1999
+init:
+  complex c1 = #pixel                   ; primary iterated point
+  complex c2 = #pixel + @offset         ; horizontally offset point
+  complex c3 = #pixel + flip(@offset)   ; vertically offset point
+  complex z1 = c1 + @start
+  complex z2 = c2 + @start
+  complex z3 = c3 + @start
+
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+  z1 = c1 * @fn1(z1)
+  z2 = c2 * @fn1(z2)
+  z3 = c3 * @fn1(z3)
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE             ; didn't compute z this time
+    z = z1         ; use primary iteration value to keep periodicity working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope Mandel-fn"
+  center = (0.0, 0.0)
+  maxiter = 250
+
+  param start
+    caption = "Start value"
+    default = (0.0,0.0)
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 2048.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.  Smaller \
+            distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" "sin" \
+    "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+  func fn1
+    caption = "Function 1"
+    default = sin()
+  endfunc
+switch:
+  type = "Slope_Lambda-fn"
+  bailout = bailout
+  seed = #pixel
+  offset = offset
+  xfer = xfer
+  zscale = zscale
+  zscale2 = zscale2
+  everyiter = everyiter
+  fn1 = fn1
+}
+
+Slope_popcornjulia {; modified from Ron Barnett version
+                  ; by Sylvie Gallet - November 28, 1999
+init:
+  complex z1 = #pixel                   ; primary iterated point
+  complex z2 = #pixel + @offset         ; horizontally offset point
+  complex z3 = #pixel + flip(@offset)   ; vertically offset point
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+
+  x_temp = real(z1)
+  y_temp = imag(z1)
+  z1 = x_temp - real(@h * @fn1(y_temp + @fn2(@C * y_temp)))        \
+              - imag(@h * @fn3(x_temp + @fn4(@C * x_temp)))        \
+       + flip(y_temp - real(@h * @fn3(x_temp + @fn4(@C * x_temp))) \
+                     - imag(@h * @fn1(y_temp + @fn2(@C * y_temp))))
+  x_temp = real(z2)
+  y_temp = imag(z2)
+  z2 = x_temp - real(@h * @fn1(y_temp + @fn2(@C * y_temp)))        \
+              - imag(@h * @fn3(x_temp + @fn4(@C * x_temp)))        \
+       + flip(y_temp - real(@h * @fn3(x_temp + @fn4(@C * x_temp))) \
+                     - imag(@h * @fn1(y_temp + @fn2(@C * y_temp))))
+  x_temp = real(z3)
+  y_temp = imag(z3)
+  z3 = x_temp - real(@h * @fn1(y_temp + @fn2(@C * y_temp)))        \
+              - imag(@h * @fn3(x_temp + @fn4(@C * x_temp)))        \
+       + flip(y_temp - real(@h * @fn3(x_temp + @fn4(@C * x_temp))) \
+                     - imag(@h * @fn1(y_temp + @fn2(@C * y_temp))))
+
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE               ; didn't compute z this time
+    z = z1            ; use primary iteration value to keep
+                      ; periodicity working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope PopcornJulia"
+  center = (0.0,0.0)
+  maxiter = 250
+
+  param h
+    caption = "Step size"
+    default = (0.05,0.0)
+  endparam
+  param c
+    caption = "Constant C"
+    default = (3.0,0.0)
+  endparam
+  func fn1
+    caption = "First Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "Third Function"
+    default = sin()
+  endfunc
+  func fn4
+    caption = "Fourth Function"
+    default = tan()
+  endfunc
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't \
+            belong to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.\
+            Smaller distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+    "sin" "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+}
+
+many_man{; Modified Stephen C. Ferguson formula
+      ; adapted for Ultra Fractal by Sylvie Gallet, 1999
+      ; adapted for Fractint by Les St Clair, 1997
+      ; use real p1 to set bailout (try p1=4)
+      ; use real p2 to set number of mandels
+      ; set fn1=ident, fn2=log for "default" formula
+init:
+   complex z = 0
+   complex c = @fn1(@fn2(#pixel^@p2)/@p2)
+loop:
+   z = z*z + c
+bailout:
+   |z| <= @p1
+default:
+   title = "Many_Man"
+   center = (0.0,0.0)
+   maxiter = 250
+   param p1
+     caption = "Bailout value"
+     default = (4.0,0.0)
+   endparam
+   param p2
+     caption = "Number of Mandels"
+     default = (3.0,0.0)
+   endparam
+   func fn1
+     caption = "First Function"
+     default = ident()
+   endfunc
+   func fn2
+     caption = "Second Function"
+     default = log()
+   endfunc
+}
+
+Slope_Many_Man {; modified from Ron Barnett version
+                  ; by Sylvie Gallet - December 5, 1999
+init:
+  complex z1 = 0
+  complex z2 = 0
+  complex z3 = 0
+  complex c1 = @fn1(@fn2(#pixel^@p2)/@p2)
+                                  ; primary iterated point
+  complex c2 = @fn1(@fn2((#pixel + @offset)^@p2)/@p2)
+                                  ; horizontally offset point
+  complex c3 = @fn1(@fn2((#pixel + flip(@offset))^@p2)/@p2)
+                                  ; vertically offset point
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+
+  z1 = z1*z1 + c1
+  z2 = z2*z2 + c2
+  z3 = z3*z3 + c3
+
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE                ; didn't compute z this time
+    z = z1            ; use primary iteration value to keep \
+                      ; periodicity working
+  ENDIF
+  IF (modz >= @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+   title = "Slope_Many_Man"
+   center = (0.0,0.0)
+   maxiter = 250
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't \
+            belong to the set anymore."
+  endparam
+  param p2
+    caption = "Number of Mandels"
+    default = (3.0,0.0)
+  endparam
+  func fn1
+    caption = "First Function"
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second Function"
+    default = log()
+  endfunc
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.\
+            Smaller distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+    "sin" "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  \
+            Higher values will exaggerate differences between \
+            high and low.In general, you will want to use \
+            smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; \
+            like Height Pre-Scale, except that this value is \
+            applied after the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm \
+            which processes every iteration, you will need this."
+  endparam
+}
+
+Slope_Spider     {; modified from Ron Barnett version
+                  ; by Sylvie Gallet - December 13, 1999
+init:
+  complex c1 = #pixel                        \
+                  ; primary iterated point
+  complex z1 = c1 + @p1
+  complex c2 = #pixel + @offset              \
+                  ; horizontally offset point
+  complex z2 = c2 + @p1
+  complex c3 = #pixel + flip(@offset)        \
+                  ; vertically offset point
+  complex z3 = c3 + @p1
+
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+
+  z1 = z1*z1 + c1 , c1 = c1/2 + z1
+  z2 = z2*z2 + c2 , c2 = c2/2 + z2
+  z3 = z3*z3 + c3 , c3 = c3/2 + z3
+
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE                ; didn't compute z this time
+    z = z1            ; use primary iteration value to keep \
+                      ; periodicity working
+  ENDIF
+  IF (modz >= @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+   title = "Slope_Spider"
+   center = (0.0,0.0)
+   maxiter = 250
+  param bailout
+    caption = "Bailout Value"
+    default = 4.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't \
+            belong to the set anymore."
+  endparam
+  param p1
+    caption = "Perturbation z(0)"
+    default = (0.0,0.0)
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are.\
+            Smaller distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+    "sin" "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  \
+            Higher values will exaggerate differences between \
+            high and low.In general, you will want to use \
+            smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; \
+            like Height Pre-Scale, except that this value is \
+            applied after the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm \
+            which processes every iteration, you will need this."
+  endparam
+}
+
+Z4 {
+
+init:
+  complex c = #pixel
+  complex z = 1
+
+loop:
+  z = z^4 + z^(-4) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "z4"
+  center = (-2.0, 0.0)
+  magn = 1.0
+  maxiter = 1000
+
+  param start
+    caption = "Starting Point"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 100.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+}
+
+Slope_z4 { ; modified from Ron Barnett version
+                  ; by Sylvie Gallet - December 26, 1999
+init:
+  complex c1 = #pixel			         ; primary iterated point
+  complex c2 = #pixel + @offset        ; horizontally offset point
+  complex c3 = #pixel + flip(@offset)  ; vertically offset point
+  complex z1 = 1         ; starting value
+  complex z2 = 1
+  complex z3 = 1
+  int done = 2
+  float modz = 0.0
+  float e1 = 0.0         ; potentials
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0         ; normal vector
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float iterexp1 = 0.0
+  float iterexp2 = 0.0
+  float iterexp3 = 0.0
+
+loop:
+  z1 = z1^4 + z1^(-4) + c1
+  z2 = z2^4 + z2^(-4) + c2
+  z3 = z3^4 + z3^(-4) + c3
+  iterexp1 = iterexp1 + exp(-cabs(z1))
+  iterexp2 = iterexp2 + exp(-cabs(z2))
+  iterexp3 = iterexp3 + exp(-cabs(z3))
+  done = done + 1         ; increment iteration counter
+
+  modz = |z1|
+  IF (modz > @bailout ||       \
+      @everyiter ||            \
+      done == #maxit + 2)      ; done, or every iteration, or last
+    ; determine continuous iteration (height) for each point
+      e1 = iterexp1 * @zscale
+      e2 = iterexp2 * @zscale
+      e3 = iterexp3 * @zscale
+
+    ; apply transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    IF (@xfer == 1)             ; log
+      e1 = log(e1)
+      e2 = log(e2)
+      e3 = log(e3)
+    ELSEIF (@xfer == 2)         ; sqrt
+      e1 = sqrt(e1)
+      e2 = sqrt(e2)
+      e3 = sqrt(e3)
+    ELSEIF (@xfer == 3)         ; cuberoot
+      e1 = (e1)^(1/3)
+      e2 = (e2)^(1/3)
+      e3 = (e3)^(1/3)
+    ELSEIF (@xfer == 4)         ; exp
+      e1 = exp(e1)
+      e2 = exp(e2)
+      e3 = exp(e3)
+    ELSEIF (@xfer == 5)         ; sqr
+      e1 = sqr(e1)
+      e2 = sqr(e2)
+      e3 = sqr(e3)
+    ELSEIF (@xfer == 6)         ; cube
+      e1 = (e1)^3
+      e2 = (e2)^3
+      e3 = (e3)^3
+    ELSEIF (@xfer == 7)         ; sin
+      e1 = sin(e1)
+      e2 = sin(e2)
+      e3 = sin(e3)
+    ELSEIF (@xfer == 8)         ; cos
+      e1 = cos(e1)
+      e2 = cos(e2)
+      e3 = cos(e3)
+    ELSEIF (@xfer == 9)         ; tan
+      e1 = tan(e1)
+      e2 = tan(e2)
+      e3 = tan(e3)
+    ENDIF
+
+    ; apply post-scale
+    e1 = e1 * @zscale2
+    e2 = e2 * @zscale2
+    e3 = e3 * @zscale2
+
+      vx = e2-e1
+      vy = e3-e1
+      vz = -@offset
+      ; normalize vector
+      vd = 1/sqrt(sqr(vx)+sqr(vy)+sqr(vz))
+      vx = vx*vd
+      vy = vy*vd
+      vz = vz*vd
+      z = vx + flip(vy)         ; fudge z from vector
+  ELSE               ; didn't compute z this time
+    z = z1           ; use primary iteration value to keep periodicity \
+                     ; working
+  ENDIF
+  IF (modz > @bailout)         ; we're done
+    done = 0
+  ENDIF
+
+bailout:
+  (done > 0)
+
+default:
+  title = "Slope_z4"
+  center = (-2.0, 0.0)
+  magn = 1.0
+  maxiter = 1000
+
+  param start
+    caption = "Starting Point"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param bailout
+    caption = "Bailout Value"
+    default = 100.0
+    min = 0.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+  param offset
+    caption = "Orbit Separation"
+    default = 0.00000001
+    hint = "Defines how far apart the simultaneous orbits are. \
+            Smaller distances will produce more accurate results."
+  endparam
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" "sin" \
+           "cos" "tan"
+    hint = "This function will be applied to the height value \
+            before a slope is calculated."
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    hint = "Specifies the ratio between height and distance.  Higher \
+            values will exaggerate differences between high and low. \
+       In general, you will want to use smaller numbers here."
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.025
+    hint = "Specifies the ratio between height and distance; like \
+            Height Pre-Scale, except that this value is applied after \
+       the transfer function."
+  endparam
+  param everyiter
+    caption = "Every Iteration"
+    default = false
+    hint = "If set, the surface normal will be computed at every \
+            iteration.  If you are using a coloring algorithm which \
+       processes every iteration, you will need this."
+  endparam
+}
+

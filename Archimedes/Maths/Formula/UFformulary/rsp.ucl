@@ -1,0 +1,587 @@
+rp-AS-xx2{
+;rui parracho 2002 
+
+INIT:
+  FLOAT radius = 0.0
+  FLOAT rmin = 1.0e12
+  FLOAT rad = 0
+  FLOAT orad = 0
+  FLOAT alpha = 0
+  FLOAT theta = 0
+  
+  COMPLEX x = 0           
+  COMPLEX z = 0              
+  COMPLEX y = 0
+  COMPLEX w = 0
+      
+LOOP:
+  ;-------------------------------------------------------------------
+  ;       perturb #z into the new value w
+  ;-------------------------------------------------------------------
+ 
+  IF     @trans == 0 
+    x = .5 * @c1 * real( @fn3( 7 * @c2 * flip( @c3 * @fn1( #z ) ) ) )
+    y = .5 * @c1 * real( @fn3( 7 * @c2 * real( @c3 * @fn2( #z ) ) ) )
+  
+  ELSEIF @trans == 1
+    x = 2 * @c1 *     ( @fn1( @c2 * @fn2( 2 * @c3 * @fn3( #z ) ) ) )
+    y = 2 * @c1 * flip( @fn1( @c2 * @fn2( 2 * @c3 * @fn3( #z ) ) ) )
+  
+  ELSEIF @trans == 2 
+    x = real( @c1 * @fn1( #z + @c2 * @fn2( #z + @c3 * @fn3( #z ) ) ) )
+    y = real( @c1 * @fn1( #z + @c2 * @fn2( #z + @c3 * @fn3( #z ) ) ) )
+  
+  ELSEIF @trans == 3
+    x = ( @c1 * @fn1(  6 * @c2 / @fn2( @c3 / @fn3(#z) ) ) )
+    y = ( @c1 * @fn1(  6 * @c2 / @fn2( @c3 / @fn3(#z) ) ) )
+    
+  ELSEIF @trans == 4
+    x = 1.2*@c1*cabs(@c2*@fn1(@c3*#z))
+    y = 1.2*@c1*atan2(@c2*@fn1(@c3*#z))
+    
+  ELSEIF @trans == 5,
+    rad = cabs(@fn1(#z)), 
+    alpha = abs(atan2(@fn2(#z)))
+    orad = rad
+    rad = rad + 1.5*@c1 * sin(6*@c2 * alpha)
+    alpha = alpha + 1.5*@c1 * cos(6*@c2 * orad)
+    x = rad * cos(@c3*alpha)
+    y = rad * sin(@c3*alpha)  
+    
+  ELSEIF @trans == 6
+    x = @c1 * real(@fn3(@c2 * imag(@c3*@fn1(#z))))
+    y = @c1 * real(@fn3(@c2 * imag(@c3*@fn2(#z))))
+    
+  ELSEIF @trans == 7
+    x = @c1 * real(@fn3(@c2 * real(@c3*@fn1(#z))))
+    y = @c1 * imag(@fn3(@c2 * imag(@c3*@fn2(#z))))
+    
+  ELSEIF @trans == 8  
+    theta = abs(atan2(@c2*@fn2(#z)))
+    alpha = 1 + (theta)^3
+    x = 3*@c1 * theta/alpha
+    y = 3*@c1 * sqr(@c3*theta)/alpha
+    
+  ELSEIF @trans == 9
+    theta = cabs(atan(@c2*@fn2(#z)))
+    alpha = 1 + theta^4
+    x = 3*@c1 * theta/alpha
+    y = 3*@c1 * sqr(theta)/alpha
+
+  ENDIF
+    
+  w = x + flip(y)
+  
+  ;-------------------------------------------------------------------
+  ;       pick a coordinate system
+  ;-------------------------------------------------------------------
+
+  IF @coord == 1
+    rad = cabs(w)
+    theta = abs(atan2(w))
+    x = rad
+    y = theta
+  
+  ELSEIF @coord ==2
+    rad = cabs(w)
+    x = rad * cosh(real(w))
+    y = rad * sinh(imag(w))
+
+  ELSEIF @coord ==3
+    rad = cabs(w-#pixel)
+    x = rad * cos(real(w))
+    y = rad * sin(imag(w))
+  
+  ENDIF
+  
+  ;-------------------------------------------------------------------
+  ;       calculate the z variable
+  ;-------------------------------------------------------------------
+  
+  z= @zsx * @fnx(x * @zpx) + @zsy * @fny(y * @zpy)
+  
+  ;-------------------------------------------------------------------
+  ;       calculate the distance perturbed and filter out the least value
+  ;-------------------------------------------------------------------
+  
+  radius=cabs(#z-z)
+  IF(radius<rmin), rmin = radius, ENDIF
+   
+  
+final:
+  
+  #index = rmin
+
+default:
+  title="rp-AS-xx2"
+
+  PARAM trans
+    caption = " Transform Type "
+    enum = "1st" "2nd" "3rd" "4th" "5th" "6th" "7th" "8th" "9th" "10th"
+    default = 0
+  ENDPARAM
+
+  PARAM coord
+    caption = "Coordinates "
+    enum="normal" "polar" "hyperbolic" "strange"
+    default = 0
+  ENDPARAM
+  
+  PARAM c1, caption = "Scale Outer FN", default = 1.0, ENDPARAM  
+  PARAM c2, caption = "Scale Inner FN" , default = 1.0, ENDPARAM  
+  PARAM c3, caption = "Scale Deep FN", default = 1.0, ENDPARAM  
+ 
+  PARAM zsx, caption = "Z scale X", default = 1.0, ENDPARAM
+  PARAM zsy, caption = "Z scale Y", default = 1.0, ENDPARAM
+  
+  PARAM zpx, caption ="Z pivot X", default = (1,0), ENDPARAM
+  PARAM zpy, caption ="Z pivot y", default = (0,1), ENDPARAM
+  
+  func fn1,  caption = "1st Function",    default = ident(), endfunc
+  func fn2,  caption = "2nd Function",   default = ident(), endfunc
+  func fn3,  caption = "3rd Function",    default = tan(),   endfunc
+  
+  func fnx,  caption = "Z function X",        default = ident(), endfunc
+  func fny,  caption = "Z function Y",        default = ident(), endfunc
+  
+}
+
+;-----------------------------------------------------------------------------------
+;00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;-----------------------------------------------------------------------------------
+;00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;-----------------------------------------------------------------------------------
+
+;-----------------------------------------------------------------------------------
+;00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;-----------------------------------------------------------------------------------
+;00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;-----------------------------------------------------------------------------------
+
+
+rp-AS-xx4(BOTH) {
+init:
+
+  FLOAT rmin = 1.0e12
+  float radius = 0
+ 
+  COMPLEX x = 0           
+  COMPLEX z = 0              
+  COMPLEX y = 0
+  
+loop:
+  x = (   @fn3(   (   @fn1( #z )   )   )   )
+  y = (   @fn3(   (   @fn2( #z )   )   )   )
+  
+  z=  (x + flip(y))*(1 + @fuzz*#rand)
+  
+  radius=cabs(#z - z + @re + flip(@im) )
+  
+  IF(radius<rmin), rmin = radius, ENDIF
+
+final:
+  
+  #index = rmin
+
+default:
+  title = "rp-AS-xx4"
+
+  PARAM fuzz
+    caption = "fuzz factor"
+    default = 0.0
+  ENDPARAM
+
+  PARAM re
+    caption = "real push"
+    default = 0.0
+
+  ENDPARAM
+
+  PARAM im
+    caption = "imag push"
+    default = 0.0
+  ENDPARAM
+   
+  func fn1,  caption = "1st Function",    default = ident(), endfunc
+  func fn2,  caption = "2nd Function",    default = ident(), endfunc
+  func fn3,  caption = "3rd Function",    default = tan(),   endfunc
+}
+
+;------------------------------------------------------------------------------
+; rp-AS-xx5
+
+;------------------------------------------------------------------------------
+
+;------------------------------------------------------------------------------
+; rp-AS-xx5
+;------------------------------------------------------------------------------
+
+
+popcorna(BOTH) {
+init:
+  int n = 0
+  float temp = 1e6
+  float dist = 0  
+loop:
+  x = real((#z)/@b)
+  y = imag((#z)/@b)
+  
+  while n < @iter
+    ox = x
+    x = x - @h*sin(y+tan(3*y))
+    y = y - @h*sin(ox+tan(3*ox))
+    n = n+1
+  endwhile
+
+  dist = @m*cabs(#z - x + flip(y))
+  if dist < temp, temp = dist, endif
+                        
+final:
+ 
+  
+  #index = temp
+default:
+
+  title = "popcorna"
+
+
+
+  param iter, caption = "iterations", default = 10, endparam
+  param h, caption = "step", default = .1, endparam
+    
+  param m, caption = "smooth multi", default = 1.0,endparam
+  param b, caption = "bailout", default = 4.0, endparam
+
+}
+
+;------------------------------------------------------------------------------
+; rp-AS-xx6
+;------------------------------------------------------------------------------
+
+rp-AS-x10(BOTH) {
+init:
+  float rmin = 1.0e12
+  float radius = 0
+  int nw = 0
+  
+loop:
+  complex w = fn1(fn2(fn3(#z)))
+  if @it>0
+    repeat
+      w =  (@p*w - @off/(w^@p))/(@p+@off) 
+      nw = nw + 1 
+    until nw >= @it
+  endif
+  
+  z = w*(@scale + @fuzz*#rand)
+    
+    radius=cabs(#z - z + @push)
+
+
+    
+    IF(radius<rmin), rmin = radius, ENDIF
+
+final:
+    #index = rmin
+    
+default:
+  title = "rp-AS-x10"
+  
+  PARAM fuzz,  caption = "fuzz factor", default = 0.0, ENDPARAM
+  
+  PARAM scale, caption = "z scale", default = 1.0, ENDPARAM
+  
+  PARAM push,  caption = "distance push", default = 0.0, ENDPARAM
+  
+  param p,     caption= "Newton power", default = (-0.075,1.0375),endparam
+
+  param it,    caption= "Newton iterations", default = 50,endparam
+  
+  param off,   caption= "Newton offset", default = (1,0),endparam
+          
+  func fn1,  caption = "1st Function",    default = cabs(), endfunc
+  func fn2,  caption = "2nd Function",    default = sqr(), endfunc
+  func fn3,  caption = "3rd Function",    default = tan(),   endfunc
+
+}
+
+popcornb(BOTH) {
+
+init:
+  int n = 0
+
+  int c = 0
+  complex w = 0
+loop:
+  c=c+1
+  oz = #z
+final:
+  
+  t = #pixel*@s,  
+  x = real(t),    
+  y = imag(t),    
+  while n < @iter
+    ox = x,       
+    x = x - @h*real(sin(y+tan(3*y)))   
+    y = y - @h*real(sin(ox+tan(3*ox)))
+    n = n + 1
+  endwhile
+  w=x+flip(y)
+  #index = @m*cabs( w * log(log(#z))  )
+  
+default:
+  title = "popcornb"
+
+  param iter, caption = "iterations", default = 10, endparam
+  param h, caption = "step", default = .05, endparam
+  param s, caption = "scale", default = 1.0, endparam
+
+    
+  param m, caption = "smooth multi", default = 1.0,endparam
+  param b, caption = "func bail", default = 4.0,endparam
+  
+}
+
+First-rsp(BOTH) {
+init:
+  int i = 0
+  int ndx=0
+  complex dind = 0;(0.0,0)
+  
+loop:
+  ndx = ndx + 1     
+  
+  u = cabs(#pixel-#z)
+  v = (u/5-floor(u/5))
+  
+  while i <= @iters
+    i = i + 1
+    ov = v
+    v = v*#z+#pixel
+    if cabs(ov) <= cabs(v)
+      dind = @fn1(v) + @str/100
+    else 
+      dind = @fn1(v) - @str/100
+    endif
+   endwhile
+  if real(dind) > 1, dind = (dind)- floor(dind), endif
+ 
+final:
+  #index = cabs(dind) + log(#numiter)/10   
+default:
+  title = "First-rsp"
+  func fn1
+       caption = "coloring function"
+       default = atanh()
+  endfunc
+  
+  param iters
+       caption = "color loop iter"
+       default = 5
+  endparam
+  
+  param str
+       caption = "color loop step"
+       default = 1.0
+  endparam  
+  
+}
+
+newfin(BOTH) {
+init:
+  float n = 1
+  float zmin = 1e12
+  float ztemp = 0
+  float zmax = 0
+  float x = 0
+  float y = 0
+loop:
+  n = n+1
+  x = real(fn1(#z))
+  y = imag(fn2(#z))
+  
+  ztemp = cabs(#z-x - flip(y))
+  if ztemp < zmin, zmin = ztemp, endif
+  if x > zmax || y >zmax, zmax =cabs(x+flip(y)),endif
+final:
+  #index = zmin;*exp(log( n)*log((1/n))-log(n))*zmax
+default:
+  title = "newfin"
+}
+
+QuadColor(BOTH) {
+init:
+  if real(#pixel) > 0
+    if imag(#pixel) > 0, float quad = 1, endif
+    if imag(#pixel) < 0, float quad = 4, endif
+
+  else
+    if imag(#pixel) > 0, float quad = 2, endif
+    if imag(#pixel) < 0, float quad = 3, endif
+  endif
+  float q1 = 0, float q2 = 0, float q3 = 0, float q4 = 0
+  float n = 0, float m = 0, float quad =0, FLOAT BIC = 0
+loop:
+  n = n +1
+  oldquad = quad
+; Determine quadrant of current iterate  
+  if real(#z) > 0
+    if imag(#z) > 0, quad = 1, endif
+    if imag(#z) < 0, quad = 4, endif
+  elseif real(#z) <0
+    if imag(#z) > 0, quad = 2, endif
+    if imag(#z) < 0, quad = 3, endif
+  endif
+; Sum of the quadrant touches
+  if     quad == 1, q1 = q1 + 1
+  elseif quad == 2, q2 = q2 + 1
+  elseif quad == 3, q3 = q3 + 1
+  elseif quad == 4, q4 = q4 + 1
+  endif
+;number of quadrant changes
+  if oldquad == quad, M=M, ELSE, m = m+1, endif 
+  complex oz = #z
+final:
+  if     @meander == 0, bic = m/n
+  elseif @meander == 1, BIC = cabs(#z-oz)*(q1+q2);((m-q1)/(n-m))
+  elseif @meander == 2, if ((q1+q2) < (q3+q4)), BIC = cabs((q1+q2)/(q3+q4) + (m%n)/n), else, BIC = cabs((q3+q4)/(q1+q2) + (m%n)/n), endif
+  elseif @meander == 3, BIC = (q1-q2)*(q3-q4)/(q3-q2)/(q1-q4)
+
+  endif
+  ;if bic > 1, bic = bic-1, elseif bic <1, bic = bic +1, endif
+  
+  #INDEX = BIC
+default:
+  title = "QuadColor"
+  
+  param meander
+    enum =  "Q-C Ratio" "cross ratio""mobius" "cross 2"
+    default = 0
+  endparam
+  
+  param scale
+    default = 1.0
+    caption = "density scale"
+  endparam
+    
+}
+
+rp-AS-x22(BOTH) {
+init:
+  float rmin = 1e6
+  complex z = 0
+  float radius = 0
+  int c = 1
+loop:
+  c=c+1
+  z = fn1(1/fn2(1/fn3(#z - #pixel/@p)))
+  radius = @sc*cabs((fn4(z - #z/c) + @push)*(1+@fuzz*#rand))
+  IF(radius<rmin), rmin = radius, ENDIF
+final:
+  #index = rmin
+default:
+  title = "rp-AS-x22"
+  
+  param p,    caption = "Pixel Divisor",   default = 1.0, endparam
+  param sc,   caption = "Distance Scaler", default = 1.0, ENDPARAM
+  param push, caption = "Radius Push",     default = 0.0, ENDPARAM
+  param fuzz, caption = "Fuzz Factor",     default = 0.0, endparam
+  
+  func fn1, caption = "Outside Function",    default = cabs(), endfunc
+  func fn2, caption = "Middle Function",    default = sqr(), endfunc
+  func fn3, caption = "Inner Function",    default = atanh(),   endfunc
+  
+  func fn4, caption = "Radius Function",    default = cotan(),   endfunc
+   
+}
+
+rp-AS-x23(BOTH) {
+init:
+  float rmin = 1e6,   float rmax = -1e-6
+  float zmag_min = 0, float zmag_max = 0
+  float iter_min = 0, float iter_max = 0
+  float rz_min = 0,   float rz_max = 0
+  float iz_min = 0,   float iz_max = 0 
+  float ang_min = 0,  float ang_max = 0
+  complex z = 0
+  float radius = 0
+  int c = 0
+loop:
+  c=c+1
+  if     @function == 0, z =   fn1(1/fn2(1/fn3(#z - #pixel/@p)))
+  elseif @function == 1, z =   fn1(  fn2(#z - fn3(#pixel)/@p))
+  elseif @function == 2, z = 1/fn3(1/fn2(1/fn1(#z - #pixel/@p)))
+  elseif @function == 3, z = fn1(#pixel+1/fn2(1/fn3(#z - #pixel/@p)))
+  elseif @function == 4, z = fn1(sqr(#pixel)*1/fn2(1/fn3(#z - #pixel/@p)))
+  elseif @function == 5, z = fn1(#z - #pixel/@p)/fn2(#z - #pixel/@p)*fn3(#z - #pixel/@p)
+  endif
+    
+  radius = @sc*cabs((fn4(z - #z/c) + @push)*(1+@fuzz*#rand))
+
+  IF(radius<rmin)
+    rmin = radius
+    zmag_min = cabs(z)
+    iter_min = c/@iterdiv
+    rz_min = real(#z)
+    iz_min = imag(#z)
+    ang_min = atan2(#z)/(2*#pi)+1
+  ENDIF
+
+  IF(radius>rmax)
+    rmax = radius/@maxdiv
+    zmag_max = cabs(z)
+    iter_max = c/@iterdiv
+    rz_max = real(#z)
+    iz_max = imag(#z)
+    ang_max = atan2(#z)/(2*#pi)+1
+  ENDIF
+
+final:
+  if     @colorby == 0, #index = rmin
+  elseif @colorby == 1, #index = zmag_min
+
+  elseif @colorby == 2, #index = iter_min
+  elseif @colorby == 3, #index = rz_min
+  elseif @colorby == 4, #index = iz_min
+  elseif @colorby == 5, #index = ang_min
+  
+  elseif @colorby ==  6, #index = rmax
+  elseif @colorby ==  7, #index = zmag_max
+  elseif @colorby ==  8, #index = iter_max
+  elseif @colorby ==  9, #index = rz_max
+  elseif @colorby == 10, #index = iz_max
+  elseif @colorby == 11, #index = ang_max
+  endif
+
+  
+default:
+
+  title = "rp-AS-x23"
+  
+  param function
+    enum = "1" "2" "3" "4" "5" "6"
+    default =0
+    caption = "Stress Type"
+  endparam
+
+  param colorby
+    enum = "min dist" "min zmag" "min iter" "min real" "min imag" "min angle"\
+           "max dist" "max zmag" "max iter" "max real" "max imag" "max angle"
+    default =0
+    caption = "Color Using:"
+  endparam
+  
+  param p,    caption = "Pixel Divisor",   default = 1.0, endparam
+  param sc,   caption = "Distance Scaler", default = 1.0, ENDPARAM
+  param push, caption = "Radius Push",     default = 0.0, ENDPARAM
+  param fuzz, caption = "Fuzz Factor",     default = 0.0, endparam
+  
+  param iterdiv, caption = "MaxMin Iter Divider",     default = 100.0, endparam
+  param maxdiv, caption = "Max dist Divider",     default = 1.0, endparam
+
+  func fn1, caption = "Outside Function",    default = cabs(), endfunc
+  func fn2, caption = "Middle Function",    default = sqr(), endfunc
+  func fn3, caption = "Inner Function",    default = atanh(),   endfunc
+  
+  func fn4, caption = "Radius Function",    default = cotan(),   endfunc
+}

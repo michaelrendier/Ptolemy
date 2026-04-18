@@ -1,0 +1,2617 @@
+lp-Smooth(BOTH)EBver {
+;initial formula from Luke Plant lp.ucl 1998
+;Evan Bayliss modification April 2021
+;Option to add function variable to @centre
+;this works best if @ centre given non-zero value
+;Try Transfer function: Linear = 0.05, Centre function = tan and Decay function = cos//
+;to give element of grain without moire pattern
+
+init:
+  if @choice == 0
+  complex pt = @center
+  else
+  complex pt = @cfunc(@center)
+  endif
+
+  float dec= @decay      ; decay factor
+  float col = 0.0
+  complex temp = (0,0)
+
+loop:
+  temp = fn1(cabs(#z - pt))
+  col = col + exp(-dec*real(temp))
+
+final:
+  #index = col
+
+default:
+  title = "Smooth colouring EB adjustment"
+  param center
+    caption = "center"
+    default = (0,0)
+    hint = "This should be kept as 0,0 for smooth \
+    colouring, other values gives interesting effects"
+  endparam
+  param choice
+        caption = "Choose centre alone or with function"
+        enum = "Centre alone" "Centre with function"
+        default = 0
+  endparam
+
+  func cfunc
+     caption = "Centre function"
+     default = sqr()
+   endfunc
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "Controls how quickly the exponential decay \
+    drops off around the central point"
+  endparam
+
+
+  func fn1
+    caption = "Decay function"
+    default = sqr()
+  endfunc
+
+}
+
+ lp-Smooth(BOTH)EBver2 {
+;initial formula from Luke Plant lp.ucl 1998
+;Evan Bayliss modification April 2021
+;Option to add function variable to @centre
+;this works best if @ centre given non-zero value
+;Try Transfer function: Linear = 0.05, Centre function = tan and Decay function = cos//
+;to give element of grain without moire pattern
+
+init:
+  if @choice == 0
+  complex pt = @center
+  else
+  complex pt = @cfunc(@center)
+  endif
+
+  float dec= @decay      ; decay factor
+  float col = 0.0
+  complex temp = (0,0)
+
+loop:
+  ;temp calculation modified
+  temp = fn1(cabs(#z - pt)) + fn1(cabs(pt - #z))
+  col = col + exp(-dec*real(temp))
+
+final:
+  #index = col
+
+default:
+  title = "Smooth colouring EB adjustment ver 2"
+  param center
+    caption = "center"
+    default = (0,0)
+    hint = "This should be kept as 0,0 for smooth \
+    colouring, other values gives interesting effects"
+  endparam
+  param choice
+        caption = "Choose centre alone or with function"
+        enum = "Centre alone" "Centre with function"
+        default = 0
+  endparam
+
+  func cfunc
+     caption = "Centre function"
+     default = sqr()
+   endfunc
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "Controls how quickly the exponential decay \
+    drops off around the central point"
+  endparam
+
+
+  func fn1
+    caption = "Decay function"
+    default = sqr()
+  endfunc
+
+}
+
+lp-Smooth(BOTH)EBver3 {
+;initial formula from Luke Plant lp.ucl 1998
+;Evan Bayliss modification August 2021
+;Option to add function variable to @centre
+;this works best if @ centre given non-zero value
+;Try Transfer function: Linear = 0.05, Centre function = tan and Decay function = cos//
+;to give element of grain without moire pattern
+
+init:
+  if @choice == 0
+  complex pt = @center
+  else
+  complex pt = @cfunc(@center)
+  endif
+
+  float dec= @decay      ; decay factor
+  float col = 0.0
+  complex temp = (0,0)
+  a = #z
+  b = #pixel
+loop:
+  a = a-real(0.01*sin(b+tan(3*b)))-imag(0.01*sin(a+tan(3*a)))
+  b = b-real(0.01*sin(a+tan(3*a)))-imag(0.01*sin(b+tan(3*b)))  
+  ;temp = @fn1(cabs(#z - pt)) + |#pixel| +a + b
+  ;col = col + exp(-dec*real(temp)) - |#pixel|
+
+  temp = @fn1(cabs(#z - pt)) +a + b
+  col = col + exp(-dec*real(temp)) 
+
+final:
+  #index = col
+
+default:
+  title = "Smooth colouring EB adjustment ver 3"
+  param center
+    caption = "center"
+    default = (0,0)
+    hint = "This should be kept as 0,0 for smooth \
+    colouring, other values gives interesting effects"
+  endparam
+  param choice
+        caption = "Choose centre alone or with function"
+        enum = "Centre alone" "Centre with function"
+        default = 0
+  endparam
+
+  func cfunc
+     caption = "Centre function"
+     default = sqr()
+   endfunc
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "Controls how quickly the exponential decay \
+    drops off around the central point"
+  endparam
+
+
+  func fn1
+    caption = "Decay function"
+    default = sqr()
+  endfunc
+
+}
+
+ExponentialSmoothingEBver3b {
+;
+; This is modified from the Exponential Smoothing
+; colouring method written by Damien Jones, incorporating
+; convergent and divergent options
+; developed by Ron Barnett.
+; The loop uses complex values for sum and sum2 to allow for
+; functions in the loop formulae.
+; The Final section uses real(sum) and real(sum2)
+; Smooth colouring can be still obtained,
+; but with combinations such as low Color Density Transfer Function Sin
+; and Tan Function for sum/sum2 a grain layer can be obtained, free of moire
+; and other distractions.
+;
+; Original Damien M. Jones, modified Evan Bayliss September 2021
+
+init:
+  complex sum = (0.0,0.0)
+  complex sum2 = (0.0,0.0)
+  complex zold = (0,0)
+  int iter = 0
+loop:
+  iter =iter + 1
+  IF (@diverge)
+    sum = cabs(@funct1(sum)) + exp(-cabs(#z))
+  ENDIF
+  IF (@converge)
+    sum2 = cabs(@funct1(sum2)) + exp(-1/cabs(zold-#z))
+  ENDIF
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = real(sum2)
+    ELSE
+      #index = 0
+    ENDIF
+
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = real(sum) * @divergescale
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+
+default:
+  title = "Exponential Smoothing EB ver 3b"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+
+
+  param diverge
+    caption = "Color Divergent"
+    default = FALSE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+
+  func funct1
+  caption = " Function for sum/sum2 in loop"
+  default = abs()
+  endfunc
+
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  param divergescale
+    caption = "Divergent Density"
+    default = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "Sets the divergent coloring density, relative to the \
+            convergent coloring. If set to 1.0, they will use \
+       	    the same color density."
+  endparam
+}
+
+ExponentialSmoothingEBver3 {
+;
+; This is modified from the Exponential Smoothing
+; colouring method written by Damien Jones, incorporating
+; convergent and divergent options
+; developed by Ron Barnett.
+; The loop uses complex values for sum and sum2 to allow for
+; functions in the loop formulae.
+; The Final section uses |sum| and |sum2|
+; Smooth colouring can be still obtained,
+; but with combinations such as low Color Density Transfer Function Sin
+; and Tan Function for sum/sum2 a grain layer can be obtained, free of moire
+; and other distractions.
+;
+; Original Damien M. Jones, modified Evan Bayliss September 2021
+
+init:
+  complex sum = (0.0,0.0)
+  complex sum2 = (0.0,0.0)
+  complex zold = (0,0)
+  int iter = 0
+loop:
+  iter =iter + 1
+  IF (@diverge)
+    sum = @funct1(sum) + exp(-cabs(#z))
+  ENDIF
+  IF (@converge)
+    sum2 = @funct1(sum2) + exp(-1/cabs(zold-#z))
+  ENDIF
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = |sum2|
+    ELSE
+      #index = 0
+    ENDIF
+
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = |sum| * @divergescale
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+
+default:
+  title = "Exponential Smoothing EB ver 3"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+  param diverge
+    caption = "Color Divergent"
+    default = FALSE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+
+  func funct1
+  caption = " Function for sum/sum2 in loop"
+  default = abs()
+  endfunc
+
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  param divergescale
+    caption = "Divergent Density"
+    default = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "Sets the divergent coloring density, relative to the \
+            convergent coloring. If set to 1.0, they will use \
+       	    the same color density."
+  endparam
+}
+
+Smooth(OUTSIDE)EBver1 {
+;
+; Original formula by Damien S Jones (plus F Slijkerman and Linas Veptas)
+; Modified Evan Bayliss September 2021
+;
+
+init:
+  complex il = 1/log(@power)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+final:
+  #index = 0.05 * real(#numiter + il*lp - il*@final1(@final2(cabs(#z))))
+
+default:
+  title = "Smooth (Mandelbrot) EB version 1"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+Smooth(OUTSIDE)EBver2 {
+;
+; Original formula by Damien S Jones (plus F Slijkerman and Linas Veptas)
+; Modified Evan Bayliss September 2021
+;
+
+init:
+  complex il = 1/(log(@ifunc(@power)))	; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+final:
+  #index = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z))))
+
+default:
+  title = "Smooth (Mandelbrot) EB version 2"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+  func ifunc
+  caption = "Function for complex il"
+  default = log()
+  endfunc
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  param iconst
+  caption = "Constant for #index"
+  default = .05
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  func final3
+  caption = "Third function for #index formula"
+  default = cabs()
+  endfunc
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+Smooth(OUTSIDE)EBver3 {
+;
+; Original formula by Damien S Jones (plus F Slijkerman and Linas Veptas)
+; Modified Evan Bayliss September 2021
+;
+init:
+  complex il = 1/(log(@power))	; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+final:
+  i1 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z))))
+  i2 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z)))) + @increment2
+  i3 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z)))) + @increment3
+  #index = |(i1 + i2 +i3)|/ 3
+
+default:
+  title = "Smooth (Mandelbrot) EB version 3"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+    param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  param iconst
+  caption = "Constant for #index"
+  default = .05
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  func final3
+  caption = "Third function for #index formula"
+  default = cabs()
+  endfunc
+  param increment2
+  caption = "Value to increase or decrease i2"
+  default = 0.0
+  endparam
+
+  param increment3
+  caption = "Value to increase or decrease i3"
+  default = 0.0
+  endparam
+
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+Smooth(OUTSIDE)EBver4 {
+;
+;
+; Original formula by Damien S Jones (plus F Slijkerman and Linas Veptas)
+; Modified Evan Bayliss September 2021
+;
+
+init:
+  complex il = 1/(log(@power))	; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+final:
+  i1 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z))))
+  i2 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z)))) + @increment2
+  i3 = @iconst * real(#numiter + il*lp - il*@final1(@final2(@final3(#z)))) + @increment3
+  #index = real(i1 + i2 +i3)/ 3
+
+default:
+  title = "Smooth (Mandelbrot) EB version 4"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+    param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  param iconst
+  caption = "Constant for #index"
+  default = .05
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  func final3
+  caption = "Third function for #index formula"
+  default = cabs()
+  endfunc
+  param increment2
+  caption = "Value to increase or decrease i2"
+  default = 0.0
+  endparam
+
+  param increment3
+  caption = "Value to increase or decrease i3"
+  default = 0.0
+  endparam
+
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+PotentialDifferentialEBver2 {
+; Halfway between field lines and distance estimator. 
+; Has the potential for a smooth coloring.
+;
+; Bugfix and 'final roundoff' tweak by Jim Blue
+global:
+    float r_twopi = recip(2*#pi)
+    float r_relax = 1.0
+    if (@relax>1)
+        r_relax = recip(@relax)
+    endif
+
+init:
+    complex trace[#maxiter+1]       ; record of iteration
+    trace[0] = #z
+    int count = 1
+
+loop:
+    trace[count] = #z
+    count = count+1
+
+final:
+    trace[count] = #z
+    
+    int start_count=@inskipp
+    int end_count = count
+    
+    int ix
+    if (@delta_z)
+        ix = start_count
+        while ix<end_count
+            trace[ix] = trace[ix+1]-trace[ix]
+            ix = ix+1
+        endwhile
+        end_count = end_count-1
+    endif
+  
+    if @adj_inskipp
+        if |trace[start_count]| < 1e-80      ; way too close to zero, skip it
+            start_count = start_count+1
+        endif
+        
+        if |trace[end_count]| < 1e-80      ; way too close to zero, skip it
+            end_count = end_count-1
+        endif
+    endif
+    
+;    if (@method=="additive")
+        float rotation = 0.0
+;    else
+        complex dgdz = 1.0
+;    endif
+    bool initial_iter = true
+    ix = start_count
+    while (ix < end_count)
+        if (@method=="additive")
+            float delta_rot
+            delta_rot = atan2(trace[ix])
+    
+            if (initial_iter)
+                rotation = delta_rot*@initpower
+                initial_iter = false
+            else
+                rotation = rotation + delta_rot
+            endif
+        else
+            if (initial_iter)
+                dgdz = trace[ix]^@initpower
+                initial_iter = false
+            else
+                dgdz = dgdz * trace[ix]
+            endif
+
+            if (@relax>1)            
+                while ( (real(dgdz)>@relax || real(dgdz)<-@relax) && (imag(dgdz)>@relax || imag(dgdz)<-@relax) )
+                    dgdz = r_relax*dgdz
+                endwhile
+                while ( real(dgdz)>-r_relax && real(dgdz)<r_relax && imag(dgdz)>-r_relax && imag(dgdz)<r_relax )
+                    dgdz = @relax*dgdz
+                endwhile
+            endif ; @relax
+        
+        endif ; @method
+        
+        ix = ix+1
+  endwhile
+  
+  float v
+  if (@method=="additive")
+    v = r_twopi * ( atan2( (trace[end_count])) - (@power-1)*rotation )
+  else
+    if (@power==2)
+        v = r_twopi * atan2( (trace[end_count]) / dgdz )
+    else 
+        v = r_twopi * atan2((trace[end_count]) / dgdz^(@power-1) )
+    endif
+  endif
+
+  float usedshift
+  if (@auto_shift)  ; calculate shift based on last iteration step
+    if (end_count>start_count)  ; do we have a last iteration step?
+        if (@method=="additive")
+            usedshift = -r_twopi * ( atan2(trace[end_count]) - @power * atan2(trace[end_count-1]) )
+        else
+            usedshift = -r_twopi * atan2(trace[end_count] / (trace[end_count-1]^@power))
+        endif
+$ifdef DEBUG
+        print( "shift=", usedshift )
+$endif
+    else
+        usedshift = 0
+    endif
+  else
+    usedshift = @shift
+  endif
+  v = v + usedshift*(end_count - start_count)
+  if @final == "floor"
+    #index = (v - floor(v)) ;+ (v * floor(v))/2 +(v * floor(v))/4 + (v * floor(v))/8 + (v * floor(v))/16
+  elseif @final == "trunc"
+    #index = v - trunc(v)    
+  elseif @final == "round"
+    #index = v - round(v)    
+  else  ; @final == "ceil"
+    #index = ceil(v) - v
+  endif      
+
+default:
+  title = "Potential Differential EB ver 2"
+  heading
+    caption="Formula parameters"
+  endheading
+  float param power
+    caption="Exponent"
+    hint="Should be the exponent of the formula you're iterating \
+        (say, 2 for standard Mandelbrot)"
+    default = 2.0
+  endparam
+  float param initpower
+    caption="Initial exponent"
+    hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+    default = 2.0
+  endparam
+  func vfunc
+  caption =" Function for v formula"
+  default = atan()
+  endfunc
+  bool param delta_z
+    caption="use z-step"
+    default=false
+  endparam
+  
+  param final
+    caption="final roundoff"
+    enum = "floor" "ceil" "trunc" "round"
+    default = 0
+  endparam  
+  
+  heading
+    caption="Under the hood"
+$ifdef VER40
+    expanded=false
+$endif
+  endheading
+  
+  int param inskipp
+    caption="Orbit start"
+    hint="Number of initial iterations to skip"
+    min=0
+    default=0
+  endparam
+  bool param adj_inskipp
+    caption="Auto-adjust orbit"
+    hint="Skip the first orbit entry if the orbit starts at (0,0)"
+    default=true
+  endparam
+
+  float param shift
+    caption="Manual shift"
+    hint="Can create (and sometimes, obliterate) stripes"
+    default=0
+    min=-1
+    max=1
+    enabled = (! @auto_shift)
+  endparam
+  bool param auto_shift
+    caption="Automatic shift"
+    hint="Guesstimate the shift value"
+    default=true
+  endparam
+  
+  param method
+    caption="Calculation"
+    hint="Method of calculation (multiplicative is faster, \
+        additive is less prone to round-off errors under certain conditions)"
+    enum="additive" "multiplicative"
+    default=1
+  endparam  
+  float param relax
+    enabled=(@method=="multiplicative")
+    min=0
+    default=128
+  endparam
+  
+}
+
+
+PotentialDifferentialEBver2a {
+; Halfway between field lines and distance estimator.
+; Has the potential for a smooth coloring.
+;
+; Bugfix and 'final roundoff' tweak by Jim Blue
+global:
+    float r_twopi = recip(2*#pi)
+    float r_relax = 1.0
+    if (@relax>1)
+        r_relax = recip(@relax)
+    endif
+
+init:
+    complex trace[#maxiter+1]       ; record of iteration
+    trace[0] = #z
+    int count = 1
+
+loop:
+    trace[count] = @vfunc(#z)*@vfunc2(#z)
+    count = count+1
+
+final:
+    trace[count] = #z
+
+    int start_count=@inskipp
+    int end_count = count
+
+    int ix
+    if (@delta_z)
+        ix = start_count
+        while ix<end_count
+            trace[ix] = trace[ix+1]-trace[ix]
+            ix = ix+1
+        endwhile
+        end_count = end_count-1
+    endif
+
+    if @adj_inskipp
+        if |trace[start_count]| < 1e-80      ; way too close to zero, skip it
+            start_count = start_count+1
+        endif
+
+        if |trace[end_count]| < 1e-80      ; way too close to zero, skip it
+            end_count = end_count-1
+        endif
+    endif
+
+;    if (@method=="additive")
+        float rotation = 0.0
+;    else
+        complex dgdz = 1.0
+;    endif
+    bool initial_iter = true
+    ix = start_count
+    while (ix < end_count)
+        if (@method=="additive")
+            float delta_rot
+            delta_rot = atan2(trace[ix])
+
+            if (initial_iter)
+                rotation = delta_rot*@initpower
+                initial_iter = false
+            else
+                rotation = rotation + delta_rot
+            endif
+        else
+            if (initial_iter)
+                dgdz = trace[ix]^@initpower
+                initial_iter = false
+            else
+                dgdz = dgdz * trace[ix]
+            endif
+
+            if (@relax>1)
+                while ( (real(dgdz)>@relax || real(dgdz)<-@relax) && (imag(dgdz)>@relax || imag(dgdz)<-@relax) )
+                    dgdz = r_relax*dgdz
+                endwhile
+                while ( real(dgdz)>-r_relax && real(dgdz)<r_relax && imag(dgdz)>-r_relax && imag(dgdz)<r_relax )
+                    dgdz = @relax*dgdz
+                endwhile
+            endif ; @relax
+
+        endif ; @method
+
+        ix = ix+1
+  endwhile
+
+  float v
+  if (@method=="additive")
+    v = r_twopi * ( atan2( (trace[end_count])) - (@power-1)*rotation )
+  else
+    if (@power==2)
+        v = r_twopi * atan2( (trace[end_count]) / dgdz )
+    else
+        v = r_twopi * atan2((trace[end_count]) / dgdz^(@power-1) )
+    endif
+  endif
+
+  float usedshift
+  if (@auto_shift)  ; calculate shift based on last iteration step
+    if (end_count>start_count)  ; do we have a last iteration step?
+        if (@method=="additive")
+            usedshift = -r_twopi * ( atan2(trace[end_count]) - @power * atan2(trace[end_count-1]) )
+        else
+            usedshift = -r_twopi * atan2(trace[end_count] / (trace[end_count-1]^@power))
+        endif
+$ifdef DEBUG
+        print( "shift=", usedshift )
+$endif
+    else
+        usedshift = 0
+    endif
+  else
+    usedshift = @shift
+  endif
+  v = v + usedshift*(end_count - start_count)
+  if @final == "floor"
+    #index = (v - floor(v)) ;+ (v * floor(v))/2 +(v * floor(v))/4 + (v * floor(v))/8 + (v * floor(v))/16
+  elseif @final == "trunc"
+    #index = v - trunc(v)
+  elseif @final == "round"
+    #index = v - round(v)
+  else  ; @final == "ceil"
+    #index = ceil(v) - v
+  endif
+
+default:
+  title = "Potential Differential EB ver 2a"
+  heading
+    caption="Formula parameters"
+  endheading
+  float param power
+    caption="Exponent"
+    hint="Should be the exponent of the formula you're iterating \
+        (say, 2 for standard Mandelbrot)"
+    default = 2.0
+  endparam
+  float param initpower
+    caption="Initial exponent"
+    hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+    default = 2.0
+  endparam
+  func vfunc
+  caption =" Function 1 for init z formula"
+  default = atan()
+  endfunc
+  func vfunc2
+  caption =" Function 2 for init z formula"
+  default = atan()
+  endfunc
+  bool param delta_z
+    caption="use z-step"
+    default=false
+  endparam
+
+  param final
+    caption="final roundoff"
+    enum = "floor" "ceil" "trunc" "round"
+    default = 0
+  endparam
+
+  heading
+    caption="Under the hood"
+$ifdef VER40
+    expanded=false
+$endif
+  endheading
+
+  int param inskipp
+    caption="Orbit start"
+    hint="Number of initial iterations to skip"
+    min=0
+    default=0
+  endparam
+  bool param adj_inskipp
+    caption="Auto-adjust orbit"
+    hint="Skip the first orbit entry if the orbit starts at (0,0)"
+    default=true
+  endparam
+
+  float param shift
+    caption="Manual shift"
+    hint="Can create (and sometimes, obliterate) stripes"
+    default=0
+    min=-1
+    max=1
+    enabled = (! @auto_shift)
+  endparam
+  bool param auto_shift
+    caption="Automatic shift"
+    hint="Guesstimate the shift value"
+    default=true
+  endparam
+
+  param method
+    caption="Calculation"
+    hint="Method of calculation (multiplicative is faster, \
+        additive is less prone to round-off errors under certain conditions)"
+    enum="additive" "multiplicative"
+    default=1
+  endparam
+  float param relax
+    enabled=(@method=="multiplicative")
+    min=0
+    default=128
+  endparam
+
+}
+
+PotentialDifferentialEBver2b {
+; Halfway between field lines and distance estimator.
+; Has the potential for a smooth coloring.
+;
+; Bugfix and 'final roundoff' tweak by Jim Blue
+global:
+    float r_twopi = recip(2*#pi)
+    float r_relax = 1.0
+    if (@relax>1)
+        r_relax = recip(@relax)
+    endif
+
+init:
+    complex trace[#maxiter+1]       ; record of iteration
+    trace[0] = #z
+    int count = 1
+
+loop:
+    trace[count] = (@vfunc(#z)*@vfunc2(#z))/(@vfunc(#z)-@vfunc2(#z))
+    count = count+1
+
+final:
+    trace[count] = #z
+
+    int start_count=@inskipp
+    int end_count = count
+
+    int ix
+    if (@delta_z)
+        ix = start_count
+        while ix<end_count
+            trace[ix] = trace[ix+1]-trace[ix]
+            ix = ix+1
+        endwhile
+        end_count = end_count-1
+    endif
+
+    if @adj_inskipp
+        if |trace[start_count]| < 1e-80      ; way too close to zero, skip it
+            start_count = start_count+1
+        endif
+
+        if |trace[end_count]| < 1e-80      ; way too close to zero, skip it
+            end_count = end_count-1
+        endif
+    endif
+
+;    if (@method=="additive")
+        float rotation = 0.0
+;    else
+        complex dgdz = 1.0
+;    endif
+    bool initial_iter = true
+    ix = start_count
+    while (ix < end_count)
+        if (@method=="additive")
+            float delta_rot
+            delta_rot = atan2(trace[ix])
+
+            if (initial_iter)
+                rotation = delta_rot*@initpower
+                initial_iter = false
+            else
+                rotation = rotation + delta_rot
+            endif
+        else
+            if (initial_iter)
+                dgdz = trace[ix]^@initpower
+                initial_iter = false
+            else
+                dgdz = dgdz * trace[ix]
+            endif
+
+            if (@relax>1)
+                while ( (real(dgdz)>@relax || real(dgdz)<-@relax) && (imag(dgdz)>@relax || imag(dgdz)<-@relax) )
+                    dgdz = r_relax*dgdz
+                endwhile
+                while ( real(dgdz)>-r_relax && real(dgdz)<r_relax && imag(dgdz)>-r_relax && imag(dgdz)<r_relax )
+                    dgdz = @relax*dgdz
+                endwhile
+            endif ; @relax
+
+        endif ; @method
+
+        ix = ix+1
+  endwhile
+
+  float v
+  float v1
+  float v2
+  float v3
+
+  if (@method=="additive")
+    v1 = r_twopi * ( atan2( (trace[end_count])) - (@power-1)*rotation )
+    v2 = (r_twopi + @increment1) * ( atan2( (trace[end_count])) - (@power-1)*rotation )
+    v3 = (r_twopi + @increment2) * ( atan2( (trace[end_count])) - (@power-1)*rotation )
+    v = (v1 * v2 * v3)/3
+
+  else
+    if (@power==2)
+        v = r_twopi * atan2( (trace[end_count]) / dgdz )
+    else
+        v = r_twopi * atan2((trace[end_count]) / dgdz^(@power-1) )
+    endif
+  endif
+
+  float usedshift
+  if (@auto_shift)  ; calculate shift based on last iteration step
+    if (end_count>start_count)  ; do we have a last iteration step?
+        if (@method=="additive")
+            usedshift = -r_twopi * ( atan2(trace[end_count]) - @power * atan2(trace[end_count-1]) )
+        else
+            usedshift = -r_twopi * atan2(trace[end_count] / (trace[end_count-1]^@power))
+        endif
+$ifdef DEBUG
+        print( "shift=", usedshift )
+$endif
+    else
+        usedshift = 0
+    endif
+  else
+    usedshift = @shift
+  endif
+  v = v + usedshift*(end_count - start_count)
+  if @final == "floor"
+    #index = (v - floor(v)) ;+ (v * floor(v))/2 +(v * floor(v))/4 + (v * floor(v))/8 + (v * floor(v))/16
+  elseif @final == "trunc"
+    #index = v - trunc(v)
+  elseif @final == "round"
+    #index = v - round(v)
+  else  ; @final == "ceil"
+    #index = ceil(v) - v
+  endif
+
+default:
+  title = "Potential Differential EB ver 2b"
+  heading
+    caption="Formula parameters"
+  endheading
+  float param power
+    caption="Exponent"
+    hint="Should be the exponent of the formula you're iterating \
+        (say, 2 for standard Mandelbrot)"
+    default = 2.0
+  endparam
+  float param initpower
+    caption="Initial exponent"
+    hint="The exponent for the start of the orbit (floating point; try values between 1.0 and 3.0)"
+    default = 2.0
+  endparam
+  func vfunc
+  caption =" Function 1 for init z formula"
+  default = atan()
+  endfunc
+  func vfunc2
+  caption =" Function 2 for init z formula"
+  default = atan()
+  endfunc
+  float param increment1
+  caption = "Increment for v2"
+  default=.001
+  endparam
+  float param increment2
+  caption = "Increment for v3"
+  default=.001
+  endparam
+
+  bool param delta_z
+    caption="use z-step"
+    default=false
+  endparam
+
+  param final
+    caption="final roundoff"
+    enum = "floor" "ceil" "trunc" "round"
+    default = 0
+  endparam
+
+  heading
+    caption="Under the hood"
+$ifdef VER40
+    expanded=false
+$endif
+  endheading
+
+  int param inskipp
+    caption="Orbit start"
+    hint="Number of initial iterations to skip"
+    min=0
+    default=0
+  endparam
+  bool param adj_inskipp
+    caption="Auto-adjust orbit"
+    hint="Skip the first orbit entry if the orbit starts at (0,0)"
+    default=true
+  endparam
+
+  float param shift
+    caption="Manual shift"
+    hint="Can create (and sometimes, obliterate) stripes"
+    default=0
+    min=-1
+    max=1
+    enabled = (! @auto_shift)
+  endparam
+  bool param auto_shift
+    caption="Automatic shift"
+    hint="Guesstimate the shift value"
+    default=true
+  endparam
+
+  param method
+    caption="Calculation"
+    hint="Method of calculation (multiplicative is faster, \
+        additive is less prone to round-off errors under certain conditions)"
+    enum="additive" "multiplicative"
+    default=1
+  endparam
+  float param relax
+    enabled=(@method=="multiplicative")
+    min=0
+    default=128
+  endparam
+
+}
+
+ExperimentEB1 {
+; Original Exponential Smoothing formula by Damien S Jones (plus F Slijkerman and Linas Veptas)
+; The final section of the  formula has been modified
+; Evan Bayliss Sept 2021
+;
+init:
+  complex il = 1/log(@power)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+  complex sp = #screenpixel
+
+  complex p = #pixel
+final:
+  in = (0.05 * real(#numiter + il*lp - il*@final1(@final2(cabs(#z)))))
+  #index = real (in + (in/2) + (in/4) + (in/8) + (in/16) + (in/32)) + real(@final1(sp-p))
+
+default:
+  title = "Experiment EB version 1"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+Smooth(OUTSIDE)EBver10witherror {
+;
+; This coloring method provides smooth iteration
+; colors for Mandelbrot and other z^2 formula types
+; (Phoenix, Julia).  Results on other types may be
+; unpredictable, but might be interesting.
+;
+; Thanks to F. Slijkerman for some tweaks.
+; Thanks to Linas Vepstas for the math.
+;
+; Written by Damien M. Jones
+;
+init:
+  complex il = 1/log(@power)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+  complex zz[@numiter]
+  int loopnum = 0
+  float indexval[@numiter]
+  int iter = 0
+  indexval[0] = 0.0
+loop:
+  while iter <= @numiter
+  iter = iter +1
+  loopnum = loopnum +1
+  if loopnum == 1
+  ;zz[loopnum] = #z
+  indexval[loopnum] = 0.05 * real(iter + il*lp - il*@final1(@final2(cabs(#z))))
+  else
+  indexval[loopnum] = real(@final2(@final1(indexval[loopnum-1]))) + 0.05 * real(iter + il*lp - il*@final1(@final2(cabs(#z))))
+  endif
+  endwhile
+
+final:
+ ; lines to make sure initer 1 and 2 do not exceed numiter
+ if @initer1 > @numiter
+ @initer1 = @numiter
+ endif
+
+ if @initer2 > @numiter
+ @initer2 = @numiter
+ endif
+
+ if @choice == 0
+ #index = indexval[@numiter] ;+ indexval[1])/2
+ else
+ #index = indexval[@initer1] + indexval[@initer2]
+ endif
+
+default:
+  title = "Smooth (Mandelbrot) EB version 10 with error"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/smooth.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+  int param numiter
+  caption = "Number of iterations for loop"
+  default =1
+  endparam
+
+  int param initer1
+  caption = "Number of iterations for indexval[@initer1]"
+  default = 1
+  endparam
+
+  int param initer2
+  caption = "Number of iterations for indexval[@initer2]"
+  default = 0
+  endparam
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is usually 2."
+  endparam
+
+  func final1
+  caption = "First function for #index formula"
+  default = log()
+  endfunc
+
+  func final2
+  caption = "Second function for #index formula"
+  default = log()
+  endfunc
+
+  param bailout
+    caption = "Bail-out value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bail-out value in \
+            the Formula tab. This formula works best with bail-out \
+            values higher than 100."
+  endparam
+}
+
+mt-gnarly-traps-EB-ver-3 {
+ ; Mark Townsend, 27 Aug 1999
+ ; modified Evan Bayliss Jan 2021
+ ; modified to include max_dist to all combination formulae
+init:
+  w = 0
+  trap_z = 0
+  trap_frm_z = 0
+  int iter = 0
+  int frm_iter = 0
+  int trap_frm_iter = 0
+  int trap_iter = 0
+  float x = 0
+  float y = 0
+  float xx = 0
+  float average = 0
+  float frm_dist = 0
+  float frm_mdist = 1e20
+  float min_w = 1e20
+  float min_dist = 1e20
+  float max_w = 0
+  float max_dist = 0
+  float ctz = 0
+
+loop:
+  w = @fn1(#z + @offset)
+  x = real(w) * 1/@scale
+  y = imag(w) * 1/@scale
+
+; Iterate trap formula
+  frm_iter = 0
+  average = 0
+  min_w = 1e20
+  while frm_iter < @max_iter
+    xx = x
+    if @formula == 0
+    ; Martin
+      x = y - sin(x)
+      y = @a - xx
+    elseif @formula == 1
+    ; Popcorn
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+    elseif @formula == 2
+      ; Vine
+      if @flavor == 0
+        x = x - @h * sin(y + sin(@a * y ))
+        y = y + @h * sin(xx + sin(@a * xx))
+      elseif @flavor == 1
+        x = x - @h * sin(y^@b + sin(@a * y))
+        y = y + @h * sin(xx^@b + sin(@a * xx))
+      elseif @flavor == 2
+       x = x - @h * sin(y + sin(@a * (y + sin(@a * y))))
+       y = y + @h * sin(xx + sin(@a * (xx + sin(@a * xx))))
+      else
+        float newx = y
+        float newy = x
+        int i = 0
+        while i < @flavor
+          i = i + 1
+          newx = y + sin(@a * newx)
+          newy = x + sin(@a * newy)
+        endwhile
+        x = x - @h * sin(newx)
+        y = y + @h * sin(newy)
+      endif
+    elseif @formula == 3
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@a * (y + @gn3(@b * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@a * (xx + @gn3(@b * xx)))))
+    elseif @formula == 4
+      ; Martin and Popcorn combined
+      if @f4choice == 0
+      x = y - sin(x)
+      y = @a - xx
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      else
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      x = y - sin(x)
+      y = @a - xx
+      endif
+    endif
+
+
+    w = @fn2(x + flip(y))
+    if @trap_mode == 0 || @trap_mode == 2 ; Closest & Average
+    ; Choose the variable that we want to watch...
+      if @frm_mode == 0
+        frm_dist = cabs(w)
+      elseif @frm_mode == 1
+        frm_dist = cabs(w - #z)
+      elseif @frm_mode == 2
+        frm_dist = cabs(w - #pixel)
+      elseif @frm_mode == 3
+        frm_dist = cabs(w - @offset)
+      endif
+    endif
+    if @trap_mode == 0
+      ; Closest
+      if frm_dist < min_w
+        min_w = frm_dist
+        trap_frm_z = w
+        trap_frm_iter = frm_iter
+      endif
+      ; Furthest
+     if frm_dist > max_w
+        max_w = frm_dist
+        trap_frm_z = w
+        trap_frm_iter = frm_iter
+      endif
+    elseif @trap_mode == 2
+      ; Average
+      average = average + frm_dist
+    endif
+    frm_iter = frm_iter + 1
+  endwhile ; end of formula loop
+
+  if @trap_mode == 3 ; Martin
+    x = real(w) * 1/@mscale
+    y = imag(w) * 1/@mscale
+  ; Iterate the Martin formula
+    i = 0
+    while i < @m_iterations
+      xx = x
+      x = y - sin(x)
+      y = @m - xx
+      i = i + 1
+    endwhile
+    w = x + flip(y)
+  endif
+
+  if @trap_mode == 1 || @trap_mode == 3 ; Final & Martin
+  ; Choose the variable that we want to watch...
+    if @frm_mode == 0
+       max_w = min_w = cabs(w)
+    elseif @frm_mode == 1
+      max_w = min_w = cabs(w - #z)
+    elseif @frm_mode == 2
+      max_w = min_w = cabs(w - #pixel)
+    elseif @frm_mode == 3
+      max_w = min_w = cabs(w - @offset)
+    endif
+  elseif @trap_mode == 2 ; Average
+    max_w = min_w = average / @max_iter
+  endif
+
+; Look for the smallest value
+  if min_w < min_dist
+    min_dist = min_w
+    if @trap_mode == 0
+      trap_z = trap_frm_z
+      trap_iter = trap_frm_iter
+    else
+      trap_z = #z
+      trap_iter = iter
+    endif
+  endif
+
+  ; Look for the largest value
+  if max_w > max_dist
+    max_dist = max_w
+    if @trap_mode == 0
+      trap_z = trap_frm_z
+      trap_iter = trap_frm_iter
+    else
+      trap_z = #z
+      trap_iter = iter
+    endif
+  endif
+
+  iter = iter + 1
+final:
+  if @coloring == 0 ; Distance
+    #index = min_dist
+  elseif @coloring == 1
+  #index = max_dist
+  elseif @coloring == 2 ; Iteration
+    #index = 0.01 * trap_iter
+  elseif @coloring == 3 ; Magnitude
+    #index = cabs(trap_z)
+  elseif @coloring == 4 ; Real
+    #index = real(trap_z)
+  elseif @coloring == 5 ; Imag
+    #index = imag(trap_z)
+  elseif @coloring == 6 ; Angle
+    float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 7 ; Pixel distance
+    #index = cabs(trap_z - #pixel)
+  elseif @coloring == 8 ; Offset distance
+    #index = cabs(trap_z - @offset)
+  elseif @coloring == 9 ; Angle to pixel
+    float a = atan2(trap_z - #pixel)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 10 ; Angle to offset
+    float a = atan2(trap_z - @offset)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 11 ; combined
+  #index = (min_dist + (0.01*trap_iter))/2
+  elseif @coloring == 12
+   #index = min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel)
+  elseif @coloring == 13
+   ;angle calc
+   float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) *  a
+    ;angle to pixel calc
+   float aa = atan2(trap_z - #pixel)
+    if aa < 0
+      aa = a + 2 * #pi
+    endif
+    aa = 1 / (2 * #pi) * a
+   ;angle to offset calc
+    float aaa = atan2(trap_z - @offset)
+    if aaa < 0
+      aaa = a + 2 * #pi
+    endif
+      aaa = 1 / (2 * #pi) * a
+    ; If 'Works' option used : choice of averaging formulae
+    if @indexchoice == 0
+     ; no averaging
+    #index = min_dist + max_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) +a + aa +aaa
+    elseif @indexchoice == 1
+    ; arithmetic average
+     #index = (min_dist + max_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    elseif @indexchoice == 2
+    ; geometric average
+    #index = (min_dist * max_dist * (0.01 * trap_iter) * real(trap_z) * imag(trap_z) * cabs(trap_z - #pixel) * cabs(trap_z - @offset) *a * aa *aaa)^-9
+    elseif @indexchoice == 3
+     ; harmonic average
+    float recip = (1/min_dist) + (1/max_dist) + (1/(0.01 * trap_iter)) + (1/real(trap_z)) + (1/imag(trap_z)) + (1/cabs(trap_z - #pixel)) + (1/cabs(trap_z - @offset)) + (1/a) + (1/aa) + (1/aaa)
+    float recipave = (1/(recip/9))
+    #index = recipave
+    elseif @indexchoice == 4
+    ; standard deviation
+    float aave = (min_dist + max_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    float sd =  ((min_dist/aave)^2 + ((0.01 * trap_iter)/aave)^2 + (real(trap_z)/aave)^2 + (imag(trap_z)/aave)^2 + (cabs(trap_z - #pixel)/aave)^2 + (cabs(trap_z - @offset)/aave)^2 + (a/aave)^2 + (aa/aave)^2 + (aaa/aave)^2)/9
+    #index = sd
+    elseif @indexchoice == 5
+    ; coefficient of variation
+    float aave = (min_dist +  max_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    float sd =  ((min_dist/aave)^2 + ((0.01 * trap_iter)/aave)^2 + (real(trap_z)/aave)^2 + (imag(trap_z)/aave)^2 + (cabs(trap_z - #pixel)/aave)^2 + (cabs(trap_z - @offset)/aave)^2 + (a/aave)^2 + (aa/aave)^2 + (aaa/aave)^2)/9
+    #index =sd/aave
+    elseif @indexchoice == 6
+    ; fractal dimension change sd^aave
+    ;float dr = cabs(trap_z - #pixel) - min_dist
+    ;#index = sd/dr
+    float aave = (min_dist +  max_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    float sd =  ((min_dist/aave)^2 + ((0.01 * trap_iter)/aave)^2 + (real(trap_z)/aave)^2 + (imag(trap_z)/aave)^2 + (cabs(trap_z - #pixel)/aave)^2 + (cabs(trap_z - @offset)/aave)^2 + (a/aave)^2 + (aa/aave)^2 + (aaa/aave)^2)/9
+    #index =sd^aave
+    endif
+  endif
+default:
+  title = "Gnarly Orbit Traps Eb ver 3"
+  param formula
+    caption = "Formula"
+    enum = "Martin" "Popcorn" "Vine" "Gnarl" "Martin and Popcorn combined"
+    default = 1
+  endparam
+
+  param f4choice
+  caption = "Order of M + P calcs"
+  enum = " M then P" "P then M"
+  visible = @formula == 4
+  default = 0
+  endparam
+
+  param @trap_mode
+    caption = "Mode"
+    enum = "Closest" "Final" "Average" "Martin"
+    default = 1
+  endparam
+  param @frm_mode
+    caption = "Variable"
+    enum = "Magnitude" "Distance" "Pixel distance" "Offset distance"
+  endparam
+  param coloring
+    caption = "Coloring"
+    enum = "Distance" "Max Distance" "Iteration" "Magnitude" "Real" \
+           "Imag" "Angle" "Pixel distamce" "Offset distance" \
+           "Angle to pixel" "Angle to offset" "(Distance +Iteration)/2" "(Dist+Iter+Real+Imag+Pixel)" \
+           "The works"
+  endparam
+  param indexchoice
+  caption = "Averaging options for 'Works' choice"
+  enum = "No average" "Arithmetic Average" "Geometric Average" "Harmonic Average" "Std Deviation" "Coeff. Variation" "Std Dev^Arith Ave"
+  visible = @coloring == "The works"
+  default = 0
+  endparam
+
+  param offset
+    caption = "Offset"
+    hint = "This is added to the value of z before the trap \
+           formula is iterated."
+  endparam
+  param scale
+    caption = "Scale"
+    hint = "This affects the size of the shapes."
+    default = 0.5
+    min = 1e-20
+  endparam
+  param a
+    caption = "Alpha"
+    hint = "This parameter is used for all of the formulas."
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    hint = "This parameter is used only for Vine flavor 1 and Gnarl."
+    default = 2.0
+    visible = (@formula == 2 && @flavor == 1) ||   @formula == 3
+  endparam
+  param h
+    caption = "Step size"
+    hint = "This parameter usually affects the 'harshness' of the \
+            shapes."
+    default = 0.05
+    min = 1e-20
+  endparam
+  param flavor
+    caption = "Vine flavor"
+    hint = "This is the 'flavor' for the Vine formula."
+    default = 2
+    min = 0
+    visible = @formula == 2
+  endparam
+  func gn1
+    caption = "Gnarl function #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+    default = sin()
+    visible = @formula == 3
+  endfunc
+  func gn2
+    caption = "Gnarl function #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+    visible = @formula == 3
+  endfunc
+  func gn3
+    caption = "Gnarl function #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+    visible = @formula == 3
+  endfunc
+
+  param max_iter
+    caption = "Trap Iterations"
+    hint = "This is the number of times to iterate the trap formula."
+    default = 10
+    min = 1
+  endparam
+  param m
+    caption = "Martin trap mode parameter"
+    hint = "This is the parameter for the Martin mode."
+    default = 3.14159
+    visible = @trap_mode == 3
+  endparam
+  param m_iterations
+    caption = "Martin trap mode iterations"
+    hint = "This is the number of iterations for the \
+            Martin mode."
+    default = 10
+    min = 1
+    visible = @trap_mode == 3
+  endparam
+  param mscale
+    caption = "Martin trap mode scale"
+    hint = "This is the scale for the Martin mode."
+    default = 0.1
+    min = 1e-20
+    visible = @trap_mode == 3
+  endparam
+  func fn1
+    caption = "First trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+ 
+}
+
+mt-gnarly-traps-EB-ver-1 {
+ ; Mark Townsend, 27 Aug 1999
+ ;modified Evan Bayliss Jan 2021
+init:
+  w = 0
+  trap_z = 0
+  trap_frm_z = 0
+  int iter = 0
+  int frm_iter = 0
+  int trap_frm_iter = 0
+  int trap_iter = 0
+  float x = 0
+  float y = 0
+  float xx = 0
+  float average = 0
+  float frm_dist = 0
+  float min_w = 1e20
+  float min_dist = 1e20
+  float ctz = 0
+loop:
+  w = @fn1(#z + @offset)
+  x = real(w) * 1/@scale
+  y = imag(w) * 1/@scale
+
+; Iterate trap formula
+  frm_iter = 0
+  average = 0
+  min_w = 1e20
+  while frm_iter < @max_iter
+    xx = x
+    if @formula == 0
+    ; Martin
+      x = y - sin(x)
+      y = @a - xx
+    elseif @formula == 1
+    ; Popcorn
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+    elseif @formula == 2
+      ; Vine
+      if @flavor == 0
+        x = x - @h * sin(y + sin(@a * y ))
+        y = y + @h * sin(xx + sin(@a * xx))
+      elseif @flavor == 1
+        x = x - @h * sin(y^@b + sin(@a * y))
+        y = y + @h * sin(xx^@b + sin(@a * xx))
+      elseif @flavor == 2
+       x = x - @h * sin(y + sin(@a * (y + sin(@a * y))))
+       y = y + @h * sin(xx + sin(@a * (xx + sin(@a * xx))))
+      else
+        float newx = y
+        float newy = x
+        int i = 0
+        while i < @flavor
+          i = i + 1
+          newx = y + sin(@a * newx)
+          newy = x + sin(@a * newy)
+        endwhile
+        x = x - @h * sin(newx)
+        y = y + @h * sin(newy)
+      endif
+    elseif @formula == 3
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@a * (y + @gn3(@b * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@a * (xx + @gn3(@b * xx)))))
+    elseif @formula == 4
+      ; Martin and Popcorn combined
+      if @f4choice == 0
+      x = y - sin(x)
+      y = @a - xx
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      else
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      x = y - sin(x)
+      y = @a - xx
+      endif
+    endif
+
+
+    w = @fn2(x + flip(y))
+    if @trap_mode == 0 || @trap_mode == 2 ; Closest & Average
+    ; Choose the variable that we want to watch...
+      if @frm_mode == 0
+        frm_dist = cabs(w)
+      elseif @frm_mode == 1
+        frm_dist = cabs(w - #z)
+      elseif @frm_mode == 2
+        frm_dist = cabs(w - #pixel)
+      elseif @frm_mode == 3
+        frm_dist = cabs(w - @offset)
+      endif
+    endif
+    if @trap_mode == 0
+      ; Closest
+      if frm_dist < min_w
+        min_w = frm_dist
+        trap_frm_z = w
+        trap_frm_iter = frm_iter
+      endif
+    elseif @trap_mode == 2
+      ; Average
+      average = average + frm_dist
+    endif
+    frm_iter = frm_iter + 1
+  endwhile ; end of formula loop
+
+  if @trap_mode == 3 ; Martin
+    x = real(w) * 1/@mscale
+    y = imag(w) * 1/@mscale
+  ; Iterate the Martin formula
+    i = 0
+    while i < @m_iterations
+      xx = x
+      x = y - sin(x)
+      y = @m - xx
+      i = i + 1
+    endwhile
+    w = x + flip(y)
+  endif
+
+  if @trap_mode == 1 || @trap_mode == 3 ; Final & Martin
+  ; Choose the variable that we want to watch...
+    if @frm_mode == 0
+       min_w = cabs(w)
+    elseif @frm_mode == 1
+      min_w = cabs(w - #z)
+    elseif @frm_mode == 2
+      min_w = cabs(w - #pixel)
+    elseif @frm_mode == 3
+      min_w = cabs(w - @offset)
+    endif
+  elseif @trap_mode == 2 ; Average
+    min_w = average / @max_iter
+  endif
+
+; Look for the smallest value
+  if min_w < min_dist
+    min_dist = min_w
+    if @trap_mode == 0
+      trap_z = trap_frm_z
+      trap_iter = trap_frm_iter
+    else
+      trap_z = #z
+      trap_iter = iter
+    endif
+  endif
+
+  iter = iter + 1
+final:
+  if @coloring == 0 ; Distance
+    #index = min_dist
+  elseif @coloring == 1 ; Iteration
+    #index = 0.01 * trap_iter
+  elseif @coloring == 2 ; Magnitude
+    #index = cabs(trap_z)
+  elseif @coloring == 3 ; Real
+    #index = real(trap_z)
+  elseif @coloring == 4 ; Imag
+    #index = imag(trap_z)
+  elseif @coloring == 5 ; Angle
+    float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 6 ; Pixel distance
+    #index = cabs(trap_z - #pixel)
+  elseif @coloring == 7 ; Offset distance
+    #index = cabs(trap_z - @offset)
+  elseif @coloring == 8 ; Angle to pixel
+    float a = atan2(trap_z - #pixel)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 9 ; Angle to offset
+    float a = atan2(trap_z - @offset)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 10
+  #index = (min_dist + (0.01*trap_iter))/2
+  elseif @coloring == 11
+   #index = min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel)
+  elseif @coloring == 12
+   ;angle calc
+   float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) *  a
+    ;angle to pixel calc
+   float aa = atan2(trap_z - #pixel)
+    if aa < 0
+      aa = a + 2 * #pi
+    endif
+    aa = 1 / (2 * #pi) * a
+   ;angle to offset calc
+    float aaa = atan2(trap_z - @offset)
+    if aaa < 0
+      aaa = a + 2 * #pi
+    endif
+      aaa = 1 / (2 * #pi) * a
+
+    #index = min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) +a + aa +aaa
+  endif
+default:
+  title = "Gnarly Orbit Traps Eb ver 1"
+  param formula
+    caption = "Formula"
+    enum = "Martin" "Popcorn" "Vine" "Gnarl" "Martin and Popcorn combined"
+    default = 1
+  endparam
+  param f4choice
+  caption = "Order of M + P calcs"
+  enum = " M then P" "P then M"
+  default = 0
+  visible = @formula == 4
+  endparam
+
+  param @trap_mode
+    caption = "Mode"
+    enum = "Closest" "Final" "Average" "Martin"
+    default = 1
+  endparam
+  param @frm_mode
+    caption = "Variable"
+    enum = "Magnitude" "Distance" "Pixel distance" "Offset distance"
+  endparam
+  param coloring
+    caption = "Coloring"
+    enum = "Distance" "Iteration" "Magnitude" "Real" \
+           "Imag" "Angle" "Pixel distamce" "Offset distance" \
+           "Angle to pixel" "Angle to offset" "(Distance +Iteration)/2" "(Dist+Iter+Real+Imag+Pixel)" \
+           "The works"
+  endparam
+  param offset
+    caption = "Offset"
+    hint = "This is added to the value of z before the trap \
+           formula is iterated."
+  endparam
+  param scale
+    caption = "Scale"
+    hint = "This affects the size of the shapes."
+    default = 0.5
+    min = 1e-20
+  endparam
+  param a
+    caption = "Alpha"
+    hint = "This parameter is used for all of the formulas."
+    default = 3.0
+  endparam
+  param b
+    caption = "Beta"
+    hint = "This parameter is used only for Vine flavor 1 and Gnarl."
+    default = 2.0
+    visible = (@formula == 2 && @flavor == 1) || @formula == "Gnarl"
+  endparam
+  param h
+    caption = "Step size"
+    hint = "This parameter usually affects the 'harshness' of the \
+            shapes."
+    default = 0.05
+    min = 1e-20
+  endparam
+  param flavor
+    caption = "Vine flavor"
+    hint = "This is the 'flavor' for the Vine formula."
+    default = 2
+    min = 0
+    visible = @formula == "Vine"
+  endparam
+
+  func gn1
+    caption = "Gnarl function #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+    default = sin()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn2
+    caption = "Gnarl function #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn3
+    caption = "Gnarl function #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+    visible = @formula == "Gnarl"
+  endfunc
+  param max_iter
+    caption = "Iterations"
+    hint = "This is the number of times to iterate the trap formula."
+    default = 10
+    min = 1
+  endparam
+  param m
+    caption = "Martin parameter"
+    hint = "This is the parameter for the Martin mode."
+    default = 3.14159
+    visible = @trap_mode == "Martin"
+  endparam
+  param m_iterations
+    caption = "Martin iterations"
+    hint = "This is the number of iterations for the \
+            Martin mode."
+    default = 10
+    min = 1
+    visible = @trap_mode == "Martin"
+  endparam
+  param mscale
+    caption = "Martin scale"
+    hint = "This is the scale for the Martin mode."
+    default = 0.1
+    min = 1e-20
+    visible = @trap_mode == "Martin"
+  endparam
+ func fn1
+    caption = "First trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+}
+
+mt-gnarly-traps-EB-ver-2 {
+ ; Mark Townsend, 27 Aug 1999
+ ;modified Evan Bayliss Jan 2021
+init:
+  w = 0
+  trap_z = 0
+  trap_frm_z = 0
+  int iter = 0
+  int frm_iter = 0
+  int trap_frm_iter = 0
+  int trap_iter = 0
+  float x = 0
+  float y = 0
+  float xx = 0
+  float average = 0
+  float frm_dist = 0
+  float min_w = 1e20
+  float min_dist = 1e20
+  float max_w = 0
+  float max_dist = 0
+  float ctz = 0
+
+loop:
+  w = @fn1(#z + @offset)
+  x = real(w) * 1/@scale
+  y = imag(w) * 1/@scale
+
+; Iterate trap formula
+  frm_iter = 0
+  average = 0
+  min_w = 1e20
+  while frm_iter < @max_iter
+    xx = x
+    if @formula == 0
+    ; Martin
+      x = y - sin(x)
+      y = @a - xx
+    elseif @formula == 1
+    ; Popcorn
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+    elseif @formula == 2
+      ; Vine
+      if @flavor == 0
+        x = x - @h * sin(y + sin(@a * y ))
+        y = y + @h * sin(xx + sin(@a * xx))
+      elseif @flavor == 1
+        x = x - @h * sin(y^@b + sin(@a * y))
+        y = y + @h * sin(xx^@b + sin(@a * xx))
+      elseif @flavor == 2
+       x = x - @h * sin(y + sin(@a * (y + sin(@a * y))))
+       y = y + @h * sin(xx + sin(@a * (xx + sin(@a * xx))))
+      else
+        float newx = y
+        float newy = x
+        int i = 0
+        while i < @flavor
+          i = i + 1
+          newx = y + sin(@a * newx)
+          newy = x + sin(@a * newy)
+        endwhile
+        x = x - @h * sin(newx)
+        y = y + @h * sin(newy)
+      endif
+    elseif @formula == 3
+      ; Gnarl
+      x = x - @h * real(@gn1(y + @gn2(@a * (y + @gn3(@b * y)))))
+      y = y + @h * real(@gn1(xx + @gn2(@a * (xx + @gn3(@b * xx)))))
+    elseif @formula == 4
+      ; Martin and Popcorn combined
+      if @f4choice == 0
+      x = y - sin(x)
+      y = @a - xx
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      else
+      x = x - @h * sin(y + tan(@a * y))
+      y = y - @h * sin(xx + tan(@a * xx))
+      x = y - sin(x)
+      y = @a - xx
+      endif
+    endif
+
+
+    w = @fn2(x + flip(y))
+    if @trap_mode == 0 || @trap_mode == 2 ; Closest & Average
+    ; Choose the variable that we want to watch...
+      if @frm_mode == 0
+        frm_dist = cabs(w)
+      elseif @frm_mode == 1
+        frm_dist = cabs(w - #z)
+      elseif @frm_mode == 2
+        frm_dist = cabs(w - #pixel)
+      elseif @frm_mode == 3
+        frm_dist = cabs(w - @offset)
+      endif
+    endif
+    if @trap_mode == 0
+      ; Closest
+      if frm_dist < min_w
+        min_w = frm_dist
+        trap_frm_z = w
+        trap_frm_iter = frm_iter
+      endif
+      ; Furthest
+     if frm_dist > max_w
+        max_w = frm_dist
+        trap_frm_z = w
+        trap_frm_iter = frm_iter
+      endif
+    elseif @trap_mode == 2
+      ; Average
+      average = average + frm_dist
+    endif
+    frm_iter = frm_iter + 1
+  endwhile ; end of formula loop
+
+  if @trap_mode == 3 ; Martin
+    x = real(w) * 1/@mscale
+    y = imag(w) * 1/@mscale
+  ; Iterate the Martin formula
+    i = 0
+    while i < @m_iterations
+      xx = x
+      x = y - sin(x)
+      y = @m - xx
+      i = i + 1
+    endwhile
+    w = x + flip(y)
+  endif
+
+  if @trap_mode == 1 || @trap_mode == 3 ; Final & Martin
+  ; Choose the variable that we want to watch...
+    if @frm_mode == 0
+       max_w = min_w = cabs(w)
+    elseif @frm_mode == 1
+      max_w = min_w = cabs(w - #z)
+    elseif @frm_mode == 2
+      max_w = min_w = cabs(w - #pixel)
+    elseif @frm_mode == 3
+      max_w = min_w = cabs(w - @offset)
+    endif
+  elseif @trap_mode == 2 ; Average
+    max_w = min_w = average / @max_iter
+  endif
+
+; Look for the smallest value
+  if min_w < min_dist
+    min_dist = min_w
+    if @trap_mode == 0
+      trap_z = trap_frm_z
+      trap_iter = trap_frm_iter
+    else
+      trap_z = #z
+      trap_iter = iter
+    endif
+  endif
+
+  ; Look for the largest value
+  if max_w > max_dist
+    max_dist = max_w
+    if @trap_mode == 0
+      trap_z = trap_frm_z
+      trap_iter = trap_frm_iter
+    else
+      trap_z = #z
+      trap_iter = iter
+    endif
+  endif
+
+  iter = iter + 1
+final:
+  if @coloring == 0 ; Distance
+    #index = min_dist
+  elseif @coloring == 1
+  #index = max_dist
+  elseif @coloring == 2 ; Iteration
+    #index = 0.01 * trap_iter
+  elseif @coloring == 3 ; Magnitude
+    #index = cabs(trap_z)
+  elseif @coloring == 4 ; Real
+    #index = real(trap_z)
+  elseif @coloring == 5 ; Imag
+    #index = imag(trap_z)
+  elseif @coloring == 6 ; Angle
+    float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 7 ; Pixel distance
+    #index = cabs(trap_z - #pixel)
+  elseif @coloring == 8 ; Offset distance
+    #index = cabs(trap_z - @offset)
+  elseif @coloring == 9 ; Angle to pixel
+    float a = atan2(trap_z - #pixel)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 10 ; Angle to offset
+    float a = atan2(trap_z - @offset)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) * a
+    #index = a
+  elseif @coloring == 11 ; combined
+  #index = (min_dist + (0.01*trap_iter))/2
+  elseif @coloring == 12
+   #index = min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel)
+  elseif @coloring == 13
+   ;angle calc
+   float a = atan2(trap_z)
+    if a < 0
+      a = a + 2 * #pi
+    endif
+    a = 1 / (2 * #pi) *  a
+    ;angle to pixel calc
+   float aa = atan2(trap_z - #pixel)
+    if aa < 0
+      aa = a + 2 * #pi
+    endif
+    aa = 1 / (2 * #pi) * a
+   ;angle to offset calc
+    float aaa = atan2(trap_z - @offset)
+    if aaa < 0
+      aaa = a + 2 * #pi
+    endif
+      aaa = 1 / (2 * #pi) * a
+    ; If 'Works' option used : choice of averaging formulae
+    if @indexchoice == 0
+     ; no averaging
+    #index = min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) +a + aa +aaa
+    elseif @indexchoice == 1
+    ; arithmetic average
+     #index = (min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    elseif @indexchoice == 2
+    ; geometric average
+    #index = (min_dist * (0.01 * trap_iter) * real(trap_z) * imag(trap_z) * cabs(trap_z - #pixel) * cabs(trap_z - @offset) *a * aa *aaa)^-9
+    elseif @indexchoice == 3
+     ; harmonic average
+    float recip = (1/min_dist) + (1/(0.01 * trap_iter)) + (1/real(trap_z)) + (1/imag(trap_z)) + (1/cabs(trap_z - #pixel)) + (1/cabs(trap_z - @offset)) + (1/a) + (1/aa) + (1/aaa)
+    float recipave = (1/(recip/9))
+    #index = recipave
+    elseif @indexchoice == 4
+    ; standard deviation
+    float aave = (min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    float sd =  ((min_dist/aave)^2 + ((0.01 * trap_iter)/aave)^2 + (real(trap_z)/aave)^2 + (imag(trap_z)/aave)^2 + (cabs(trap_z - #pixel)/aave)^2 + (cabs(trap_z - @offset)/aave)^2 + (a/aave)^2 + (aa/aave)^2 + (aaa/aave)^2)/9
+    #index = sd
+    elseif @indexchoice == 5
+    ; coefficient of variation
+    float aave = (min_dist + (0.01 * trap_iter) + real(trap_z) + imag(trap_z) + cabs(trap_z - #pixel) + cabs(trap_z - @offset) + a + aa + aaa)/9
+    float sd =  ((min_dist/aave)^2 + ((0.01 * trap_iter)/aave)^2 + (real(trap_z)/aave)^2 + (imag(trap_z)/aave)^2 + (cabs(trap_z - #pixel)/aave)^2 + (cabs(trap_z - @offset)/aave)^2 + (a/aave)^2 + (aa/aave)^2 + (aaa/aave)^2)/9
+    #index =sd/aave
+    elseif @indexchoice == 6
+    ; fractal dimension
+    float dr = max_dist - min_dist
+    #index = sd/dr
+    endif
+  endif
+default:
+  title = "Gnarly Orbit Traps Eb ver 2"
+  param formula
+    caption = "Formula"
+    enum = "Martin" "Popcorn" "Vine" "Gnarl" "Martin and Popcorn combined"
+    default = 1
+  endparam
+  param f4choice
+  caption = "Order of M + P calcs"
+  enum = " M then P" "P then M"
+  visible = @formula == 4
+  default = 0
+  endparam
+
+  param @trap_mode
+    caption = "Mode"
+    enum = "Closest" "Final" "Average" "Martin"
+    default = 1
+  endparam
+  param @frm_mode
+    caption = "Variable"
+    enum = "Magnitude" "Distance" "Pixel distance" "Offset distance"
+  endparam
+  param coloring
+    caption = "Coloring"
+    enum = "Distance" "Max Distance" "Iteration" "Magnitude" "Real" \
+           "Imag" "Angle" "Pixel distamce" "Offset distance" \
+           "Angle to pixel" "Angle to offset" "(Distance +Iteration)/2" "(Dist+Iter+Real+Imag+Pixel)" \
+           "The works"
+  endparam
+  param indexchoice
+  caption = "Averaging options for 'Works' choice"
+  enum = "No average" "Arithmetic Average" "Geometric Average" "Harmonic Average" "Std Deviation" "Coeff. Variation" "Fractal Dimension"
+  visible = @coloring == 12
+  default = 0
+  endparam
+
+  param offset
+    caption = "Offset"
+    hint = "This is added to the value of z before the trap \
+           formula is iterated."
+  endparam
+  param scale
+    caption = "Scale"
+    hint = "This affects the size of the shapes."
+    default = 0.5
+    min = 1e-20
+  endparam
+  param a
+    caption = "Alpha"
+    hint = "This parameter is used for all of the formulas."
+    default = 3.0
+  endparam
+  param flavor
+    caption = "Vine flavor"
+    hint = "This is the 'flavor' for the Vine formula."
+    default = 2
+    min = 0
+  endparam
+  param b
+    caption = "Beta"
+    hint = "This parameter is used only for Vine flavor 1 and Gnarl."
+    default = 2.0
+    visible = (@formula == 2 && @flavor == 1) || @formula == "Gnarl"
+  endparam
+  func gn1
+    caption = "Gnarl function #1"
+    hint = "This is the first function for the Gnarl \
+            formula only."
+    default = sin()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn2
+    caption = "Gnarl function #2"
+    hint = "This is the second function for the Gnarl \
+            formula only."
+    default = tan()
+    visible = @formula == "Gnarl"
+  endfunc
+  func gn3
+    caption = "Gnarl function #3"
+    hint = "This is the third function for the Gnarl \
+            formula only."
+    default = cos()
+    visible = @formula == "Gnarl"
+  endfunc
+  param h
+    caption = "Step size"
+    hint = "This parameter usually affects the 'harshness' of the \
+            shapes."
+    default = 0.05
+    min = 1e-20
+  endparam
+
+  param max_iter
+    caption = "Iterations"
+    hint = "This is the number of times to iterate the trap formula."
+    default = 10
+    min = 1
+    visible = @trap_mode == "Martin"
+  endparam
+  param m
+    caption = "Martin trap parameter"
+    hint = "This is the parameter for the Martin mode."
+    default = 3.14159
+    visible = @trap_mode == "Martin"
+  endparam
+  param m_iterations
+    caption = "Martin trap iterations"
+    hint = "This is the number of iterations for the \
+            Martin mode."
+    default = 10
+    min = 1
+    visible = @trap_mode == "Martin"
+  endparam
+  param mscale
+    caption = "Martin trap scale"
+    hint = "This is the scale for the Martin mode."
+    default = 0.1
+    min = 1e-20
+    visible = @trap_mode == "Martin"
+  endparam
+  func fn1
+    caption = "First trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+  func fn2
+    caption = "Second trap function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+    visible = @formula == "Gnarl"
+  endfunc
+
+}
+
+ExponentialSmoothingEBver3a {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Written by Damien M. Jones
+;real(sum/sum2) rather than |sum/sum2|
+;
+init:
+  complex sum = (0.0,0.0)
+  complex sum2 = (0.0,0.0)
+  complex zold = (0,0)
+  int iter = 0
+loop:
+  iter =iter + 1
+  IF (@diverge)
+    sum = @funct1(sum) + exp(-cabs(#z))
+  ENDIF
+  IF (@converge)
+    sum2 = @funct1(sum2) + exp(-1/cabs(zold-#z))
+  ENDIF
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = real(sum2)
+    ELSE
+      #index = 0
+    ENDIF
+
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = real(sum) * @divergescale
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+
+default:
+  title = "Exponential Smoothing EB ver 3a"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+$IFDEF VER50
+  rating = recommended
+$ENDIF
+
+  param diverge
+    caption = "Color Divergent"
+    default = FALSE
+    hint = "If checked, points which escape to infinity will be \
+            colored."
+  endparam
+
+  func funct1
+  caption = " Function for sum/sum2 in loop"
+  default = abs()
+  endfunc
+
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If checked, points which collapse to one value will be \
+            colored."
+  endparam
+  param divergescale
+    caption = "Divergent Density"
+    default = 1.0
+$IFDEF VER40
+    exponential = true
+$ENDIF
+    hint = "Sets the divergent coloring density, relative to the \
+            convergent coloring. If set to 1.0, they will use \
+       	    the same color density."
+  endparam
+}

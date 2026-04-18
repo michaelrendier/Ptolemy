@@ -1,0 +1,5949 @@
+KPKSierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Jan 2000
+;
+; Revision: March 02, 2000
+;
+; suggestions and additions are welcome
+;
+; Adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param now enabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Sierpinskiing
+;   by Andreas Lober
+;
+; What you have to know first:
+;   The Init-Flavours go through the init sections
+;   of the different KPK-formulae,
+;
+;   whilst the Loop-Flavours go through the loop sections
+;   of the different KPK-formulae.
+;
+; More comments are to be found in the formula text
+;
+; The MAC Sierpinski02 is not like the original
+; More formula material waits to be included...
+;
+; Don Quixote seems not to work correctly
+;
+
+init:
+  complex  z = 0
+  complex zc = 0
+  int iter   = 0
+  float IMC  = 0
+
+  if     (@i_flavour == 0) ; AKLinsky
+
+     z = pixel + @epsilon/#pixel
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z*@fn1(z) + @epsilon/z - zc)/@sizesq
+
+
+  elseif (@i_flavour == 1) ; KPKinsky I
+
+     z = #pixel + @epsilon/#pixel
+
+
+  elseif (@i_flavour == 2) ; KPKinsky II+IV, KPKinskyDM3
+                           ; Funcinsky, KPKinskyDM3,
+                           ; KPKMultinsky
+                           ; Intermediate function = sqr()
+                           ;
+                           ; PinskyFamily I+II, QuadrinskyFamily,
+                           ; Intermediate function = round()
+                           ;
+                           ; Dalinsky
+                           ; Intermediate function = atan()
+
+     z = #pixel + @epsilon/#pixel
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z + @epsilon/z - zc)/@sizesq
+
+
+  elseif (@i_flavour == 3) ; KPKinsky II+IV Power
+                           ; Intermediate function = sqr()
+                           ; PinskyFamily I+II Power,
+                           ; QuadrinskyFamily Power,
+                           ; Funcinsky Power
+                           ; KPKinskyDM3 Power
+                           ; Intermediate function = round()
+                           ; Dalinsky Power
+                           ; Intermediate function = atan()
+
+     z = #pixel + @epsilon/#pixel
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z + @epsilon/z - zc)/@power
+
+
+  elseif (@i_flavour == 4) ; KPKinsky III
+                          ; Intermediate function = floor()
+
+     z = #pixel + @epsilon/#pixel
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z + @epsilon/z - (@corte*zc/2))/(@corte*@sizesq)
+
+
+  elseif (@i_flavour == 5) ; KPKinsky III Power
+                          ; Intermediate function = floor()
+
+     z = #pixel + @epsilon/#pixel
+    zc = @imFkt(z/@power)*@sizesq
+     z = @factor*(z + @epsilon/z - (@corte*zc/2))/(@corte*@sizesq)
+
+
+  elseif (@i_flavour == 6) ; SierpM-Net
+                          ; Intermediate function = abs()
+                          ; SierpinskiM-Hex
+                          ; Intermediate function = log()
+                          ;   and spokes = 6
+
+     z = 0.2*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+
+
+  elseif (@i_flavour == 7) ; SierpM-NetFamily
+                          ; Intermediate function = round()
+                          ;   and spokes = 3
+
+     z = 0.2*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z + @epsilon/z - zc)/@sizesq
+
+
+  elseif (@i_flavour == 8) ; SierpM-NetFamilyP
+                           ;   Intermediate function = round()
+                           ;     and Function 1 = abs()
+                           ;     and spokes = 3
+                           ; KPKinsky Federal
+                           ;   Start-Function = ident()
+                           ;     and spokes = 1
+
+     z = 0.2*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = @factor*(z + @epsilon/z - zc)/@power
+
+
+  elseif (@i_flavour == 9) ; SierpinskiM-Windmill I
+                           ; Start-Function = exp()
+                           ;   and spokes = 3
+                           ; Don Quixote
+                           ; Don Quixote NoS
+
+     z = 0.3*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+
+
+  elseif (@i_flavour == 10) ; Sierpinski02 from MAC.ufm
+                            ; Start-Function = ident()
+                            ;   and spokes = 1
+                            ;     does not work like
+                            ;     the original
+
+     z = @startFkt(#pixel^@spokes + @epsilon/#pixel)
+
+
+  elseif (@i_flavour == 11) ; KPKinskyRune
+
+     z = @startFkt(#pixel^@spokes + @epsilon/#pixel)
+    zc = @imFkt(z/@sizesq)*@sizesq
+     z = 2*(z + @epsilon/z - zc) + @Rune
+
+
+  endif
+
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+
+  if     (@ri_flavour == 0) ; real/imag
+
+    real_z = real(z)
+    imag_z = imag(z)
+
+    
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; max/min
+
+    float r_z = real(z)
+    float i_z = imag(z)
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+
+  elseif (@ri_flavour == 7) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+  if     (@l_flavour == 0) ; AKLinsky
+
+    if     (imag_z > @corte && 1/@corte < imag_z)
+      z = @factor*real_z      + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte && 1/@corte < real_z)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+0.75+IMC + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 1) ; KPKinsky I
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+0.75+IMC + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 2) ; KPKinsky II+III
+                           ; Pinskyfamily
+                           ; SierpM-NetFamily
+                           ; SierpinskiM Windmill I
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 3); KPKinsky IV
+                          ; PinskyFamily II
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @factor*imag_z+1.00+IMC + flip(@factor*real_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+  elseif (@l_flavour == 4); QuadrinskyFamily
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (imag_z < @corte)
+      z = @factor*imag_z+1.00+IMC +      @factor*real_z
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 5); Funcinsky, Dalinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC  + flip(@factor*imag_z)
+    elseif (real_z < -@corte/5)
+      z = @factor*@fn1(z)-1.00-IMC + flip(@factor*real_z)
+    else
+      z = @factor*@fn2(z)+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 6); KPKinskyDM3
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC  + flip(@factor*imag_z)
+    elseif (real_z > -@corte/5)
+      z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+    else
+      z = @factor*real_z+IMC       + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 7) ; KPKMultinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + @fn3(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + @fn4(@factor*imag_z)
+    elseif (real_z > @corte)
+      z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+    elseif (imag_z < -@corte/5)
+      z = @factor*imag_z+1.00+IMC + flip(@factor*real_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 8) ; SierpinskiM Net I
+                           ; SierpinskiM Windmill I
+                           ; Don Quixote
+                           ; Don Quixote LD
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+      z = @fn1(z)
+    endif
+
+
+  elseif (@l_flavour == 9) ; Don Quixote NoS
+
+    if     (imag_z > @corte)
+      z = @factor*real_z     + flip(@factor*imag_z-1.00-IMC)
+    else
+      z = @factor*real_z+IMC + flip(@factor*imag_z)
+      z = @fn2(z)
+    endif
+
+
+  elseif (@l_flavour == 10) ; MAC-Sierpinski02
+
+    complex a1 = 0
+    complex a2 = 0
+    complex a3 = 0
+
+    if     (imag_z > @corte)
+      a1 = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      a2 = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      a3 = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+    if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+      z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+
+    endif
+
+
+  elseif (@l_flavour == 11) ; +/-
+
+    if     (imag_z + real_z > 2*@corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (abs (real_z - imag_z) > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 12) ; max/min
+
+    float hlp_r = real_z
+    float hlp_i = imag_z
+
+    if (hlp_r < hlp_i)
+      real_z = hlp_r
+      imag_z = hlp_i
+    else
+      real_z = hlp_i
+      imag_z = hlp_r
+    endif
+    
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 13) ; KPKinsky Federal
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @factor*imag_z+1.00+IMC + flip(@factor*real_z)
+    else
+      z = @fn2(((z^2+@fact01+1)/(3*z+@fact01-1))^2) + #pixel/0.3
+    endif
+
+
+  elseif (@l_flavour == 14) ; KPKinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fact01*imag_z+1.00+IMC + flip(@factor*real_z)
+    elseif (real_z >  @corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 15) ; AKLinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 16) ; AKLinsky Dune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fn1(imag_z)
+    elseif (imag_z >  @corte/5)
+      z = @fn2(real_z)
+    elseif (real_z < -@corte/5)
+      z = @fn3(imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fn4(real_z)
+    else
+      z = @factor*real_z+IMC     + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 17) ; Sierpinksi Triangle distorted
+                            ; -> DJKinsky Triang
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+      z = @fn1(1/z^@factor)
+    endif
+
+  endif
+
+
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  z = @addFkt(z)
+
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  iter = iter + 1
+
+bailout:
+  ; |z| < @bailout
+  (@bailOutMode == 0 && \
+      |z| <= @bailout) || \
+  (@bailOutMode == 1 && \
+      sqr(real(z)) < @bailout) || \
+  (@bailOutMode == 2 && \
+      sqr(imag(z)) < @bailout) || \
+  (@bailOutMode == 3 && \
+      (sqr(real(z)) < @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 4 && \
+      (sqr(real(z)) < @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) < @bailout)) || \
+  (@bailOutMode == 6 && \
+      (sqr(real(z) + imag(z)) < @bailout)) || \
+  (@bailOutMode == 7 && \
+      (real(z)) <= @bailout) || \
+  (@bailOutMode == 8 && \
+      (imag(z)) <= @bailout)
+
+default:
+  title = "KPK Sierps with Joukowskij term"
+  maxiter = 512
+
+  param i_flavour
+    caption = "Flavours: Init"
+    enum = "AKLinsky" "KPKinsky I" "Dalinsky" "Dalinsky P" \
+           "KPKinsky III" "KPKinsky III P" "SierpM-Net" \
+           "SierpM-NetFamily" "SierpM-NetFamilyP" \
+           "Don Quixote *" "MAC Sierp02" "KPKinsky Rune"
+    default = 0
+  endparam
+
+  param l_flavour
+    caption = "Flavours: Loop"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky II+III" \
+           "KPKinsky IV" "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min" \
+           "KPKinsky Federal" "KPKinsky Rune" \
+           "AKLinsky Rune" "AKLinsky Dune" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param power
+    caption = "Power"
+    default = (2,0)
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = (4.0,0.0)
+  endparam
+
+  param Rune
+    caption = "Rune Constant"
+    default = (0.1666666667,0.33333333333)
+  endparam
+
+  param epsilon
+    caption = "J-Coeff. for 1/z"
+    default = 0.01
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param sizesq
+    caption = "Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param bailOutMode
+    caption = "Bailout Test Mode"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param corte
+    caption = "Cutting edges"
+    default = 0.5
+  endparam
+
+  param factor
+    caption = "Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "Add. const for DM3" 
+    default=(1.0,0.0)
+  endparam
+
+  param pure
+    caption = "With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  func startFkt
+    caption = "Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func fn1
+    caption = "Loop Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "Loop Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "Loop Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "Loop Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+} ; KPKSierps
+
+Sierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Jan 2000
+;
+; Revision: Feb, 07 2000
+;
+; suggestions and additions are welcome
+;
+;
+; Adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param can be en-/disabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Siepinskiing
+;   by Andreas Lober
+;
+; What you have to know first:
+;   The Init-Flavours go through the init sections
+;   of the different KPK-formulae,
+;   but are only abstracts of them,
+;   you have to combine
+;     Power1 yes/no Power2 yes/no
+;     InterMediate yes/no
+;
+;   whilst the Loop-Flavours go through the loop sections
+;   of the different KPK-formulae.
+;
+; More comments are to be found in the formula text
+;
+; The MAC Sierpinski02 is not like the original
+; More formula material waits to be included...
+;
+
+init:
+  complex  z = 0
+  complex zc = 0
+
+  int iter   = 0
+  float offset1 = @offset1
+  float offset2 = @offset2
+  float IMC  = 0
+
+  z = @startFac*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+
+  if (@withInterMediate)
+    if (@withPower1)
+      zc = @imFkt(z/@power)*@sizesq
+    else
+      zc = @imFkt(z/@sizesq)*@sizesq
+    endif
+
+    if     (@i_flavour == 0) ; AKLinsky
+      z = @factor*(z*@imFkt2(z) + @epsilon/z - zc)
+    elseif (@i_flavour == 1) ; KPKinsky I
+      z = @factor*(@imFkt2(z)   + @epsilon/z - zc)
+    elseif (@i_flavour == 2) ; KPKinsky III
+      z = @factor*(@imFkt2(z)   + @epsilon/z - \
+           (@corte*zc/2))/@corte
+    elseif (@i_flavour == 2) ; KPKinsky Rune
+      z = @factor*(z + @epsilon/z - zc) + @Rune
+    endif
+
+    if (@withPower2)
+     z = z/@power
+    else
+     z = z/@sizesq
+    endif
+  endif
+
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+    offset1 = @offset1 + IMC
+    offset2 = @offset2 + IMC
+  endif
+
+
+  if     (@ri_flavour == 0) ; real/imag
+
+    real_z = real(z)
+    imag_z = imag(z)
+
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; max/min
+
+    float r_z = real(z)
+    float i_z = imag(z)
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+
+  elseif (@ri_flavour == 7) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+  if     (@l_flavour == 0) ; AKLinsky
+
+    if     (imag_z > @corte && 1/@corte < imag_z)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte && 1/@corte < real_z)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 1) ; KPKinsky I
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 2); KPKinsky IV
+                          ; PinskyFamily II
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1 + flip(@factor*real_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+  elseif (@l_flavour == 3); QuadrinskyFamily
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    elseif (imag_z < @corte/@cortFac)
+      z = @factor*imag_z+offset1 +      @factor*real_z
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 4); Dalinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z < -@corte/@cortFac)
+      z = @factor*@fn1(z)-offset1 + flip(@factor*real_z)
+    else
+      z = @factor*@fn2(z)+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 5); KPKinskyDM3
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z > -@corte/@cortFac)
+      z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+    else
+      z = @factor*real_z+offset2  + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 6) ; KPKMultinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + @fn3(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + @fn4(@factor*imag_z)
+    elseif (real_z > @corte)
+      z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1  + flip(@factor*real_z)
+    else
+      z = @factor*real_z+offset2  + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 7) ; SierpinskiM Net I
+                           ; SierpinskiM Windmill I
+                           ; Don Quixote
+                           ; Don Quixote LD
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 8) ; Don Quixote NoS
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 9) ; MAC-Sierpinski02
+
+    complex a1 = 0
+    complex a2 = 0
+    complex a3 = 0
+
+    if     (imag_z > @corte)
+      a1 = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      a2 = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      a3 = @factor*real_z+offset2 + flip(@factor*imag_z)
+      a3 = @elseFkt(a3)
+    endif
+
+    if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+      z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+
+    endif
+
+
+  elseif (@l_flavour == 10) ; +/-
+
+    if     (imag_z + real_z > 2*@corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (abs (real_z - imag_z) > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 11) ; max/min
+
+    float hlp_r = real_z
+    float hlp_i = imag_z
+
+    if (hlp_r < hlp_i)
+      real_z = hlp_r
+      imag_z = hlp_i
+    else
+      real_z = hlp_i
+      imag_z = hlp_r
+    endif
+
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 12) ; KPKinsky Federal
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/@cortFac)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+1.00  + flip(@factor*real_z)
+    else
+      z = @fn2(((z^2+@fact01+1)/(3*z+@fact01-1))^2) + #pixel/0.3
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 13) ; KPKinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1.00)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fact01*imag_z+1.00   + flip(@factor*real_z)
+    elseif (real_z >  @corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 14) ; AKLinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 15) ; AKLinsky Dune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fn1(imag_z)
+    elseif (imag_z >  @corte/5)
+      z = @fn2(real_z)
+    elseif (real_z < -@corte/5)
+      z = @fn3(imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fn4(real_z)
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 16) ; Sierpinksi Triangle distorted
+                            ; -> DJKinsky Triang
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+      z = @fn1(1/z^@factor)
+    endif
+
+  endif
+
+
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  z = @addFkt(z)
+
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  iter = iter + 1
+
+bailout:
+  ;|z| < @bailout
+  (@bailOutMode == 0 && \
+      |z| <= @bailout) || \
+  (@bailOutMode == 1 && \
+      sqr(real(z)) < @bailout) || \
+  (@bailOutMode == 2 && \
+      sqr(imag(z)) < @bailout) || \
+  (@bailOutMode == 3 && \
+      (sqr(real(z)) < @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 4 && \
+      (sqr(real(z)) < @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) < @bailout)) || \
+  (@bailOutMode == 6 && \
+      (sqr(real(z) + imag(z)) < @bailout)) || \
+  (@bailOutMode == 7 && \
+      (real(z)) <= @bailout) || \
+  (@bailOutMode == 8 && \
+      (imag(z)) <= @bailout)
+
+default:
+  title = "Sierp Combinations from KPK"
+  maxiter = 512
+
+  param i_flavour
+    caption = "Flavours: Init"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky III" "KPKinsky Rune"
+    default = 0
+  endparam
+
+  param l_flavour
+    caption = "Flavours: Loop"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky IV" \
+           "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min"  \
+           "KPKinsky Federal" "KPKinsky Rune" \
+           "AKLinsky Rune" "AKLinsky Dune" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param startFac
+    caption = "i: Start Factor"
+    default = 1.0
+  endparam
+
+  param withInterMediate
+    caption = "i: InterMediate? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower1
+    caption = "i: 1. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower2
+    caption = "i: 2. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param power
+    caption = "i: Power"
+    default = (2,0)
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = 1.0
+  endparam
+
+  param Rune
+    caption = "Rune Constant"
+    default = (0.166667,0.33333333333)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = 0.01
+  endparam
+
+  param sizesq
+    caption = "i: Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param bailOutMode
+    caption = "Bailout Test Mode"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param corte
+    caption = "i: Cutting edges"
+    default = 0.5
+  endparam
+
+  param cortFac
+    caption = "i: add to Cutting edges"
+    default = 5
+  endparam
+
+  param factor
+    caption = "l: Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "l: Add. const for DM3"
+    default = (1.0,0.0)
+  endparam
+
+  param offset1
+    caption = "l: Offset 1 (in if/elseif)"
+    default = 1.0
+  endparam
+
+  param offset2
+    caption = "l: Offset 2 (in else)"
+    default = 0.75
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "f: Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "init: Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func imFkt2
+    caption = "init: add. Interm. function"
+    default = ident()
+  endfunc
+
+  func fn1
+    caption = "loop: Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "loop: Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "loop: Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "loop: Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func elseFkt
+    caption = "loop: Function in else-part"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+} ; Sierps
+
+
+LordSierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Feb 2000
+;
+; Revision: Feb, 07 2000
+;
+; suggestions and additions are welcome
+;
+;
+; Sierps adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param can be en-/disabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Sierpinskiing
+;   by Andreas Lober
+;
+
+init:
+  complex z  = 0
+  complex zc = 0
+
+  complex z1 = 0
+  complex z2 = 0
+  complex z3 = 0
+  complex z4 = 0
+  complex z5 = 0
+  int iter   = 0
+  float limit  = 100
+  complex limPar = (-0.74338090,-0.13185003030)
+  complex jPixel = (#pixel + @epsilon/#pixel)^@spokes
+
+  float offset1 = @offset1
+  float offset2 = @offset2
+  float iterModConst = 0
+
+  ; for KochCurve...
+  float angle1 = 0
+  float angle2 = 0
+  float spokesPi = 2*pi/@spokes
+  bool bail = false
+  bool elseBranchActive = FALSE
+
+  ; for the AGMinskys
+  complex ar = 0
+  complex ge = 0
+
+  complex arit = 0
+  complex geom = 0
+  complex oldz = 0
+  complex old_z = 0
+  
+
+  ;
+  ; Now let's start with Sierps
+  ;
+  z = @startFac*@startFkt(jPixel)
+
+
+  ;
+  ; Perhaps some additional Lord Flavours?
+  ;
+  if     (@ic_flavour == 1) ; Bilbo
+    z = @ic_fn1(@ic_fn2(jPixel))          \
+      - @ic_fn3(@ic_fn4(@ic_fac1/jPixel)) \
+      - @ic_fn3(@ic_fn5(@ic_fac2/jPixel))
+
+  elseif (@ic_flavour == 2) ; Frodo
+    z = @ic_fn1(@ic_fn2(jPixel))         \
+      - 1/((@ic_fn3(@ic_fn4(jPixel))^10) \
+           + @ic_fn3(@ic_fn5(jPixel)))
+
+  elseif (@ic_flavour == 3) ; Sam
+    z = @ic_fn1(imag(1-jPixel))*@ic_fn2(jPixel) \
+      - @ic_fn3(@ic_fn4(@ic_fac1/jPixel))       \
+      - @ic_fn3(@ic_fn5(@ic_fac2/jPixel))
+
+;    elseif (@lord == 4) ; Lord2103
+;      z = jPixel                    \
+;        - 0.5/(log(conj(jPixel))^12 \
+;               + jPixel)            \
+;        + conj(0.04/(jPixel))
+
+;    elseif (@lord == 5) ; Lord2104
+;      z = flip(1-jPixel)            \
+;            *sqr(jPixel)            \
+;        - conj(0.10/(jPixel))       \
+;        - flip(0.010/(jPixel))
+
+;    elseif (@lord == 6) ; Lord2105
+;      z = flip(1+jPixel)            \
+;            *sqr(conj(jPixel))      \
+;        - conj(0.10/jPixel)         \
+;        + flip(0.010/jPixel)
+
+;    elseif (@lord == 7) ; Lord2106
+;      z = jPixel                        \
+;        - 2/(sinh(0.10/jPixel)          \
+;              -sqr(tanh(0.010/jPixel))  \
+;            )
+
+;    elseif (@lord == 8) ; Lord2107
+;      z = jPixel                        \
+;        - 1/(sinh(0.10/jPixel)          \
+;              -sqr(cosh(0.0250/jPixel)) \
+;            )
+
+;    elseif (@lord == 9) ; Lord2108
+;      z = jPixel                        \
+;        - 1/(tanh(0.10/jPixel)          \
+;              -sqr(sinh(0.0250/jPixel)) \
+;            )^6
+
+;    elseif (@lord == 10) ; Lord2109
+;      z = jPixel                        \
+;        - 1/(atan(0.10/jPixel)          \
+;              -sqr(acos(0.0250/jPixel)) \
+;            )^6
+
+  endif
+
+  ;
+  ; Prepare the Lord Flavours of the init: section
+  ;
+  if (@lc_flavour == 0)
+    z1 = z
+    z2 = z
+    z3 = z
+    z4 = z
+  else
+    z1 = z*@lordFac
+    z2 = z*@lordFac^2
+    z3 = z*@lordFac^3
+    z4 = z*@lordFac^4
+  endif
+
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z)  - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z)   - @lattFac2*sqrt(real(z)*imag(z))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)         
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)         
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)         
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+
+
+  ;
+  ; Give an additional Exponent
+  ;
+  if (@startExp != 1)
+    z = z^@startExp
+  endif
+
+
+
+  ;
+  ; check, if the Intermediate section of the Sierps
+  ; will be active
+  ;
+  if (@withInterMediate)
+    if (@withPower1)
+      zc = @imFkt(z/@power)*@sizesq
+    else
+      zc = @imFkt(z/@sizesq)*@sizesq
+    endif
+
+    if     (@is_flavour == 0) ; AKLinsky
+      z = @factor*(z*@imFkt2(z) + @epsilon/z - zc)
+    
+    elseif (@is_flavour == 1) ; KPKinsky I
+      z = @factor*(@imFkt2(z)   + @epsilon/z - zc)
+    
+    elseif (@is_flavour == 2) ; KPKinsky III
+      z = @factor*(@imFkt2(z)   + @epsilon/z - \
+           (@corte*zc/2))/@corte
+    
+    endif ; @is_flavour == ?
+
+    if (@withRune)
+      z = z + @Rune
+    endif
+
+    if (@withPower2)
+      z = z/@power
+    else
+      z = z/@sizesq
+    endif
+  endif ; @withInterMediate
+
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+
+
+  ;
+  ; Start the iteration mode
+  ;
+  if (@withIterMod)
+    iterModConst = iter%@iterMod
+    offset1 = @offset1 + iterModConst
+    offset2 = @offset2 + iterModConst
+  endif
+
+
+
+  ;
+  ; Which test mode do you like?
+  ;
+  if     (@ri_flavour == 0) ; real/imag
+                            ; the normal mode
+    real_z = real(z)
+    imag_z = imag(z)
+
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+
+  ;
+  ; order by max and min
+  ;
+  if (@withMaxMin) ; max/min
+
+    float r_z = real_z
+    float i_z = imag_z
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+  endif
+
+
+  ;
+  ; make the Lord flavours only active
+  ; for the else-branch of the Sierp flavours
+  ;
+  elseBranchActive = FALSE
+
+
+  ;
+  ; Choose an Sierp loop flavour
+  ;
+  if     (@ls_flavour == 0) ; AKLinsky
+  
+    if     (imag_z > @corte && 1/@corte < imag_z)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte && 1/@corte < real_z)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 1) ; KPKinsky I
+  
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 2) ; KPKinsky IV
+                            ; PinskyFamily II
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1 + flip(@factor*real_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  elseif (@ls_flavour == 3); QuadrinskyFamily
+  
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    elseif (imag_z < @corte/@cortFac)
+      z = @factor*imag_z+offset1 +      @factor*real_z
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 4); Dalinsky
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z < -@corte/@cortFac)
+      z = @factor*@fn1(z)-offset1 + flip(@factor*real_z)
+    else
+      z = @factor*@fn2(z)+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 5); KPKinskyDM3
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z > -@corte/@cortFac)
+      z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+    else
+      z = @factor*real_z+offset2  + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 6) ; KPKMultinsky
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + @fn3(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + @fn4(@factor*imag_z)
+    elseif (real_z > @corte)
+      z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1  + flip(@factor*real_z)
+    else
+      z = @factor*real_z+offset2  + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 7) ; SierpinskiM Net I
+                            ; SierpinskiM Windmill I
+                            ; Don Quixote
+                            ; Don Quixote LD
+  
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 8) ; Don Quixote NoS
+  
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 9) ; MAC-Sierpinski02
+  
+    complex a1 = 0
+    complex a2 = 0
+    complex a3 = 0
+  
+    if     (imag_z > @corte)
+      a1 = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z > @corte)
+      a2 = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      a3 = @factor*real_z+offset2 + flip(@factor*imag_z)
+      a3 = @elseFkt(a3)
+      elseBranchActive = TRUE
+    endif
+  
+    if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+  
+    elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+  
+    elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+  
+    elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+  
+    elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+  
+    elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+  
+    elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+  
+    elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+  
+    elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+      z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+  
+    endif
+  
+  
+  elseif (@ls_flavour == 10) ; +/-
+  
+    if     (imag_z + real_z > 2*@corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (abs (real_z - imag_z) > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 11) ; max/min
+  
+    float hlp_r = real_z
+    float hlp_i = imag_z
+  
+    if (hlp_r < hlp_i)
+      real_z = hlp_r
+      imag_z = hlp_i
+    else
+      real_z = hlp_i
+      imag_z = hlp_r
+    endif
+    
+  
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 12) ; KPKinsky Federal
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/@cortFac)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1  + flip(@factor*real_z)
+    else
+      z = @fn2(((z^2+offset2)/(3*z+offset2))^2) + #pixel/0.3
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 13) ; KPKinsky Rune
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fact01*imag_z+offset1  + flip(@factor*real_z)
+    elseif (real_z >  @corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z           + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 14) ; AKLinsky Rune
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1 + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z          + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 15) ; AKLinsky Dune
+  
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fn1(imag_z)
+    elseif (imag_z >  @corte/5)
+      z = @fn2(real_z)
+    elseif (real_z < -@corte/5)
+      z = @fn3(imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fn4(real_z)
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  
+  elseif (@ls_flavour == 16) ; KochCurveCircle
+  
+    z = real_z/sqrt(@Rune) + 1i*sqrt(@Rune)*imag_z
+  
+    if (|z| > 1)
+      bail = true
+    endif
+  
+    angle1 = atan2(z)
+    ; Deal the case where z needs a rotation
+    angle2 = round(angle1/spokesPi)*spokesPi
+  
+    ; Prevent the "son-circle" drawed under the
+    ; "mother" one from having babies...
+    if round(spokesPi*angle1) == 0 && iter > 1
+      if angle1 > 0
+        angle2 =  spokesPi
+      else
+        angle2 = -spokesPi
+      endif
+    endif
+  
+    ; Rotate the z that need it.
+    z = z*exp(-1i*angle2)
+  
+    ; Set the future circle center
+    ; z = - z + (1 - 1/@s)
+    ; Magnifiy z by s.
+    ; z = @s*z
+  
+  
+  elseif (@ls_flavour == 17) ; AGMinsky Mandel
+
+    ar = |@fn1(z)|
+    ge = |@fn2(old_z)|
+
+    int loop_iter = 0
+
+    while (|@fn3(ar)-@fn3(ge)| > 0.1 && loop_iter < 100)
+
+      loop_iter = loop_iter +1
+
+      ; Calculate new values of arithmetical
+      ; and geometrical mean
+      arit = (ar+ge)/2.0
+      geom = sqrt(ar*ge)
+
+      ; give these values back
+      ; for the next loop-run
+      ar = arit
+      ge = geom
+
+    endwhile
+
+    old_z = oldz
+    oldz = z
+
+    if     (imag_z >  @corte/loop_iter)
+      z = @factor*real_z          + flip(@factor*imag_z-offset1)
+    elseif (real_z >  @corte/loop_iter)
+      z = @factor*real_z-offset1  + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+offset1  + flip(@factor*real_z)
+    else
+      z = z^iter + #pixel
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+
+
+  elseif (@ls_flavour == 18) ; Sierpinksi Triangle distorted
+                             ; -> DJKinsky Triang
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+      z = @fn1(1/z^@factor)
+      z = @elseFkt(z)
+      elseBranchActive = TRUE
+    endif
+  
+  endif
+
+
+  ;
+  ; Now: we are in the else branch
+  ; and have chosen a Lord flavour
+  ;
+  if (elseBranchActive && @lc_flavour > 0)
+
+    j_z = z - @epsilon/z^2
+
+    if     (@lc_flavour == 1)
+      if     (iter==100)
+        z = z1
+      elseif (iter==200)
+        z = z2
+      elseif (iter==300)
+        z = z3
+      elseif (iter==400)
+        z = z4
+      endif
+      z = (j_z)^2 + z
+
+
+    elseif (@lc_flavour == 2)
+      if (iter > limit)
+        z = (j_z)^2 + limPar
+      else
+        z = (j_z)^2 + z
+      endif
+
+
+    elseif (@lc_flavour == 3)
+      if (iter < limit)
+        z = (j_z)^2 + limPar
+      else
+        if (j_z == 0)
+          z5 = ((j_z)^5-1) \
+              /(4*(j_z)^4+1)
+        else
+          z5 = ((j_z)^5-1) \
+              /(4*(j_z)^4)
+        endif
+      
+        z = (j_z)^2 - z5
+      endif
+
+
+    endif
+
+  endif ; elseBranchActive && @lc_flavour > 0
+
+
+  ;
+  ; Additional exponent
+  ;
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  ;
+  ; count the loop number
+  ;
+  iter = iter + 1
+
+bailout:
+  |z| < @bailout || \
+  (bail == false && @ls_flavour == 16) ; KochCurveCircle
+
+default:
+  title = "Lord of the Sierps"
+  maxiter = 512
+  periodicity = 0
+
+  param ic_flavour
+    caption = "i: Lord Flavours"
+    enum = "None" "Bilbo" "Frodo" "Sam"
+    default = 0
+  endparam
+
+  param ic_fac1
+    caption = "i: Lord factor 1"
+    default = (0.11,0.0)
+  endparam
+
+  param ic_fac2
+    caption = "i: Lord factor 2"
+    default = (0.011,0.0)
+  endparam
+
+  param is_flavour
+    caption = "i: Sierp Flavours"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky III"
+    default = 0
+  endparam
+
+  param withMaxMin
+    caption = "l: With Max/Min? Y/N"
+    default = FALSE
+  endparam
+
+  param lc_flavour
+    caption = "l: Lord Flavours"
+    enum = "None" "Bilbo" "Frodo" "Sam"
+    default = 0
+  endparam
+
+  param ls_flavour
+    caption = "l: Sierp Flavours"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky IV" \
+           "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min" \
+           "KPKinsky Federal" "KPKinsky Rune" \
+           "AKLinsky Rune" "AKLinsky Dune" \
+           "KochCurveCircle" "AGMinsky Mandel" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param startExp
+    caption = "i: Start Exponent"
+    default = 1.0
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None" \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param startFac
+    caption = "i: Start Factor"
+    default = (1.0,0.0)
+  endparam
+
+  param withInterMediate
+    caption = "i: InterMediate? Y/N"
+    default = TRUE
+  endparam
+
+  param withPower1
+    caption = "imd: 1. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower2
+    caption = "imd: 2. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param power
+    caption = "imd: Power Constant"
+    default = (2,0)
+  endparam
+
+  param withRune
+    caption = "imd: Rune? Y/N"
+    default = FALSE
+  endparam
+
+  param Rune
+    caption = "imd: Rune Constant"
+    default = (0.1666666667,0.33333333333)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = 1.0
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.01,0.0)
+  endparam
+
+  param sizesq
+    caption = "i: Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param corte
+    caption = "i: Cutting edges"
+    default = 0.5
+  endparam
+
+  param cortFac
+    caption = "i: add to Cutting edges"
+    default = 5.0
+  endparam
+
+  param factor
+    caption = "l: Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "l: Add. const for DM3" 
+    default = 1.0
+  endparam
+
+  param offset1
+    caption = "l: Offset 1 (in if/elseif)" 
+    default = 1.0
+  endparam
+
+  param offset2
+    caption = "l: Offset 2 (in else)" 
+    default = 0.75
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "f: Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  param lordFac
+    caption = "i: Lord Factor"
+    default = 1.5
+  endparam
+
+  func startFkt
+    caption = "i: Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "i: Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func imFkt2
+    caption = "i: add. Interm. function"
+    default = ident()
+  endfunc
+
+  func ic_fn1
+    caption = "i: L-Function 1"
+    default = sinh()
+    hint = "In the Lord Flavour part of the init: section"
+  endfunc
+
+  func ic_fn2
+    caption = "i: L-Function 2"
+    default = sinh()
+    hint = "In the Lord Flavour part of the init: section"
+  endfunc
+
+  func ic_fn3
+    caption = "i: L-Function 3"
+    default = sqr()
+    hint = "In the Lord Flavour part of the init: section"
+  endfunc
+
+  func ic_fn4
+    caption = "i: L-Function 4"
+    default = atan()
+    hint = "In the Lord Flavour part of the init: section"
+  endfunc
+
+  func ic_fn5
+    caption = "i: L-Function 5"
+    default = sqr()
+    hint = "In the Lord Flavour part of the init: section"
+  endfunc
+
+  func fn1
+    caption = "l: Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "l: Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "l: Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "l: Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func elseFkt
+    caption = "l: Function in else-part"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the else part of the loop: section"
+  endfunc
+
+} ; LordSierps
+
+
+AKL+KPKombinsky {
+;
+; Written by KPK February, 2000
+;
+; Enhanced by Andreas Lober
+;
+; Version February, 15
+;
+; Init/loop multi functionality 
+; and modified loop sequences
+; after ideas by Andreas Lober
+;
+; Idea for Spiral Effect loop
+; sequence by Andras Szolek
+;
+; Parameter Spiral Effect works together
+; with all Overall loop types
+; except Mix II. Attention: not only
+; spirals will appear!
+;
+; Choose positive or negative
+; values for real and/or imaginary part 
+; of the Kombinsky Factor
+;
+; Sierpinsky is back again ;-), use
+; default settings for Global Functions
+; and for Transformations I and II
+
+init:
+  complex  z = 0
+  complex zc = 0
+  complex jPixel = (#pixel + @epsilon/#pixel)
+
+  IF  (@init == 0)
+     z = 0.4*fn1(jPixel^@spokes)
+    zc = fn2(z/@spokes)*@sizesq
+     z = 2*(z - zc)+@devide/@power
+           
+  ELSEIF  (@init == 1)
+     z = jPixel^@spokes
+    zc = fn1(z/@sizesq)*@sizesq
+     z = 2*(z - zc)+@devide/@power
+  
+  ELSEIF  (@init == 2)
+     z = 0.2*fn1(jPixel^@spokes)
+  
+  ELSEIF  (@init == 3)
+     z = fn1(jpixel)                
+  
+  ELSEIF  (@init == 4)
+     z = jPixel^@spokes*@trans1
+    zc = fn2(z/@sizesq)*@sizesq     
+     z = 2*(z - zc)+@devide/@power
+  
+  ELSEIF  (@init == 5)
+     z = jPixel
+    zc = fn2(z/@sizesq)*@sizesq     
+     z = 2*(z - zc)/@sizesq
+                   
+  ENDIF
+
+
+  
+  IF (@spiral == true && @loop != 4)
+    sp = 2
+
+  ELSE
+    sp = 1
+    
+  ENDIF
+
+loop:
+
+  IF (@loop == 0)
+
+
+    IF imag(z)>0.5*sp
+      z = 2*z - 1i
+      
+    ELSEIF @adFkt1(z)>0.5*sp^3
+      z = 2*z - 1i
+      
+    ELSEIF @adFkt2(z)<0.5
+      z = (2*z - 1i)^z
+      
+    ELSEIF real(z)>0.5
+      z = (2*z - 1)*(pi^@sizesq)
+  
+    ELSEIF real(z)>0.1
+      z = fn3(imag(z^@structure1)) * fn4(sin(z^@structure2))
+  
+    ELSEIF imag(z)>1.5
+      z = fn2(imag(imag(z^@structure1)))*fn3(z^@spokes)
+  
+    ELSEIF imag(z) > @devide/@power
+      z = fn2(imag(z))^(pi/@spokes)
+  
+    ELSE
+      z = (2*z)*@rot
+  
+    ENDIF
+
+       
+    IF (@vac == 1)   
+      z = @fn5(@fn1(@vac1)) + @fn2(@vac2)\
+          + @fn3(@vac3) + @fn4(jPixel) - (@vac2*z)^@vac2
+  
+    ELSEIF (@vac == 2) 
+      z = trunc(@fn1(@vac1)) + @fn2(@vac2)\
+          + @fn3(@vac3) - @fn4(jPixel) - (@vac2*z)^@vac2
+  
+    ELSEIF (@vac == 3) 
+      z = floor(@fn1(@vac1)) + @fn2(@vac2)\
+          - @fn3(@vac3) + @fn4(jPixel) - (@vac2*z)^@vac3
+  
+    ELSEIF (@vac == 4) 
+      z = ceil( @fn1(@vac1)) + @fn2(@vac2) - @fn3(@vac3)\
+          - @fn4(jPixel) - @vac2*@adFunc1(real(z)*imag(z))
+  
+    ELSEIF (@vac == 5)
+      z = abs(@fn1(@vac1)) - @fn2(@vac2) + @fn3(@vac3) \
+          + @fn4(jPixel) - @vac2*@adFunc1(real(z)*imag(z))
+  
+    ELSEIF (@vac == 6)
+      z = round(@fn1(@vac1)) - @fn2(@vac2) + @fn3(@vac3) \
+          - @fn4(jPixel) - @vac2*@adFunc1(real(z)*imag(z))
+  
+    ELSEIF (@vac == 7) 
+      z = trunc(@fn1(@vac1)) + @fn2(@vac2) + @fn3(@vac3) \
+          - @fn4(jPixel) - @vac2*@adFunc1(real(z)*imag(z))
+  
+    ELSEIF (@vac == 8) 
+      z = floor(@fn1(@vac1)) - @fn2(@vac2) + @fn3(@vac3) \
+          - @fn4(jPixel) - @vac2*@adFunc1(real(z)*imag(z))
+  
+    ELSEIF (@vac == 9) 
+      z = ceil( @fn1(@vac1)) * @fn2(@vac2) * @fn3(@vac3)\
+          * @fn4(jPixel) - ((@adFunc1(@vac1*z) - @vac1*z)^3) \
+          - @vac2*z^3
+          
+    ELSEIF (@vac == 10) 
+      z = abs( @fn1(@vac1)) * @fn2(@vac2) * @fn3(@vac3)\
+          * @fn4(jPixel) - ((@adFunc1(@vac1*z) - @vac1*z)^3) \
+          + @vac2*z^3
+  
+    ENDIF
+
+
+  ELSEIF (@loop == 1)
+
+    IF imag(z)>0.5*sp
+      z = 2*real(z) + flip(2*imag(z)-1)
+  
+    ELSEIF real(z)>0.5*sp^7
+      z = 2*real(z)-1 + flip(2*imag(z))
+  
+    ELSEIF imag(z)<-0.1
+      z = 2*imag(z)+1 + flip(2*real(z))
+  
+    ELSEIF real(z)>0.1
+      z = fn2(imag(z^@structure1)) * fn3(fn4(z^@structure2))
+  
+    ELSE
+      z = 2*real(z) + flip(2*imag(z))
+  
+    ENDIF
+
+
+  ELSEIF (@loop == 2)
+
+
+    IF imag(z)>@trans2*sp
+      z = @trans1*real(z) + flip(@trans1*imag(z)-1)
+  
+    ELSEIF real(z)>@trans2*sp
+      z = @trans1*real(z)-1 + flip(@trans1*imag(z))
+  
+    ELSE
+      z = @trans1*real(z) + flip(@trans1*imag(z))
+      z = @fn2(z)
+  
+    ENDIF
+
+
+  ELSEIF (@loop == 3)
+
+    IF imag(z)>@trans2*sp
+      z = @trans1*real(z) + fn1(@trans1*imag(z)-1)
+  
+    ELSEIF real(z)>@trans2*sp
+      z = @trans1*real(z)-1 + fn2(@trans1*imag(z))
+  
+    ELSE
+      z = @trans1*real(z) + fn3(@trans1*imag(z))
+      z = @fn2(z)
+  
+    ENDIF
+
+
+  ELSEIF (@loop == 4)
+  
+    IF imag(z)>0.3
+      z = @trans1*real(z) + @fn5(@trans1*imag(z)-1)
+    
+    ELSEIF imag(z)<0.1
+      z = @trans1*real(z)-1 + @fn5(@trans1*imag(z))
+      
+    ELSEIF imag(z)<0.5
+      z = @trans1*imag(z)+1 + @fn5(@trans1*real(z))
+      
+    ELSEIF real(z)>-1.5
+      z = fn1(real(imag(z^@trans1)))*@fn5(z^@trans1)
+      
+    ELSEIF flip(z)>-1
+      z = fn3(z)+fn2(z)+fn1(z)
+      
+    ELSE
+      z = jPixel^(fn4(z))
+      
+    ENDIF
+  
+  
+  ELSEIF (@loop == 5)
+  
+    IF imag(z)>0.5*sp^2
+      z = 2*real(z) + fn1(2*imag(z)-1)*sp^3
+  
+    ELSEIF real(z)>0.5
+      z = 2*real(z)-1 + fn1(2*imag(z))
+  
+    ELSE
+      z = 2*real(z) + flip(2*imag(z))
+  
+    ENDIF
+  
+  
+    IF (@vac == 1)
+      z = round((round(@vac1*z) - @vac1*z)^2) - @vac2*z^2
+  
+    ELSEIF (@vac == 2)
+      z = trunc((trunc(@vac1*z) - @vac1*z)^2) - @vac2*z^2
+  
+    ELSEIF (@vac == 3)
+      z = floor((floor(@vac1*z) - @vac1*z)^2) - @vac2*z^2
+  
+    ELSEIF (@vac == 4)
+      z = ceil((ceil(@vac1*z) - @vac1*z)^2) - @adFunc1(@vac2*z^2)
+  
+    ELSEIF (@vac == 5)
+      z = abs((abs(@vac1*z) - @vac1*z^2)^2) - @adFunc1(@vac2*z^2)
+  
+    ELSEIF (@vac == 6)
+      z = @fn5((round(@vac1*z) - @vac1*fn1(real(z)*imag(z)))^2)  \
+          - @adFunc1(@vac2*z^2)
+  
+    ELSEIF (@vac == 7)
+      z = trunc((trunc(@vac1*z) - @vac1*fn1(real(z)*imag(z)))^2)  \
+          - @adFunc1(@vac2*z^2)
+  
+    ELSEIF (@vac == 8)         
+      z = floor((floor(@vac1*z) - @vac1*fn1(real(z)*imag(z)))^2)  \
+          - @adFunc1(@vac2*z^2)
+  
+    ELSEIF (@vac == 9)         
+      z = ceil((ceil(@vac1*z) - @vac1*fn1(real(z)*imag(z)))^2)  \
+          - @adFunc1(@vac2*z^2)
+          
+    ELSEIF (@vac == 10) 
+      z = abs( abs(@vac1)) * ceil(@vac2) * round(@vac3)\
+          * sqrt(jPixel) - ((@adFunc1(@vac1*z) - @vac1*z)^3) \
+          + @vac2*z^3
+  
+    ENDIF
+  
+  ENDIF
+
+  ;
+  ; Additional exponent
+  ;
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+  
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+  
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+bailout:
+  ;|z| < @bailout
+  (@bailOutMode == 0 && \
+      |z| <= @bailout) || \
+  (@bailOutMode == 1 && \
+      sqr(real(z)) < @bailout) || \
+  (@bailOutMode == 2 && \
+      sqr(imag(z)) < @bailout) || \
+  (@bailOutMode == 3 && \
+      (sqr(real(z)) < @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 4 && \
+      (sqr(real(z)) < @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) < @bailout)) || \
+  (@bailOutMode == 6 && \
+      (sqr(real(z) + imag(z)) < @bailout)) || \
+  (@bailOutMode == 7 && \
+      (real(z)) <= @bailout) || \
+  (@bailOutMode == 8 && \
+      (imag(z)) <= @bailout)
+
+default:
+  title = "AKL+KPKombinsky"
+  center = (0.4, 0.2)
+  magn = 1.0
+  maxiter = 500
+  periodicity = 0
+
+  param init
+    caption = "Overall init"
+       enum = "Kombinsky" "Rune"  "Don Quixote" \
+              "Mix I" "Mix II" "Mix III"
+    default = 0
+  endparam
+
+  param loop
+    caption = "Overall loop"
+       enum = "Kombinsky" "Rune" "Don Quixote" \
+              "Mix I" "Mix II" "Mix III"
+    default = 0
+  endparam 
+
+  param trans1
+    caption = "Transformation I"
+    default = 2.0
+       hint = "For Overall loop Don Quixote \
+              and Mix I and II"
+  endparam
+
+  param trans2
+    caption = "Transformation II"
+    default = 0.5
+       hint = "For Overall loop Don Quixote \
+              and Mix I and II"
+  endparam
+
+  param devide
+    caption = "Separation Factor"
+    default = 0
+   endparam
+    
+  param rot
+    caption = "Inside Factor"
+    default = 0.0
+  endparam
+  
+  param power
+    caption = "Power"
+    default = (0,4)
+  endparam
+
+  param spokes
+    caption = "Spokes (x 2)"
+    default = 2
+  endparam
+
+  param spiral
+    caption = "Spiral Effect"
+    default = false
+  endparam
+
+  param sizesq
+    caption = "Magnification"
+    default = 0.7
+  endparam
+
+  param bailout
+    caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param bailOutMode
+    caption = "Bailout Test Mode"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param structure1
+    caption = "Structure 1"
+    default = 1.0
+  endparam
+
+  param structure2
+    caption = "Structure 2"
+    default = 2.0
+  endparam
+
+  param vac
+    caption = "Kombinsky Type"
+       enum = "None" "round" "trunc" "floor" "ceil" \
+              "abs" "a-round" "a-trunc" "a-floor" "a-ceil" 
+    default = 0
+       hint = "For Overall loop Kombinsky and Mix III"
+  endparam
+
+  param vac1
+    caption = "Kombinsky Fact. a"
+    default = (1.0,1.0)
+  endparam
+
+  param vac2
+    caption = "Kombinsky Fact. b"
+    default = (1.0,0.0)
+  endparam
+  
+  param vac3
+    caption = "Kombinsky Fact. c"
+    default = (0.0,0.0)
+  endparam
+  
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.0,0.0)
+  endparam
+
+    param exponent
+      caption = "f: Exponent for Transfer"
+      default = 1.0
+         hint = "Try 1 or 3"
+    endparam
+
+    param pure
+      caption = "f: With Pixel Addition"
+      default = FALSE
+    endparam
+
+  func fn1
+    caption = "Global Fct. 1"
+    default = sqrt()
+  endfunc
+
+  func fn2
+    caption = "Global Fct. 2"
+    default = ident()
+  endfunc
+
+  func adFkt1
+    caption = "Kombinsky Fct. 1"
+    default = ceil()
+       hint = "For Overall loop Kombinsky only"
+  endfunc
+
+  func adFkt2
+    caption = "Kombinsky Fct. 2"
+    default = sqr()
+       hint = "For Overall loop Kombinsky only"
+  endfunc
+
+  func fn3
+    caption = "loop: Fct. 3"
+    default = tan()
+  endfunc
+
+  func fn4
+    caption = "loop: Fct. 4"
+    default = cos()
+  endfunc
+
+  func fn5
+    caption = "loop: Fct. 5"
+    default = round()
+  endfunc
+    
+  func adFunc1
+    caption = "For Kombinsky Types"
+    default = flip()
+       hint = "Works together with Kombinsky Type parameters \
+              ceil, abs, a-trunc, a-round, a-floor, a-ceil"
+  endfunc
+   
+    func addFkt
+      caption = "Additional Loop Function"
+      default = ident()
+         hint = "End of the loop: section"
+    endfunc
+    
+}
+
+MoreCarrSierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Jan 2000
+;
+; Revision: March 02, 2000
+;
+; suggestions and additions are welcome
+;
+;
+; Adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param can be en-/disabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Sierpinskiing
+;   by Andreas Lober
+;
+; Carrs 2100, 2101, 2102, 2103, ..., 2109
+;   added in different ways
+;   adapted (in a very free way) from Carr2100.ufm
+;   because I like Carrs very much
+;   (Thanks a lot, Dr. Carr :-)
+;
+; What you have to know first:
+;   The Init-Flavours go through the init sections
+;   of the different KPK-formulae,
+;   but are only abstracts of them,
+;   you have to combine
+;     Power1 yes/no Power2 yes/no
+;     InterMediate yes/no
+;
+;   whilst the Loop-Flavours go through the loop sections
+;   of the different KPK-formulae.
+;
+; More comments are to be found in the formula text
+;
+; The MAC Sierpinski02 is not like the original
+; More formula material waits to be included...
+;
+
+init:
+  complex z  = 0
+  complex zc = 0
+
+  complex z1 = 0
+  complex z2 = 0
+  complex z3 = 0
+  complex z4 = 0
+  int iter   = 0
+  float limit  = 100
+  complex limPar = (-0.743380900000982,-0.131850030300002)
+  complex jPixel = (#pixel + @epsilon/#pixel)^@spokes
+
+  if     (@carr == 0)
+    z = @startFac*@startFkt(jPixel)
+
+  elseif (@carr == 1) ; Carr2100
+    z = conj(tan(jPixel))        \
+      - sqr(conj(0.10/(jPixel))) \
+      - sqr(flip(0.02/(jPixel)))
+
+  elseif (@carr == 2) ; Carr2101
+    z = jPixel - 1/((log(tan(jPixel))^10) \
+                    + jPixel)
+
+  elseif (@carr == 3) ; Carr2102
+    z = flip(imag(1-jPixel))*sqr(jPixel)       \
+      - conj(0.10/jPixel) - flip(0.010/jPixel)
+
+  elseif (@carr == 3) ; Carr2103
+    z = jPixel                    \
+      - 0.5/(log(conj(jPixel))^12 \
+             + jPixel)            \
+      + conj(0.04/(jPixel))
+
+  elseif (@carr == 4) ; Carr2104
+    z = flip(1-jPixel) \
+          *sqr(jPixel)       \
+      - conj(0.10/(jPixel))    \
+      - flip(0.010/(jPixel))
+  endif
+
+  if (@carr == 0)
+    z1 = z
+    z2 = z
+    z3 = z
+    z4 = z
+  else
+    z1 = z*@carrFac
+    z2 = z*@carrFac^2
+    z3 = z*@carrFac^3
+    z4 = z*@carrFac^4
+  endif
+
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z)  - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z)   - @lattFac2*sqrt(real(z)*imag(z))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)         
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)         
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)         
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  if (@withInterMediate)
+    if (@withPower1)
+      zc = @imFkt(z/@power)*@sizesq
+    else
+      zc = @imFkt(z/@sizesq)*@sizesq
+    endif
+
+    if     (@i_flavour == 0) ; AKLinsky
+      z = @factor*(z*@imFkt2(z) + @epsilon/z - zc)
+
+    elseif (@i_flavour == 1) ; KPKinsky I
+      z = @factor*(@imFkt2(z)   + @epsilon/z - zc)
+
+    elseif (@i_flavour == 2) ; KPKinsky III
+      z = @factor*(@imFkt2(z)   + @epsilon/z - \
+           (@corte*zc/2))/@corte
+
+    elseif (@i_flavour == 3) ; Carr2100
+      z = conj(tan(zc+z))        \
+        - sqr(conj(0.10/(zc+z))) \
+        - sqr(flip(0.02/(zc+z)))
+
+    elseif (@i_flavour == 4) ; Carr2101
+      z = zc+z - 1/((log(tan(zc+z))^10) \
+                      + zc+z)
+
+    elseif (@i_flavour == 5) ; Carr2102
+      z = flip(imag(1-(zc+z)))*sqr(zc+z)       \
+        - conj(0.10/(zc+z)) - flip(0.010/(zc+z))
+
+
+    elseif (@i_flavour == 6) ; Carr2103
+      z = (zc+z)                    \
+        - 0.5/(log(conj(zc+z))^12 \
+               + zc+z)            \
+        + conj(0.04/(zc+z))
+    endif
+
+    if (@withRune)
+      z = z + @Rune
+    endif
+
+    if (@withPower2)
+      z = z/@power
+    else
+      z = z/@sizesq
+    endif
+  endif
+
+
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+
+  if     (@ri_flavour == 0) ; real/imag
+
+    real_z = real(z)
+    imag_z = imag(z)
+
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; max/min
+
+    float r_z = real(z)
+    float i_z = imag(z)
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+
+  elseif (@ri_flavour == 7) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+  if     (@l_flavour == 0) ; AKLinsky
+
+    if     (imag_z > @corte && 1/@corte < imag_z)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte && 1/@corte < real_z)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 1) ; KPKinsky I
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 2); KPKinsky IV
+                          ; PinskyFamily II
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+@offset1 + flip(@factor*real_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+  elseif (@l_flavour == 3); QuadrinskyFamily
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    elseif (imag_z < @corte/@cortFac)
+      z = @factor*imag_z+@offset1 +      @factor*real_z
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 4); Dalinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z < -@corte/@cortFac)
+      z = @factor*@fn1(z)-@offset1 + flip(@factor*real_z)
+    else
+      z = @factor*@fn2(z)+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 5); KPKinskyDM3
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z > -@corte/@cortFac)
+      z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+    else
+      z = @factor*real_z+@offset2  + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 6) ; KPKMultinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + @fn3(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + @fn4(@factor*imag_z)
+    elseif (real_z > @corte)
+      z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+@offset1  + flip(@factor*real_z)
+    else
+      z = @factor*real_z+@offset2  + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 7) ; SierpinskiM Net I
+                           ; SierpinskiM Windmill I
+                           ; Don Quixote
+                           ; Don Quixote LD
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 8) ; Don Quixote NoS
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 9) ; MAC-Sierpinski02
+
+    complex a1 = 0
+    complex a2 = 0
+    complex a3 = 0
+
+    if     (imag_z > @corte)
+      a1 = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      a2 = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      a3 = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      a3 = @elseFkt(a3)
+    endif
+
+    if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+      z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+
+    endif
+
+
+  elseif (@l_flavour == 10) ; +/-
+
+    if     (imag_z + real_z > 2*@corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (abs (real_z - imag_z) > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 11) ; max/min
+
+    float hlp_r = real_z
+    float hlp_i = imag_z
+
+    if (hlp_r < hlp_i)
+      real_z = hlp_r
+      imag_z = hlp_i
+    else
+      real_z = hlp_i
+      imag_z = hlp_r
+    endif
+    
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 12) ; KPKinsky Federal
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/@cortFac)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+1.00  + flip(@factor*real_z)
+    else
+      z = @fn2(((z^2+@fact01+1)/(3*z+@fact01-1))^2) + #pixel/0.3
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 13 || @l_flavour == 14) ; Carr2100,2101
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if     (iter==100)
+       z = z1
+      elseif (iter==200)
+       z = z2
+      elseif (iter==300)
+       z = z3
+      elseif (iter==400)
+       z = z4
+      endif
+
+      z = (z - @epsilon/z^2)^2 + z
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 15) ; Carr2102
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if     (iter==100)
+       z = z1
+      elseif (iter==200)
+       z = z2
+      elseif (iter==300)
+       z = z3
+      elseif (iter==400)
+       z = z4
+      endif
+
+      z = (z - @epsilon/z^2)^2 + z - 0.087
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 16) ; Carr2103
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if (iter > limit)
+        z = (z - @epsilon/z^2)^2 + limPar
+      else
+        z = (z - @epsilon/z^2)^2 + z
+      endif
+
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 17) ; KPKinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fact01*imag_z+@offset1  + flip(@factor*real_z)
+    elseif (real_z >  @corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z           + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 18) ; AKLinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z          + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 19) ; AKLinsky Dune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fn1(imag_z)
+    elseif (imag_z >  @corte/5)
+      z = @fn2(real_z)
+    elseif (real_z < -@corte/5)
+      z = @fn3(imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fn4(real_z)
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 20) ; Sierpinksi Triangle distorted
+                            ; -> DJKinsky Triang
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-1.00-IMC)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00-IMC + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+IMC      + flip(@factor*imag_z)
+      z = @fn1(1/z^@factor)
+    endif
+
+  endif
+
+
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  z = @addFkt(z)
+
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  iter = iter + 1
+
+bailout:
+  ;|z| < @bailout
+  (@bailOutMode == 0 && \
+      |z| <= @bailout) || \
+  (@bailOutMode == 1 && \
+      sqr(real(z)) < @bailout) || \
+  (@bailOutMode == 2 && \
+      sqr(imag(z)) < @bailout) || \
+  (@bailOutMode == 3 && \
+      (sqr(real(z)) < @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 4 && \
+      (sqr(real(z)) < @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) < @bailout)) || \
+  (@bailOutMode == 6 && \
+      (sqr(real(z) + imag(z)) < @bailout)) || \
+  (@bailOutMode == 7 && \
+      (real(z)) <= @bailout) || \
+  (@bailOutMode == 8 && \
+      (imag(z)) <= @bailout)
+
+default:
+  title = "More Carr Sierps"
+  maxiter = 512
+  periodicity = 0
+
+  param i_flavour
+    caption = "Flavours: Init"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky III" \
+           "Carr2100" "Carr2101" "Carr2102" "Carr2103"
+    default = 0
+  endparam
+
+  param l_flavour
+    caption = "Flavours: Loop"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky IV" \
+           "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min" "KPKinsky Federal" \
+           "Carr2100" "Carr2101" "Carr2102" "Carr2103" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None" \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param startFac
+    caption = "i: Start Factor"
+    default = (1.0,0.0)
+  endparam
+
+  param withInterMediate
+    caption = "i: InterMediate? Y/N"
+    default = TRUE
+  endparam
+
+  param withPower1
+    caption = "i: 1. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower2
+    caption = "i: 2. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param power
+    caption = "i: Power"
+    default = (2,0)
+  endparam
+
+  param withRune
+    caption = "i: Rune? Y/N"
+    default = FALSE
+  endparam
+
+  param Rune
+    caption = "i: Rune Constant"
+    default = (0.1666666667,0.33333333333)
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = 1.0
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.01,0.0)
+  endparam
+
+  param sizesq
+    caption = "i: Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param bailOutMode
+    caption = "Bailout Test Mode"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param corte
+    caption = "i: Cutting edges"
+    default = 0.5
+  endparam
+
+  param cortFac
+    caption = "i: add to Cutting edges"
+    default = 5.0
+  endparam
+
+  param factor
+    caption = "l: Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "l: Add. const for DM3" 
+    default = 1.0
+  endparam
+
+  param offset1
+    caption = "l: Offset 1 (in if/elseif)" 
+    default = 1.0
+  endparam
+
+  param offset2
+    caption = "l: Offset 2 (in else)" 
+    default = 0.75
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "f: Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  param carr
+    caption = "i: Carr-Pinsky"
+    enum = "None" "Carr2100" "Carr2101" "Carr2102" "Carr2103"
+    default = 0
+  endparam
+
+  param carrFac
+    caption = "i: Carr Factor"
+    default = 1.5
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "init: Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func imFkt2
+    caption = "init: add. Interm. function"
+    default = ident()
+  endfunc
+
+  func fn1
+    caption = "loop: Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "loop: Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "loop: Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "loop: Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func elseFkt
+    caption = "loop: Function in else-part"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the else part of the loop: section"
+  endfunc
+
+}
+
+MostCarrSierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Jan 2000
+;
+; Revision: Feb, 07 2000
+;
+; suggestions and additions are welcome
+;
+;
+; Adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param can be en-/disabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Sierpinskiing
+;   by Andreas Lober
+;
+; Carrs 2100, 2101, 2102, 2103, ..., 2109
+;   added in different ways
+;   adapted (in a very free way) from Carr2100.ufm
+;   because I like Carrs very much
+;   (Thanks a lot, Dr. Carr :-)
+;
+; What you have to know first:
+;   The Init-Flavours go through the init sections
+;   of the different KPK-formulae,
+;   but are only abstracts of them,
+;   you have to combine
+;     Power1 yes/no Power2 yes/no
+;     InterMediate yes/no
+;
+;   whilst the Loop-Flavours go through the loop sections
+;   of the different KPK-formulae.
+;
+; More comments are to be found in the formula text
+;
+; The MAC Sierpinski02 is not like the original
+; More formula material waits to be included...
+;
+
+init:
+  complex z  = 0
+  complex zc = 0
+
+  complex z1 = 0
+  complex z2 = 0
+  complex z3 = 0
+  complex z4 = 0
+  complex z5 = 0
+  int iter   = 0
+  float limit  = 100
+  complex limPar = (-0.743380900000982,-0.131850030300002)
+  complex jPixel = (#pixel + @epsilon/#pixel)^@spokes
+
+  float offset1 = @offset1
+  float offset2 = @offset2
+  float iterModConst = 0
+
+  ; for KochCurve...
+  float angle1 = 0
+  float angle2 = 0
+  float spokesPi = 2*pi/@spokes
+  bool bail = false
+
+  if     (@carr == 0)
+    z = @startFac*@startFkt(jPixel)
+
+  elseif (@carr == 1) ; Carr2100
+    z = conj(tan(jPixel))        \
+      - sqr(conj(0.10/(jPixel))) \
+      - sqr(flip(0.02/(jPixel)))
+
+  elseif (@carr == 2) ; Carr2101
+    z = jPixel - 1/((log(tan(jPixel))^10) \
+                    + jPixel)
+
+  elseif (@carr == 3) ; Carr2102
+    z = flip(imag(1-jPixel))*sqr(jPixel)       \
+      - conj(0.10/jPixel) - flip(0.010/jPixel)
+
+  elseif (@carr == 4) ; Carr2103
+    z = jPixel                    \
+      - 0.5/(log(conj(jPixel))^12 \
+             + jPixel)            \
+      + conj(0.04/(jPixel))
+
+  elseif (@carr == 5) ; Carr2104
+    z = flip(1-jPixel)            \
+          *sqr(jPixel)            \
+      - conj(0.10/(jPixel))       \
+      - flip(0.010/(jPixel))
+
+  elseif (@carr == 6) ; Carr2105
+    z = flip(1+jPixel)            \
+          *sqr(conj(jPixel))      \
+      - conj(0.10/jPixel)         \
+      + flip(0.010/jPixel)
+
+  elseif (@carr == 7) ; Carr2106
+    z = jPixel                        \
+      - 2/(sinh(0.10/jPixel)          \
+            -sqr(tanh(0.010/jPixel))  \
+          )
+
+  elseif (@carr == 8) ; Carr2107
+    z = jPixel                        \
+      - 1/(sinh(0.10/jPixel)          \
+            -sqr(cosh(0.0250/jPixel)) \
+          )
+
+  elseif (@carr == 9) ; Carr2108
+    z = jPixel                        \
+      - 1/(tanh(0.10/jPixel)          \
+            -sqr(sinh(0.0250/jPixel)) \
+          )^6
+
+  elseif (@carr == 10) ; Carr2109
+    z = jPixel                        \
+      - 1/(atan(0.10/jPixel)          \
+            -sqr(acos(0.0250/jPixel)) \
+          )^6
+
+  endif
+
+  if (@carr == 0)
+    z1 = z
+    z2 = z
+    z3 = z
+    z4 = z
+  else
+    z1 = z*@carrFac
+    z2 = z*@carrFac^2
+    z3 = z*@carrFac^3
+    z4 = z*@carrFac^4
+  endif
+
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z)  - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z)   - @lattFac2*sqrt(real(z)*imag(z))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)         
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)         
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)         
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  if (@startExp != 1)
+    z = z^@startExp
+  endif
+
+  if (@withInterMediate)
+    if (@withPower1)
+      zc = @imFkt(z/@power)*@sizesq
+    else
+      zc = @imFkt(z/@sizesq)*@sizesq
+    endif
+
+    if (@useCarrFlavours_i)
+
+      if     (@ic_flavour == 0) ; Carr2100
+        z = conj(tan(zc+z))        \
+          - sqr(conj(0.10/(zc+z))) \
+          - sqr(flip(0.02/(zc+z)))
+
+      elseif (@ic_flavour == 1) ; Carr2101
+        z = zc+z - 1/((log(tan(zc+z))^10) \
+                        + zc+z)
+
+      elseif (@ic_flavour == 2) ; Carr2102
+        z = flip(imag(1-(zc+z)))*sqr(zc+z)       \
+          - conj(0.10/(zc+z)) - flip(0.010/(zc+z))
+
+
+      elseif (@ic_flavour == 3) ; Carr2103
+        z = (zc+z)                    \
+          - 0.5/(log(conj(zc+z))^12 \
+                 + zc+z)            \
+          + conj(0.04/(zc+z))
+
+      elseif (@ic_flavour == 4) ; Carr2104
+        z = flip(1-(zc+z))            \
+              *sqr((zc+z))            \
+          - conj(0.10/((zc+z)))       \
+          - flip(0.010/((zc+z)))
+  
+      elseif (@ic_flavour == 5) ; Carr2105
+        z = flip(1+(zc+z))            \
+              *sqr(conj((zc+z)))      \
+          - conj(0.10/(zc+z))         \
+          + flip(0.010/(zc+z))
+  
+      elseif (@ic_flavour == 6) ; Carr2106
+        z = (zc+z)                        \
+          - 2/(sinh(0.10/(zc+z))          \
+                -sqr(tanh(0.010/(zc+z)))  \
+              )
+  
+      elseif (@ic_flavour == 7) ; Carr2107
+        z = (zc+z)                        \
+          - 1/(sinh(0.10/(zc+z))          \
+                -sqr(cosh(0.0250/(zc+z))) \
+              )
+  
+      elseif (@ic_flavour == 8) ; Carr2108
+        z = (zc+z)                        \
+          - 1/(tanh(0.10/(zc+z))          \
+                -sqr(sinh(0.0250/(zc+z))) \
+              )^6
+  
+      elseif (@ic_flavour == 9) ; Carr2109
+        z = (zc+z)                        \
+          - 1/(atan(0.10/(zc+z))          \
+                -sqr(acos(0.0250/(zc+z))) \
+              )^6
+
+
+      endif
+
+    else
+
+      if     (@is_flavour == 0) ; AKLinsky
+        z = @factor*(z*@imFkt2(z) + @epsilon/z - zc)
+
+      elseif (@is_flavour == 1) ; KPKinsky I
+        z = @factor*(@imFkt2(z)   + @epsilon/z - zc)
+
+      elseif (@is_flavour == 2) ; KPKinsky III
+        z = @factor*(@imFkt2(z)   + @epsilon/z - \
+             (@corte*zc/2))/@corte
+
+      endif ; @is_flavour == ?
+
+    endif
+
+    if (@withRune)
+      z = z + @Rune
+    endif
+
+    if (@withPower2)
+      z = z/@power
+    else
+      z = z/@sizesq
+    endif
+  endif ; @withInterMediate
+
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+  if (@withIterMod)
+    iterModConst = iter%@iterMod
+    offset1 = @offset1 + iterModConst
+    offset2 = @offset2 + iterModConst
+  endif
+
+
+  if     (@ri_flavour == 0) ; real/imag
+
+    real_z = real(z)
+    imag_z = imag(z)
+
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; max/min
+
+    float r_z = real(z)
+    float i_z = imag(z)
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+
+  elseif (@ri_flavour == 7) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+  if (@useCarrFlavours_l)
+
+    j_z = z - @epsilon/z^2
+
+    if     (@lc_flavour == 0 || @lc_flavour == 1) ; Carr2100,2101
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        if     (iter==100)
+         z = z1
+        elseif (iter==200)
+         z = z2
+        elseif (iter==300)
+         z = z3
+        elseif (iter==400)
+         z = z4
+        endif
+
+        z = (j_z)^2 + z
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@lc_flavour == 2) ; Carr2102
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        if     (iter==100)
+         z = z1
+        elseif (iter==200)
+         z = z2
+        elseif (iter==300)
+         z = z3
+        elseif (iter==400)
+         z = z4
+        endif
+
+        z = (j_z)^2 + z - 0.087
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@lc_flavour == 3) ; Carr2103
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        if (iter > limit)
+          z = (j_z)^2 + limPar
+        else
+          z = (j_z)^2 + z
+        endif
+
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@lc_flavour == 4) ; Carr2104
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        if (iter < limit)
+          z = (j_z)^2 + limPar
+        else
+          if (j_z == 0)
+            z5 = ((j_z)^5-1) \
+                /(4*(j_z)^4+1)
+          else
+            z5 = ((j_z)^5-1) \
+                /(4*(j_z)^4)
+          endif
+
+          z = (j_z)^2 - z5
+        endif
+
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@lc_flavour == 5) ; Carr2105
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        if (iter < limit)
+          z = (j_z)^2 + limPar
+        else
+          if (j_z == 0)
+            z5 = ((j_z)^5-1) \
+                /(4*(j_z)^4+1)
+          else
+            z5 = ((j_z)^5-1) \
+                /(4*(j_z)^4)
+          endif
+
+          z = (j_z)^2 + (-1)^(iter%2)*z5
+        endif
+
+        z = @elseFkt(z)
+      endif
+
+    endif
+
+  else
+
+    if     (@ls_flavour == 0) ; AKLinsky
+
+      if     (imag_z > @corte && 1/@corte < imag_z)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z > @corte && 1/@corte < real_z)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 1) ; KPKinsky I
+
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 2) ; KPKinsky IV
+                              ; PinskyFamily II
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      elseif (imag_z < -@corte/@cortFac)
+        z = @factor*imag_z+offset1 + flip(@factor*real_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+    elseif (@ls_flavour == 3); QuadrinskyFamily
+
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      elseif (imag_z < @corte/@cortFac)
+        z = @factor*imag_z+offset1 +      @factor*real_z
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 4); Dalinsky
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + flip(@factor*imag_z)
+      elseif (real_z < -@corte/@cortFac)
+        z = @factor*@fn1(z)-offset1 + flip(@factor*real_z)
+      else
+        z = @factor*@fn2(z)+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 5); KPKinskyDM3
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + flip(@factor*imag_z)
+      elseif (real_z > -@corte/@cortFac)
+        z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+      else
+        z = @factor*real_z+offset2  + flip(@factor*imag_z)
+      endif
+
+
+    elseif (@ls_flavour == 6) ; KPKMultinsky
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + @fn3(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + @fn4(@factor*imag_z)
+      elseif (real_z > @corte)
+        z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+      elseif (imag_z < -@corte/@cortFac)
+        z = @factor*imag_z+offset1  + flip(@factor*real_z)
+      else
+        z = @factor*real_z+offset2  + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 7) ; SierpinskiM Net I
+                              ; SierpinskiM Windmill I
+                              ; Don Quixote
+                              ; Don Quixote LD
+
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 8) ; Don Quixote NoS
+
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 9) ; MAC-Sierpinski02
+
+      complex a1 = 0
+      complex a2 = 0
+      complex a3 = 0
+
+      if     (imag_z > @corte)
+        a1 = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z > @corte)
+        a2 = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        a3 = @factor*real_z+offset2 + flip(@factor*imag_z)
+        a3 = @elseFkt(a3)
+      endif
+
+      if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+        z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+      elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+        z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+      elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+        z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+      elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+        z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+      elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+        z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+      elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+        z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+      elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+        z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+      elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+        z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+      elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+        z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+
+      endif
+
+
+    elseif (@ls_flavour == 10) ; +/-
+
+      if     (imag_z + real_z > 2*@corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (abs (real_z - imag_z) > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 11) ; max/min
+
+      float hlp_r = real_z
+      float hlp_i = imag_z
+
+      if (hlp_r < hlp_i)
+        real_z = hlp_r
+        imag_z = hlp_i
+      else
+        real_z = hlp_i
+        imag_z = hlp_r
+      endif
+      
+
+      if     (imag_z > @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z  > @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z+offset2 + flip(@factor*imag_z)
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 12) ; KPKinsky Federal
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + flip(@factor*imag_z)
+      elseif (real_z >  @corte/@cortFac)
+        z = @fact01*@fn1(sin(1/(z + @fact01)))
+      elseif (imag_z < -@corte/@cortFac)
+        z = @factor*imag_z+offset1  + flip(@factor*real_z)
+      else
+        z = @fn2(((z^2+offset2)/(3*z+offset2))^2) + #pixel/0.3
+        z = @elseFkt(z)
+      endif
+
+
+    elseif (@ls_flavour == 13) ; KPKinsky Rune
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + flip(@factor*imag_z)
+      elseif (imag_z < -@corte/5)
+        z = @fact01*imag_z+offset1  + flip(@factor*real_z)
+      elseif (real_z >  @corte/5)
+        z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+      else
+        z = @factor*real_z           + flip(@factor*imag_z)
+      endif
+
+
+    elseif (@ls_flavour == 14) ; AKLinsky Rune
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z          + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1 + flip(@factor*imag_z)
+      elseif (real_z >  @corte/5)
+        z = @fact01*@fn1(sin(1/(z + @fact01)))
+      elseif (imag_z < -@corte/5)
+        z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+      else
+        z = @factor*real_z          + flip(@factor*imag_z)
+      endif
+
+
+    elseif (@ls_flavour == 15) ; AKLinsky Dune
+
+      if     (imag_z >  @corte)
+        z = @factor*real_z           + flip(@factor*imag_z-offset1)
+      elseif (real_z >  @corte)
+        z = @factor*real_z-offset1  + flip(@factor*imag_z)
+      elseif (real_z >  @corte/5)
+        z = @fn1(imag_z)
+      elseif (imag_z >  @corte/5)
+        z = @fn2(real_z)
+      elseif (real_z < -@corte/5)
+        z = @fn3(imag_z)
+      elseif (imag_z < -@corte/5)
+        z = @fn4(real_z)
+      else
+        z = @factor*real_z        + flip(@factor*imag_z)
+      endif
+
+
+    elseif (@ls_flavour == 16) ; KochCurveCircle
+
+      z = real_z/sqrt(@Rune) + 1i*sqrt(@Rune)*imag_z
+
+      if (|z| > 1)
+        bail = true
+      endif
+
+      angle1 = atan2(z)
+      ; Deal the case where z needs a rotation
+      angle2 = round(angle1/spokesPi)*spokesPi
+
+      ; Prevent the "son-circle" drawed under the
+      ; "mother" one from having babies...
+      if round(spokesPi*angle1) == 0 && iter > 1
+        if angle1 > 0
+          angle2 =  spokesPi
+        else
+          angle2 = -spokesPi
+        endif
+      endif
+
+      ; Rotate the z that need it.
+      z = z*exp(-1i*angle2)
+
+      ; Set the future circle center
+      ; z = - z + (1 - 1/@s)
+      ; Magnifiy z by s.
+      ; z = @s*z
+
+
+    elseif (@ls_flavour == 17) ; Sierpinksi Triangle distorted
+                               ; -> DJKinsky Triang
+  
+      if     (imag_z > @corte)
+        z = @factor*real_z      + flip(@factor*imag_z-1.00)
+      elseif (real_z > @corte)
+        z = @factor*real_z-1.00 + flip(@factor*imag_z)
+      else
+        z = @factor*real_z      + flip(@factor*imag_z)
+        z = @fn1(1/z^@factor)
+        z = @elseFkt(z)
+      endif
+
+    endif
+
+  endif ; use_CarrFlavours_l
+
+
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  z = @addFkt(z)
+
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  iter = iter + 1
+
+bailout:
+  |z| < @bailout || \
+  (bail == false && @ls_flavour == 16) ; KochCurveCircle
+
+default:
+  title = "Most Carr Sierps"
+  maxiter = 512
+  periodicity = 0
+
+  param carr
+    caption = "i: Carr-Pinsky"
+    enum = "None" "Carr2100" \
+           "Carr2101" "Carr2102" "Carr2103" \
+           "Carr2104" "Carr2105" "Carr2106" \
+           "Carr2107" "Carr2108" "Carr2109"
+    default = 0
+  endparam
+
+  param useCarrFlavours_i
+    caption = "i: Carr Flavours? Y/N"
+    default = TRUE
+  endparam
+
+  param ic_flavour
+    caption = "Flavours: Init Carr"
+    enum = "Carr2100" \
+           "Carr2101" "Carr2102" "Carr2103" \
+           "Carr2104" "Carr2105" "Carr2106" \
+           "Carr2107" "Carr2108" "Carr2109"
+    default = 0
+  endparam
+
+  param is_flavour
+    caption = "Flavours: Init Sierp"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky III"
+    default = 0
+  endparam
+
+  param useCarrFlavours_l
+    caption = "l: Carr Flavours? Y/N"
+    default = FALSE
+  endparam
+
+  param lc_flavour
+    caption = "Flavours: Loop Carr"
+    enum = "Carr2100" "Carr2101" "Carr2102" "Carr2103" \
+           "Carr2104" "Carr2105*"
+    default = 0
+  endparam
+
+  param ls_flavour
+    caption = "Flavours: Loop Sierp"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky IV" \
+           "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min" \
+           "KPKinsky Federal" "KPKinsky Rune" \
+           "AKLinsky Rune" "AKLinsky Dune" \
+           "KochCurveCircle" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None" \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param startExp
+    caption = "i: Start Exponent"
+    default = 1.0
+  endparam
+
+  param startFac
+    caption = "i: Start Factor"
+    default = (1.0,0.0)
+  endparam
+
+  param withInterMediate
+    caption = "i: InterMediate? Y/N"
+    default = TRUE
+  endparam
+
+  param withPower1
+    caption = "i: 1. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower2
+    caption = "i: 2. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param power
+    caption = "i: Power"
+    default = (2,0)
+  endparam
+
+  param withRune
+    caption = "i: Rune? Y/N"
+    default = FALSE
+  endparam
+
+  param Rune
+    caption = "i: Rune Constant"
+    default = (0.1666666667,0.33333333333)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = 1.0
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.01,0.0)
+  endparam
+
+  param sizesq
+    caption = "i: Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param corte
+    caption = "i: Cutting edges"
+    default = 0.5
+  endparam
+
+  param cortFac
+    caption = "i: add to Cutting edges"
+    default = 5.0
+  endparam
+
+  param factor
+    caption = "l: Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "l: Add. const for DM3" 
+    default = 1.0
+  endparam
+
+  param offset1
+    caption = "l: Offset 1 (in if/elseif)" 
+    default = 1.0
+  endparam
+
+  param offset2
+    caption = "l: Offset 2 (in else)" 
+    default = 0.75
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "f: Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  param carrFac
+    caption = "i: Carr Factor"
+    default = 1.5
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "init: Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func imFkt2
+    caption = "init: add. Interm. function"
+    default = ident()
+  endfunc
+
+  func fn1
+    caption = "loop: Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "loop: Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "loop: Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "loop: Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func elseFkt
+    caption = "loop: Function in else-part"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the else part of the loop: section"
+  endfunc
+
+}
+
+CarrSierps {
+; Andreas Lober + Klaus-Peter Kubik
+; Jan 2000
+;
+; Revision: March, 02 2000
+;
+; suggestions and additions are welcome
+;
+;
+; Adapted from formulas by Samuel Monnier
+;   and Luke Plant
+;
+; Corrected KPK formulae (KPK January 2000)
+;   => Power param can be en-/disabled
+;
+; Joukowskij Term "@epsilon/#pixel" added
+;   by Andreas Lober
+;
+; put alltogether in ONE formula
+;   for neverending Sierpinskiing
+;   by Andreas Lober
+;
+; Carrs 2100, 2101, 2102, 2103 ... 
+;   added in different ways
+;   adapted (in a very free way) from Carr2100.ufm
+;   because I like Carrs very much
+;
+; What you have to know first:
+;   The Init-Flavours go through the init sections
+;   of the different KPK-formulae,
+;   but are only abstracts of them,
+;   you have to combine
+;     Power1 yes/no Power2 yes/no
+;     InterMediate yes/no
+;
+;   whilst the Loop-Flavours go through the loop sections
+;   of the different KPK-formulae.
+;
+; More comments are to be found in the formula text
+;
+; The MAC Sierpinski02 is not like the original
+; More formula material waits to be included...
+;
+
+init:
+  complex z  = 0
+  complex zc = 0
+
+  complex z1 = 0
+  complex z2 = 0
+  complex z3 = 0
+  complex z4 = 0
+  int iter   = 0
+  float limit  = 100
+  complex limPar = (-0.743380900000982,-0.131850030300002)
+
+  if     (@carr == 0)
+    z = @startFac*@startFkt(#pixel^@spokes + @epsilon/#pixel)
+
+  elseif (@carr == 1) ; Carr2100
+    z = conj(tan(#pixel + @epsilon/#pixel))        \
+      - sqr(conj(0.10/(#pixel + @epsilon/#pixel))) \
+      - sqr(flip(0.02/(#pixel + @epsilon/#pixel)))
+
+  elseif (@carr == 2) ; Carr2101
+    z = #pixel + @epsilon/#pixel -                 \
+        1/((log(tan(#pixel + @epsilon/#pixel))^10) \
+            + #pixel + @epsilon/#pixel)
+
+  elseif (@carr == 3) ; Carr2102
+    z = flip(imag(1-#pixel + @epsilon/#pixel)) \
+          *sqr(#pixel + @epsilon/#pixel)       \
+      - conj(0.10/#pixel + @epsilon/#pixel)    \
+      - flip(0.010/#pixel + @epsilon/#pixel)
+
+  elseif (@carr == 3) ; Carr2103
+    z = #pixel + @epsilon/#pixel                    \
+      - 0.5/(log(conj(#pixel + @epsilon/#pixel))^12 \
+             + #pixel + @epsilon/#pixel)            \
+      + conj(0.04/(#pixel + @epsilon/#pixel))
+  endif
+
+  if (@carr == 0)
+    z1 = z
+    z2 = z
+    z3 = z
+    z4 = z
+  else
+    z1 = z*@carrFac
+    z2 = z*@carrFac^2
+    z3 = z*@carrFac^3
+    z4 = z*@carrFac^4
+  endif
+
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z) - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z)  - @lattFac2*sqrt(real(z)*imag(z))
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z)   - @lattFac2*sqrt(real(z)*imag(z))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)         
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)         
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)         
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  if (@startExp != 1)
+    z = z^@startExp
+  endif
+
+  if (@withInterMediate)
+    if (@withPower1)
+      zc = @imFkt(z/@power)*@sizesq
+    else
+      zc = @imFkt(z/@sizesq)*@sizesq
+    endif
+
+    if     (@i_flavour == 0) ; AKLinsky
+      z = @factor*(z*@imFkt2(z) + @epsilon/z - zc)
+
+    elseif (@i_flavour == 1) ; KPKinsky I
+      z = @factor*(@imFkt2(z)   + @epsilon/z - zc)
+
+    elseif (@i_flavour == 2) ; KPKinsky III
+      z = @factor*(@imFkt2(z)   + @epsilon/z - \
+           (@corte*zc/2))/@corte
+
+    elseif (@i_flavour == 3) ; Carr2100
+      z = conj(tan(#pixel + @epsilon/#pixel))        \
+        - sqr(conj(0.10/(#pixel + @epsilon/#pixel))) \
+        - sqr(flip(0.02/(#pixel + @epsilon/#pixel)))
+
+    elseif (@i_flavour == 4) ; Carr2101
+      z = #pixel + @epsilon/#pixel -                 \
+          1/((log(tan(#pixel + @epsilon/#pixel))^10) \
+              + #pixel + @epsilon/#pixel)
+
+    elseif (@i_flavour == 5) ; Carr2102
+      z = flip(imag(1-#pixel + @epsilon/#pixel)) \
+            *sqr(#pixel + @epsilon/#pixel)       \
+        - conj(0.10/#pixel + @epsilon/#pixel)    \
+        - flip(0.010/#pixel + @epsilon/#pixel)
+
+
+    elseif (@i_flavour == 6) ; Carr2103
+      z = #pixel + @epsilon/#pixel                    \
+        - 0.5/(log(conj(#pixel + @epsilon/#pixel))^12 \
+               + #pixel + @epsilon/#pixel)            \
+        + conj(0.04/(#pixel + @epsilon/#pixel))
+      z = @factor*(@imFkt2(z) + @epsilon/z - zc)
+
+
+    endif
+
+    if (@withRune)
+      z = z + @Rune
+    endif
+
+    if (@withPower2)
+      z = z/@power
+    else
+      z = z/@sizesq
+    endif
+  endif
+loop:
+
+  float real_z = 0
+  float imag_z = 0
+
+
+  if     (@ri_flavour == 0) ; real/imag
+
+    real_z = real(z)
+    imag_z = imag(z)
+
+
+  elseif (@ri_flavour == 1) ; sin/cos
+
+    real_z = real(sin(z))
+    imag_z = imag(cos(z))
+
+
+  elseif (@ri_flavour == 2) ; Arcus
+
+    real_z = real(asin(z))
+    imag_z = imag(acos(z))
+
+
+  elseif (@ri_flavour == 3) ; Hyperbolic
+
+    real_z = real(sinh(z))
+    imag_z = imag(cosh(z))
+
+
+  elseif (@ri_flavour == 4) ; ArHyp
+
+    real_z = real(asinh(z))
+    imag_z = imag(acosh(z))
+
+
+  elseif (@ri_flavour == 5) ; exp/log
+
+    real_z = real(exp(z))
+    imag_z = imag(log(z))
+
+
+  elseif (@ri_flavour == 6) ; max/min
+
+    float r_z = real(z)
+    float i_z = imag(z)
+
+    if (r_z < i_z)
+      real_z = r_z
+      imag_z = i_z
+    else
+      real_z = i_z
+      imag_z = r_z
+    endif
+
+
+  elseif (@ri_flavour == 7) ; sqr/sqrt
+
+    real_z = real(sqr(z))
+    imag_z = imag(sqrt(z))
+
+
+  endif
+
+
+  if     (@l_flavour == 0) ; AKLinsky
+
+    if     (imag_z > @corte && 1/@corte < imag_z)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte && 1/@corte < real_z)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 1) ; KPKinsky I
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 2); KPKinsky IV
+                          ; PinskyFamily II
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+@offset1 + flip(@factor*real_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+  elseif (@l_flavour == 3); QuadrinskyFamily
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    elseif (imag_z < @corte/@cortFac)
+      z = @factor*imag_z+@offset1 +      @factor*real_z
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 4); Dalinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z < -@corte/@cortFac)
+      z = @factor*@fn1(z)-@offset1 + flip(@factor*real_z)
+    else
+      z = @factor*@fn2(z)+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 5); KPKinskyDM3
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z > -@corte/@cortFac)
+      z = @fact01*@fn1(@fn2(1/(z+@fact01)))
+    else
+      z = @factor*real_z+@offset2  + flip(@factor*imag_z)
+    endif
+
+
+  elseif (@l_flavour == 6) ; KPKMultinsky
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + @fn3(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + @fn4(@factor*imag_z)
+    elseif (real_z > @corte)
+      z = @fn1(@fact01)*@fn2(z+@fact01)-0.1
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+@offset1  + flip(@factor*real_z)
+    else
+      z = @factor*real_z+@offset2  + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 7) ; SierpinskiM Net I
+                           ; SierpinskiM Windmill I
+                           ; Don Quixote
+                           ; Don Quixote LD
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 8) ; Don Quixote NoS
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 9) ; MAC-Sierpinski02
+
+    complex a1 = 0
+    complex a2 = 0
+    complex a3 = 0
+
+    if     (imag_z > @corte)
+      a1 = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z > @corte)
+      a2 = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      a3 = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      a3 = @elseFkt(a3)
+    endif
+
+    if     (@macMode == 0) ;  +fn1+fn2+fn3+fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 1) ;  +fn1+fn2+fn3-fn4
+      z = @fn1(a1) + @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 2) ;  +fn1+fn2-fn3+fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 3) ;  +fn1+fn2-fn3-fn4
+      z = @fn1(a1) + @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 4) ;  +fn1-fn2+fn3+fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 5) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) + @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 6) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) + @fn4(#pixel)
+
+    elseif (@macMode == 7) ;  +fn1-fn2+fn3-fn4
+      z = @fn1(a1) - @fn2(a2) - @fn3(a3) - @fn4(#pixel)
+
+    elseif (@macMode == 8) ;  +fn1*fn2*fn3*fn4
+      z = @fn1(a1) * @fn2(a2) * @fn3(a3) * @fn4(#pixel)
+
+    endif
+
+
+  elseif (@l_flavour == 10) ; +/-
+
+    if     (imag_z + real_z > 2*@corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (abs (real_z - imag_z) > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 11) ; max/min
+
+    float hlp_r = real_z
+    float hlp_i = imag_z
+
+    if (hlp_r < hlp_i)
+      real_z = hlp_r
+      imag_z = hlp_i
+    else
+      real_z = hlp_i
+      imag_z = hlp_r
+    endif
+    
+
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z+@offset2 + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 12) ; KPKinsky Federal
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z           + flip(@factor*imag_z-@offset1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-@offset1  + flip(@factor*imag_z)
+    elseif (real_z >  @corte/@cortFac)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/@cortFac)
+      z = @factor*imag_z+1.00  + flip(@factor*real_z)
+    else
+      z = @fn2(((z^2+@fact01+1)/(3*z+@fact01-1))^2) + #pixel/0.3
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 13 || @l_flavour == 14) ; Carr2100,2101
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if     (iter==100)
+       z = z1
+      elseif (iter==200)
+       z = z2
+      elseif (iter==300)
+       z = z3
+      elseif (iter==400)
+       z = z4
+      endif
+
+      z = (z - @epsilon/z^2)^2 + z
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 15) ; Carr2102
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if     (iter==100)
+       z = z1
+      elseif (iter==200)
+       z = z2
+      elseif (iter==300)
+       z = z3
+      elseif (iter==400)
+       z = z4
+      endif
+
+      z = (z - @epsilon/z^2)^2 + z - 0.087
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 16) ; Carr2103
+    if     (imag_z > @corte)
+      z = @factor*real_z          + flip(@factor*imag_z-@offset1)
+    elseif (real_z  > @corte)
+      z = @factor*real_z-@offset1 + flip(@factor*imag_z)
+    else
+      if (iter > limit)
+        z = (z - @epsilon/z^2)^2 + limPar
+      else
+        z = (z - @epsilon/z^2)^2 + z
+      endif
+
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 17) ; KPKinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1.00)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fact01*imag_z+1.00   + flip(@factor*real_z)
+    elseif (real_z >  @corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 18) ; AKLinsky Rune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fact01*@fn1(sin(1/(z + @fact01)))
+    elseif (imag_z < -@corte/5)
+      z = @fn2(2*real_z*imag_z) * @fn3(@fn4(z^2))
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 19) ; AKLinsky Dune
+
+    if     (imag_z >  @corte)
+      z = @factor*real_z        + flip(@factor*imag_z-1)
+    elseif (real_z >  @corte)
+      z = @factor*real_z-1.00   + flip(@factor*imag_z)
+    elseif (real_z >  @corte/5)
+      z = @fn1(imag_z)
+    elseif (imag_z >  @corte/5)
+      z = @fn2(real_z)
+    elseif (real_z < -@corte/5)
+      z = @fn3(imag_z)
+    elseif (imag_z < -@corte/5)
+      z = @fn4(real_z)
+    else
+      z = @factor*real_z        + flip(@factor*imag_z)
+      z = @elseFkt(z)
+    endif
+
+
+  elseif (@l_flavour == 20) ; Sierpinksi Triangle distorted
+                            ; -> DJKinsky Triang
+
+    if     (imag_z > @corte)
+      z = @factor*real_z      + flip(@factor*imag_z-1.00)
+    elseif (real_z > @corte)
+      z = @factor*real_z-1.00 + flip(@factor*imag_z)
+    else
+      z = @factor*real_z      + flip(@factor*imag_z)
+      z = @fn1(1/z^@factor)
+      z = @elseFkt(z)
+    endif
+
+  endif
+
+
+  if (@exponent != 1)
+    z = z^@exponent
+  endif
+
+  z = @addFkt(z)
+
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  iter = iter + 1
+
+bailout:
+  ;|z| < @bailout
+  (@bailOutMode == 0 && \
+      |z| <= @bailout) || \
+  (@bailOutMode == 1 && \
+      sqr(real(z)) < @bailout) || \
+  (@bailOutMode == 2 && \
+      sqr(imag(z)) < @bailout) || \
+  (@bailOutMode == 3 && \
+      (sqr(real(z)) < @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 4 && \
+      (sqr(real(z)) < @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@bailOutMode == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) < @bailout)) || \
+  (@bailOutMode == 6 && \
+      (sqr(real(z) + imag(z)) < @bailout)) || \
+  (@bailOutMode == 7 && \
+      (real(z)) <= @bailout) || \
+  (@bailOutMode == 8 && \
+      (imag(z)) <= @bailout)
+
+default:
+  title = "Carr Sierp Combinations"
+  maxiter = 512
+  periodicity = 0
+
+  param i_flavour
+    caption = "Flavours: Init"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky III" \
+           "Carr2100" "Carr2101" "Carr2102" "Carr2103"
+    default = 0
+  endparam
+
+  param l_flavour
+    caption = "Flavours: Loop"
+    enum = "AKLinsky" "KPKinsky I" "KPKinsky IV" \
+           "QuadrinskyFamily" \
+           "Dalinsky" "KPKinskyDM3" "KPKMultinsky" \
+           "Don Quixote" "Don Quixote NoS" "MAC Sierp02" \
+           "+/-" "max/min" "KPKinsky Federal" \
+           "Carr2100" "Carr2101" "Carr2102" "Carr2103" \
+           "KPKinsky Rune" \
+           "AKLinsky Rune" "AKLinsky Dune" \
+           "DJKinsky Triang"
+    default = 0
+  endparam
+
+  param ri_flavour
+    caption = "Flavours: Test Modes"
+    enum = "real/imag (Sierp)" "sin/cos" \
+           "Arcus" "Hyperbolic" "ArHyp"  \
+           "exp/log" "max/min" "sqr/sqrt"
+    default = 0
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None" \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param startExp
+    caption = "i: Start Exponent"
+    default = 1.0
+  endparam
+
+  param startFac
+    caption = "i: Start Factor"
+    default = (1.0,0.0)
+  endparam
+
+  param withInterMediate
+    caption = "i: InterMediate? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower1
+    caption = "i: 1. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param withPower2
+    caption = "i: 2. Power? Y/N"
+    default = FALSE
+  endparam
+
+  param power
+    caption = "i: Power"
+    default = (2,0)
+  endparam
+
+  param spokes
+    caption = "Spokes"
+    default = 1.0
+  endparam
+
+  param withRune
+    caption = "i: Rune? Y/N"
+    default = FALSE
+  endparam
+
+  param Rune
+    caption = "i: Rune Constant"
+    default = (0.166667,0.33333333333)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.01,0.0)
+  endparam
+
+  param sizesq
+    caption = "i: Size of the tiles"
+    default = 0.7
+  endparam
+
+  param bailout
+   caption = "Bailout"
+   default = 1e20
+  endparam
+
+  param bailOutMode
+    caption = "Bailout Test Mode"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param corte
+    caption = "i: Cutting edges"
+    default = 0.5
+  endparam
+
+  param cortFac
+    caption = "i: add to Cutting edges"
+    default = 5.0
+  endparam
+
+  param factor
+    caption = "l: Factor Transformation"
+    default = 2.0
+  endparam
+
+  param fact01
+    caption = "l: Add. const for DM3" 
+    default = 1.0
+  endparam
+
+  param offset1
+    caption = "l: Offset 1 (in if/elseif)" 
+    default = 1.0
+  endparam
+
+  param offset2
+    caption = "l: Offset 2 (in else)" 
+    default = 0.75
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param exponent
+    caption = "f: Exponent for Transfer"
+    default = 1.0
+  endparam
+
+  param macMode
+    caption = "MAC Mode for Sierp02"
+    enum = "++++" "+++-" "++-+" "++--" \
+           "+-++" "+-+-" "+--+" "+---" \
+           "****"
+    default = 0
+  endparam
+
+  param carr
+    caption = "i: Carr-Pinsky"
+    enum = "None" "Carr2100" "Carr2101" "Carr2102" "Carr2103"
+    default = 0
+  endparam
+
+  param carrFac
+    caption = "i: Carr Factor"
+    default = 1.5
+
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = abs()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func imFkt
+    caption = "init: Intermediate function"
+    default = sqr()
+    hint = "In the middle (zc) of the init section \
+            Makes the difference between \
+            KPKinsky II -> sqr() \
+            and PinskyFamily -> round()"
+  endfunc
+
+  func imFkt2
+    caption = "init: add. Interm. function"
+    default = ident()
+  endfunc
+
+  func fn1
+    caption = "loop: Function 1"
+    default = sin()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn2
+    caption = "loop: Function 2"
+    default = abs()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn3
+    caption = "loop: Function 3"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func fn4
+    caption = "loop: Function 4"
+    default = flip()
+    hint = "In the Flavour part of the loop: section"
+  endfunc
+
+  func elseFkt
+    caption = "loop: Function in else-part"
+    default = ident()
+    hint = "After the Flavour part of the loop: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the else part of the loop: section"
+  endfunc
+
+} ; CarrSierps
+
+KPKinsky_octangel1 {
+; From Luke Plant's Sierpinski
+; Modified by KPK December 1999
+;
+; Angle algorythm added by
+; Andreas Lober May, 2000
+;
+; Reworked and released by KPK June 21, 2000
+
+init:
+  complex z = pixel
+
+  float arg = 0
+
+  float testAngle1 = #pi/@corte1
+  float testAngle2 = #pi/@corte2
+
+  complex rotAngle1  = 1i*testAngle1
+  complex rotAngle2  = 1i*testAngle2
+
+  float x = 0
+  float y = 0
+
+  float angle = @angle*pi/180
+
+loop:
+
+  x = real(z)
+  y = imag(z)
+
+  IF x < 0
+    x = -x
+  ENDIF
+
+  IF y < 0
+    y = -y
+  ENDIF
+
+  z = x + flip(y)
+
+  arg = atan2(z)
+
+  IF(arg > testAngle1-angle)
+    z = z*exp(-rotAngle1)
+
+  ELSEIF (arg < testAngle1-angle && arg > angle)
+    z = z*exp(-rotAngle2)
+    z = z*cos(angle)/cos(rotAngle2-angle)
+
+  ELSE
+    IF (imag(z)>0.5)
+      z = 2*real(z) + flip(2*imag(z)-1)
+
+    ELSEIF (real(z)>0.5)
+      z = 2*real(z)-1 + flip(2*imag(z))
+
+    ELSEIF (imag(z)<0.5)
+      z = 2*real(z)+0.75 + flip(2+imag(z))
+
+    ELSE
+      z = 2*real(z) + flip(2*imag(z))
+
+    ENDIF
+  ENDIF
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "KPKinsky I OctAngel#1"
+  magn = 0.25
+  maxiter = 500
+  method = multipass
+  periodicity = 0
+
+  param bailout
+    caption = "Bailout value"
+    default = 127
+    min = 1
+  endparam
+
+  param corte1
+    caption = "Old Cutting edges"
+    default = 2.0
+  endparam
+
+  param corte2
+    caption = "New Cutting edges"
+    default = 4.0
+  endparam
+
+  param angle
+    caption = "Angle"
+    default = 45.0
+  endparam
+}
+
+

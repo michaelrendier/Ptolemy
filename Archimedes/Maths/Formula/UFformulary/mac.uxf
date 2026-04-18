@@ -1,0 +1,227 @@
+FunApply { ; Marcelo Anelli
+  transform:
+    float x = real(#pixel)
+    float y = imag(#pixel)
+    if (@form == 0)
+      if (@metodo == 0)
+        #pixel = x * @fn1(y) - flip( x * @fn2(y))
+      elseif (@metodo == 1)
+        #pixel = x * @fn1(y) + flip( x * @fn2(y))
+      elseif (@metodo == 2)
+        #pixel = x * @fn1(y) * flip( x * @fn2(y))
+      elseif (@metodo == 3)
+        #pixel = x * @fn1(y) / flip( x * @fn2(y))
+      endif
+    elseif (@form == 1)
+      if (@metodo == 0)
+        #pixel = ( x * @fn1(y) ) + flip( @fn2( x ) * y )
+      elseif (@metodo == 1)
+        #pixel = ( x * @fn1(y) ) - flip( @fn2( x ) * y )
+      elseif (@metodo == 2)
+        #pixel = ( x * @fn1(y) ) * flip( @fn2( x ) * y )
+      elseif (@metodo == 3)
+        #pixel = ( x * @fn1(y) ) / flip( @fn2( x ) * y )
+      endif
+    endif
+  default:
+    Title = "FunApply"
+    param form
+      caption = "Form of appling"
+      default = 0
+      enum = "First" "Second"
+    endparam
+    param metodo
+      caption = "Mode"
+      default = 0
+      enum = "Add" "Subtract" "Multiply" "Divide"
+    endparam
+    func fn1
+      caption = "First function"
+      default = cos()
+    endfunc
+    func fn2
+      caption = "Second function"
+      default = sin()
+    endfunc
+}
+
+Negada { ; Marcelo Anelli
+transform:
+  #pixel = - #pixel
+default:
+  Title = "Negated"
+}
+
+UnaFun { ; Marcelo Anelli
+transform:
+  #pixel = fn1(#pixel)
+default:
+  Title = "One function"
+  func fn1
+    caption = "Function"
+    default = sin()
+  endfunc
+}
+
+DosFun01 { ; Marcelo Anelli
+transform:
+  #pixel = fn2(fn1(#pixel))
+default:
+  Title = "Two function applied"
+  func fn1
+    caption = "First function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second function"
+    default = sin()
+  endfunc
+}
+
+DosFun02 { ; Marcelo Anelli
+transform:
+  if (@colorear == 0)
+    #pixel = (@Val1 * fn1(#pixel) + @Val2 * fn2(#pixel))/(@Val1 + @Val2)
+  elseif (@colorear == 1)
+    #pixel = (@Val1 * fn1(#pixel) - @Val2 * fn2(#pixel))/(@Val1 + @Val2)
+  elseif (@colorear == 2)
+    #pixel = (@Val1 * fn1(#pixel) * @Val2 * fn2(#pixel))
+  elseif (@colorear == 3)
+    #pixel = (@Val1 * fn1(#pixel) / @Val2 * fn2(#pixel))
+  endif
+default:
+  Title = "Two function transform"
+  param Val1
+    caption = "Weight 1"
+    default = 1.0
+    hint = "Weight for first function"
+  endparam
+  param Val2
+    caption = "Weight 2"
+    default = 1.0
+    hint = "Weight for second function"
+  endparam
+  param colorear
+    caption = "Transform"
+	default = 0
+	enum = "Add" "Subtract" "Multiply" "Divide"
+  endparam
+  func fn1
+    caption = "First function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second function"
+    default = sin()
+  endfunc
+}
+
+Deformar { ; Marcelo Anelli
+transform:
+  #pixel = @Val1 * real(#pixel) + @Val2 * flip(imag(#pixel))
+default:
+  Title = "Linear deformation"
+  param Val1
+    caption = "Real factor"
+    default = 1.5
+    min = 0.1
+    hint = "Real factor of the transformation"
+  endparam
+  param Val2
+    caption = "Imaginary factor"
+    default = 1.3
+    min =0.1
+    hint = "Imaginary factor of the transformation"
+  endparam
+}
+
+Deformar1 { ; Marcelo Anelli
+transform:
+  #pixel = @Val1 * (real(#pixel)-real(#center)) + @Val2 * flip(imag(#pixel)-imag(#center))
+default:
+  Title = "Deform to the center"
+  param Val1
+    caption = "Real factor"
+    default = 1.5
+    min = 0.1
+    hint = "Real factor for the transformation"
+  endparam
+  param Val2
+    caption = "Imaginary factor"
+    default = 1.3
+    min =0.1
+    hint = "Imaginary factor for the transformation"
+  endparam
+}
+
+AzarD1 { ; Marcelo Anelli
+transform:
+  if (@colorear == 0)
+    #pixel = @Val1 * (real(#pixel) + @factor * #rand ) + @Val2 * flip(imag(#pixel) + @factor * #rand )
+  elseif (@colorear == 1)
+    #pixel = @Val1 * (real(#pixel) - @factor * #rand ) + @Val2 * flip(imag(#pixel) - @factor * #rand )
+  elseif (@colorear == 2)
+    #pixel = @Val1 * (@factor * #rand ) + @Val2 * flip( @factor * #rand )
+  elseif (@colorear == 3)
+    #pixel = @fn1( @Val1 * (real(#pixel) + @factor * #rand ) + @Val2 * flip(imag(#pixel) + @factor * #rand ))
+  elseif (@colorear == 4)
+    #pixel = @fn1( @Val1 * (real(#pixel) + @factor * #rand )) + @fn2(@Val2 * flip(imag(#pixel) + @factor * #rand ))
+  endif
+default:
+  Title = "Random deformation"
+  param Val1
+    caption = "Real factor"
+    default = 1.5
+    min = 0.1
+    hint = "Real factor for the transformation"
+  endparam
+  param Val2
+    caption = "Imaginary factor"
+    default = 1.3
+    min =0.1
+    hint = "Imaginary factor for the transformation"
+  endparam
+  param factor
+    caption = "Random component"
+    default = 0.1
+	hint = "Random component for the transformation"
+  endparam
+  param colorear
+    caption = "Form"
+	default = 0
+	enum = "Add" "Subtract" "Pure random" "One function" "Two function"
+  endparam
+  func fn1
+    caption = "First function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "Second function"
+    default = sin()
+  endfunc
+}
+
+Affina { ; Marcelo Anelli
+transform:
+  float x = real( #pixel )
+  float y = imag( #pixel )
+  #pixel = @a * x + @b * y + flip( @c * x + @d * y )
+default:
+  Title = "Affine deformation"
+  param a
+    caption = "a"
+    default = 0.0
+  endparam
+  param b
+    caption = "b"
+    default = 1.0
+  endparam
+  param c
+    caption = "c"
+    default = -1.0
+  endparam
+  param d
+    caption = "d"
+    default = 0.0
+  endparam
+}

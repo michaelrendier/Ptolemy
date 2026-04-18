@@ -1,0 +1,205 @@
+ImageWrapperDirect {
+;
+; ImageWrapperDirect is a Direct Coloring Algorithm. It's very similar
+; to the algorithm Image from the Standard library but using an
+; ImageWrapper plug-in object to display the image
+;
+
+  global:
+
+    import "common.ulb"
+
+    ImageWrapper i = new @imageWrapperClass(0)
+
+  final:
+
+    ; Simplified (faster but no scaling or proportion adjustment)
+    #color = i.getColor(#pixel)
+
+  default:
+
+    title = "ImageWrapper Direct"
+    heading
+      text = "Tip: the ImageWrapper Direct coloring algorithm works best \
+        with the standard Pixel fractal formula or equivalent. The plug-in \
+		is responsible of adjusting image proportions. The image size may \
+		require also magnification"
+    endheading
+
+    ImageWrapper param imageWrapperClass
+      caption = "ImageWrapper (plug-in)"
+      default = ImageImport
+      hint = "The image center is at (0, 0). The parameters at Location tab \
+        allow viewing the image at the desired size."
+    endparam
+}
+
+
+ImageGradient {
+;
+; ImageGradient is very similar to standard coloring algorithm formula Image but
+; it uses gradient instead of direct color.
+; Displays an image from disk. It's best used on the Outside tab, together with
+; the Pixel formula from Standard.ufm. It's also recomended to use Linear
+; one-pass or multi-pass in the formula tab to avoid rendering glitches.
+; The index is obtained from one of the color components: red, green, blue, hue,
+; saturation, luminance or alpha. Default value is luminance (use standard
+; lighting gradient to obtain a grayscale image version of the source image)
+; Pixels totally transparent (0% alpha) receive the solid color so the image
+; outside and transparent parts of the source image become solid color. The
+; expected behavior probably requires to set the solid color as transparent too.
+;
+
+  global:
+
+    Image i = new @imageClass
+
+  final:
+
+    ; Use #pixel as the complex coordinate inside the image, but scale such that
+    ; the default corner coordinates (-2,1.5)..(2,-1.5) correspond to the entire
+    ; image width.
+    complex c = 0.5 * #pixel
+
+    ; Make sure the ratio of the image is preserved.
+    float ratio
+    if !i.getEmpty()
+      ratio = i.getWidth() / i.getHeight()
+    else
+      ratio = 1
+    endif
+
+    ; The base color is used to determine the index based in the component
+    ; selected with the mode
+    color tone = i.getColor(real(c) + flip(imag(c) * ratio))
+    float idx = 0.0
+    float alpha = alpha(tone)
+
+    if @comp == "Red"
+    idx = red(tone)
+    elseif @comp == "Green"
+    idx = green(tone)
+    elseif @comp == "Blue"
+    idx = blue(tone)
+    elseif @comp == "Hue"
+    idx = hue(tone)
+    elseif @comp == "Saturation"
+      idx = sat(tone)
+    elseif @comp == "Luminance"
+      idx = lum(tone)
+    else   ; alpha
+      idx = alpha
+    endif
+  
+    if alpha == 0.0
+      #solid = true
+    else
+      ; Limit maximum value to use lighting gradient w/linear transfer
+      if idx > 0.9975
+        idx = 0.9975
+      endif
+      #index = idx
+    endif
+
+  default:
+
+    title = "Image Index"
+    heading
+    text = "Tip: the Image coloring algorithm works best with the standard \
+        Pixel fractal formula."
+    endheading
+
+    Image param imageClass
+      caption = "Image"
+    hint = "The image selected here will fill the entire layer, if combined \
+        with the Pixel fractal formula and if the location is set to the \
+      default. To do this, click the Reset button on the Location tab."
+    endparam
+
+    int param comp
+      caption = "Component"
+      default = 5   ; Luminance
+      enum = "Red" "Green" "Blue" "Hue" "Saturation" "Luminance" "Alpha"
+  endparam
+
+}
+  
+  
+ImageWrapperGradient {
+;
+; ImageWrapperGradient is very similar to ImageGradient but it uses an
+; ImageWrapper object instead of an Image object.
+; Displays an image from disk. It's best used on the Outside tab, together with
+; the Pixel formula from Standard.ufm. It's also recomended to use Linear
+; one-pass or multi-pass in the formula tab to avoid rendering glitches.
+; The index is obtained from one of the color components: red, green, blue, hue,
+; saturation, luminance or alpha. Default value is luminance (use standard
+; lighting gradient to obtain a grayscale image version of the source image)
+; Pixels totally transparent (0% alpha) receive the solid color so the image
+; outside and transparent parts of the source image become solid color. The
+; expected behavior probably requires to set the solid color as transparent too.
+;
+
+global:
+
+  import "common.ulb"
+
+  ImageWrapper i = new @imageWrapperClass(0)
+
+final:
+
+  ; The base color is used to determine the index based in the component
+  ; selected with the mode
+  ; Use #pixel as the complex coordinate without scaling
+  color tone = i.getColor(#pixel)
+  float idx = 0.0
+  float alpha = alpha(tone)
+
+  if @comp == "Red"
+    idx = red(tone)
+  elseif @comp == "Green"
+    idx = green(tone)
+  elseif @comp == "Blue"
+    idx = blue(tone)
+  elseif @comp == "Hue"
+    idx = hue(tone)
+  elseif @comp == "Saturation"
+    idx = sat(tone)
+  elseif @comp == "Luminance"
+    idx = lum(tone)
+  else   ; alpha
+    idx = alpha
+  endif
+
+  if alpha == 0.0
+    #solid = true
+  else
+    ; Limit maximum value to use lighting gradient w/linear transfer
+    if idx > 0.9975
+      idx = 0.9975
+    endif
+    #index = idx
+  endif
+
+default:
+
+  title = "ImageWrapper Gradient"
+  heading
+    text = "Tip: the ImageWrapper Gradient coloring algorithm works best \
+	  with the standard Pixel fractal formula or equivalent."
+  endheading
+
+  ImageWrapper param imageWrapperClass
+    caption = "ImageWrapper (plug-in)"
+    default = ImageImport
+    hint = "The image selected here will fill the entire layer, if combined \
+      with the Pixel fractal formula and if the location is set to the \
+      default. To do this, click the Reset button on the Location tab."
+  endparam
+
+  int param comp
+    caption = "Component"
+    default = 5   ; Luminance
+    enum = "Red" "Green" "Blue" "Hue" "Saturation" "Luminance" "Alpha"
+  endparam
+}

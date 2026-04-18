@@ -1,0 +1,3165 @@
+comment {
+  dmj-pub.ucl 2.1
+  Coloring methods for Ultra Fractal 2
+  by Damien M. Jones
+  April 2, 2000
+
+  For more information about this formula collection,
+  please visit its home page:
+  
+      http://www.fractalus.com/ultrafractal/dmj-pub-uf.htm
+
+  Many of these coloring algorithms are general-purpose tools
+  which work with a variety of fractals. A few are more
+  specialized. Huge portions of this compilation build upon
+  the techniques explored by others.
+}
+
+dmj-Bifurcation {
+;
+; Intended to color bifurcation plots.
+; It assumes the fractal formula will have placed the count of
+; orbit points landing within the pixel area into real(z).
+; It then performs some simple scaling of the result.
+;
+final:
+  #index = real(#z)/(#maxit-@filter)
+  
+default:
+  title = "Bifurcation"
+  helpfile = "dmj-pub\dmj-pub-uf-bifurcationc.htm"
+
+  param filter
+    caption = "Filter Iterations"
+    default = 200
+    hint = "Specifies the number of iterations to skip before \
+            plotting orbit points. (This should match what is on \
+            the Formula tab.)"
+  endparam
+}
+
+dmj-CarlsonAtan {
+;
+; This is the Paul Carlson ATAN method.
+; Basically, it is atan(z[n] - z[n-1]).
+; On most fractals it will give slightly different
+; results than the FractInt ATAN, but on some
+; (especially Nova and other convergent fractals)
+; it yields substantially different images.
+;
+init:
+  complex zold = (0,0)
+  float d = 0.0
+  
+loop:
+  zold = #z			; save current orbit value
+
+final:
+  zold = #z - zold		; take final z and subtract previous z
+  d = atan2(zold)		; retrieve the angle of that
+  IF (d < 0)			; it's negative
+    d = d + #pi * 2		; make it positive
+  ENDIF
+  #index = d / (#pi * 2)	; scale so full angle range is 0..1
+
+default:
+  title = "Atan (Paul Carlson)"
+  helpfile = "dmj-pub\dmj-pub-uf-atan.htm"
+}
+
+dmj-CarlsonAtan2 {
+;
+; This is a variation on the Paul Carlson ATAN
+; method. Basically, it is atan(z[n] - z[n-2]).
+;
+init:
+  complex zold = (0,0)
+  complex zold2 = (0,0)
+  float d = 0.0
+  
+loop:
+  zold2 = zold			; save previous iteration
+  zold = #z			; save current iteration
+
+final:
+  zold = #z - zold2		; take final z and subtract 2nd previous z
+  d = atan2(zold)		; determine angle of zold
+  IF (d < 0)			; it's negative
+    d = d + #pi * 2		; make it positive
+  ENDIF
+  #index = d / (#pi * 2)	; scale so full angle range is 0..1
+
+default:
+  title = "Atan2 (Paul Carlson variant)"
+  helpfile = "dmj-pub\dmj-pub-uf-atan.htm"
+}
+
+dmj-Cilia(OUTSIDE) {
+;
+; This coloring method is an implementation of the
+; "Cilia" coloring type from the KPT5 FraxPlorer.
+; The technique was developed by Ben Weiss of
+; MetaCreations; I've added several new modes and
+; parameters to it. Many thanks to Ben for confirming
+; my guesses as to how this algorithm works.
+;
+; Because this method relies on smoothed iteration
+; values, it will work best with Mandelbrot and
+; derived types.  It also DOES NOT WORK YET with
+; fractals with exponents other than 2! Feel free
+; to experiment regardless, but the results will
+; not be seamless.
+;
+init:
+  complex il = 1/log(2.0)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+  complex z1 = (0,0)			; old iterations
+  complex z2 = (0,0)
+  complex z3 = (0,0)
+  complex z4 = (0,0)
+
+loop:
+  IF (@olditer > 0)			; need old iterations
+    z4 = z3				; save them
+    z3 = z2
+    z2 = z1
+    z1 = #z
+  ENDIF
+
+final:
+  IF (@olditer == 0)			; select the iteration we want
+    z4 = #z
+  ELSEIF (@olditer == 1)
+    z4 = z1
+  ELSEIF (@olditer == 2)
+    z4 = z2
+  ELSEIF (@olditer == 3)
+    z4 = z3
+  ENDIF
+  
+  ; determine potential and decomposition
+  ; this gives us a "coordinate" in d and f, ranging from 0 to 1
+  float f = real(il*lp - il*log(log(cabs(#z))))	; fractional iteration
+  float d = atan2(z4)				; angle of z
+  IF (d < 0)			; it's negative
+    d = d + #pi * 2		; make it positive
+  ENDIF
+  d = d / (#pi * 2)		; scale so full angle range is 0..1
+  
+  ; apply skew
+  d = d + @skew*f
+  d = d - floor(d)
+;  f = f - floor(f)
+
+  ; convert decomp and pot to tileable value d
+  ; this is where the patterns are made
+  IF (@ciliamode == 0)			; sawtooth
+    IF (d < 0.5)
+      d = d * (f+1)
+    ELSE
+      d = (d-0.5) * (f+1) - f/2 + 0.5
+    ENDIF
+    d = abs(1-d*2)
+
+  ELSEIF (@ciliamode == 1)		; interpolated
+    float d1 = abs(1-d*2)
+    float d2 = abs(1-(d*real(2.0)-floor(d*real(2.0)))*2)
+    d = d1 + f*(d2-d1)
+
+  ELSEIF (@ciliamode == 2)		; sine waves
+    float d1 = cos(d*#pi*2)*0.5 + 0.5
+    float d2 = cos(d*#pi*2*real(2.0))*0.5 + 0.5
+    d = d1 + f*(d2-d1)
+
+  ELSEIF (@ciliamode == 3)		; cells
+    d = ((0.25-sqr(d-0.5)) * (0.25-sqr(f-0.5))) * 16
+
+  ELSEIF (@ciliamode == 4)		; bricks
+    float d1 = 1 - abs(d-0.5)*2
+    float d2 = 1 - abs(f-0.5)*2
+    IF (d1 < d2)
+      d = d1
+    ELSE
+      d = d2
+    ENDIF
+
+  ELSEIF (@ciliamode == 5)		; diamonds
+    d = 0.5 - abs(d - 0.5)
+    IF (f < 2/3)
+      d = d + f*0.75
+      d = abs(1-d*2)
+    ELSE
+      IF (d < f*0.75-0.5)
+        d = f*3-2-d*4
+      ELSE
+        d = 1-(0.5-d)/(1-f*0.75)
+      ENDIF
+    ENDIF
+    
+  ENDIF
+
+  #index = d * 0.99			; reduce it just a bit to prevent
+  					; the colors from wrapping
+
+default:
+  title = "Cilia"
+  helpfile = "dmj-pub\dmj-pub-uf-cilia.htm"
+
+;  param power
+;    caption = "Exponent"
+;    default = (2,0)
+;    hint = "This should be set to match the exponent of the \
+;            formula you are using.  For Mandelbrot, this is 2."
+;  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab."
+  endparam
+  param ciliamode
+    caption = "Cilia Mode"
+    default = 0
+    enum = "sawtooth" "interpolated" "sine waves" "cells" "bricks" "diamonds"
+    hint = "This is the periodic function used to generate the \
+            cilia pieces.  Each has a different 'flavor'."
+  endparam
+  param skew
+    caption = "Cilia Skew"
+    default = 0.0
+    hint = "This skews the pattern.  Use multiples of 0.5 for \
+            complete continuity."
+  endparam
+  param olditer
+    caption = "Use Older Iterations"
+    default = 0
+    enum = "no" "1 older" "2 older" "3 older" "4 older"
+    hint = "Uses older iterations for decomposition angle; this \
+            has the effect of spreading out the pattern.  Best \
+	    used to compensate for higher bailouts."
+  endparam
+}
+
+dmj-Curvature {
+;
+; This formula averages curvature over the course
+; of all iterations by averaging the difference in
+; absolute value of angles between orbit steps. The
+; technique was suggested by Prof. Javier Barrallo.
+;
+; Note that the results are often very similar to
+; Kerry Mitchell's Triangle Inequality Average method,
+; but are slightly more angular.
+;
+init:
+  complex zold = (0,0)
+  complex zold2 = (0,0)
+  float a = 0.0
+  float a2 = 0.0
+  int i = 0
+
+loop:
+  a2 = a
+  IF (i >= 2 && @aflavor != 2)			; zold and zold2 are valid
+    a = a + abs(atan2((#z-zold)/(zold-zold2)))	; update average
+  ENDIF
+  i = i + 1					; count the iteration
+  zold2 = zold					; save the orbit values
+  zold = #z
+
+final:
+  IF (@aflavor == 0)
+    float il = 1/log(@power)
+    float lp = log(log(@bailout)/2.0)
+    float f = il*lp - il*log(log(cabs(#z)))
+    a = a / i
+    a2 = a2 / (i-1)
+    #index = (a2 + (a-a2) * (f+1)) / #pi
+  
+  ELSEIF (@aflavor == 1)
+    #index = (a/i) / #pi + 1
+    
+  ELSE
+    a = atan2((#z-zold)/(zold-zold2))		; update average
+    #index =  a    / #pi + 1
+  ENDIF
+  
+default:
+  title = "Curvature Average"
+  helpfile = "dmj-pub\dmj-pub-uf-ca.htm"
+
+  param aflavor
+    caption = "Average Flavor"
+    default = 0
+    enum = "smooth" "average" "last"
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+}
+
+dmj-Decomp {
+;
+; This coloring method simulates the decomp
+; option in FractInt.  Note that this will
+; give smooth coloring; this may make matching
+; some uses of decomp difficult.
+;
+; Note also that unlike the Compatibility
+; formula that comes with Ultra Fractal, this
+; method can be used for inside coloring, too.
+;
+final:
+  float d = atan2(#z)		; get angle of z
+  IF (d < 0)			; it's negative
+    d = d + #pi * 2		; make it positive
+  ENDIF
+  #index = d / (#pi * 2) * @portion / 256 ; scale so full angle range is 0..1
+
+default:
+  title = "Final Decomposition"
+  helpfile = "dmj-pub\dmj-pub-uf-decomp.htm"
+  
+  param portion
+    caption = "Palette Portion"
+    default = 256.0
+    hint = "Indicates the portion of the palette to use. \
+            256 means use the whole palette, 128 means use \
+	    half of it."
+  endparam
+}
+
+dmj-Distance(OUTSIDE) {
+;
+; This is the distance-estimator coloring method
+; for Mandelbrot and other z^n formula types
+; (Phoenix, Julia).  Results on other types may
+; be unpredictable, but might be interesting.
+;
+; To match the coloring of FractInt's distance
+; estimator method, use a Sqr transfer function
+; and a coloring style of "distance". This is not,
+; however, a perfect match.
+;
+; The "real" and "imaginary" coloring styles are
+; not simply the real and imaginary components
+; of the distance/angle calculations. These were
+; exceptionally dull. I've mangled these modes to
+; try to produce something more interesting, but
+; generally these were an experiment that didn't
+; work at all like I expected them to.
+;
+init:
+  complex dz = (0,0)
+  
+loop:
+  dz = @power * #z^(@power-1) * dz + 1
+  
+final:
+  IF (@style == 0)		; distance
+    #index = (@power*log(cabs(#z)) * cabs(#z) / cabs(dz))^(1/@power)
+  ELSEIF (@style == 1)		; angle
+    #index = atan2(#z/dz)/#pi + 1
+  ELSEIF (@style == 2)		; real
+    #index = (abs(real(#z/dz)))^(1/exp(@power)) * log(#numiter)
+  ELSEIF (@style == 3)		; imaginary
+    #index = (abs(imag(#z/dz)))^(1/exp(@power)) * log(#numiter)
+  ENDIF
+  
+default:
+  title = "Distance Estimator (Mandelbrot)"
+  helpfile = "dmj-pub\dmj-pub-uf-dem.htm"
+
+  param style
+    caption = "Coloring Style"
+    default = 0
+    enum = "distance" "angle" "real" "imaginary"
+    hint = "Selects the value to use from the distance estimator \
+            function."
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+}
+
+dmj-fBm {
+;
+; Fractional Brownian Motion
+; This is an adaptation of Intel's real-time MMX fBm
+; algorithm, which is derived from Ken Musgrave's fBm
+; algorithm, which is built on Perlin's noise basis
+; function. It provides bumpy coloring that can be
+; rendered at high resolution. The algorithm is fractal.
+;
+; You will find that this coloring has sharp breaks at
+; iteration boundaries. That's because it was created to
+; color "flat" areas, not those twisted by fractal
+; formulas. Interesting effects can be obtained if you can
+; arrange for all pixels to use the same number of fractal
+; formula iterations.
+;
+; I'm not going to try to provide a complete description
+; of how this algorithm works, because it has several
+; layers. I was able to find a fairly decent description
+; on Intel's site (which is where the outline of this
+; code comes from) but it is written for assembly language
+; programmers and not mathematicians (let alone laypeople)
+; and I can't recommend it. I'll write better docs when
+; I do the full help file package.
+;
+final:
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex r2 = (0,1) ^ (@anglestep / 90.0)
+  complex p = #z * @scale * r + @offset
+  float sum = 0.0
+  float freq = 1.0
+  int i = @octaves
+  WHILE (i > 0)
+    ; determine integer coordinate for corners of square
+    ; surrounding p
+    float bx0 = floor(real(p)) % 256
+    float by0 = floor(imag(p)) % 256
+    IF (bx0 < 0)
+      bx0 = bx0 + 256
+    ENDIF
+    IF (by0 < 0)
+      by0 = by0 + 256
+    ENDIF
+    float bx1 = (bx0 + 1) % 256
+    float by1 = (by0 + 1) % 256
+
+    float rx0 = real(p) - floor(real(p))
+    float ry0 = imag(p) - floor(imag(p))
+    float rx1 = rx0 - 1
+    float ry1 = ry0 - 1
+    
+    ; create a "random" index for each corner
+    ; (this is where Intel's version differs from Perlin's;
+    ; I used Intel's version because it doesn't require a
+    ; pre-computed random table, which is difficult to manage
+    ; in UF.)
+    float b00 = (bx0^@power % 65536 + by0)^@power % 65536
+    float b10 = (bx1^@power % 65536 + by0)^@power % 65536
+    float b01 = (bx0^@power % 65536 + by1)^@power % 65536
+    float b11 = (bx1^@power % 65536 + by1)^@power % 65536
+
+    ; produce a "random" vector for each corner
+    float g_b00_0 = (b00)^@power*0.25 % 512 - 256
+    float g_b10_0 = (b10)^@power*0.25 % 512 - 256
+    float g_b01_0 = (b01)^@power*0.25 % 512 - 256
+    float g_b11_0 = (b11)^@power*0.25 % 512 - 256
+    float g_b00_1 = (b00+1)^@power*0.25 % 512 - 256
+    float g_b10_1 = (b10+1)^@power*0.25 % 512 - 256
+    float g_b01_1 = (b01+1)^@power*0.25 % 512 - 256
+    float g_b11_1 = (b11+1)^@power*0.25 % 512 - 256
+    
+    ; normalize each vector
+    float d = 0.0;
+    d = 1 / sqrt(sqr(g_b00_0) + sqr(g_b00_1))
+    g_b00_0 = g_b00_0 * d
+    g_b00_1 = g_b00_1 * d
+    d = 1 / sqrt(sqr(g_b10_0) + sqr(g_b10_1))
+    g_b10_0 = g_b10_0 * d
+    g_b10_1 = g_b10_1 * d
+    d = 1 / sqrt(sqr(g_b01_0) + sqr(g_b01_1))
+    g_b01_0 = g_b01_0 * d
+    g_b01_1 = g_b01_1 * d
+    d = 1 / sqrt(sqr(g_b11_0) + sqr(g_b11_1))
+    g_b11_0 = g_b11_0 * d
+    g_b11_1 = g_b11_1 * d
+    
+    ; produce colors for each corner
+    float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+    float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+    float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+    float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+    
+    ; interpolate between corners using
+    ; bilinear filtering
+    float sx = sqr(rx0) * (3 - rx0*2)
+    float sy = sqr(ry0) * (3 - ry0*2)
+    float a = u1 + sx*(v1-u1)
+    float b = u2 + sx*(v2-u2)
+    
+    sum = sum + (a + sy*(b-a))*freq
+    freq = freq * @step
+    p = p * r2 / @step
+    i = i - 1
+  ENDWHILE
+  #index = (sum + 1) * 0.5
+  
+default:
+  title = "Fractional Brownian Motion"
+  helpfile = "dmj-pub\dmj-pub-uf-fbm.htm"
+
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "This is the offset of the pattern. You can use this to shift \
+            the pattern around on the complex plane."
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+    hint = "This is the overall scale of the noise."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, of the noise."
+  endparam
+  param step
+    caption = "Scale Step"
+    default = 0.5
+    hint = "This is the step in scale between noise iterations."
+  endparam
+  param anglestep
+    caption = "Rotation Step"
+    default = 37.0
+    hint = "This is the angle, in degrees, to rotate between noise \
+            iterations."
+  endparam
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+    hint = "This is the number of iterations of the noise formula."
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This is the exponent used to scramble numbers."
+  endparam
+}
+
+dmj-fBm2 {
+;
+; Fractional Brownian Motion II
+; This is an adaptation of Intel's real-time MMX fBm
+; algorithm, which is derived from Ken Musgrave's fBm
+; algorithm, which is built on Perlin's noise basis
+; function. It provides bumpy coloring that can be
+; rendered at high resolution.
+;
+; This variant uses the fBm texture as a cumulative
+; effect at each iteration. As such, you can usually
+; get away with using only a few octaves at each
+; iteration.
+;
+init:
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex r2 = (0,1) ^ (@anglestep / 90.0)
+  float sum = 0.0
+
+loop:
+  float fade2 = 1-cabs(#z)/@fade
+  IF (fade2 < 0)
+    fade2 = 0
+  ELSE
+    fade2 = sqr(fade2)
+  ENDIF
+
+  complex p = #z * @scale * r + @offset
+  float freq = 1.0
+  int i = @octaves
+  WHILE (i > 0)
+    ; determine integer coordinate for corners of square
+    ; surrounding p
+    float bx0 = floor(real(p)) % 256
+    float by0 = floor(imag(p)) % 256
+    IF (bx0 < 0)
+      bx0 = bx0 + 256
+    ENDIF
+    IF (by0 < 0)
+      by0 = by0 + 256
+    ENDIF
+    float bx1 = (bx0 + 1) % 256
+    float by1 = (by0 + 1) % 256
+
+    float rx0 = real(p) - floor(real(p))
+    float ry0 = imag(p) - floor(imag(p))
+    float rx1 = rx0 - 1
+    float ry1 = ry0 - 1
+    
+    ; create a "random" index for each corner
+    ; (this is where Intel's version differs from Perlin's;
+    ; I used Intel's version because it doesn't require a
+    ; pre-computed random table, which is difficult to manage
+    ; in UF.)
+    float b00 = (bx0^@power % 65536 + by0)^@power % 65536
+    float b10 = (bx1^@power % 65536 + by0)^@power % 65536
+    float b01 = (bx0^@power % 65536 + by1)^@power % 65536
+    float b11 = (bx1^@power % 65536 + by1)^@power % 65536
+
+    ; produce a "random" vector for each corner
+    float g_b00_0 = (b00)^@power*0.25 % 512 - 256
+    float g_b10_0 = (b10)^@power*0.25 % 512 - 256
+    float g_b01_0 = (b01)^@power*0.25 % 512 - 256
+    float g_b11_0 = (b11)^@power*0.25 % 512 - 256
+    float g_b00_1 = (b00+1)^@power*0.25 % 512 - 256
+    float g_b10_1 = (b10+1)^@power*0.25 % 512 - 256
+    float g_b01_1 = (b01+1)^@power*0.25 % 512 - 256
+    float g_b11_1 = (b11+1)^@power*0.25 % 512 - 256
+    
+    ; normalize each vector
+    float d = 0.0;
+    d = 1 / sqrt(sqr(g_b00_0) + sqr(g_b00_1))
+    g_b00_0 = g_b00_0 * d
+    g_b00_1 = g_b00_1 * d
+    d = 1 / sqrt(sqr(g_b10_0) + sqr(g_b10_1))
+    g_b10_0 = g_b10_0 * d
+    g_b10_1 = g_b10_1 * d
+    d = 1 / sqrt(sqr(g_b01_0) + sqr(g_b01_1))
+    g_b01_0 = g_b01_0 * d
+    g_b01_1 = g_b01_1 * d
+    d = 1 / sqrt(sqr(g_b11_0) + sqr(g_b11_1))
+    g_b11_0 = g_b11_0 * d
+    g_b11_1 = g_b11_1 * d
+    
+    ; produce colors for each corner
+    float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+    float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+    float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+    float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+    
+    ; interpolate between corners using
+    ; bilinear filtering
+    float sx = sqr(rx0) * (3 - rx0*2)
+    float sy = sqr(ry0) * (3 - ry0*2)
+    float a = u1 + sx*(v1-u1)
+    float b = u2 + sx*(v2-u2)
+    
+    sum = sum + (a + sy*(b-a))*freq*fade2
+    freq = freq * @step
+    p = p * r2 / @step
+    i = i - 1
+  ENDWHILE
+
+final:
+  #index = (sum + @coloroffset) * 0.5
+  
+default:
+  title = "Fractional Brownian Motion II"
+  helpfile = "dmj-pub\dmj-pub-uf-fbm.htm"
+
+  param fade
+    caption = "Fade Amount"
+    default = 16.0
+    hint = "Indicates the degree to which the texture fades with distance \
+            from the origin. Larger values give less fading."
+  endparam
+  param coloroffset
+    caption = "Coloring Offset"
+    default = 1.0
+    hint = "Sets the coloring offset from zero. Increase this if you see \
+            large areas of solid color."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "This is the offset of the pattern. You can use this to shift \
+            the pattern around on the complex plane."
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+    hint = "This is the overall scale of the noise."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, of the noise."
+  endparam
+  param step
+    caption = "Scale Step"
+    default = 0.5
+    hint = "This is the step in scale between noise iterations."
+  endparam
+  param anglestep
+    caption = "Rotation Step"
+    default = 37.0
+    hint = "This is the angle, in degrees, to rotate between noise \
+            iterations."
+  endparam
+  param octaves
+    caption = "Octaves"
+    default = 1
+    min = 1
+    hint = "This is the number of iterations of the noise formula."
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This is the exponent used to scramble numbers."
+  endparam
+}
+
+dmj-FiniteAttractor(INSIDE) {
+;
+; This coloring method colors based on how quickly the
+; orbit falls into a periodic orbit. Since the coloring
+; is based on iteration count, it is discrete.
+;
+; NOTE: This formula uses oldz(). It is thus not suitable
+; for very high iteration limits (over 100,000).
+;
+final:
+  int i = 0
+  bool found = false
+  WHILE (i < #maxit && !found)
+    IF (|oldz(i)-#z| < @threshold)
+      found = true
+    ELSE
+      i = i + 1
+    ENDIF
+  ENDWHILE
+  #index = i * 0.05
+
+default:
+  title = "Finite Attractor"
+  helpfile = "dmj-pub\dmj-pub-uf-fa.htm"
+
+  param threshold
+    caption = "Threshold"
+    default = 1e-5
+    hint = "Specifies how close the orbit must approach the \
+            finite attractor before being considered to have \
+	    reached it. This is similar to a bailout for \
+	    convergent types."
+  endparam
+}
+
+dmj-Light {
+;
+; This coloring method expects a surface normal in z
+; and performs lighting for that point. This is best
+; used with the "Slope" family of formulas, which
+; provide exactly the information expected by this
+; coloring method.
+;
+; Surface normals are 3D vectors with a length of 1.
+; So while only two components of this vector can be
+; passed through a complex number, the third can be
+; derived by sqrt(1-sqr(real)-sqr(imag)). The full
+; vector gives the orientation of a 3D surface, which
+; is needed to calculate lighting. Note that this is
+; an *extremely* simple lighting model; to do a more
+; accurate lighting model would require more parameters
+; from the fractal formula (such as a position in 3D
+; space).
+;
+final:
+  float vz = -sqrt(1-|#z|)		; extract implied portion of normal
+  float d2r = #pi/180			; degrees to radians conversion factor
+
+  ; create vector for light direction
+  float lx = cos(@angle*d2r) * cos(@elevation*d2r)
+  float ly = sin(@angle*d2r) * cos(@elevation*d2r)
+  float lz = -sin(@elevation*d2r)
+
+  ; compute cosine of angle between these vectors
+  ; (this is the amount of lighting on the surface)
+  float l = lx*real(#z) + ly*imag(#z) + lz*vz
+  IF (l < @ambient)			; light is below the ambient level
+    l = @ambient			; set it to the ambient level
+  ENDIF
+  IF (@ambient < 0)			; the ambient level is negative
+    l = l + 1				; offset to prevent clipping at 0
+  ENDIF
+  #index = l*0.99			; reduce it just a bit to prevent
+  					; the colors from wrapping
+
+default:
+  title = "Lighting"
+  helpfile = "dmj-pub\dmj-pub-uf-lighting.htm"
+  
+  param @angle
+    caption = "Light Rotation"
+    default = 90.0
+    hint = "Gives the rotation of the light source, in degrees."
+  endparam
+  param @elevation
+    caption = "Light Elevation"
+    default = 30.0
+    hint = "Gives the elevation of the light source, in degrees."
+  endparam
+  param @ambient
+    caption = "Ambient Light"
+    default = 0.0
+    min = -1.0
+    max = 1.0
+    hint = "Specifies the level of ambient light.  Use -1.0 to \
+            color all surfaces."
+  endparam
+}
+
+dmj-Logistics {
+;
+; This coloring algorithm should be used with the
+; Markus-Lyapunov fractal type. It expects the sum
+; of the logarithms at each iteration to be passed
+; in real(z). It then performs some simple scaling.
+;
+final:
+  #index = -real(#z)/#numiter
+  
+default:
+  title = "Markus-Lyapunov"
+  helpfile = "dmj-pub\dmj-pub-uf-mlc.htm"
+}
+
+dmj-Lyapunov {
+;
+; This algorithm computes the Lyapunov exponent
+; for Mandelbrot types. This exponent is usually
+; negative for divergent orbits (outside points),
+; and positive for convergent orbits (inside
+; points).
+;
+; This might have interesting results when used
+; with other fractal types, although the results
+; would not be mathematically accurate.
+;
+; Optimizations suggested by Charles Vassallo.
+;
+init:
+  float oldsum = 0
+  float sum = 1
+  float v = 0
+  float il = 1/log(real(@power))
+  float lp = log(log(@bailout)/2.0)
+  float f = 0.0
+  
+loop:
+  IF (@trackvariable == 0)		; |z|
+    v = cabs(#z)
+  ELSEIF (@trackvariable == 1)		; real(z)
+    v = real(#z)
+  ELSEIF (@trackvariable == 2)		; imag(z)
+    v = imag(#z)
+  ELSEIF (@trackvariable == 3)		; real(z)/imag(z)
+    v = real(#z)/imag(#z)
+  ELSEIF (@trackvariable == 4)		; imag(z)/real(z)
+    v = imag(#z)/real(#z)
+  ELSEIF (@trackvariable == 5)		; arg(z)
+    v = atan2(#z)
+  ELSEIF (@trackvariable == 6)		; 1/real(z)
+    v = 1.0/real(#z)
+  ELSEIF (@trackvariable == 7)		; 1/imag(z)
+    v = 1.0/imag(#z)
+  ENDIF
+
+  oldsum = sum
+;  sum = sum + log(abs(2*v))		; sum the Lyapunov exponent (slow method)
+  sum = sum * (abs(2*v))		; sum the Lyapunov exponent
+  
+final:
+  oldsum = log(oldsum)
+  sum = log(sum)
+  IF (@negative == 1)
+    sum = -sum/#numiter
+    oldsum = -oldsum/(#numiter-1)
+  ELSEIF (@negative == 2)
+    sum = abs(sum/#numiter)
+    oldsum = abs(oldsum/(#numiter-1))
+  ELSE
+    sum = sum/#numiter
+    oldsum = oldsum/(#numiter-1)
+  ENDIF
+  IF (@smooth)
+    f = il*lp - il*log(log(cabs(#z)))
+    #index = oldsum + (sum-oldsum) * (f+1)
+  ELSE
+    #index = sum
+  ENDIF
+
+default:
+  title = "Lyapunov"
+  helpfile = "dmj-pub\dmj-pub-uf-lyapunov.htm"
+  
+  param trackvariable
+    caption = "Variable to Track"
+    default = 0
+    enum = "magnitude of z" "real part of z" "imaginary part of z" \
+           "real / imag" "imag / real" "angle of z" "1 / real(z)" "1 / imag(z)"
+    hint = "Indicates which variable to measure the Lyapunov exponent for."
+  endparam
+  param negative
+    caption = "Sign"
+    default = 2
+    enum = "positive" "negative" "absolute value"
+    hint = "Affects the sign of the exponent.  'Negative' and 'absolute \
+            value' are useful for inside coloring."
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param smooth
+    caption = "Smooth Coloring"
+    default = false
+    hint = "If set, results will be 'smoothed' to hide iteration bands."
+  endparam
+}
+
+dmj-Sampling {
+;
+; This coloring algorithm samples the iterating fractal for
+; the current point. It works best when the fractal formula
+; iterates the same sequence for every pixel or large group
+; of pixels, as the bifurcation fractals do. But, it will
+; actually produce results for all fractal types.
+;
+; NOTE: Box sampling is not completely accurate if your image
+; is rotated. This is the crudest form of sampling anyway;
+; if you're interested in accuracy, you probably want point
+; sampling. Box sampling is only in here as a rough-cut quick
+; render for some other formulas I was working on.
+;
+; NOTE: Box sampling is RESOLUTION-DEPENDENT. This means if
+; you zoom such an image, your samples will be more sparsely
+; spaced, and you will need to increase the maximum number
+; of iterations to compensate. Other sampling modes are NOT
+; dependent on image size.
+;
+; HINT: Don't use box sampling! :-)
+;
+init:
+  int counter = 0
+  float iradius = 1/@radius
+  float sradius = sqr(@radius)
+
+  float xmin = real(#pixel)
+  float xmax = real(#pixel) + 4/#magn/#height
+  float ymin = imag(#pixel)
+  float ymax = imag(#pixel) + 4/#magn/#height
+
+  float sum = 1e20
+  IF (@select == 0 || @countall == false)
+    sum = 0.0
+  ENDIF
+  float d = 0.0
+
+  complex oldz = (0,0)
+  complex c = (0,0)
+  IF (@mode >= 2)
+    counter = -1			; these modes have a built-in filter
+  ENDIF
+
+loop:
+  IF (counter >= @filter)		; passed iteration filter, count this
+
+    IF (@mode == 0)			; box sampling
+      IF (real(#z) >= xmin && real(#z) < xmax && \
+          imag(#z) >= ymin && imag(#z) < ymax)
+        d = 1.0				; point is inside box, counts as 1
+      ELSE
+        d = 0.0				; point is outside box, counts as 0
+      ENDIF
+  
+    ELSEIF (@mode == 1)			; point sampling
+      d = |#z-#pixel|			; get distance to point
+      IF (@countall)			; counting all pixels
+        d = sqrt(d)			; use simple linear distance
+      ELSEIF (d < sradius)		; within radius 1
+        d = 1 - sqrt(d)*iradius		; ranges linearly from 1 to 0
+      ELSE				; not within radius 1
+        d = 0				; does not count
+      ENDIF
+      
+    ELSEIF (@mode == 2)			; line sampling
+      ; note: if you use sum with this mode, the endpoints
+      ; of the line segments will count twice.
+      c = (#pixel-oldz)*conj(#z-oldz)/(|#z-oldz|) ; get distance along line
+      						  ; from oldz to #z
+      d = real(c)			; normalized distance along line
+      IF (d < 0)			; past oldz end of line
+        d = |oldz-#pixel|		; get distance to point
+        IF (@countall)			; counting all pixels
+          d = sqrt(d)			; use simple linear distance
+        ELSEIF (d < sradius)		; within radius 1
+          d = 1 - sqrt(d)*iradius	; ranges linearly from 1 to 0
+        ELSE				; not within radius 1
+          d = 0				; does not count
+        ENDIF
+      ELSEIF (d > 1)			; past #z end of line
+        d = |#z-#pixel|			; get distance to point
+        IF (@countall)			; counting all pixels
+          d = sqrt(d)			; use simple linear distance
+        ELSEIF (d < sradius)		; within radius 1
+          d = 1 - sqrt(d)*iradius	; ranges linearly from 1 to 0
+        ELSE				; not within radius 1
+          d = 0				; does not count
+        ENDIF
+      ELSE				; within line segment boundaries
+        d = abs(imag(c)) * cabs(#z-oldz) ; linear distance from line segment
+        IF (@countall == false)		; need to fix distances
+          IF (d < @radius)		; distance is within range
+            d = 1 - d*iradius		; scale/adjust it
+          ELSE				; distance is out of range
+            d = 0			; does not count
+          ENDIF
+        ENDIF
+      ENDIF
+
+    ENDIF
+    
+    ; apply sample transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    d = d * @prescale
+    IF (@sampfunc == 1)		; log
+      d = log(d)
+    ELSEIF (@sampfunc == 2)		; sqrt
+      d = sqrt(d)
+    ELSEIF (@sampfunc == 3)		; cuberoot
+      d = (d)^(1/3)
+    ELSEIF (@sampfunc == 4)		; exp
+      d = exp(-d)			; NOTE this is different!
+    ELSEIF (@sampfunc == 5)		; sqr
+      d = sqr(d)
+    ELSEIF (@sampfunc == 6)		; cube
+      d = (d)^3
+    ELSEIF (@sampfunc == 7)		; sin
+      d = sin(d)
+    ELSEIF (@sampfunc == 8)		; cos
+      d = cos(d)
+    ELSEIF (@sampfunc == 9)		; tan
+      d = tan(d)
+    ELSEIF (@sampfunc == 10)		; sinc (modified form)
+      IF (d == 0)
+        d = 1
+      ELSE
+        d = sin(#pi*d)/d
+      ENDIF
+    ENDIF
+    d = d * @postscale
+
+    IF (@select == 0)
+      sum = sum + d
+    ELSEIF (@select == 1)
+      IF (d > sum)
+        sum = d
+      ENDIF
+    ENDIF
+  ENDIF
+  
+  counter = counter + 1
+  IF (@mode >= 2)
+    oldz = #z
+  ENDIF
+
+final:
+  IF (@mode == 0)
+    #index = sum/(#maxit-@filter)
+  ELSEIF (@mode >= 1)
+    #index = sum
+  ENDIF
+  
+default:
+  title = "Sampling"
+  helpfile = "dmj-pub\dmj-pub-uf-sampling.htm"
+
+  param mode
+    caption = "Sampling Mode"
+    enum = "box" "points" "lines"
+    default = 2
+    hint = "Sets the sampling mode. 'Box' counts orbits that fall \
+            within the pixel. 'Points' counts orbits that fall near \
+            the pixel. 'Lines' counts orbits that fall near lines \
+            connecting orbit points."
+  endparam
+  param select
+    caption = "Sample Select"
+    enum = "sum" "closest"
+    default = 1
+    hint = "Sets which sample(s) are selected for plotting. 'Sum' works \
+            well with point sampling, 'closest' works well with lines."
+  endparam
+  param radius
+    caption = "Sampling Radius"
+    default = 0.1
+    hint = "Sets the sampling radius. A wider radius will result in \
+            more points being counted per pixel."
+  endparam
+  param sampfunc
+    caption = "Sampling Transfer"
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+           "sin" "cos" "tan" "sinc"
+    hint = "This function is applied to orbit distances at every \
+            iteration. It can be used to apply some special effects \
+            to sample shapes."
+  endparam
+  param prescale
+    caption = "Distance Pre-scale"
+    default = 1.0
+    hint = "This is a multiplier applied to the sample distance, \
+            before the Sampling Transfer function is applied to it."
+  endparam
+  param postscale
+    caption = "Distance Post-scale"
+    default = 1.0
+    hint = "This is a multiplier applied to the sample distance, \
+            after the Sampling Transfer function is applied to it."
+  endparam
+  param countall
+    caption = "Ignore Radius"
+    default = false
+    hint = "If enabled, distances will not be restricted to a range \
+            from 0 to 1."
+  endparam
+  param filter
+    caption = "Filter Iterations"
+    default = 0
+    hint = "Specifies the number of iterations to skip before \
+            plotting orbit points. For most Mandelbrot types, you will \
+            need to set this to at least 1."
+  endparam
+}
+
+dmj-Smooth(OUTSIDE) {
+;
+; This coloring method provides smooth iteration
+; colors for Mandelbrot and other z^2 formula types
+; (Phoenix, Julia).  Results on other types may be
+; unpredictable, but might be interesting.
+;
+; Thanks to F. Slijkerman for some tweaks.
+; Thanks to Linas Vepstas for the math.
+;
+init:
+  complex il = 1/log(@power)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+
+final:
+  #index = 0.05 * real(#numiter + il*lp - il*log(log(cabs(#z))))
+
+default:
+  title = "Smoothed Iterations (Mandelbrot)"
+  helpfile = "dmj-pub\dmj-pub-uf-smooth.htm"
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab."
+  endparam
+}
+
+dmj-SmoothConverge(OUTSIDE) {
+;
+; This coloring method provides smooth iteration
+; colors for Magnet and other convergent/divergent
+; formula types.  Results on other types may be
+; unpredictable, but might be interesting.
+;
+; The default values have been specifically tweaked
+; for Magnet 1, although they are not perfect.
+;
+init:
+  complex il = 1/log(@power)	; Inverse log (power).
+  float lp = log(log(@bailout))	; log(log bailout).
+  complex zold = (0,0)
+
+loop:
+  zold = #z			; save old Z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = 0.05 * real(#numiter + @fudge*0.5*(il*lp - il*log(log(cabs(#z-zold)))))
+    ELSE
+      #index = 0
+    ENDIF      
+
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = 0.05 * real(#numiter + il*lp - il*log(log(cabs(#z))))
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+
+default:
+  title = "Smoothed Iterations (General)"
+  helpfile = "dmj-pub\dmj-pub-uf-smooth.htm"
+
+  param power
+    caption = "Exponent"
+    default = (1.414213562,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Magnet, this is sqrt(2)."
+  endparam
+  param bailout
+    caption = "Bailout 1"
+    default = 128
+    hint = "Divergent bailout value; this should be set to match the \
+            large bailout in the Formula tab."
+  endparam
+  param bailout2
+    caption = "Bailout 2"
+    default = 0.00001
+    hint = "Convergent bailout value; this should be set to match the \
+            small bailout in the Formula tab."
+  endparam
+  param diverge
+    caption = "Color Divergent"
+    default = TRUE
+    hint = "If set, points which escape to infinity will be \
+            colored."
+  endparam
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If set, points which collapse to one value will be \
+            colored."
+  endparam
+  param fudge
+    caption = "Fudge Factor"
+    default = 1.0
+    hint = "Fractional iteration strength; use 15 for Nova."
+  endparam
+}
+
+dmj-Smooth2 {
+;
+; This coloring method provides smooth iteration
+; colors for all divergent fractal types.  It was
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Note: You can achieve exactly this coloring by
+; using the Orbit Traps coloring, with a merge
+; mode setting of "funky average 4" and a distance
+; transfer function of "sqrt". However, this
+; formula is probably easier to add.
+;
+init:
+  float sum = 0.0
+  
+loop:
+  sum = sum + exp(-cabs(#z))
+
+final:
+  #index = sum
+  
+default:
+  title = "Exponential Smoothing (Divergent)"
+  helpfile = "dmj-pub\dmj-pub-uf-es.htm"
+}
+
+dmj-Smooth2Converge {
+;
+; This coloring method provides smooth iteration
+; colors for all convergent fractal types.  It was
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+init:
+  float sum2 = 0.0
+  complex zold = (0,0)
+  
+loop:
+  sum2 = sum2 + exp(-1/cabs(zold-#z))
+  zold = #z
+
+final:
+  #index = sum2
+  
+default:
+  title = "Exponential Smoothing (Convergent)"
+  helpfile = "dmj-pub\dmj-pub-uf-es.htm"
+}
+
+dmj-Smooth2General {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+  
+loop:
+  IF (@diverge)
+    sum = sum + exp(-cabs(#z))
+  ENDIF
+  IF (@converge)
+    sum2 = sum2 + exp(-1/cabs(zold-#z))
+  ENDIF
+  zold = #z
+
+final:
+  IF (|#z - zold| < 0.5)	; convergent bailout.
+    IF (@converge)
+      #index = sum2
+    ELSE
+      #index = 0
+    ENDIF
+    
+  ELSE				; divergent bailout.
+    IF (@diverge)
+      #index = sum * @divergescale
+    ELSE
+      #index = 0
+    ENDIF
+  ENDIF
+  
+default:
+  title = "Exponential Smoothing (General)"
+  helpfile = "dmj-pub\dmj-pub-uf-es.htm"
+
+  param diverge
+    caption = "Color Divergent"
+    default = FALSE
+    hint = "If set, points which escape to infinity will be \
+            colored."
+  endparam
+  param converge
+    caption = "Color Convergent"
+    default = TRUE
+    hint = "If set, points which collapse to one value will be \
+            colored."
+  endparam
+  param divergescale
+    caption = "Divergent Density"
+    default = 1.0
+    hint = "Sets the divergent coloring density, relative to the \
+            convergent coloring.  If set to 1.0, they will use \
+	    the same color density."
+  endparam
+}
+
+dmj-Spiral(OUTSIDE) {
+;
+; This method is an implementation of Ben Weiss's
+; decomposition estimator algorithm, as used in
+; Kai's Power Tools' Fractal Explorer from
+; MetaCreations.  Many thanks to Ben for sharing
+; this with me.
+;
+; Note: this version only works correctly with
+; the classic Mandelbrot set. Results with other
+; fractals will be unpredictable, but could be
+; interesting.
+;
+; Further note: as with KPT, this algorithm is
+; not wholly accurate. There are instances (most
+; notably on tight spirals) where the radial
+; portion of the spiral calculation breaks down,
+; and discontinuities result. This is because
+; calculating field lines is a difficult task.
+; The algorithm used here gives only an approximate
+; field line.
+;
+final:
+  float power = 2.0
+  int i = #numiter
+  complex zn = (0,0)
+  complex p = oldz(i)
+  float d = abs(atan2(p)) / (#pi*2.0)	; initial approximation, in range 0 to 1
+
+  ; determine field line (estimated)
+  ; this is the Weiss algorithm
+  WHILE (i > 0)				; still an iteration left to process
+    i = i - 1				; move to previous iteration
+    zn = oldz(i)			; get orbit value at that iteration
+    p = sqrt(p)				; get positive square root
+    d = d * 0.5				; all existing angle bits are less significant now
+    IF (real(p)*real(zn)+imag(p)*imag(zn) < 0) ; dot product is negative
+    					; this is an abbreviated calculation
+					; since we only care about the sign
+      p = -p				; flip sign for next time
+      d = 0.5 - d			; and do some bit mangling
+    ENDIF
+  ENDWHILE
+  IF (imag(#pixel) < 0 ); && @mandel)	; final bit
+    d = 2 - abs(d)*2
+  ELSE
+    d = d * 2
+  ENDIF
+
+  ; determine potential
+  complex il = 1/log(power)		; Inverse log (power).
+  float lp = log(log(@bailout))		; log(log bailout).
+  float s = real(#numiter + il*lp - il*log(log(cabs(#z))))
+  
+  ; determine color
+  IF (@potscale < 0)			; reverse spiral
+    #index = @decscale*(2-d) - @potscale*s*0.05
+  ELSE					; forward spiral
+    #index = @decscale*d + @potscale*s*0.05
+  ENDIF
+
+default:
+  title = "Spiral"
+  helpfile = "dmj-pub\dmj-pub-uf-spiral.htm"
+
+  param decscale
+    caption = "Radial Scale"
+    default = 1.0
+    hint = "This is the number of times the gradient should repeat radially; \
+            this determines the number of 'arms' in the spiral."
+  endparam
+  param potscale
+    caption = "Potential Scale"
+    default = 1.0
+    hint = "This is the 'tightness' of the spiral, how closely it wraps \
+            around the fractal."
+  endparam
+;  param mandel
+;    caption = "Mandelbrot"
+;    default = TRUE
+;    hint = "Check this if you're using a Mandelbrot (not Julia) fractal type."
+;  endparam
+;  param power
+;    caption = "Exponent"
+;    default = (2,0)
+;    hint = "This should be set to match the exponent of the \
+;            formula you are using.  For Mandelbrot, this is 2."
+;  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 65536.0
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab."
+  endparam
+}
+
+dmj-Trap {
+;
+; This single type replaces all of the trap types
+; in dmj-pub.frm - and includes all the extra UF
+; options, so they're more flexible, too.  Many
+; of the options and shapes in here are built on
+; ideas from others, including:
+;   Cliff Pickover
+;   Phil Pickard
+;   Paul Carlson
+;   Kerry Mitchell
+;   Luke Plant
+;   Stephen Ferguson
+;   Earl Hinrichs
+;   Janet Preslar
+;   Mark Townsend
+; and probably some others I forgot to credit.
+;
+; NOTE: SOME THINGS DO NOT WORK YET!
+; - Some of the trap modes (sum, average, sign
+;   average; funky averages) don't look different
+;   from each other except in distance coloring.
+;   Unless you're using distance coloring, use
+;   sum instead of average or sign average, and
+;   funky average instead of funky average 2.
+;
+init:
+  float closest = 1e38
+  float closest1 = 1e38
+  float d = 0.0
+  float d2 = 0.0
+  complex point = (0,0)
+  complex point1 = (0,0)
+  complex point2 = (0,0)
+  complex point3 = (0,0)
+  complex z2 = (0,0)
+  BOOL done = false
+  int i = 0
+  int i1 = 0
+  int iter = 0
+  float fiter = @trapstart
+  BOOL trapping = false
+  float diameter2 = sqr(@diameter)
+  float r1 = @angle / 90.0
+  float r2 = @anglestep / 90.0
+  float s1 = @skew / 90.0
+  float s2 = @skewstep / 90.0
+  complex r = (0,1) ^ r1
+  complex r0 = (0,0)
+  complex s = (0,1) ^ s1
+  complex rh = (0,1) ^ (@traporder / 8)	; heart rotation value
+  complex zh = (0,0)
+  complex trapcenter2 = @trapcenter
+
+  IF (@movetrap)			; Trap Center follows pixel
+    trapcenter2 = #pixel + @trapcenter
+  ENDIF
+
+  IF (@trapshape >= 17 || @trapshape <= 19)	; ripple shapes
+    diameter2 = #pi / @diameter
+  ENDIF
+
+  IF (@traptype == 1 || @traptype == 4 || \
+      @traptype == 5 || @traptype == 7 || \
+      @traptype == 12 || @traptype == 13 || \
+      @traptype == 14 || @traptype == 15 || \
+      @traptype == 16 || @traptype == 17 || \
+      @traptype == 18)			; last, sum, average, sign average
+    closest = 0.0
+  ELSEIF (@traptype == 6)		; product
+    closest = 1.0
+  ELSEIF (@traptype == 9 || @traptype == 11)	; second/two farthest
+    closest = 0.0
+    closest1 = 0.0
+  ENDIF
+  BOOL usesolid = true			; assume a solid color
+
+loop:
+  iter = iter + 1			; iteration counter
+  IF (@trapskip != 0)			; we are skipping some iterations
+    fiter = fiter - 1			; one less to go before we trap
+    WHILE (fiter < 0.0)			; iterations all used up
+      IF (trapping)			; we are currently trapping
+        trapping = false		; so stop
+	fiter = fiter + @trapskip	; skip this many iterations
+      ELSE				; we aren't currently trapping
+        trapping = true			; so start
+	fiter = fiter + @trapiter	; do this many iterations
+      ENDIF
+    ENDWHILE
+  ENDIF
+
+  IF (@trapskip == 0.0 || trapping)	; if we're checking for traps...
+
+    ; adjust rotation/skew/trapcenter
+    IF (@anglestep != 0)		; changing rotation angle.
+      r = (0,1) ^ (r1+r2*(iter-1))
+    ENDIF
+    IF (@skewstep != 0)			; changing skew angle.
+      s = (0,1) ^ (s1+s2*(iter-1))
+    ENDIF
+    IF (@trapdrift != (0,0))		; changing trap center
+      trapcenter2 = trapcenter2 + @trapdrift
+    ENDIF
+    IF (@traporbit != (0,0))		; changing trap orbit
+      trapcenter2 = trapcenter2 * @traporbit
+    ENDIF
+
+    ; rotate/squash/skew/repeat z
+    IF (@traptype == 18)		; trap only, work on unadulterated pixel
+      z2 = #pixel
+    ELSE				; some other trap mode, use z
+      z2 = #z
+    ENDIF
+    ; 1. radially repeat
+    IF (@gausss > 0 && @gaussr == 0)	; concentrically repeating trap, but not radial
+      z2 = z2 - @gausscenter
+      d = cabs(z2)
+      d = ((d / @gausss) - round(d / @gausss)) * @gausss
+      z2 = z2 * d / cabs(z2) + @gausscenter
+    ENDIF
+    IF (@gaussr > 0.0)			; radially repeating trap
+      z2 = z2 - @gausscenter
+      d = cabs(z2)
+      d2 = atan(imag(z2)/real(z2))
+      IF (real(z2) < 0)
+        d2 = d2 + #pi
+      ENDIF
+      IF (d2 < 0)
+        d2 = d2 + 2*#pi
+      ENDIF
+      d2 = d2 / (#pi*2)
+      d2 = ((d2 * @gaussr) - round(d2 * @gaussr)) / @gaussr * #pi*2
+      IF (@gausss > 0)			; concentrically repeating trap
+        d = ((d / @gausss) - round(d / @gausss)) * @gausss
+      ENDIF
+      IF (@radialmode == 0)		; standard radial repeat mode
+        z2 = cos(d2)*d + flip(sin(d2)*d) + @gausscenter
+      ELSEIF (@radialmode == 1)		; unwrap mode
+        z2 = d + flip(d2)
+      ENDIF
+    ENDIF
+    ; 2. grid repeat
+    IF (@gauss > 0)			; repeating trap
+      z2 = z2 - @gaussgcenter
+      z2 = ((z2 / @gauss) - round(z2 / @gauss)) * @gauss
+      z2 = z2 + @gaussgcenter
+    ENDIF
+    ; 3. rotate
+    z2 = (z2 - trapcenter2) * r		; rotate
+    ; 4. apply aspect
+    IF (@aspect != 1.0)
+      z2 = real(z2) + flip(imag(z2) * @aspect) ; apply aspect
+    ENDIF
+    ; 5. skew
+    z2 = real(z2 * s) + flip(imag(z2))	; apply skew
+
+    ; determine distance from trap--different for each shape
+    IF (@trapshape == 0)		; point
+      d = cabs(z2)
+    ELSEIF (@trapshape == 1)		; ring
+      d = abs(cabs(z2) - @diameter)
+    ELSEIF (@trapshape == 2)		; ring2
+      d = abs(|z2| - diameter2)
+    ELSEIF (@trapshape == 3)		; egg
+      d = (cabs(z2-flip(@diameter)*2) + cabs(z2)*@traporder*0.5) * 0.25
+    ELSEIF (@trapshape == 4)		; hyperbola
+      d = abs(imag(z2) * real(z2) - @diameter)
+    ELSEIF (@trapshape == 5)		; hypercross
+      d = abs(imag(z2) * real(z2))
+    ELSEIF (@trapshape == 6)		; cross
+      d = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape == 7)		; astroid
+      d = abs(real(z2))^@traporder + abs(imag(z2))^@traporder
+      IF (@traporder < 0)
+        d = 1/d
+      ENDIF
+    ELSEIF (@trapshape == 8)		; diamond
+      d = abs(real(z2)) + abs(imag(z2))
+    ELSEIF (@trapshape == 9)		; rectangle
+      d = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 > d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape == 10)		; box
+      d = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 > d)
+        d = d2
+      ENDIF
+      d = abs(d - @diameter)
+    ELSEIF (@trapshape == 11)		; lines
+      d = abs(abs(imag(z2)) - @diameter)
+    ELSEIF (@trapshape == 12)		; waves
+      d = abs(abs(imag(z2) + sin(real(z2)*@trapfreq)*@traporder*0.25) - @diameter)
+    ELSEIF (@trapshape == 13)		; mirrored waves
+      d = abs(abs(imag(z2)) - @diameter + sin(real(z2)*@trapfreq)*@traporder*0.25)
+    ELSEIF (@trapshape == 14)		; mirrored waves 2
+      d2 = @diameter - sin(real(z2)*@trapfreq)*@traporder*0.25	; compute wave height
+      d  = abs(abs(imag(z2)) - d2)	; distance to each wave
+      d2 = abs(abs(imag(z2)) + d2)
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape == 15)		; radial waves
+      d2 = atan2(z2)
+      d = abs(cabs(z2) * (1 - sin(d2*@trapfreq)*@traporder*0.125) - @diameter)
+    ELSEIF (@trapshape == 16)		; radial waves 2
+      d2 = atan2(z2)
+      d2 = sin(d2*@trapfreq)*@traporder*0.125
+      d = abs(cabs(z2) * (1 - d2) - @diameter)
+      d2 = abs(cabs(z2) * (1 + d2) - @diameter)
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape == 17)		; ring ripples
+      d = cabs(z2)
+      IF (d < @traporder)
+        d = cos(d * diameter2 * @trapfreq) * sqr(1-d/@traporder)
+;        d = (cos(d * diameter2 * @trapfreq)+1) * sqr(1-d/@traporder) * 0.5
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape == 18)		; grid ripples
+      d = cabs(z2)
+      IF (d < @traporder)
+        d = (cos(real(z2)*diameter2*@trapfreq) + cos(imag(z2)*diameter2*@trapfreq)) * sqr(1-d/@traporder) * 0.5
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape == 19)		; radial ripples
+      d = atan2(z2)
+      d2 = cabs(z2)
+      IF (d2 < @traporder)
+        d = cos(4 * d * @trapfreq) * sqr(1-d2/@traporder)
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape == 20)		; pinch
+      d2 = atan2(z2)
+      IF (d2 < 0)
+        d2 = d2 + 2*#pi
+      ENDIF
+      d = sqrt(cabs(z2)) / abs(sin(d2*@traporder*0.5))
+    ELSEIF (@trapshape == 21)		; spiral
+      d = 1/(cabs(z2)) * @diameter
+      r0 = (0,1) ^ d
+      z2 = z2 * r0
+      d = atan(abs(imag(z2)/real(z2)))
+    ELSEIF (@trapshape == 22)		; heart
+      zh = real(z2) + flip(abs(imag(z2)))
+      zh = zh*rh * 3 / @diameter
+      d = abs(real(zh) - sqr(imag(zh)) + 3)
+    ENDIF
+
+    ; apply trap transfer function
+    ; a function is not used because these are floats
+    ; and not all functions apply to floats
+    d = d * @prescale
+    IF (@trapfunc == 1)			; log
+      d = log(d)
+    ELSEIF (@trapfunc == 2)		; sqrt
+      d = sqrt(d)
+    ELSEIF (@trapfunc == 3)		; cuberoot
+      d = (d)^(1/3)
+    ELSEIF (@trapfunc == 4)		; exp
+      d = exp(d)
+    ELSEIF (@trapfunc == 5)		; sqr
+      d = sqr(d)
+    ELSEIF (@trapfunc == 6)		; cube
+      d = (d)^3
+    ELSEIF (@trapfunc == 7)		; sin
+      d = sin(d)
+    ELSEIF (@trapfunc == 8)		; cos
+      d = cos(d)
+    ELSEIF (@trapfunc == 9)		; tan
+      d = tan(d)
+    ELSEIF (@trapfunc == 10)		; sinc (modified form)
+      IF (d == 0)
+        d = 1
+      ELSE
+        d = sin(#pi*d)/d
+      ENDIF
+    ENDIF
+    d = d * @postscale
+    IF (@trapabs)			; absolute value only
+      d = abs(d)
+    ENDIF
+
+    ; now adjust closest/point/i as needed
+    IF (@movetrap == false || iter > 1)
+      IF (@traptype == 0)		; closest
+        IF (d < closest)
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+        ENDIF
+        IF (d < @threshold)
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 1)		; farthest (within threshold)
+        IF (d > closest && d < @threshold)
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 2)		; first (within threshold)
+        IF (d < @threshold && done == false)
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+          done = true
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 3)		; last (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+          done = true
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 4)		; sum (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = point + #z
+          point2 = point2 + z2
+          closest = closest + d
+          usesolid = false
+       ENDIF
+      ELSEIF (@traptype == 5)		; average (within threshold)
+        IF (d < @threshold)
+          i = iter
+          i1 = i1 + 1
+          point = point + #z
+          point2 = point2 + z2
+          closest = closest + d
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 6)		; product (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = point * #z / @threshold
+          point2 = point2 * z2 / @threshold
+          closest = closest * d / @threshold
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 7)		; sign average
+        IF (d < d2)
+          i = i + 1
+          point = point + #z
+          point2 = point2 + z2
+          closest = closest + 1
+          usesolid = false
+        ELSE
+          i = i - 1
+        ENDIF
+        d2 = d
+      ELSEIF (@traptype == 8 || @traptype == 10) ; second/two closest
+        IF (d < closest)
+          i1 = i
+          point1 = point
+          point3 = point2
+          closest1 = closest
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+        ELSEIF (d < closest1)
+          i1 = iter
+          point1 = #z
+          point3 = z2
+          closest1 = d
+        ENDIF
+        IF (d < @threshold)
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 9 || @traptype == 11) ; second/two farthest
+        IF (d > closest && d < @threshold)
+          i1 = i
+          point1 = point
+          point3 = point2
+          closest1 = closest
+          i = iter
+          point = #z
+          point2 = z2
+          closest = d
+          usesolid = false
+        ELSEIF (d > closest1 && d < @threshold)
+          i1 = iter
+          point1 = #z
+          point3 = z2
+          closest1 = d
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 12)		; funky average
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z2 - point2
+          closest = @threshold - abs(closest - d)
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 13)		; funky average 2
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z2 - point2
+          closest = abs(d - @threshold + closest)
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 14)		; funky average 3 (Luke Plant)
+        IF (d < @threshold)
+          i = i + 1
+	  d2 = d/@threshold
+          point = #z + (point-#z) * d2
+          point2 = z2 + (point2-z2) * d2
+          closest = closest + d
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 15)		; funky average 4 (exponential average)
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z2 - point2
+          closest = closest + exp(-d)
+          usesolid = false
+        ENDIF
+      ELSEIF (@traptype == 16)		; funky average 5 (average distance change)
+        IF (d < d2)
+          point = point + #z
+          point2 = point2 + z2
+          closest = closest + d2-d
+          usesolid = false
+        ENDIF
+        d2 = d
+      ELSEIF (@traptype == 17)		; funky average 6 (Luke Plant, 1/squared)
+        IF (d < @threshold)
+          i = i + 1
+          usesolid = false
+        ENDIF
+	d2 = sqr(d/@threshold)
+        point = #z + (point-#z) * d2
+        point2 = z2 + (point2-z2) * d2
+        closest = closest + 1/d2
+      ELSEIF (@traptype == 18)		; trap only, do first iteration
+        IF (iter == 1)
+          point = #z
+          point2 = z2
+          closest = d/@threshold
+          IF (d < @threshold)
+            usesolid = false
+          ENDIF
+        ENDIF
+      ENDIF
+    ENDIF
+
+  ENDIF
+
+final:
+  ; un-fudge anything that was fudged
+  IF (@traptype == 5)			; traptype average
+    point = point / i1
+    point2 = point2 / i1
+    closest = closest / i1
+  ELSEIF (@traptype == 6)		; traptype product
+    closest = abs(closest)
+  ELSEIF (@traptype == 7)		; traptype sign average
+    point = point / iter
+    point2 = point2 / iter
+    closest = closest / iter
+  ELSEIF (@traptype == 8 || @traptype == 9) ; second closest or farthest
+    i = i - i1
+    point = point - point1
+    point2 = point2 - point3
+    closest = closest - closest1
+  ELSEIF (@traptype == 10 || @traptype == 11) ; two closest or farthest
+    i = round((i + i1) / 2)
+    point = (point + point1) / 2
+    point2 = (point2 + point3) / 2
+    closest = (closest + closest1) / 2
+  ELSEIF (@traptype == 14)		; funky average 3
+    closest = @threshold * i - closest
+  ENDIF
+
+  ; choose coloring based on method
+  IF (!@solidcolor)			; solid color not allowed
+    #solid = false
+  ELSE
+    #solid = usesolid
+  ENDIF
+  IF (@trapcolor == 0)			; distance
+    IF (@traptype == 2 || @traptype == 3) ; first or last type
+      #index = closest / @threshold
+    ELSE				; any other trap type
+      #index = closest
+    ENDIF
+  ELSEIF (@trapcolor == 1)		; magnitude
+    #index = cabs(point2)
+  ELSEIF (@trapcolor == 2)		; real
+    #index = abs(real(point2))
+  ELSEIF (@trapcolor == 3)		; imaginary
+    #index = abs(imag(point2))
+  ELSEIF (@trapcolor == 4)		; angle to trap
+    d = atan2(point2)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 5)		; angle to trap 2 (no aspect)
+    point = point - @trapcenter
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 6)		; angle to origin
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 7)		; angle to origin 2 (old ReallyCool)
+    #index = 0.02 * abs(atan(imag(point) / real(point)) * 180/#pi)
+  ELSEIF (@trapcolor == 8)		; iteration
+    d = i
+    #index = d / #maxiter
+  ENDIF
+  
+default:
+  title = "Orbit Traps"
+  helpfile = "dmj-pub\dmj-pub-uf-ot.htm"
+
+  param trapshape
+    caption = "Trap Shape"
+    default = 0
+    enum = "point" "ring" "ring 2" "egg" "hyperbola" "hypercross" \
+           "cross" "astroid" "diamond" "rectangle" "box" "lines" \
+	   "waves" "mirrored waves" "mirrored waves 2" \
+	   "radial waves" "radial waves 2" "ring ripples" \
+	   "grid ripples" "radial ripples" "pinch" "spiral" "heart"
+; old ordering:
+;    enum = "point" "ring" "ring 2" "hyperbola" "hypercross" "cross" \
+;           "rectangle" "box" "lines" "spiral" "diamond" "pinch" \
+;	   "astroid" "heart" "ring ripples" "grid ripples" "egg" \
+;	   "waves" "mirrored waves" "mirrored waves 2"
+    hint = "This is the shape of the orbit trap."
+  endparam
+  param trapcolor
+    caption = "Trap Coloring"
+    default = 0
+    enum = "distance" "magnitude" "real" "imaginary" "angle to trap" \
+           "angle to trap 2" "angle to origin" "angle to origin 2" "iteration"
+; old ordering:
+;    enum = "distance" "magnitude" "real" "imaginary" "angle to trap" \
+;           "angle to origin" "iteration" "angle to trap 2"
+    hint = "This is the information used to produce a color."
+  endparam
+  param traptype
+    caption = "Trap Mode"
+    default = 0
+    enum = "closest" "farthest" "first" "last" "sum" "average" "product" \
+           "sign average" "second closest" "second farthest" "two closest" \
+	   "two farthest" "funky average" "funky average 2" "funky average 3" \
+	   "funky average 4" "funky average 5" "funky average 6" \
+	   "trap only"
+    hint = "This is how points will be chosen to use for coloring."
+  endparam
+  param traporder
+    caption = "Trap Order"
+    default = 4.0
+    hint = "Number of leaves for the pinch trap shape, the \
+            exponent to use for astroid curves (try 0.66667), \
+	    'egginess', or the height of waves."
+  endparam
+  param trapfreq
+    caption = "Trap Frequency"
+    default = 1.0
+    hint = "The frequency of ripples or waves."
+  endparam
+  param trapcenter
+    caption = "Trap Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+  endparam
+  param trapdrift
+    caption = "Trap Drift"
+    default = (0,0)
+    hint = "This is the amount the trap center will move with each \
+            iteration."
+  endparam
+  param traporbit
+    caption = "Trap Orbit"
+    default = (0,0)
+    hint = "The trap center location is multiplied by this value \
+            with each iteration."
+  endparam
+  param movetrap
+    caption = "Trap Center Moves"
+    default = false
+    hint = "If this is enabled, the trap center will match the \
+            pixel location instead of being fixed.  This overrides \
+	    Trap Center."
+  endparam
+  param aspect
+    caption = "Aspect Ratio"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the trap is.  You can distort the \
+            trap by using a value other than 1.0."
+  endparam
+  param threshold
+    caption = "Threshold"
+    default = 0.25
+    min = 0
+    hint = "This is the width of the trap area, used for most \
+            trap modes."
+  endparam
+  param diameter
+    caption = "Diameter"
+    default = 1.0
+;    min = 0
+    hint = "This is the diameter of the trap (for ring, box, and \
+            line shapes)."
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap should \
+            be rotated."
+  endparam
+  param anglestep
+    caption = "Rotation Step"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap will \
+            be rotated with each iteration."
+  endparam
+  param skew
+    caption = "Skew"
+    default = 0.0
+    hint = "This is the angle, in degrees, to skew the vertical \
+            axis of the trap shape."
+  endparam
+  param skewstep
+    caption = "Skew Step"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the skew angle \
+            should be increased by with each iteration."
+  endparam
+  param trapfunc
+    caption = "Distance Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+           "sin" "cos" "tan" "sinc"
+    hint = "This function is applied to trap distances at every \
+            iteration. It can be used to apply some special effects \
+            to trap shapes."
+  endparam
+  param prescale
+    caption = "Distance Pre-scale"
+    default = 1.0
+    hint = "This is a multiplier applied to the trap distance, \
+            before the Distance Transfer function is applied to it."
+  endparam
+  param postscale
+    caption = "Distance Post-scale"
+    default = 1.0
+    hint = "This is a multiplier applied to the trap distance, \
+            after the Distance Transfer function is applied to it."
+  endparam
+  param trapabs
+    caption = "No Negative Distance"
+    default = false
+    hint = "If enabled, eliminates 'negative' distances by taking \
+            the absolute value of the distance."
+  endparam
+  param trapstart
+    caption = "Start Iteration"
+    default = 0.0
+    hint = "This is the iteration at which to start watching for \
+            orbit traps."
+  endparam
+  param trapiter
+    caption = "Trap Iterations"
+    default = 10000.0
+    hint = "This is the number of iterations to watch for traps \
+            in a single block."
+  endparam
+  param trapskip
+    caption = "Skip Iterations"
+    default = 0.0
+    hint = "This is the number of iterations to skip watching for \
+            traps, after a block of watched iterations."
+  endparam
+  param gauss
+    caption = "Repeat Spacing"
+    default = 0.0
+    min = 0.0
+    hint = "This is the spacing at which the trap will repeat, \
+            all across the complex plane.  If zero, trap does \
+	    not repeat."
+  endparam
+  param gaussgcenter
+    caption = "Repeat Center"
+    default = (0,0)
+    hint = "This is the center point of grid trap repetition."
+  endparam
+  param gaussr
+    caption = "Radial Spacing"
+    default = 0.0
+    min = 0
+    hint = "This is the number of times the trap will repeat, \
+            radially around the radial center point.  If zero, \
+	    trap does not repeat radially."
+  endparam
+  param gausss
+    caption = "Concentric Spacing"
+    default = 0.0
+    min = 0
+    hint = "This is the distance at which the trap will repeat, \
+            radially out from the radial center point.  If zero, \
+	    trap does not repeat radially out."
+  endparam
+  param gausscenter
+    caption = "Radial Center"
+    default = (0,0)
+    hint = "This is the center point of radial trap repetition."
+  endparam
+  param radialmode
+    caption = "Radial Mode"
+    default = 0
+    enum = "kaleidoscope" "polar coordinates"
+    hint = "Indicates the type of radial repetition to use.  The \
+            two styles produce very different results."
+  endparam
+  param solidcolor
+    caption = "Use Solid Color"
+    default = false
+    hint = "If enabled, areas 'outside' the trap area will be colored \
+            with the 'solid color' on the coloring tab."
+  endparam
+}
+
+dmj-Triangle {
+;
+; This coloring method implements a variation of Kerry
+; Mitchell's Triangle Inequality Average coloring
+; method.  Because the smoothing used in this formula
+; is based on the dmj-Smooth formula, which only works
+; for z^n+c and derivates, the smoothing here will only
+; work for those types as well.
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  float ac = cabs(#pixel)
+  float il = 1/log(@power)
+  float lp = log(log(@bailout)/2.0)
+  float az2 = 0.0
+  float lowbound = 0.0
+  float f = 0.0
+  BOOL first = true
+  float ipower = 1/@apower
+
+loop:
+  sum2 = sum
+  IF (!first)
+    az2 = cabs(#z - #pixel)
+    lowbound = abs(az2 - ac)
+    IF (@aflavor == 0)
+      sum = sum + ((cabs(#z) - lowbound) / (az2+ac - lowbound))^@apower
+    ELSEIF (@aflavor == 1)
+      sum = sum + 1-(1-(cabs(#z) - lowbound) / (az2+ac - lowbound))^ipower
+    ENDIF
+  ELSE
+    first = false
+  ENDIF
+
+final:
+  sum = sum / (#numiter)
+  sum2 = sum2 / (#numiter-1)
+  f = il*lp - il*log(log(cabs(#z)))
+  #index = sum2 + (sum-sum2) * (f+1)
+  
+default:
+  title = "Triangle Inequality Average"
+  helpfile = "dmj-pub\dmj-pub-uf-tia.htm"
+
+  param apower
+    caption = "Average Exponent"
+    default = 1.0
+    hint = "This skews the values averaged by raising them to \
+            this power. Use 1.0 for the classic coloring."
+  endparam
+  param aflavor
+    caption = "Average Flavor"
+    default = 0
+    enum = "normal" "reversed"
+    hint = "Controls whether values are reversed before being \
+            raised to a power. Has no effect if Average Exponent \
+	    is 1.0."
+  endparam
+  param power
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should be set to match the exponent of the \
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+}
+
+dmj-TwinTrap {
+;
+; This formula is based in large part on the
+; ideas of Kerry Mitchell, in his dual-trap
+; formula. What it does is set up *two* trap
+; shapes, and color based on the interaction
+; between these shapes and the fractal orbit.
+;
+; The idea is to position two trap shapes,
+; and measure two trap distances at each
+; iteration. From these two trap distances, a
+; final trap distance is computed; this is
+; then used for the regular trap modes.
+;
+init:
+  float closest = 1e38
+  float closest1 = 1e38
+  float d = 0.0
+  float d1 = 0.0
+  float d2 = 0.0
+  complex point = (0,0)
+  complex point1 = (0,0)
+  complex point2 = (0,0)
+  complex point3 = (0,0)
+  complex point4 = (0,0)
+  complex point5 = (0,0)
+  complex point6 = (0,0)
+  complex point7 = (0,0)
+  complex z1 = (0,0)
+  complex z2 = (0,0)
+  complex z3 = (0,0)
+  BOOL done = false
+  int i = 0
+  int i1 = 0
+  int iter = 0
+  float fiter = @trapstart
+  BOOL trapping = false
+  float diametersq1 = sqr(@diameter1)
+  float diametersq2 = sqr(@diameter2)
+  complex r1 = (0,1) ^ (@angle1 / 90.0)
+  complex r2 = (0,1) ^ (@angle2 / 90.0)
+  complex r0 = (0,0)
+  complex rh1 = (0,1) ^ (@traporder1 / 8)	; heart rotation value
+  complex rh2 = (0,1) ^ (@traporder2 / 8)	; heart rotation value
+  complex zh = (0,0)
+  BOOL ab = false
+
+  IF (@trapshape1 >= 17 || @trapshape1 <= 19)	; ripple shapes
+    diametersq1 = #pi / @diameter1
+  ENDIF
+  IF (@trapshape2 >= 17 || @trapshape2 <= 19)	; ripple shapes
+    diametersq2 = #pi / @diameter2
+  ENDIF
+
+  IF (@traptype == 1 || @traptype == 4 || \
+      @traptype == 5 || @traptype == 7 || \
+      @traptype == 12 || @traptype == 13 || \
+      @traptype == 14 || @traptype == 15 || \
+      @traptype == 16 || @traptype == 17 || \
+      @traptype == 18)			; last, sum, average, sign average
+    closest = 0.0
+  ELSEIF (@traptype == 6)		; product
+    closest = 1.0
+  ELSEIF (@traptype == 9 || @traptype == 11)	; second/two farthest
+    closest = 0.0
+    closest1 = 0.0
+  ENDIF
+
+loop:
+  iter = iter + 1			; iteration counter
+  IF (@trapskip != 0)			; we are skipping some iterations
+    fiter = fiter - 1			; one less to go before we trap
+    WHILE (fiter < 0.0)			; iterations all used up
+      IF (trapping)			; we are currently trapping
+        trapping = false		; so stop
+	fiter = fiter + @trapskip	; skip this many iterations
+      ELSE				; we aren't currently trapping
+        trapping = true			; so start
+	fiter = fiter + @trapiter	; do this many iterations
+      ENDIF
+    ENDWHILE
+  ENDIF
+
+  IF (@trapskip == 0.0 || trapping)	; if we're checking for traps...
+
+    ; adjust rotation/skew/trapcenter
+    ; (we don't do this for this trap formula)
+    
+    ; rotate/squash/skew/repeat z
+    IF (@traptype == 18)		; trap only, work on unadulterated pixel
+      z1 = #pixel
+      z2 = #pixel
+    ELSE				; some other trap mode, use z
+      z1 = #z
+      z2 = #z
+    ENDIF
+    ; 1. radially repeat
+    ; (we don't do this for this trap formula)
+    ; 2. grid repeat
+    ; (we don't do this for this trap formula)
+    ; 3. rotate
+    z1 = (z1 - @trapcenter1) * r1
+    z2 = (z2 - @trapcenter2) * r2	; rotate
+    ; 4. apply aspect
+    IF (@aspect1 != 1.0)
+      z1 = real(z1) + flip(imag(z1) * @aspect1)
+    ENDIF
+    IF (@aspect2 != 1.0)
+      z2 = real(z2) + flip(imag(z2) * @aspect2) ; apply aspect
+    ENDIF
+    ; 5. skew
+    ; (we don't do this for this trap formula)
+
+    ; determine distance from trap--different for each shape
+    ; first trap shape
+    IF (@trapshape1 == 0)		; point
+      d = cabs(z1)
+    ELSEIF (@trapshape1 == 1)		; ring
+      d = abs(cabs(z1) - @diameter1)
+    ELSEIF (@trapshape1 == 2)		; ring2
+      d = abs(|z1| - diametersq1)
+    ELSEIF (@trapshape1 == 3)		; egg
+      d = (cabs(z1-flip(@diameter1)*2) + cabs(z1)*@traporder1*0.5) * 0.25
+    ELSEIF (@trapshape1 == 4)		; hyperbola
+      d = abs(imag(z1) * real(z1) - @diameter1)
+    ELSEIF (@trapshape1 == 5)		; hypercross
+      d = abs(imag(z1) * real(z1))
+    ELSEIF (@trapshape1 == 6)		; cross
+      d = abs(real(z1))
+      d2 = abs(imag(z1))
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape1 == 7)		; astroid
+      d = abs(real(z1))^@traporder1 + abs(imag(z1))^@traporder1
+      IF (@traporder1 < 0)
+        d = 1/d
+      ENDIF
+    ELSEIF (@trapshape1 == 8)		; diamond
+      d = abs(real(z1)) + abs(imag(z1))
+    ELSEIF (@trapshape1 == 9)		; rectangle
+      d = abs(real(z1))
+      d2 = abs(imag(z1))
+      IF (d2 > d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape1 == 10)		; box
+      d = abs(real(z1))
+      d2 = abs(imag(z1))
+      IF (d2 > d)
+        d = d2
+      ENDIF
+      d = abs(d - @diameter1)
+    ELSEIF (@trapshape1 == 11)		; lines
+      d = abs(abs(imag(z1)) - @diameter1)
+    ELSEIF (@trapshape1 == 12)		; waves
+      d = abs(abs(imag(z1) + sin(real(z1)*@trapfreq1)*@traporder1*0.25) - @diameter1)
+    ELSEIF (@trapshape1 == 13)		; mirrored waves
+      d = abs(abs(imag(z1)) - @diameter1 + sin(real(z1)*@trapfreq1)*@traporder1*0.25)
+    ELSEIF (@trapshape1 == 14)		; mirrored waves 2
+      d2 = @diameter1 - sin(real(z1)*@trapfreq1)*@traporder1*0.25	; compute wave height
+      d  = abs(abs(imag(z1)) - d2)	; distance to each wave
+      d2 = abs(abs(imag(z1)) + d2)
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape1 == 15)		; radial waves
+      d2 = atan2(z1)
+      d = abs(cabs(z1) * (1 - sin(d2*@trapfreq1)*@traporder1*0.125) - @diameter1)
+    ELSEIF (@trapshape1 == 16)		; radial waves 2
+      d2 = atan2(z1)
+      d2 = sin(d2*@trapfreq1)*@traporder1*0.125
+      d = abs(cabs(z1) * (1 - d2) - @diameter1)
+      d2 = abs(cabs(z1) * (1 + d2) - @diameter1)
+      IF (d2 < d)
+        d = d2
+      ENDIF
+    ELSEIF (@trapshape1 == 17)		; ring ripples
+      d = cabs(z1)
+      IF (d < @traporder1)
+        d = cos(d * diametersq1 * @trapfreq1) * sqr(1-d/@traporder1)
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape1 == 18)		; grid ripples
+      d = cabs(z1)
+      IF (d < @traporder1)
+        d = (cos(real(z1)*diametersq1*@trapfreq1) + cos(imag(z1)*diametersq1*@trapfreq1)) * sqr(1-d/@traporder1) * 0.5
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape1 == 19)		; radial ripples
+      d = atan2(z1)
+      d2 = cabs(z1)
+      IF (d2 < @traporder1)
+        d = cos(4 * d * @trapfreq1) * sqr(1-d2/@traporder1)
+      ELSE
+        d = 0
+      ENDIF
+    ELSEIF (@trapshape1 == 20)		; pinch
+      d2 = atan2(z1)
+      IF (d2 < 0)
+        d2 = d2 + 2*#pi
+      ENDIF
+      d = sqrt(cabs(z1)) / abs(sin(d2*@traporder1*0.5))
+    ELSEIF (@trapshape1 == 21)		; spiral
+      d = 1/(cabs(z1)) * @diameter1
+      r0 = (0,1) ^ d
+      z1 = z1 * r0
+      d = atan(abs(imag(z1)/real(z1)))
+    ELSEIF (@trapshape1 == 22)		; heart
+      zh = real(z1) + flip(abs(imag(z1)))
+      zh = zh*rh1 * 3 / @diameter1
+      d = abs(real(zh) - sqr(imag(zh)) + 3)
+    ENDIF
+    ; second trap shape
+    IF (@trapshape2 == 0)		; point
+      d1 = cabs(z2)
+    ELSEIF (@trapshape2 == 1)		; ring
+      d1 = abs(cabs(z2) - @diameter2)
+    ELSEIF (@trapshape2 == 2)		; ring2
+      d1 = abs(|z2| - diametersq2)
+    ELSEIF (@trapshape2 == 3)		; egg
+      d1 = (cabs(z2-flip(@diameter2)*2) + cabs(z2)*@traporder2*0.5) * 0.25
+    ELSEIF (@trapshape2 == 4)		; hyperbola
+      d1 = abs(imag(z2) * real(z2) - @diameter2)
+    ELSEIF (@trapshape2 == 5)		; hypercross
+      d1 = abs(imag(z2) * real(z2))
+    ELSEIF (@trapshape2 == 6)		; cross
+      d1 = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 < d1)
+        d1 = d2
+      ENDIF
+    ELSEIF (@trapshape2 == 7)		; astroid
+      d1 = abs(real(z2))^@traporder2 + abs(imag(z2))^@traporder2
+      IF (@traporder2 < 0)
+        d1 = 1/d1
+      ENDIF
+    ELSEIF (@trapshape2 == 8)		; diamond
+      d1 = abs(real(z2)) + abs(imag(z2))
+    ELSEIF (@trapshape2 == 9)		; rectangle
+      d1 = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 > d1)
+        d1 = d2
+      ENDIF
+    ELSEIF (@trapshape2 == 10)		; box
+      d1 = abs(real(z2))
+      d2 = abs(imag(z2))
+      IF (d2 > d1)
+        d1 = d2
+      ENDIF
+      d1 = abs(d1 - @diameter2)
+    ELSEIF (@trapshape2 == 11)		; lines
+      d1 = abs(abs(imag(z2)) - @diameter2)
+    ELSEIF (@trapshape2 == 12)		; waves
+      d1 = abs(abs(imag(z2) + sin(real(z2)*@trapfreq2)*@traporder2*0.25) - @diameter2)
+    ELSEIF (@trapshape2 == 13)		; mirrored waves
+      d1 = abs(abs(imag(z2)) - @diameter2 + sin(real(z2)*@trapfreq2)*@traporder2*0.25)
+    ELSEIF (@trapshape2 == 14)		; mirrored waves 2
+      d2 = @diameter2 - sin(real(z2)*@trapfreq2)*@traporder2*0.25	; compute wave height
+      d1 = abs(abs(imag(z2)) - d2)	; distance to each wave
+      d2 = abs(abs(imag(z2)) + d2)
+      IF (d2 < d1)
+        d1 = d2
+      ENDIF
+    ELSEIF (@trapshape2 == 15)		; radial waves
+      d2 = atan2(z2)
+      d1 = abs(cabs(z2) * (1 - sin(d2*@trapfreq2)*@traporder2*0.125) - @diameter2)
+    ELSEIF (@trapshape2 == 16)		; radial waves 2
+      d2 = atan2(z2)
+      d2 = sin(d2*@trapfreq2)*@traporder2*0.125
+      d1 = abs(cabs(z2) * (1 - d2) - @diameter2)
+      d2 = abs(cabs(z2) * (1 + d2) - @diameter2)
+      IF (d2 < d1)
+        d1 = d2
+      ENDIF
+    ELSEIF (@trapshape2 == 17)		; ring ripples
+      d1 = cabs(z2)
+      IF (d1 < @traporder2)
+        d1 = cos(d1 * diametersq2 * @trapfreq2) * sqr(1-d1/@traporder2)
+      ELSE
+        d1 = 0
+      ENDIF
+    ELSEIF (@trapshape2 == 18)		; grid ripples
+      d1 = cabs(z2)
+      IF (d1 < @traporder2)
+        d1 = (cos(real(z2)*diametersq2*@trapfreq2) + cos(imag(z2)*diametersq2*@trapfreq2)) * sqr(1-d1/@traporder2) * 0.5
+      ELSE
+        d1 = 0
+      ENDIF
+    ELSEIF (@trapshape2 == 19)		; radial ripples
+      d1 = atan2(z2)
+      d2 = cabs(z2)
+      IF (d2 < @traporder2)
+        d1 = cos(4 * d1 * @trapfreq2) * sqr(1-d2/@traporder2)
+      ELSE
+        d1 = 0
+      ENDIF
+    ELSEIF (@trapshape2 == 20)		; pinch
+      d2 = atan2(z2)
+      IF (d2 < 0)
+        d2 = d2 + 2*#pi
+      ENDIF
+      d1 = sqrt(cabs(z2)) / abs(sin(d2*@traporder2*0.5))
+    ELSEIF (@trapshape2 == 21)		; spiral
+      d1 = 1/(cabs(z2)) * @diameter2
+      r0 = (0,1) ^ d1
+      z2 = z2 * r0
+      d1 = atan(abs(imag(z2)/real(z2)))
+    ELSEIF (@trapshape2 == 22)		; heart
+      zh = real(z2) + flip(abs(imag(z2)))
+      zh = zh*rh2 * 3 / @diameter2
+      d1 = abs(real(zh) - sqr(imag(zh)) + 3)
+    ENDIF
+
+    ; now combine the two trap distances in some fashion.
+    d  = d  * @trapweight1		; apply trap weights
+    d1 = d1 * @trapweight2
+    z3 = d + flip(d1)			; make synthetic point
+    IF (@trapmerge == 0)		; closest
+      IF (d1 < d)
+        d = d1
+      ENDIF
+    ELSEIF (@trapmerge == 1)		; farthest
+      IF (d1 > d)
+        d = d1
+      ENDIF
+    ELSEIF (@trapmerge == 2)		; A+B
+      d = d + d1
+    ELSEIF (@trapmerge == 3)		; A-B
+      d = d - d1
+      IF (d < 0)
+        d = 0
+      ENDIF
+    ELSEIF (@trapmerge == 4)		; B-A
+      d = d1 - d
+      IF (d < 0)
+        d = 0
+      ENDIF
+    ELSEIF (@trapmerge == 5)		; |A-B|
+      d = abs(d - d1)
+    ELSEIF (@trapmerge == 6)		; A*A+B*B
+      d = sqr(d)+sqr(d1)
+    ELSEIF (@trapmerge == 7)		; A*A-B*B
+      d = sqr(d)-sqr(d1)
+      IF (d < 0)
+        d = 0
+      ENDIF
+    ELSEIF (@trapmerge == 8)		; B*B-A*A
+      d = sqr(d1)-sqr(d)
+      IF (d < 0)
+        d = 0
+      ENDIF
+    ELSEIF (@trapmerge == 9)		; |A*A-B*B|
+      d = abs(sqr(d)-sqr(d1))
+    ELSEIF (@trapmerge == 10)		; A*A*A+B*B*B
+      d = d^3+d1^3
+    ELSEIF (@trapmerge == 11)		; A*A*A-B*B*B
+      d = d^3-d1^3
+    ELSEIF (@trapmerge == 12)		; B*B*B-A*A*A
+      d = d1^3-d^3
+    ELSEIF (@trapmerge == 13)		; |A*A*A-B*B*B|
+      d = abs(d^3-d1^3)
+    ELSEIF (@trapmerge == 14)		; A*B
+      d = d*d1
+    ELSEIF (@trapmerge == 15)		; A/B
+      d = d/d1
+    ELSEIF (@trapmerge == 16)		; B/A
+      d = d1/d
+    ELSEIF (@trapmerge == 17)		; 1/(A*B)
+      d = 1/(d*d1)
+    ELSEIF (@trapmerge == 19)		; B only
+      d = d1
+    ELSEIF (@trapmerge == 20)		; A, then B
+      IF (ab)
+        d = d1
+      ENDIF
+      ab = !ab
+    ENDIF
+
+    ; now adjust closest/point/i as needed
+      IF (@traptype == 0)		; closest
+        IF (d < closest)
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+        ENDIF
+      ELSEIF (@traptype == 1)		; farthest (within threshold)
+        IF (d > closest && d < @threshold)
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+        ENDIF
+      ELSEIF (@traptype == 2)		; first (within threshold)
+        IF (d < @threshold && done == false)
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+          done = true
+        ENDIF
+      ELSEIF (@traptype == 3)		; last (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+          done = true
+        ENDIF
+      ELSEIF (@traptype == 4)		; sum (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = point + #z
+          point2 = point2 + z1
+	  point4 = point4 + z2
+	  point6 = point6 + z3
+          closest = closest + d
+       ENDIF
+      ELSEIF (@traptype == 5)		; average (within threshold)
+        IF (d < @threshold)
+          i = iter
+          i1 = i1 + 1
+          point = point + #z
+          point2 = point2 + z1
+	  point4 = point4 + z2
+	  point6 = point6 + z3
+          closest = closest + d
+        ENDIF
+      ELSEIF (@traptype == 6)		; product (within threshold)
+        IF (d < @threshold)
+          i = iter
+          point = point * #z / @threshold
+          point2 = point2 * z1 / @threshold
+	  point4 = point4 * z2 / @threshold
+	  point6 = point6 * z3 / @threshold
+          closest = closest * d / @threshold
+        ENDIF
+      ELSEIF (@traptype == 7)		; sign average
+        IF (d < d2)
+          i = i + 1
+          point = point + #z
+          point2 = point2 + z1
+	  point4 = point4 + z2
+	  point6 = point6 + z3
+          closest = closest + 1
+        ELSE
+          i = i - 1
+        ENDIF
+        d2 = d
+      ELSEIF (@traptype == 8 || @traptype == 10) ; second/two closest
+        IF (d < closest)
+          i1 = i
+          point1 = point
+          point3 = point2
+	  point5 = point4
+          point7 = point6
+          closest1 = closest
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+        ELSEIF (d < closest1)
+          i1 = iter
+          point1 = #z
+          point3 = z1
+	  point5 = z2
+	  point7 = z3
+          closest1 = d
+        ENDIF
+      ELSEIF (@traptype == 9 || @traptype == 11) ; second/two farthest
+        IF (d > closest && d < @threshold)
+          i1 = i
+          point1 = point
+          point3 = point2
+	  point5 = point4
+	  point7 = point6
+          closest1 = closest
+          i = iter
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d
+        ELSEIF (d > closest1 && d < @threshold)
+          i1 = iter
+          point1 = #z
+          point3 = z1
+	  point5 = z2
+	  point7 = z3
+          closest1 = d
+        ENDIF
+      ELSEIF (@traptype == 12)		; funky average
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z1 - point2
+	  point4 = z2 - point4
+	  point6 = z3 - point6
+          closest = @threshold - abs(closest - d)
+        ENDIF
+      ELSEIF (@traptype == 13)		; funky average 2
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z1 - point2
+	  point4 = z2 - point4
+	  point6 = z3 - point6
+          closest = abs(d - @threshold + closest)
+        ENDIF
+      ELSEIF (@traptype == 14)		; funky average 3 (Luke Plant)
+        IF (d < @threshold)
+          i = i + 1
+	  d1 = d/@threshold
+          point = #z + (point-#z) * d1
+          point2 = z1 + (point2-z1) * d1
+	  point4 = z2 + (point4-z2) * d1
+	  point6 = z3 + (point6-z3) * d1
+          closest = closest + d
+        ENDIF
+      ELSEIF (@traptype == 15)		; funky average 4 (exponential average)
+        IF (d < @threshold)
+          i = i + 1
+          point = #z - point
+          point2 = z1 - point2
+	  point4 = z2 - point4
+	  point6 = z3 - point6
+          closest = closest + exp(-d)
+        ENDIF
+      ELSEIF (@traptype == 16)		; funky average 5 (average distance change)
+        IF (d < d2)
+          point = point + #z
+          point2 = point2 + z1
+	  point4 = point4 + z2
+	  point6 = point6 + z3
+          closest = closest + d2-d
+        ENDIF
+        d2 = d
+      ELSEIF (@traptype == 17)		; funky average 6 (Luke Plant, 1/squared)
+        IF (d < @threshold)
+          i = i + 1
+        ENDIF
+        d1 = sqr(d/@threshold)
+        point = #z + (point-#z) * d1
+        point2 = z1 + (point2-z1) * d1
+	point4 = z2 + (point4-z2) * d1
+	point6 = z3 + (point6-z3) * d1
+        closest = closest + 1/d1
+      ELSEIF (@traptype == 18)		; trap only, do first iteration
+        IF (iter == 1)
+          point = #z
+          point2 = z1
+	  point4 = z2
+	  point6 = z3
+          closest = d/@threshold
+        ENDIF
+      ENDIF
+
+  ENDIF
+
+final:
+  ; un-fudge anything that was fudged
+  IF (@traptype == 5)			; traptype average
+    point = point / i1
+    point2 = point2 / i1
+    point4 = point4 / i1
+    point6 = point6 / i1
+    closest = closest / i1
+  ELSEIF (@traptype == 6)		; traptype product
+    closest = abs(closest)
+  ELSEIF (@traptype == 7)		; traptype sign average
+    point = point / iter
+    point2 = point2 / iter
+    point4 = point4 / iter
+    point6 = point6 / iter
+    closest = closest / iter
+  ELSEIF (@traptype == 8 || @traptype == 9) ; second closest or farthest
+    i = i - i1
+    point = point - point1
+    point2 = point2 - point3
+    point4 = point4 - point5
+    point6 = point6 - point7
+    closest = closest - closest1
+  ELSEIF (@traptype == 10 || @traptype == 11) ; two closest or farthest
+    i = round((i + i1) / 2)
+    point = (point + point1) / 2
+    point2 = (point2 + point3) / 2
+    point4 = (point4 + point5) / 2
+    point6 = (point6 + point7) / 2
+    closest = (closest + closest1) / 2
+  ELSEIF (@traptype == 14)		; funky average 3
+    closest = @threshold * i - closest
+  ENDIF
+
+  ; choose coloring based on method
+  IF (@trapcolor == 0)			; distance
+    IF (@traptype == 2 || @traptype == 3) ; first or last type
+      #index = closest / @threshold
+    ELSE				; any other trap type
+      #index = closest
+    ENDIF
+  ELSEIF (@trapcolor == 1)		; magnitude
+    #index = cabs(point)
+  ELSEIF (@trapcolor == 2)		; real
+    #index = abs(real(point))
+  ELSEIF (@trapcolor == 3)		; imaginary
+    #index = abs(imag(point))
+  ELSEIF (@trapcolor == 4)		; angle to origin
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 5)		; angle to origin 2 (old ReallyCool)
+    #index = 0.02 * abs(atan(imag(point) / real(point)) * 180/#pi)
+  ELSEIF (@trapcolor == 6)		; distance A
+    IF (@traptype == 2 || @traptype == 3) ; first or last type
+      #index = real(point6) / @threshold
+    ELSE				; any other trap type
+      #index = real(point6)
+    ENDIF
+  ELSEIF (@trapcolor == 7)		; magnitude A
+    #index = cabs(point2)
+  ELSEIF (@trapcolor == 8)		; real A
+    #index = abs(real(point2))
+  ELSEIF (@trapcolor == 9)		; imaginary A
+    #index = abs(imag(point2))
+  ELSEIF (@trapcolor == 10)		; angle to trap A
+    d = atan2(point2)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 11)		; angle to trap A 2 (no aspect)
+    point = point - @trapcenter1
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 12)		; distance B
+    IF (@traptype == 2 || @traptype == 3) ; first or last type
+      #index = imag(point6) / @threshold
+    ELSE				; any other trap type
+      #index = imag(point6)
+    ENDIF
+  ELSEIF (@trapcolor == 13)		; magnitude B
+    #index = cabs(point4)
+  ELSEIF (@trapcolor == 14)		; real B
+    #index = abs(real(point4))
+  ELSEIF (@trapcolor == 15)		; imaginary B
+    #index = abs(imag(point4))
+  ELSEIF (@trapcolor == 16)		; angle to trap B
+    d = atan2(point4)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 17)		; angle to trap B 2 (no aspect)
+    point = point - @trapcenter2
+    d = atan2(point)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 18)		; synthetic magnitude
+    #index = cabs(point6)
+  ELSEIF (@trapcolor == 19)		; synthetic angle
+    d = atan2(point6)
+    IF (d < 0)
+      d = d + #pi * 2
+    ENDIF
+    #index = d / (#pi * 2)
+  ELSEIF (@trapcolor == 20)		; iteration
+    d = i
+    #index = d / #maxiter
+  ENDIF
+  
+default:
+  title = "Twin Traps"
+  helpfile = "dmj-pub\dmj-pub-uf-tt.htm"
+
+  param trapshape1
+    caption = "Trap A Shape"
+    default = 1
+    enum = "point" "ring" "ring 2" "egg" "hyperbola" "hypercross" \
+           "cross" "astroid" "diamond" "rectangle" "box" "lines" \
+	   "waves" "mirrored waves" "mirrored waves 2" \
+	   "radial waves" "radial waves 2" "ring ripples" \
+	   "grid ripples" "radial ripples" "pinch" "spiral" "heart"
+    hint = "This is the shape of the orbit trap."
+  endparam
+  param trapshape2
+    caption = "Trap B Shape"
+    default = 6
+    enum = "point" "ring" "ring 2" "egg" "hyperbola" "hypercross" \
+           "cross" "astroid" "diamond" "rectangle" "box" "lines" \
+	   "waves" "mirrored waves" "mirrored waves 2" \
+	   "radial waves" "radial waves 2" "ring ripples" \
+	   "grid ripples" "radial ripples" "pinch" "spiral" "heart"
+    hint = "This is the shape of the orbit trap."
+  endparam
+  param trapmerge
+    caption = "Trap Merging"
+    default = 0
+    enum = "closest" "farthest" "A + B" "A - B" "B - A" "| A - B |" \
+           "A*A + B*B" "A*A - B*B" "B*B - A*A" "| A*A - B*B |" \
+	   "A*A*A + B*B*B" "A*A*A - B*B*B" "B*B*B - A*A*A" "| A*A*A - B*B*B |" \
+	   "A * B" "A / B" "B / A" "1 / (A*B)" "A only" "B only" "alternating"
+    hint = "Sets how the two trap distances (A and B) will be combined \
+            before being checked by the regular trap modes."
+  endparam
+  param trapweight1
+    caption = "Trap A Weight"
+    default = 1.0
+    hint = "This is the relative weight of the distance to trap A, \
+            prior to applying the Trap Merging parameter."
+  endparam
+  param trapweight2
+    caption = "Trap B Weight"
+    default = 1.0
+    hint = "This is the relative weight of the distance to trap B, \
+            prior to applying the Trap Merging parameter."
+  endparam
+  param trapcolor
+    caption = "Trap Coloring"
+    default = 0
+    enum = "distance" "magnitude" "real" "imaginary" "angle to origin" \
+           "angle to origin 2" "distance A" "magnitude A" "real A" \
+	   "imaginary A" "angle to trap A" "angle to trap A 2" \
+	   "distance B" "magnitude B" "real B" "imaginary B" \
+	   "angle to trap B" "angle to trap B 2" "synthetic magnitude" \
+	   "synthetic angle" "iteration"
+    hint = "This is the information used to produce a color."
+  endparam
+  param traptype
+    caption = "Trap Mode"
+    default = 0
+    enum = "closest" "farthest" "first" "last" "sum" "average" "product" \
+           "sign average" "second closest" "second farthest" "two closest" \
+	   "two farthest" "funky average" "funky average 2" "funky average 3" \
+	   "funky average 4" "funky average 5" "funky average 6" \
+	   "trap only"
+    hint = "This is how points will be chosen to use for coloring."
+  endparam
+  param traporder1
+    caption = "Trap A Order"
+    default = 4.0
+    hint = "Number of leaves for the pinch trap shape, the \
+            exponent to use for astroid curves (try 0.66667), \
+	    'egginess', or the height of waves."
+  endparam
+  param traporder2
+    caption = "Trap B Order"
+    default = 4.0
+    hint = "Number of leaves for the pinch trap shape, the \
+            exponent to use for astroid curves (try 0.66667), \
+	    'egginess', or the height of waves."
+  endparam
+  param trapfreq1
+    caption = "Trap A Frequency"
+    default = 1.0
+    hint = "The frequency of ripples or waves."
+  endparam
+  param trapfreq2
+    caption = "Trap B Frequency"
+    default = 1.0
+    hint = "The frequency of ripples or waves."
+  endparam
+  param trapcenter1
+    caption = "Trap A Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+  endparam
+  param trapcenter2
+    caption = "Trap B Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+  endparam
+  param aspect1
+    caption = "Aspect Ratio A"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the trap is.  You can distort the \
+            trap by using a value other than 1.0."
+  endparam
+  param aspect2
+    caption = "Aspect Ratio B"
+    default = 1.0
+    min = 0.0000000001
+    hint = "This is how square the trap is.  You can distort the \
+            trap by using a value other than 1.0."
+  endparam
+  param threshold
+    caption = "Threshold"
+    default = 0.25
+    min = 0
+    hint = "This is the width of the trap area, used for most \
+            trap modes."
+  endparam
+  param diameter1
+    caption = "Diameter A"
+    default = 1.0
+    hint = "This is the diameter of the trap (for ring, box, and \
+            line shapes)."
+  endparam
+  param diameter2
+    caption = "Diameter B"
+    default = 1.0
+    hint = "This is the diameter of the trap (for ring, box, and \
+            line shapes)."
+  endparam
+  param angle1
+    caption = "Rotation A"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap should \
+            be rotated."
+  endparam
+  param angle2
+    caption = "Rotation B"
+    default = 0.0
+    hint = "This is the angle, in degrees, that the trap should \
+            be rotated."
+  endparam
+;  param anglestep
+;    caption = "Rotation Step"
+;    default = 0.0
+;    hint = "This is the angle, in degrees, that the trap will \
+;            be rotated with each iteration."
+;  endparam
+;  param skew
+;    caption = "Skew"
+;    default = 0.0
+;    hint = "This is the angle, in degrees, to skew the vertical \
+;            axis of the trap shape."
+;  endparam
+;  param skewstep
+;    caption = "Skew Step"
+;    default = 0.0
+;    hint = "This is the angle, in degrees, that the skew angle \
+;            should be increased by with each iteration."
+;  endparam
+  param trapstart
+    caption = "Start Iteration"
+    default = 0.0
+    hint = "This is the iteration at which to start watching for \
+            orbit traps."
+  endparam
+  param trapiter
+    caption = "Trap Iterations"
+    default = 10000.0
+    hint = "This is the number of iterations to watch for traps \
+            in a single block."
+  endparam
+  param trapskip
+    caption = "Skip Iterations"
+    default = 0.0
+    hint = "This is the number of iterations to skip watching for \
+            traps, after a block of watched iterations."
+  endparam
+}

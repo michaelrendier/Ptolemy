@@ -1,0 +1,35 @@
+Smooth {
+; This smooths iterations by calculating how far past the bailout boundary the last iteration went.
+; It works by calculating pIter (p for partial), which equals 0 if |z| was right on the boundary,
+; and approaches 1 as |z| approaches the maximum value it can (=bailout^exponent), and then subtracts
+; this from #numiter to give a continuous equivalent. 
+; If bailout = b and exponent = p, then b <= |z| < b^p (approx, better for large b), so we want a
+; function f such that f(b)=0 and f(b^p)=1. Two different ones are included.
+; Note that log(b^p)/log(b) = p.
+init:
+  float pIter = 0
+final:
+  if @t == 0
+    pIter = (log(|#z|)/log(@b)-1)/(@p-1)
+  elseif @t == 1 
+    pIter = log(log(|#z|)/log(@b))/log(@p)
+  endif
+  #index = (#numiter-pIter)/100
+default:
+  param b
+    caption = "Bailout"
+    default = 1e20
+    hint = "This should equal the bailout on the formula tab"
+  endparam
+  param p
+    caption = "Exponent"
+    default = 2.0
+    hint = "This should equal the exponent on the formula tab"
+  endparam
+  param t
+    caption = "Smoothing"
+    enum = "Linear" "Logarithmic"
+    default = 1
+    hint = "Logarithmic is the smoothest setting"
+  endparam
+}

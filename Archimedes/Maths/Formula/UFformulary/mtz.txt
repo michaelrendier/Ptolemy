@@ -1,0 +1,277 @@
+
+Tiling{
+global:
+transform:
+bool q=true
+#pixel=#pixel+real(#pixel)*(1/@asp-1)
+  #pixel=real(#pixel)%(@size)+flip(imag(#pixel)%(@size))
+
+  If real(#pixel)>0.5*@size
+    #pixel=1*@size-real(#pixel)+flip(imag(#pixel))
+    q=false
+    endif  
+  If imag(#pixel)>0.5*@size
+    #pixel=flip(1*@size-imag(#pixel))+real(#pixel)
+    q=false
+    endif
+  If (@mod==1)&&(imag(#pixel)>real(#pixel))
+    #pixel=flip(#pixel)
+    q=false
+    endif
+  If (@mod==2)&&(imag(#pixel)>(0.5*@size)-real(#pixel))
+    #pixel=flip((0.5,0.5)*@size-#pixel)
+    q=false
+    endif 
+  If (@one)&&(!q)
+    #solid=true
+    endif
+
+float angle
+angle=atan(imag(#pixel)/real(#pixel));
+if real(#pixel)<0 
+  angle=angle+#pi
+  endif
+angle=angle+@rot/180*#pi
+  
+#pixel=sqrt(|#pixel|)*(cos(angle)+flip(sin(angle))) 
+
+If !@screen
+    #pixel=#pixel+@center-(@size/4)-flip(@size/4)
+    endif 
+
+If @screen
+    #pixel=#pixel+#center
+    ;+(@size/2)
+    ;+flip(@size/2)
+    endif
+    
+
+
+default:
+  title = "Tiling"
+
+complex param center
+    caption = "Center"
+    default = 0
+    endparam
+    
+bool param screen
+    Caption = "Use Screen Center"
+    default = true
+    endparam
+
+float param asp
+    caption = "Aspect ratio"
+    default = 1
+    min = 0
+    endparam
+
+float param size
+    caption = "Size"
+    default = .5
+    min = 0
+    endparam
+    
+float param rot
+    caption = "Rotation"
+    default = 0
+    endparam
+
+int param mod
+    caption = "Mode"
+    hint = "This is type of tilling"
+    enum = "x.y" "x.y.y=x" "x.y.y=1-x"
+    default = 0
+    endparam
+
+bool param one
+    Caption = "Original piece"
+    default = false
+    endparam
+}
+
+
+
+
+Tearing {
+; This algoritm simulates a fault or a tear.
+; Use the two points parameters to generate the fault line.
+; Octaves, persistence and amplitude are just the standard 
+; 'Perlin noise' parameters.
+; Increase scale if the fault seems to be made of strait 
+; lines and the number of octaves is already big (7-8).
+; Set corection type to 'split' so that the two pieces of 
+; the fractal are pulled apart.
+; Finnaly change the seed value to generate differnt faults.
+
+
+global:
+$define debug
+; using y=ax+b
+if (real(@p1)-real(@p2) != 0)
+  float a = (imag(@p1)-imag(@p2))/(real(@p1)-real(@p2));
+  else 
+    a = (imag(@p1)-imag(@p2))/0.001;
+  endif
+if a==0 
+  a=0.001
+  endif
+;a vcannot be 0 and 90 degrees
+ 
+float b = imag(@p1)- a*real(@p1);
+
+int o = @o ;octaves 
+float per = @per ;persistence
+float scale = @scale*.6 ;
+int seed = @seed ;
+float d=@d ;fault diameter
+
+float ap=-1/a ;perpendicular a term
+float angle=atan(ap) ; perpendicular angle
+  
+transform:
+int i ;counter
+float z ;the amplitude of the noise 
+float fa ;the amplitude of the noise on the left integer
+float fb ;the amplitude of the noise on the right integer
+float pix
+float x
+int aa  
+int bb
+int aaa ;temporary 
+
+;ecuatzia perpendicularei
+float bp=imag(#pixel)-ap*real(#pixel) ;the perpendicular free term
+
+;punctul de pe dreapta
+zd=(bp-b)/(a-ap) ; the perpendicular coresponding point on the fault line
+zd=zd+flip(zd*a+b) ; and the imaginary part
+int temp
+
+;distanta de la punct la (x,0)
+float dd=sqrt(sqr(imag(zd-b/a))+sqr(real(zd-b/a)))
+i=0;
+z=0;
+repeat
+  i=i+1;
+  pix=dd*2^i/scale
+  aa = floor(pix); 
+  aaa=aa
+  bb = ceil(pix);
+    
+    temp = aa
+    if temp <= 1
+      temp=abs(temp)+12
+      endif
+    int j=0
+    repeat
+      j=j+1
+      aa=random(aa)
+      until j==temp
+      
+    temp = bb
+    if temp <= 1
+      temp=abs(temp)+12
+      endif
+    j=0
+    repeat
+      j=j+1
+      bb=random(bb)
+      until j==temp
+
+
+  fa = random(aa + seed) / #randomrange * per^(i-1)
+  fb = random(bb + seed) / #randomrange * per^(i-1)
+  
+  ;interpolation
+  if @tip==1 
+    x = (pix-aaa)*#pi
+    x = (1 - cos(x)) * .5
+    endif
+  if @tip==0
+    x = (pix-aaa)
+   endif
+  z = ((1-x)*fa + x*fb)*@amp+z 
+  until i==o
+  
+if sqrt(|#pixel - zd - z*cos(angle) - flip(z*sin(angle))|) < d/2
+    #solid = true;
+    endif
+
+if imag(#pixel)-(a*real(#pixel)+b)-z*sin(angle)>=0
+  if @corection==1
+    if angle < 0
+      #pixel=#pixel+d*(cos(angle)+flip(sin(angle)))
+      else 
+        #pixel=#pixel-d*(cos(angle)+flip(sin(angle)))
+      endif
+    endif
+  endif
+
+default:
+  title = "Tearing"
+param p1
+    caption = "Point 1"
+    default = (0,0)
+    hint= "First point of the line."
+  endparam
+
+param p2
+    caption = "Point 2"
+    default = (1,1)
+    hint= "Second point of the line."
+  endparam
+
+float param d
+  caption = "Distance"
+  default = .25
+  min = 0 
+  hint = "Width of the tear." 
+  endparam
+    
+int param o
+    caption = "Octaves"
+    default = 5
+    min = 1
+  endparam
+  
+float param per
+    caption = "Persistence"
+    default = .6
+  endparam
+  
+float param amp
+    caption = "Amplitude"
+    default = .1
+    min = 0
+  endparam
+  
+int param tip
+    caption = "Interpolation."
+    enum = "linear" "cosine"
+    default = 1 
+   endparam
+  
+
+float param scale
+    caption = "Scale"
+    hint = "Set it equal to the magnification."
+    default = 1
+    min = 0.0000000001
+endparam 
+
+int param corection
+    caption = "Corection type"
+    hint = "With cut the part of the fractal that lies on the fault is just ignored.With split the fractal is split into 2 pieces and they are pulled apart."  
+    enum = "cut" "split" 
+    default = 1
+  endparam
+  
+int param seed
+    caption = "Seed"
+    default = 135792460
+    hint = "The seed used for random numbers generating."
+endparam
+ 
+
+}

@@ -1,0 +1,7114 @@
+comment {
+
+Calculation formulas developed by Kerry Mitchell
+Compilation dated 15jul2001
+
+Includes:
+  Elliptical bailout Mandelbrot
+  Elliptical bailout Julia
+  Nth order Newton
+  Newton for exp(z)=log(z)
+  Embossing:
+    Mandelbrot
+    Julia
+    General Mandelbrot
+    General Julia
+    Nth order Newton
+    Newton for exp(z)=log(z)
+  Cardioid Julias
+  Gap Mandelbrot & Julia
+  Triangle inequality coloring Mandelbrot & Julia
+  Principal root coloring Mandelbrot & Julia
+  Baker's Transformation
+  Inversions
+  Mitch's Mandelbrot & Julia
+  Cell 4
+  S Curve
+  Divide and Average
+  Null
+  General Predictor Mandelbrot & Julia
+  Piston
+  Gravity 2 (3, and 4) with Comet
+  Vortex 2, 3, and 4
+  General Tent Mandelbrot & Julia
+  Compounding Tweaked Mandelbrot & Julia
+  Pixel
+  Rational Newton Mandelbrot & Julia
+
+}
+
+comment { ; copyright Kerry Mitchell 14sep98
+
+Embossing
+
+Notary Publics and other important folks use embossing as a way of
+marking official papers.  The embossing die puts a series of crimps
+onto the paper.  This doesn't change the color of the paper, but
+makes hills and valleys that are visible as highlights and shadows.
+The "embossing" coloring method has a similar effect.  Typically, the
+majority of the image is a middle gray.  Contour bands (such as those
+between regions of constant dwell) are colored black and white,
+resembling shadows and highlights, respectively.  Performed correctly,
+this gives a very convincing 3D effect to the image, reminiscent of a
+topographical map or architectural model.
+
+In general, embossing requires 2 test points for each pixel, and
+some discrete variable (call it D for this explanation).  If D is the
+same for both test points (D1 = D2), then the pixel is colored middle
+gray.  If D for the first test point is less than D for the second
+point (D1 < D2), then the pixel is colored black.  Otherwise, D1 > D2,
+and the pixel is colored white.  For example (B = black, W = white,
+G = gray):
+
+D1 (first test point):   1  23  45   2   5   9  34   0   1  19
+D2 (second test point):  1  22  45   2   5  10  34   0   2  18
+pixel color:             G   W   G   G   G   B   G   G   B   W
+
+In the present method, the test points are placed on either side of
+the pixel.  Exactly where is determined by 2 parameters, the "contour
+size" and "light angle".  The apparant size of the contour bands in the
+image depends on how far apart the test points are.  Moving the points
+away will result in wider, more dramatic bands.  However, making the
+bands too wide can lead to "seeing double" in your fractal.  The typical
+band size decreases with increasing magnification, and this is adjusted
+automatically.  However, the "contour size" parameter allows you to vary
+the contour size from the default.  Increasing the parameter from its
+default of 1.0 will make the bands wider, and decreasing it will make
+the bands smaller.
+
+The relative location of the highlights and shadows on a real embossed
+sheet depends on from where the light is coming.  This is simulated
+with the "lightangle" parameter.  Using a value of 0 would show
+highlights on the right side (0 degrees) and shadows on the left side
+(180 degrees).  The highlights generally appear in the same direction
+given by lightangle; the shadows are generally on the other side, 180
+degrees away.
+
+The discrete variable used here is the iteration number:  how many
+iterations before the orbits escape.  In the formulas, the 2 iteration
+counts are assigned to the real and imaginary parts of z, which is
+passed on to the coloring scheme.  Other discrete variables can be
+used, but that's work for another time.
+
+For best results, use these formulas in conjunction with the "emboss"
+coloring, emboss.ucl.  There, colors are determined by assigning
+one of 3 index values to the pixel.  If both test points have escaping
+orbits, then the pixel is colored one color (#index = 0.2) if the 1st
+point escapes first, a 2nd color (#index = 0.8) if the 2nd point escapes
+first, and a 3rd color (#index = 0.5) if they both escape on the same
+iteration.  If both orbits don't escape before the maximum number of
+iterations is reached, then the pixel is colored according to the "inside"
+settings.  Of course, the colors that actually show up in your image will
+depend on your choice of gradient.  "Emboss.ugr" was created especially
+for this purpose, and uses middle gray for the bulk of the image, with
+white highlights and black shadows.
+
+With the standard Mandelbrot and Julia sets (quadratic, z=z^2+c), an
+elliptical bailout condition is used, to add more flexibility.  In
+a typical Mandelbrot calculation, iteration ceases when |z| > bailout,
+which means
+
+        [real(z)]^2 + [imag(z)]^2 > bailout.
+
+This gives a bailout boundary that is a circle.  By changing the
+relative weights of real(z) and imag(z):
+
+        [a*real(z)]^2 + [b*imag(z)]^2 > bailout,
+
+the bailout boundary is changed to an ellipse.  The relative sizes
+of a and b will determine the eccentricity of the ellipse (long vs.
+circular vs. tall), and the minimum of a and b will determine how
+big the bailout ellipse is.  For example, small a and large b would
+weigh the imaginary part more heavily in the bailout determination.
+In this formula, a and b are set by the parameters, "x factor" and
+"y factor".  For best results, they should both be >= 1.  This method
+also uses the "strict" bailout condition:  if they are both = 1, then
+the bailout radius depends on the magnitude of c.  This brings the
+iteration contours closer together when c is small.  Since this
+method emphasizes the contours so much, the more precise condition
+was chosen.
+
+For the generalized Mandelbrot and Julia sets (z=z^n+c), the bailout
+boundary is a circle.  The (single) bailout value is entered as a
+parameter.
+
+For the Newton's method fractals, the formula converges on the nth
+roots of -1.  (-1 was chosen instead of +1 for aesthetic reasons.)
+Here, as with the generalized Mandelbrot set, the bailout boundary is
+a circle, and the bailout value is entered as a parameter.
+
+[updated 29 November 1998]
+
+In keeping with other iteration formulas that have the iterate going
+to infinity (or larger than a large bailout value), the Newton formulas
+use the reciprocal of the change in z as the bailout test variable.
+Thus, when the formula converges to a root, the change in iterate goes
+to zero, and the reciprocal of the change goes to infinity.
+
+Other conditions can be used for the embossing, besides the iteration
+count.  The orbit can be monitored, and various other characteristics
+can be chosen.  If "real(z)>0" is picked, then the number of times that
+the real part of z is positive is used.  Similarly, the "imag(z)>0"
+setting counts the number of times the imaginary part of z is positive.
+For inside colorings,  the "smallest mag" setting compares the iteration
+count for both test points where the magnitudes were the smallest.  For
+outside colorings, the "magnitude" setting compares the final magnitudes.
+Specifically, the integer part of the logarithm of the magnitude of z.
+This allows the distribution of contour bands to be interesting without
+becoming overwhelming.
+
+[updated 28 December 1998]
+
+Another embossing method has been added, the "angle" method.  This
+technique discretizes the polar angle of the last iterate into two or
+more sections.  The number of sections is set with the parameter, "# of
+sections".   For example, using 4 sections would essentially break the
+complex plane into quadrants, and perform the embossing according in
+which quadrants the two test points fell on the last iteration.  Any
+integral number of sections, from two up, can be used.
+
+}
+
+embossed-mandelbrot { ; Kerry Mitchell 13sep98
+;
+; Standard Mandelbrot set
+; with elliptical bailout.
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add general starting point
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  c1=#pixel-dr
+  c2=#pixel+dr
+  z1=@manparam
+  z2=@manparam
+  float a=1.0/@xfac
+  float b=1.0/@yfac
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+  float bailout=|(1.0+sqrt(1.0+4.0*(cabs(#pixel))))/2.0|
+  int iter1=0
+  int iter2=0
+  int iter=0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    z1=sqr(z1)+c1
+    r=|real(z1)*a|+|imag(z1)*b|
+    if(r>bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z1|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(z1)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z1)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    z2=sqr(z2)+c2
+    r=|real(z2)*a|+|imag(z2)*b|
+    if(r>bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z2|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(z2)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z2)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(-0.5,0.0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0.0,0.0)
+    hint="use (0,0) for basic Mandelbrot set"
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+  param xfac
+    caption="x factor"
+    default=1.0
+    min=1.0
+    hint="Increase to make bailout more dependent on x"
+  endparam
+  param yfac
+    caption="y factor"
+    default=1.0
+    min=1.0
+    hint="Increase to make bailout more dependent on y"
+  endparam
+switch:
+  type="embossed-julia"
+  julparam=#pixel
+  sizefac=sizefac
+  lightangle=lightangle
+  xfac=xfac
+  yfac=yfac
+}
+
+embossed-julia { ; Kerry Mitchell 13sep98
+;
+; Standard Julia set
+; with elliptical bailout.
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  z1=#pixel-dr
+  z2=#pixel+dr
+  c1=@julparam
+  c2=@julparam
+  float a=1.0/@xfac
+  float b=1.0/@yfac
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+  float bailout=|(1.0+sqrt(1.0+4.0*(cabs(@julparam))))/2.0|
+  int iter1=0
+  int iter2=0
+  int iter=0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    z1=sqr(z1)+c1
+    r=|real(z1)*a|+|imag(z1)*b|
+    if(r>bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z1|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(z1)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z1)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    z2=sqr(z2)+c2
+    r=|real(z2)*a|+|imag(z2)*b|
+    if(r>bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z2|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(z2)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z2)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Julia"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(0.0,1.0)
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+  param xfac
+    caption="x factor"
+    default=1.0
+    min=1.0
+    hint="Increase to make bailout more dependent on x"
+  endparam
+  param yfac
+    caption="y factor"
+    default=1.0
+    min=1.0
+    hint="Increase to make bailout more dependent on y"
+  endparam
+switch:
+  type="embossed-mandelbrot"
+  sizefac=sizefac
+  lightangle=lightangle
+  xfac=xfac
+  yfac=yfac
+}
+
+embossed-general-mandelbrot { ; Kerry Mitchell 14sep98
+;
+; Mandelbrot set for z^n+c.
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add general starting point
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  c1=#pixel-dr
+  c2=#pixel+dr
+  z1=@manparam
+  z2=@manparam
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    z1=z1^@nexp+c1
+    if(|z1|>@bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z1|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(z1)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z1)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    z2=z2^@nexp+c2
+    if(|z2|>@bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z2|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(z2)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z2)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed General Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0.0,0.0)
+    hint="use (0,0) for basic Mandelbrot set"
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="Mandelbrot exponent, > 1.0"
+    min=1.0
+  endparam
+  param bailout
+    caption="bailout value"
+    default=4.0
+    min=1.0
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+switch:
+  type="embossed-general-julia"
+  julparam=#pixel
+  bailout=bailout
+  sizefac=sizefac
+  lightangle=lightangle
+  nexp=nexp
+}
+
+embossed-general-julia { ; Kerry Mitchell 14sep98
+;
+; Julia set for z^n+c.
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  z1=#pixel-dr
+  z2=#pixel+dr
+  c1=@julparam
+  c2=@julparam
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    z1=z1^@nexp+c1
+    if(|z1|>@bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z1)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z1|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(z1)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z1)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    z2=z2^@nexp+c2
+    if(|z2|>@bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(z2)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|z2|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(z2)))
+    elseif(@parttype==5)
+      t=0.5*atan2(z2)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed General Julia"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(0.5,0.0)
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="Julia exponent, > 1.0"
+    min=1.0
+  endparam
+  param bailout
+    caption="bailout value"
+    default=4.0
+    min=1.0
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+switch:
+  type="embossed-general-mandelbrot"
+  bailout=bailout
+  nexp=nexp
+  sizefac=sizefac
+  lightangle=lightangle
+}
+
+embossed-z^n-newton { ; Kerry Mitchell 13sep98
+;
+; Newton's method for z^n+1=0
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  float nfac=1.0/@nexp
+  int nm1=@nexp-1
+  z1=#pixel-dr
+  z2=#pixel+dr
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    fp=z1^nm1
+    f=z1*fp+(1.0,0.0)
+    dz=nfac*f/fp
+    z1=z1-dz
+    dz=1.0/dz
+    if(|dz|>@bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(dz)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(dz)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|dz|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(dz)))
+    elseif(@parttype==5)
+      t=0.5*atan2(dz)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    fp=z2^nm1
+    f=z2*fp+(1.0,0.0)
+    dz=nfac*f/fp
+    z2=z2-dz
+    dz=1.0/dz
+    if(|dz|>@bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(dz)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(dz)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|dz|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(dz)))
+    elseif(@parttype==5)
+      t=0.5*atan2(dz)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Newton for z^n + 1 = 0"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param nexp
+    caption="exponent"
+    hint="greater than 1"
+    default=4
+    min=2
+  endparam
+  param bailout
+    caption="bailout value"
+    hint="make large"
+    default=1000.0
+    min=0.0
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+}
+
+embossed-explog-newton { ; Kerry Mitchell 13sep98
+;
+; Newton's method for exp(z)=log(z).
+; See comment block for more information
+; about embossing effect.
+;
+; updates:
+;   29nov98 to add more embossing types
+;   28dec98 to add "angle" embossing type
+;
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  z1=#pixel-dr
+  z2=#pixel+dr
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float t=0.0
+  float rmin=1e20
+  float part1=0.0
+  float part2=0.0
+loop:
+  iter=iter+1
+  if(iter1==0)
+    fp=exp(z1)
+    f=fp-log(z1)
+    fp=fp-1/z1
+    dz=f/fp
+    z1=z1-dz
+    dz=1.0/dz
+    if(|dz|>@bailout)
+      iter1=iter
+    endif
+    if(@parttype==1)
+      if(real(dz)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(dz)>0.0)
+        part1=part1+1.0
+      endif
+    elseif(@parttype==3)
+      r=|dz|
+      if(r<rmin)
+        rmin=r
+        part1=iter
+      endif
+    elseif(@parttype==4)
+      part1=real(trunc(log(dz)))
+    elseif(@parttype==5)
+      t=0.5*atan2(dz)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part1=real(trunc(t))
+    else
+      part1=iter1
+    endif
+  endif
+  if(iter2==0)
+    fp=exp(z2)
+    f=fp-log(z2)
+    fp=fp-1/z2
+    dz=f/fp
+    z2=z2-dz
+    dz=1.0/dz
+    if(|dz|>@bailout)
+      iter2=iter
+    endif
+    if(@parttype==1)
+      if(real(dz)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==2)
+      if(imag(dz)>0.0)
+        part2=part2+1.0
+      endif
+    elseif(@parttype==3)
+      r=|dz|
+      if(r<rmin)
+        rmin=r
+        part2=iter
+      endif
+    elseif(@parttype==4)
+      part2=real(trunc(log(dz)))
+    elseif(@parttype==5)
+      t=0.5*atan2(dz)/pi
+      if(t<0.0)
+        t=t+1.0
+      endif
+      t=t*@numsect
+      part2=real(trunc(t))
+    else
+      part2=iter2
+    endif
+  endif
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Newton for Exp(z) = Log(z)"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param bailout
+    caption="bailout value"
+    hint="make large"
+    default=1000.0
+    min=0.0
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iteration" "real(z)>0" "imag(z)>0" "smallest mag"\
+      "magnitude" "angle"
+  endparam
+  param numsect
+    caption="# of sections"
+    default=2
+    min=1
+    hint="for 'angle' embossing method"
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparant light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+}
+
+explog-newton { ; Kerry Mitchell  06oct98
+;
+; Uses Newton's method to find the roots
+; of exp(zc)=log(zc).  The variable zc is
+; used for the orbit computation, and z
+; is the reciprocal of the adjustment to
+; zc each iteration.  That is, when z
+; approaches infinity, the orbit has settled
+; down into a root.  Consequently, set the
+; bailout value to some large number. This
+; was done for compatibility with coloring
+; schemes that expect z to be large on bailout.
+;
+init:
+  zc=#pixel
+loop:
+  f=exp(zc)
+  fp=f-1/zc
+  f=f-log(zc)
+  dz=f/fp
+  zc=zc-dz
+  z=1/dz
+bailout:
+  |z|<@bailout
+default:
+  title="Newton's Method for exp(z) = log(z)"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param bailout
+    caption="bailout value"
+    default=100.0
+    min=0.0
+    hint="make large"
+  endparam
+}
+
+z^n+1=0-newton { ; Kerry Mitchell 20sep98
+;
+; Uses Newton's method to find the roots
+; of (zc)^n+1=0.  The variable zc is
+; used for the orbit computation, and z
+; is the reciprocal of the adjustment to
+; zc each iteration.  That is, when z
+; approaches infinity, the orbit has settled
+; down into a root.  Consequently, set the
+; bailout value to some large number. This
+; was done for compatibility with coloring
+; schemes that expect z to be large on bailout.
+;
+init:
+  zc=#pixel
+  int n=@nexp
+  int nm1=n-1
+loop:
+  fp=zc^nm1
+  f=zc*fp+(1.0,0.0)
+  dz=f/fp/n
+  zc=zc-dz
+  z=1/dz
+bailout:
+  |z|<@bailout
+default:
+  title="Newton's Method for z^n+1 = 0"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param nexp
+    caption="exponent"
+    default=4
+    min=2
+  endparam
+  param bailout
+    caption="bailout value"
+    default=100.0
+    min=0.0
+    hint="make large"
+  endparam
+}
+
+elliptical-bailout-mandelbrot { ; Kerry Mitchell 20sep98
+;
+; Standard quadratic Mandelbrot, except:
+;   - the standard bailout radius (xfactor=1,
+;     yfactor=1) is compressed based on c, to
+;     bring the curves closer together, and
+;   - this bailout radius can be adjusted with
+;     the x- and y-factors, to make the bailout
+;     circle into an ellipse. Increasing xfactor
+;     makes bailout more sensitive to y (long
+;     ellipse), and increasing yfactor makes
+;     bailout more sensitve to x (tall ellipse).
+;
+; updates:
+;   28dec98 to add general starting point
+;
+init:
+  z=@manparam
+  c=#pixel
+  float a=1/@xfac
+  float b=1/@yfac
+  float bailout=|(1+sqrt(1+4*(cabs(c))))/2|
+  float r=0
+loop:
+  z=sqr(z)+c
+  r=|real(z)*a|+|imag(z)*b|
+bailout:
+  r<bailout
+default:
+  title="Elliptical Bailout Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0,0)
+    hint="use (0,0) for basic Mandelbrot set"
+  endparam
+  param xfac
+    caption="x factor"
+    default=1.0
+    hint="Increase to make bailout more dependent on x"
+  endparam
+  param yfac
+    caption="y factor"
+    default=1.0
+    hint="Increase to make bailout more dependent on y"
+  endparam
+switch:
+  type="elliptical-bailout-julia"
+  julparam=#pixel
+  xfac=xfac
+  yfac=yfac
+}
+
+elliptical-bailout-julia { ; Kerry Mitchell 20sep98
+;
+; Standard quadratic Julia, except:
+;   - the standard bailout radius (xfactor=1,
+;     yfactor=1) is compressed based on c, to
+;     bring the curves closer together, and
+;   - this bailout radius can be adjusted with
+;     the x- and y-factors, to make the bailout
+;     circle into an ellipse. Increasing xfactor
+;     makes bailout more sensitive to y (long
+;     ellipse), and increasing yfactor makes
+;     bailout more sensitve to x (tall ellipse).
+;
+init:
+  z=#pixel
+  c=@julparam
+  float a=1/@xfac
+  float b=1/@yfac
+  float bailout=|(1+sqrt(1+4*(cabs(c))))/2|
+  float r=0
+loop:
+  z=sqr(z)+c
+  r=|real(z)*a|+|imag(z)*b|
+bailout:
+  r<bailout
+default:
+  title="Elliptical Bailout Julia"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(0,1)
+  endparam
+  param xfac
+    caption="x factor"
+    default=1.0
+    hint="Increase to make bailout more dependent on x"
+  endparam
+  param yfac
+    caption="y factor"
+    default=1.0
+    hint="Increase to make bailout more dependent on y"
+  endparam
+switch:
+  type="elliptical-bailout-mandelbrot"
+  xfac=xfac
+  yfac=yfac
+}
+
+comment { ; copyright Kerry Mitchell 07nov98
+
+Cardioid Julias
+
+The orbits of points that lie exactly on the main cardioid of the
+Mandelbrot set can be quite diverse.  If c is at the tangency point
+of a disk, then its orbit will both settle down to a fixed point, and
+be periodic, with the periodicity being that of the disk.  This happens
+because the periodic sequence of iterates contains the same value,
+repeated.  If c is not at a tangent point (and most c's on the boundary
+are not), then its orbit will be chaotic.  With a little algebra, the
+boundary points for the Mandelbrot set and some other special cases can
+be computed exactly (to the precision of the computer), and then used
+as seeds for Julia set fractals.
+
+If c is on the boundary of the main cardioid, then 2 things are known.
+First, the orbit of c will eventually settle down to a fixed point:
+z*z+c = z.  This condition is also met by all the interior points, so
+an additional condition is required.  Given that f(z)=z (for the Mandelbrot
+and Julia sets, f(z) = z*z+c), the derivative of f has a magnitude exactly
+equal to 1:  |f'(z)|=1.  The latter condition means that the orbit of c
+is neutrally stable:  if |f'(z)| < 1 then c would be in the interior of
+the cardioid, and if |f'(z)| > 1 then c would be outside of the cardioid.
+
+Since |f'(z)|=1, the derivative can be replaced by a complex number k,
+where k = cos(theta)+i*sin(theta) = exp(i*theta).  For any angle theta,
+k can be found.  Using f(z)=z*z+c and f'(z)=2*z, c can be determined in
+terms of k.  For the main cardioid of the Mandelbrot set,
+
+c = k/2 - (k/2)^2.
+
+The value of theta (and thus, k) is what determines whether or not c is
+a tangent point.  For this, the angle theta is measured in turns, where
+1 turn = 1 full circle = 2*pi radians = 360 degrees.  At any angle theta
+= m/n turns, where m and n are both integers and m/n is in lowest terms,
+c will be the tangent point between the main cardioid and the disk of
+periodicity n.  For example, at theta=1/2 turn, c=-0.75 and is the tangent
+point to the period 2 disk.
+
+Of course, UltraFractal computes angles with radians, not turns.  The
+angle measure in radians = 2*pi*m/n.  Points c that are near to, but not
+tangent points, can be found using this method, but by altering the value
+of "pi".  Using the exact value gives a tangent point.  Using a close value
+(like 3.0 or 3.125) will give a value of c that has a chaotic orbit, but
+is still close to the m/n tangent point.  This artificial value of pi is
+entered using the "pi factor" parameter.  To use the exact value (and
+generate a tangent point), use 0 as the "pi factor".
+
+The large disk centered at c=-1 in the Mandelbrot set has a boundary which
+can also be computed exactly.  The disk turns out to be a circle with a
+radius of 0.25.  In terms of k, c = k/4 -1.
+
+Other fractal formulas have main "cardioid" regions whose boundaries can be
+computed (these regions are not exactly cardioids, but will be referred to
+as such for simplicity).  The formula z = z^n+c has a main cardioid
+boundary given by:
+
+c = (k/n)^(1/(n-1)) - (k/n)^(n/(n-1)).
+
+The formula z = c*exp(z) has a main cardioid boundary given by:
+
+c = k/exp(k).
+
+Both of these, as well as the Mandelbrot period 2 disk, can be used with
+the "cardioid-julia" formula.
+
+}
+
+cardioid-julia { ; Kerry Mitchell 06nov98
+;
+; Julia sets for points along the main
+; cardioid and other special areas
+;
+; Updated 29 June 2004 for version 3 enhancements
+; and to print out the actual c value.  Now, you can
+; use this formula to find c, and copy/paste that value
+; to another layer.
+;
+global:
+$define debug
+  float p=@pifac
+  if(@pifac<1.0)
+    p=#pi
+  endif
+  float t=@m/@n*2*p
+  k=cos(t)+flip(sin(t))
+  if(@cardtype==0)                ; Mandelbrot main cardioid
+    c=k/2
+    c=c-c*c
+  elseif(@cardtype==1)            ; Mandelbrot period 2 disk
+    c=k/4-1
+  elseif(@cardtype==2)            ; z^n main cardioid
+    c=(k/@zexp)^(1/(@zexp-1))
+    c=c-c^@zexp
+  else                            ; c*exp(z) main cardioid
+    c=k/exp(k)
+  endif
+  if(@printc)
+    print("c = ",c)
+  endif
+init:
+  int done=0
+  z=#pixel
+loop:
+  if(@cardtype<2)                 ; z^2 Julia set
+    z=sqr(z)+c
+    if(|z|>@bailout)
+      done=1
+    endif
+  elseif(@cardtype==2)            ; z^n Julia set
+    z=z^@zexp+c
+    if(|z|>@bailout)
+      done=1
+    endif
+  else
+    z=c*exp(z)                    ; c*exp(z) Julia set
+    if(real(z)>@bailout)
+      done=1
+    endif
+  endif
+bailout:
+  done==0
+default:
+  title="Cardioid Julias"
+  periodicity=0
+  float param bailout
+    caption="bailout value"
+    default=4.0
+  endparam
+  param cardtype
+    caption="cardioid type"
+    enum="Mandelbrot main" "Mandelbrot disk 2" \
+      "z^n main" "c*exp(z) main"
+    default=0
+  endparam
+  float param zexp
+    caption="z exponent"
+    default=3.0
+    min=1.0
+    hint="for z^n type fractals"
+    visible=(@cardtype=="z^n main")
+  endparam
+  float param m
+    caption="m of m/n turns"
+    default=1
+    hint="numerator of internal angle fraction"
+  endparam
+  float param n
+    caption="n of m/n turns"
+    default=2
+    hint="denominator of internal angle fraction"
+  endparam
+  float param pifac
+    caption="pi factor"
+    default=3.0
+    hint="use 0 for exact pi"
+  endparam
+  bool param printc
+    caption="print c"
+    default=false
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 20dec98
+
+Gaps
+
+More fun with lines and circles.  These methods monitor the orbit
+of the standard Mandelbrot and Julia calculations and bail out if
+the orbit falls between two curves.
+
+Using the "between 2 circles" setting, the orbit is trapped between
+two concentric circles.  The circles can be specified generally with
+the center and the 2 radii.
+
+The 2 circles are identified by:
+
+        |z - center| = |radius1|, and
+        |z - center| = |radius2|.
+
+So it is sufficient to check |z - center| to see if it falls in the
+range of |radius1| to |radius2|.  Exactly where in this range it falls
+is scaled and used as the color index.
+
+The same idea can be applied to lines instead of circles, and this is
+principle behind the "between 2 lines" setting.  Here, the calculation
+is halted if the orbit falls in the gap between 2 parallel lines.  The
+lines are specified by:
+
+        sin(theta)*x - cos(theta)*y = c1,
+        sin(theta)*x - cos(theta)*y = c2.
+
+Where theta is the angle that the lines make with the horizontal.  Since
+theta is the same for both lines, the lines are parallel.  The gap between
+the lines is given by the difference between c1 and c2.  (Note that c1 and
+c2 are different than the Mandelbrot and Julia parameters c).
+
+At each step, the value
+
+        tempr = sin(theta)*real(z) - cos(theta)*imag(z)
+
+is computed to see if it is in the range from c1 to c2.  If so, then
+it's exact spot within that range is scaled to a value from 0 to 1 and
+is used as the color index.
+
+In the event that the orbit doesn't encounter either a ring or a gap,
+the bailout is hardcoded to 1e20.
+
+}
+
+gap-mandelbrot { ; Kerry Mitchell 20dec98
+;
+; z^n+c Mandelbrot
+; bails out when orbit falls into gap
+; either between 2 circles or 2 lines
+;
+; updates:
+;   28dec98 to add general starting point
+;   28feb01 to add complex exponent
+;   28feb01 to add switching to gap-julia
+;   11mar01 removed complex exponent for backwards compatibility
+;
+init:
+  z=@manparam
+  c=#pixel
+  float a=0.0
+  float b=0.0
+  float gap=0.0
+  float radsqr1=sqr(@radius1)
+  float radsqr2=sqr(@radius2)
+  float x=0.0
+  float y=0.0
+  float rmax=1e20
+  float tempr=0.0
+  int done=0
+;
+; set up line/circle parameters
+;
+  if(@type==0)                       ; lines
+    tempr=@theta/180*pi
+    a=sin(tempr)
+    b=-cos(tempr)
+    gap=@c2-@c1
+  else                               ; circles
+    gap=radsqr2-radsqr1
+  endif
+loop:
+  z=z^@n+c
+  x=real(z)
+  y=imag(z)
+;
+; check for falling into gap
+;
+  if(@type==0)                       ; lines
+    tempr=a*x+b*y
+    if((tempr>@c1)&&(tempr<@c2))
+      done=1
+      tempr=(tempr-@c1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  else                               ; circles
+    tempr=|z-@center|
+    if((tempr>radsqr1)&&(tempr<radsqr2))
+      done=1
+      tempr=(tempr-radsqr1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  endif
+  if((done==0)&&(|z|>rmax))
+    done=1
+    z=(0.0,0.0)
+  endif
+bailout:
+  done==0
+default:
+  title="Gap Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  method=multipass
+  magn=1
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0,0)
+    hint="use (0,0) for basic Mandelbrot set"
+  endparam
+  param n
+    caption="z exponent"
+    default=2.0
+    hint="Real--use Gap Mandelbrot C for complex exponents."
+  endparam
+  param type
+    caption="gap type"
+    default=0
+    enum="between 2 lines" "between 2 circles"
+  endparam
+  param c1
+    caption="line 1 c value"
+    default=-0.1
+    hint="must be less than line 2 c value"
+  endparam
+  param c2
+    caption="line 2 c value"
+    default=0.1
+    hint="must be more than line 1 c value"
+  endparam
+  param theta
+    caption="line angle"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param center
+    caption="circle center"
+    default=(0,0)
+  endparam
+  param radius1
+    caption="circle 1 radius"
+    default=0.9
+    hint="must be less than circle 2 radius"
+  endparam
+  param radius2
+    caption="circle 2 radius"
+    default=1.1
+    hint="must be more than circle 1 radius"
+  endparam
+switch:
+  type="gap-julia"
+  n=n
+  julparam=#pixel
+  type=type
+  c1=c1
+  c2=c2
+  theta=theta
+  center=center
+  radius1=radius1
+  radius2=radius2
+}
+
+gap-julia { ; Kerry Mitchell 20dec98
+;
+; z^n+c Julia
+; bails out when orbit falls into gap
+; either between 2 circles or 2 lines
+;
+; updates:
+;   28feb01 to add complex exponent
+;   28feb01 to add switching to gap-julia
+;   11mar01 removed complex exponent for backwards compatibility
+;
+init:
+  z=#pixel
+  c=@julparam
+  float a=0.0
+  float b=0.0
+  float gap=0.0
+  float radsqr1=sqr(@radius1)
+  float radsqr2=sqr(@radius2)
+  float x=0.0
+  float y=0.0
+  float rmax=1e20
+  float tempr=0.0
+  int done=0
+;
+; set up line/circle parameters
+;
+  if(@type==0)                       ; lines
+    tempr=@theta/180*pi
+    a=sin(tempr)
+    b=-cos(tempr)
+    gap=@c2-@c1
+  else                               ; circles
+    gap=radsqr2-radsqr1
+  endif
+loop:
+  z=z^@n+c
+  x=real(z)
+  y=imag(z)
+;
+; check for falling into gap
+;
+  if(@type==0)                       ; lines
+    tempr=a*x+b*y
+    if((tempr>@c1)&&(tempr<@c2))
+      done=1
+      tempr=(tempr-@c1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  else                               ; circles
+    tempr=|z-@center|
+    if((tempr>radsqr1)&&(tempr<radsqr2))
+      done=1
+      tempr=(tempr-radsqr1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  endif
+  if((done==0)&&(|z|>rmax))
+    done=1
+    z=(0.0,0.0)
+  endif
+bailout:
+  done==0
+default:
+  title="Gap Julia"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  method=multipass
+  magn=1
+  angle=0
+  param n
+    caption="z exponent"
+    default=2.0
+    hint="Real--use Gap Julia C for complex exponents."
+  endparam
+  param julparam
+    caption="Julia parameter"
+    default=(0,1)
+  endparam
+  param type
+    caption="gap type"
+    default=0
+    enum="between 2 lines" "between 2 circles"
+  endparam
+  param c1
+    caption="line 1 c value"
+    default=-0.1
+    hint="must be less than line 2 c value"
+  endparam
+  param c2
+    caption="line 2 c value"
+    default=0.1
+    hint="must be more than line 1 c value"
+  endparam
+  param theta
+    caption="line angle"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param center
+    caption="circle center"
+    default=(0,0)
+  endparam
+  param radius1
+    caption="circle 1 radius"
+    default=0.9
+    hint="must be less than circle 2 radius"
+  endparam
+  param radius2
+    caption="circle 2 radius"
+    default=1.1
+    hint="must be more than circle 1 radius"
+  endparam
+switch:
+  type="gap-mandelbrot"
+  n=n
+  type=type
+  c1=c1
+  c2=c2
+  theta=theta
+  center=center
+  radius1=radius1
+  radius2=radius2
+}
+
+gap-mandelbrot-c { ; Kerry Mitchell 20dec98
+;
+; z^n+c Mandelbrot
+; bails out when orbit falls into gap
+; either between 2 circles or 2 lines
+;
+; updates:
+;   28dec98 to add general starting point
+;   28feb01 to add complex exponent
+;   28feb01 to add switching to gap-julia
+;   11mar01 moved from gap-mandelbrot to gap-mandelbrot-c
+;
+init:
+  z=@manparam
+  c=#pixel
+  float a=0.0
+  float b=0.0
+  float gap=0.0
+  float radsqr1=sqr(@radius1)
+  float radsqr2=sqr(@radius2)
+  float x=0.0
+  float y=0.0
+  float rmax=1e20
+  float tempr=0.0
+  int done=0
+;
+; set up line/circle parameters
+;
+  if(@type==0)                       ; lines
+    tempr=@theta/180*pi
+    a=sin(tempr)
+    b=-cos(tempr)
+    gap=@c2-@c1
+  else                               ; circles
+    gap=radsqr2-radsqr1
+  endif
+loop:
+  z=z^@n+c
+  x=real(z)
+  y=imag(z)
+;
+; check for falling into gap
+;
+  if(@type==0)                       ; lines
+    tempr=a*x+b*y
+    if((tempr>@c1)&&(tempr<@c2))
+      done=1
+      tempr=(tempr-@c1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  else                               ; circles
+    tempr=|z-@center|
+    if((tempr>radsqr1)&&(tempr<radsqr2))
+      done=1
+      tempr=(tempr-radsqr1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  endif
+  if((done==0)&&(|z|>rmax))
+    done=1
+    z=(0.0,0.0)
+  endif
+bailout:
+  done==0
+default:
+  title="Gap Mandelbrot C"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  method=multipass
+  magn=1
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0,0)
+    hint="use (0,0) for basic Mandelbrot set"
+  endparam
+  param n
+    caption="z exponent"
+    default=(2,0)
+    hint="The exponent can be complex; in Gap Mandelbrot, it is real."
+  endparam
+  param type
+    caption="gap type"
+    default=0
+    enum="between 2 lines" "between 2 circles"
+  endparam
+  param c1
+    caption="line 1 c value"
+    default=-0.1
+    hint="must be less than line 2 c value"
+  endparam
+  param c2
+    caption="line 2 c value"
+    default=0.1
+    hint="must be more than line 1 c value"
+  endparam
+  param theta
+    caption="line angle"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param center
+    caption="circle center"
+    default=(0,0)
+  endparam
+  param radius1
+    caption="circle 1 radius"
+    default=0.9
+    hint="must be less than circle 2 radius"
+  endparam
+  param radius2
+    caption="circle 2 radius"
+    default=1.1
+    hint="must be more than circle 1 radius"
+  endparam
+switch:
+  type="gap-julia-c"
+  n=n
+  julparam=#pixel
+  type=type
+  c1=c1
+  c2=c2
+  theta=theta
+  center=center
+  radius1=radius1
+  radius2=radius2
+}
+
+gap-julia-c { ; Kerry Mitchell 20dec98
+;
+; z^n+c Julia
+; bails out when orbit falls into gap
+; either between 2 circles or 2 lines
+;
+; updates:
+;   28feb01 to add complex exponent
+;   28feb01 to add switching to gap-julia
+;   11mar01 moved to gap-julia-c
+;
+init:
+  z=#pixel
+  c=@julparam
+  float a=0.0
+  float b=0.0
+  float gap=0.0
+  float radsqr1=sqr(@radius1)
+  float radsqr2=sqr(@radius2)
+  float x=0.0
+  float y=0.0
+  float rmax=1e20
+  float tempr=0.0
+  int done=0
+;
+; set up line/circle parameters
+;
+  if(@type==0)                       ; lines
+    tempr=@theta/180*pi
+    a=sin(tempr)
+    b=-cos(tempr)
+    gap=@c2-@c1
+  else                               ; circles
+    gap=radsqr2-radsqr1
+  endif
+loop:
+  z=z^@n+c
+  x=real(z)
+  y=imag(z)
+;
+; check for falling into gap
+;
+  if(@type==0)                       ; lines
+    tempr=a*x+b*y
+    if((tempr>@c1)&&(tempr<@c2))
+      done=1
+      tempr=(tempr-@c1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  else                               ; circles
+    tempr=|z-@center|
+    if((tempr>radsqr1)&&(tempr<radsqr2))
+      done=1
+      tempr=(tempr-radsqr1)/gap
+      z=tempr*z/cabs(z)
+    endif
+  endif
+  if((done==0)&&(|z|>rmax))
+    done=1
+    z=(0.0,0.0)
+  endif
+bailout:
+  done==0
+default:
+  title="Gap Julia C"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  method=multipass
+  magn=1
+  angle=0
+  param n
+    caption="z exponent"
+    default=(2,0)
+    hint="The exponent can be complex; in Gap Julia, it is real."
+  endparam
+  param julparam
+    caption="Julia parameter"
+    default=(0,1)
+  endparam
+  param type
+    caption="gap type"
+    default=0
+    enum="between 2 lines" "between 2 circles"
+  endparam
+  param c1
+    caption="line 1 c value"
+    default=-0.1
+    hint="must be less than line 2 c value"
+  endparam
+  param c2
+    caption="line 2 c value"
+    default=0.1
+    hint="must be more than line 1 c value"
+  endparam
+  param theta
+    caption="line angle"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param center
+    caption="circle center"
+    default=(0,0)
+  endparam
+  param radius1
+    caption="circle 1 radius"
+    default=0.9
+    hint="must be less than circle 2 radius"
+  endparam
+  param radius2
+    caption="circle 2 radius"
+    default=1.1
+    hint="must be more than circle 1 radius"
+  endparam
+switch:
+  type="gap-mandelbrot-c"
+  n=n
+  type=type
+  c1=c1
+  c2=c2
+  theta=theta
+  center=center
+  radius1=radius1
+  radius2=radius2
+}
+
+comment { ; copyright Kerry Mitchell 07feb99
+
+Triangle Inequality
+
+The triangle inequality method is based on a simple characteristic of
+complex numbers:  the magnitude of the sum of two complex numbers, |a+b|,
+is strictly limited to a range determined by a and b:
+
+|a+b| >= ||a| - |b||, and
+|a+b| <= |a| + |b|,
+
+where |z| is the square root of the sum of the squares of the
+components, not the sum of the squares, as in Ultra Fractal.  The
+extremes of this inequality are easily seen with a few examples.
+If a=1 and b=2, then:
+
+|a| = 1, |b| = 2;
+||a| - |b|| = |1-2| = |-1| = 1;
+|a| + |b| = 1+2 = 3;
+|a+b| = |3| = 3;
+1 <= 3 <= 3.
+
+The upper bound occurs when both addends have the same polar angle.
+The geometric interpretation of this is that the complex numbers add
+up, and the length of the sum is simply the sum of the individual
+lengths.
+
+The lower bound occurs when the polar angles of the complex numbers
+differ by 180 degrees; the two numbers are diametrically opposed.
+Then, the length of the sum is the difference of the lengths.  For
+example, if a=3i and b=-5i, then:
+
+|a| = 3, |b| = 5;
+||a| - |b|| = |3-5| = |-2| = 2;
+|a| + |b| = 3 + 5 = 8;
+|a+b| = |-2i| = 2;
+2 <= 2 <= 8.
+
+In general, the length of the sum is somewhere inbetween, and can be
+thought of in terms of a triangle, which is how the inequality gets
+its name.  If |a| is the length of one side of a triangle, and |b|
+is the length of the second side, then |a+b| is the length of the
+third side, and lies somewhere within the range shown above.
+
+Back to fractals.  The two numbers of interest are z^n and c.  Given
+z (the previous iterate) and c (the Mandelbrot or Julia parameter),
+the range for the magnitude of the new iterate can then be determined.
+With this range, the magnitude of the new iterate can be rescaled to
+a fraction between 0 and 1 inclusive:
+
+min = ||z_old^n| - |c||, max = |z_old^n| + |c|,
+z_new = z_old * z_old + c
+fraction = (|z_new| - min) / (max - min).
+
+During the iterating, these fractions are average together.  After the
+last iteration, this average fraction is stored in the real part of z,
+and the actual fraction for the last iteration is stored in the imaginary
+part of the z.  If the orbit diverges (bails out), then renormalization
+techniques are used to color the outside pixels smoothly without iteration
+bands.  This works best with large bailout values.  The large bailout
+needs to be reduced with larger exponents, to prevent color gaps due to
+overflow errors.
+
+For best results, use the "basic" coloring method, with "real(z)" to show
+the average triangulation fraction, or "imag(z)" to show the actual
+fraction for the last iteration.
+
+}
+
+triangle-general-julia { ; Kerry Mitchell 05feb99
+;
+; z^n+c Julia set, colors by
+; triangle inequality
+;
+init:
+  zc=#pixel
+  c=@julparam
+  float rc=cabs(c)
+  float rzc=0.0
+  zn=(0.0,0.0)
+  float rnz=0.0
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float count=0.0
+  float count1=0.0
+  float count2=0.0
+  float countx=0.0
+  float county=0.0
+  float fac1=0.0
+  float fac2=0.0
+  float min=0.0
+  float max=0.0
+  float k=0.0
+  float kfrac=0.0
+loop:
+  iter=iter+1
+  if(@nexp==2.0)
+    zn=sqr(zc)
+    rnz=|zc|
+  else
+    zn=zc^@nexp
+    rnz=cabs(zn)
+  endif
+  zc=zn+c
+  min=cabs(rnz-rc)
+  max=rnz+rc
+  rzc=cabs(zc)
+  county=(rzc-min)/(max-min)
+  count=count+county
+  countx=count/iter
+  z=countx+flip(county)
+  if(|zc|>@bailout)
+    done=true
+    count1=count/iter
+    fac1=log(log(rzc))-llbail
+    iter=iter+1
+    if(@nexp==2.0)
+      zn=sqr(zc)
+      rnz=|zc|
+    else
+      zn=zc^@nexp
+      rnz=cabs(zn)
+    endif
+    min=cabs(rnz-rc)
+    max=rnz+rc
+    zc=zn+c
+    rzc=cabs(zc)
+    county=(rzc-min)/(max-min)
+    count=count+county
+    count2=count/iter
+    fac2=log(log(rzc))-llbail-logn
+    k=exp((fac1+fac2)/2.0)
+    kfrac=(k-1.0)/(@nexp-1.0)
+    countx=kfrac*count1+(1.0-kfrac)*count2
+    z=countx+flip(county)
+  endif
+bailout:
+  done==false
+default:
+  title="Triangle General Julia"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(1.0,0.0)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+switch:
+  type="triangle-general-mandelbrot"
+  bailout=bailout
+  nexp=nexp
+}
+
+triangle-general-mandelbrot { ; Kerry Mitchell 05feb99
+;
+; z^n+c Mandelbrot set, colors by
+; triangle inequality
+;
+init:
+  c=#pixel
+  zc=@manparam+c
+  float rc=cabs(c)
+  float rzc=0.0
+  zn=(0.0,0.0)
+  float rnz=0.0
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float count=0.5
+  float count1=0.0
+  float count2=0.0
+  float countx=0.0
+  float county=0.0
+  float fac1=0.0
+  float fac2=0.0
+  float min=0.0
+  float max=0.0
+  float k=0.0
+  float kfrac=0.0
+loop:
+  iter=iter+1
+  if(@nexp==2.0)
+    zn=sqr(zc)
+    rnz=|zc|
+  else
+    zn=zc^@nexp
+    rnz=cabs(zn)
+  endif
+  zc=zn+c
+  min=cabs(rnz-rc)
+  max=rnz+rc
+  rzc=cabs(zc)
+  county=(rzc-min)/(max-min)
+  count=count+county
+  countx=count/iter
+  z=countx+flip(county)
+  if(|zc|>@bailout)
+    done=true
+    count1=count/iter
+    fac1=log(log(rzc))-llbail
+    iter=iter+1
+    if(@nexp==2.0)
+      zn=sqr(zc)
+      rnz=|zc|
+    else
+      zn=zc^@nexp
+      rnz=cabs(zn)
+    endif
+    min=cabs(rnz-rc)
+    max=rnz+rc
+    zc=zn+c
+    rzc=cabs(zc)
+    county=(rzc-min)/(max-min)
+    count=count+county
+    count2=count/iter
+    fac2=log(log(rzc))-llbail-logn
+    k=exp((fac1+fac2)/2.0)
+    kfrac=(k-1.0)/(@nexp-1.0)
+    countx=kfrac*count1+(1.0-kfrac)*count2
+    z=countx+flip(county)
+  endif
+bailout:
+  done==false
+default:
+  title="Triangle General Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0.0,0.0)
+    hint="use (0,0) for standard Mandelbrot"
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+switch:
+  type="triangle-general-julia"
+  julparam=pixel
+  bailout=bailout
+  nexp=nexp
+}
+
+comment { ; copyright Kerry Mitchell 07feb99
+
+Principal Root
+
+Complex numbers, of which the real numbers are a subset, all have
+two square roots.  That is, for a given complex number a, there
+are two numbers, b1 and b2, such that b1*b1 (or b2*b2) = a.  It
+so happens that b2 = -b1, since -1 * -1 = 1.  One of these numbers
+(typically the one returned by the function sqrt(a)) is termed
+the principal square root of a.  For example, if a=9, then the
+square roots are 3 and -3.  3 is the principal square root.
+
+This idea can be extended to any degree of root.  Every complex
+number has n nth roots:  3 third (cube) roots, 4 fourth roots, 17
+17th roots, etc.  In the complex plane, the roots are separated by an
+angle of 2*pi/n radians, or 360/n degrees.  For square roots, this angle
+is pi radians or 180 degrees, making the 2 square roots negatives of
+each other.  The particular one root of the n that is returned by
+a^(1/n) is the principal root.
+
+For the general Mandelbrot and Julia sets, this concept is implemented
+by expanding the standard iteration loop.  Instead of:
+
+z_new = z_old^n + c, use
+
+w = z_old^n
+z_new = w + c.
+
+The question is then, is z_old the principal root of w?  This can
+be determined by assuming that w^(1/n) returns the principal root.
+The polar angle of z_old is compared with the polar angle of w^(1/n).
+If the difference is less than half of 2*pi/n, then it is assumed that
+z_old was the principal root of w.
+
+At each iteration, this yes/no answer is converted to a 1 or a 0, and a
+running total is kept.  At the last iteration, the final 1/0 is stored
+in the imaginary part of the z variable.  The running total is divided
+by the total number of iterations, and this average fraction is stored
+in the real part of z.  If the orbit diverges (bails out), then
+renormalization techniques are used to color the outside pixels smoothly
+without iteration bands.  This works best with large bailout values.  The
+large bailout needs to be reduced with larger exponents, to prevent color
+gaps due to overflow errors.
+
+For best results, use the "basic" coloring method, with "real(z)" to show
+the average fraction, or "imag(z)" to show the actual result for the last
+iteration.
+
+}
+
+roots-general-julia { ; Kerry Mitchell 05feb99
+;
+; z^n+c Julia set, colors by
+; how often z is the principal root of z^n
+;
+init:
+  zc=#pixel
+  c=@julparam
+  zn=(0.0,0.0)
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float inexp=1.0/@nexp
+  float deltat=#pi*inexp
+  float count=0.0
+  float count1=0.0
+  float count2=0.0
+  float countx=0.0
+  float county=0.0
+  float fac1=0.0
+  float fac2=0.0
+  float k=0.0
+  float kfrac=0.0
+loop:
+  iter=iter+1
+  county=0.0
+  zn=zc^@nexp
+  w=zn^inexp
+  if(cabs(atan2(w)-atan2(zc))<deltat)
+    county=1.0
+  endif
+  zc=zn+c
+  count=count+county
+  countx=count/iter
+  z=countx+flip(county)
+  if(|zc|>@bailout)
+    done=true
+    count1=count/iter
+    fac1=log(log(cabs(zc)))-llbail
+    iter=iter+1
+    county=0.0
+    zn=zc^@nexp
+    w=zn^inexp
+    if(cabs(atan2(w)-atan2(zc))<deltat)
+      county=1.0
+    endif
+    zc=zn+c
+    count=count+county
+    count2=count/iter
+    fac2=log(log(cabs(zc)))-llbail-logn
+    k=exp((fac1+fac2)/2.0)
+    kfrac=(k-1.0)/(@nexp-1.0)
+    countx=kfrac*count1+(1.0-kfrac)*count2
+    z=countx+flip(county)
+  endif
+bailout:
+  done==false
+default:
+  title="Roots General Julia"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(1.0,0.0)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+switch:
+  type="roots-general-mandelbrot"
+  bailout=bailout
+  nexp=nexp
+}
+
+roots-general-mandelbrot { ; Kerry Mitchell 05feb99
+;
+; z^n+c Mandelbrot set, colors by
+; how often z is the principal root of z^n
+;
+init:
+  c=#pixel
+  zc=@manparam
+  zn=(0.0,0.0)
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float inexp=1.0/@nexp
+  float deltat=#pi*inexp
+  float count=0.0
+  float count1=0.0
+  float count2=0.0
+  float countx=0.0
+  float county=0.0
+  float fac1=0.0
+  float fac2=0.0
+  float k=0.0
+  float kfrac=0.0
+loop:
+  iter=iter+1
+  county=0.0
+  zn=zc^@nexp
+  w=zn^inexp
+  if(cabs(atan2(w)-atan2(zc))<deltat)
+    county=1.0
+  endif
+  zc=zn+c
+  count=count+county
+  countx=count/iter
+  z=countx+flip(county)
+  if(|zc|>@bailout)
+    done=true
+    count1=count/iter
+    fac1=log(log(cabs(zc)))-llbail
+    iter=iter+1
+    county=0.0
+    zn=zc^@nexp
+    w=zn^inexp
+    if(cabs(atan2(w)-atan2(zc))<deltat)
+      county=1.0
+    endif
+    zc=zn+c
+    count=count+county
+    count2=count/iter
+    fac2=log(log(cabs(zc)))-llbail-logn
+    k=exp((fac1+fac2)/2.0)
+    kfrac=(k-1.0)/(@nexp-1.0)
+    countx=kfrac*count1+(1.0-kfrac)*count2
+    z=countx+flip(county)
+  endif
+bailout:
+  done==false
+default:
+  title="Roots General Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0.0,0.0)
+    hint="use (0,0) for standard Mandelbrot"
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+switch:
+  type="roots-general-julia"
+  julparam=pixel
+  bailout=bailout
+  nexp=nexp
+}
+
+comment { ; copyright Kerry Mitchell 01mar99
+
+Baker's Transformation
+
+Baker's transformation is a two-dimensional map that takes a square and
+maps it back to a square.  Specifically, take a square like this:
+
+        AACC
+        AACC
+        BBDD
+        BBDD
+
+then squish it in half horizontally while stretching it vertically to
+twice its original height:
+
+        AC
+        AC
+        AC
+        AC
+        BD
+        BD
+        BD
+        BD
+
+Finally, lop off the top half and place it to the right of the existing
+bottom half:
+
+        BDAC
+        BDAC
+        BDAC
+        BDAC
+
+This has the effect of taking the bottom of the original square and making
+it the left half of the new square, and making the top of the original
+square into the right side of the new one.
+
+It is a simple map that exhibits chaos and fractal characteristics,
+although its aesthetics leave something to be desired.  When used over
+many iterations, it transforms the square into a series of vertical lines,
+without much apparent shape or structure.  The formula below, based on
+the Baker's transformation, was designed to have a bit more visual appeal
+and flexibility.
+
+The map as illustrated above can be classified as "bottom to left".  That
+is, it maps the bottom of the old square to the left of the new.  There
+are 3 other ways this map can be expressed, based on which half of the
+original square gets mapped where:  "left to bottom", "top to left", and
+"left to top".  Using these alternatives in various sequences can yield
+images made of vertical lines, horizontal lines, squares, or rectangles.
+These maps are numbered 2 - 5, respectively, (1 is reserved for "none"),
+and are shown on the "map types" pulldown list.  (This parameter is for
+reference only and does not affect the calculation.)  With the "map string"
+variable, the order in which the maps are to be used can be specified.
+For example, to use map 3 ("top to left") followed by 4 ("left to top"),
+then 3, 4, 3, 4, etc., the map string would be "43".  The first map to be
+used is the rightmost digit of the string, then work left.  After the last
+entry in the string is used, the formula starts over, until the iterating
+is completed (due to reaching the maximum number of iterations).
+
+The Baker's transformation is implemented on a square, so a way is needed
+to break the complex (z) plane into squares.  This is done with the
+round() function, which returns the rounded components of the complex
+input:  round(3.9,5.2) = (4,5).  When this rounded z is subtracted from
+the actual z, the result is a number whose components both vary from -0.5
+to 0.5.  Adding 0.5 to each creates a square from 0.0 to 1.0 in both
+directions.
+
+More precisely, this results in a square grid, as the round() function
+creates boundaries at every integer (-1.0, 3.0, etc.).  The locations
+of these boundaries can be changed with the movement parameters.  This
+would allow for taking a square from (0.0,0.0) to (1.0,1.0) on one
+iteration, and then a square from (0.5,-0.5) to (1.5,0.5) on the next,
+for example, giving overlapping squares.  There are 9 movement types,
+listed on the "movement type" pulldown:
+
+     1: none            2: left           3: right
+     4: up              5: down           6: left & up
+     7: left & down     8: right & up     9: right & down
+
+The movement type numbers are assembled into the "move string"
+variable:  to move left, then right, then up, then down, then repeat,
+the string would be "5432".  This string works in the same basic
+fashion as the "map string", above.  The degree of motion is controlled
+by the "movement amount" parameter.
+
+Using round() by itself results in a grid with 1.0 x 1.0 squares.  The
+size of the squares can be controlled using the sizing parameters.  There
+are 3 methods, listed in the "sizing types" pulldown.  Like the other
+"types" pulldowns, this menu is for reference only and doesn't affect the
+computation.  The 3 methods are:  1) none, 2) bigger, and 3) smaller.  How
+much bigger or smaller depends on the "size factor" parameter, and is
+always referenced to the current size.  The grid starts out at 1.0 on a
+side.  To have an iteration sequence where the squares were twice the
+previous size, then twice again, then half, and repeating, the "size
+string" variable would be "322", and the "size factor" would be 2.0.
+
+Since the Baker's transformation doesn't lend itself to "escapes" like
+the quadratic map (Mandelbrot and Julia sets), all the pixels will be
+"inside" pixels with this formula.  Iteration numbers can typically be
+set low (less than 100), especially when using the sizing options.  The
+"Basic" coloring method works well, showing either the magnitude or
+polar angle of the iterate.  Also, try merging multiple layers in which
+only one type of parameter (map sequence, sizing sequence, or movement
+sequence) has been altered.
+
+Have fun!
+
+}
+
+baker { ; Kerry Mitchell 01mar99
+;
+; Baker's transformation, with variable direction,
+; cell sizing, and cell location
+;
+init:
+  #z=#pixel
+  float cell=1.0
+  cellcenter=(0.0,0.0)
+  float x=0.0
+  float tempx=0.0
+  float wholex=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float wholey=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+  int mapstring=@mapstring0
+  int mapdigit=0
+  int movestring=@movestring0
+  int movedigit=0
+  int sizestring=@sizestring0
+  int sizedigit=0
+loop:
+;
+; break plane into cells by taking fractional parts of x & y
+; add 0.5 to fractional parts to put them in range [0.0,1.0]
+;
+  x=real(#z-cellcenter)
+  tempx=x/cell
+  wholex=round(tempx)
+  fracx=tempx-wholex+0.5
+  y=imag(#z-cellcenter)
+  tempy=y/cell
+  wholey=round(tempy)
+  fracy=tempy-wholey+0.5
+;
+; determine which mapping to use and apply it
+;
+  mapdigit=mapstring%10
+  if(mapdigit==2)               ; bottom to left
+    if(fracx<0.5)
+      fracu=2.0*fracx
+      fracv=0.5*fracy
+    else
+      fracu=2.0*fracx-1.0
+      fracv=0.5*fracy+0.5
+    endif
+  elseif(mapdigit==3)           ; left to bottom
+    if(fracy<0.5)
+      fracu=0.5*fracx
+      fracv=2.0*fracy
+    else
+      fracu=0.5*fracx+0.5
+      fracv=2.0*fracy-1.0
+    endif
+  elseif(mapdigit==4)           ; top to left
+    if(fracx<0.5)
+      fracu=2.0*fracx
+      fracv=0.5*fracy+0.5
+    else
+      fracu=2.0*fracx-1.0
+      fracv=0.5*fracy
+    endif
+  elseif(mapdigit==5)           ; left to top
+    if(fracy<0.5)
+      fracu=0.5*fracx+0.5
+      fracv=2.0*fracy
+    else
+      fracu=0.5*fracx
+      fracv=2.0*fracy-1.0
+    endif
+  else                          ; none
+    fracu=fracx
+    fracv=fracy
+  endif
+;
+; reassemble z with new fractional parts
+;
+  u=(wholex+fracu-0.5)*cell
+  v=(wholey+fracv-0.5)*cell
+  #z=u+flip(v)+cellcenter
+;
+; move cell center
+;
+  movedigit=movestring%10
+  if(movedigit==2)              ; left
+    cellcenter=cellcenter+@movement*(-1.0,0.0)
+  elseif(movedigit==3)          ; left
+    cellcenter=cellcenter+@movement*(1.0,0.0)
+  elseif(movedigit==4)          ; left
+    cellcenter=cellcenter+@movement*(0.0,1.0)
+  elseif(movedigit==5)          ; left
+    cellcenter=cellcenter+@movement*(0.0,-1.0)
+  elseif(movedigit==6)          ; left & up
+    cellcenter=cellcenter+@movement*(-1.0,1.0)
+  elseif(movedigit==7)          ; left & down
+    cellcenter=cellcenter+@movement*(-1.0,-1.0)
+  elseif(movedigit==8)          ; right & up
+    cellcenter=cellcenter+@movement*(1.0,1.0)
+  elseif(movedigit==9)          ; right & down
+    cellcenter=cellcenter+@movement*(1.0,-1.0)
+  endif
+;
+; resize cell
+;
+  sizedigit=sizestring%10
+  if(sizedigit==2)              ; bigger
+    cell=cell*@sizefac
+  elseif(sizedigit==3)          ; smaller
+    cell=cell/@sizefac
+  endif
+;
+; cycle strings for next iteration
+; if the cycle is finished, start over with original string
+;
+  mapstring=round((mapstring-mapdigit)/10)
+  if(mapstring==0)
+    mapstring=@mapstring0
+  endif
+  movestring=round((movestring-movedigit)/10)
+  if(movestring==0)
+    movestring=@movestring0
+  endif
+  sizestring=round((sizestring-sizedigit)/10)
+  if(sizestring==0)
+    sizestring=@sizestring0
+  endif
+bailout:
+;
+; force all points to be inside points by never escaping
+;
+  0==0
+default:
+  title="Baker"
+  maxiter=16
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+;
+; mapping parameters
+;
+  param maplist
+    caption="map types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the map string"
+    enum="1: none" "2: bottom to left" "3: left to bottom"\
+      "4: top to left" "5: left to top"
+  endparam
+  param mapstring0
+    caption="map string"
+    default=2
+    min=1
+  endparam
+;
+; translation parameters
+;
+  param movelist
+    caption="movement types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the move string"
+    enum="1: none" "2: left" "3: right" "4: up" "5: down"\
+      "6: left & up" "7: left & down" "8: right & up" "9: right & down"
+  endparam
+  param movestring0
+    caption="move string"
+    default=1
+    min=1
+  endparam
+  param movement
+    caption="movement amount"
+    hint="must be >= 0.0"
+    default=0.0
+    min=0.0
+  endparam
+;
+; sizing parameters
+;
+  param sizelist
+    caption="sizing types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the size string"
+    enum="1: none" "2: bigger" "3: smaller"
+  endparam
+  param sizestring0
+    caption="size string"
+    default=1
+    min=1
+  endparam
+  param sizefac
+    caption="size factor"
+    hint="must be >= 1.0"
+    default=1.0
+    min=1.0
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 01mar99
+
+Inversions
+
+Inversions are geometric transformations using a particular curve
+(inversion curve) and a particular point (inversion center).  For each
+point in the plane, its distance to the inversion center, r_old, is
+computed.  Along the line joining the field point to the inversion
+center, the distance from the inversion center to the inversion curve
+(rc) is found.  Then, the actual inversion is:
+
+        r_new * r_old = rc * rc, or
+        r_new = rc * rc / r_old.
+
+The field point is moved from r_old (with some polar angle theta) to
+r_new (with the same angle).  This moves points inside the curve to
+outside, and vice versa.  Typically, a circle is used as the curve and
+its center as the inversion center.  In that case, lines through the
+center of the circle are transformed back into themselves.  Any other
+line is transformed into a circle, and the inversion circle is mapped
+to itself.  Small circles near the inversion center get mapped into
+large circles, and vice versa.
+
+Many other kinds of curves can be used, so long as they are easy to
+compute.  The algorithm below uses a general formula to generate the
+inversion curve:
+
+        r = a * cos(b*t) + c,
+
+where r is the distance from the inversion center to the curve, t is
+the polar angle, and a, b, and c are user-defined constants.  This
+formula can lead to a wide variety of curves.  Some examples:
+
+        a   b   c   curve
+        0   0   1   circle of radius 1, centered at inversion center
+        1   1   0   circle of radius 1, not centered
+        1   1   1   cardioid
+        1  even 0   rose curve, with 2*b petals
+        1  odd  0   rose curve, with b petals
+
+To make this formula dynamic, there are options for moving the inversion
+center and changing the size of the curve each iteration.  Otherwise, the
+iterations would be stuck in a loop of outside to inside, inside to outside,
+forever.
+
+The inversion center can move along a circle.  The circle is centered
+at (0.0,0.0) but it has a user-specified radius (parameter "icc circle
+radius").  To move along the circle, the polar angle of the inversion
+center can be altered each iteration.  The 3 ways to change the angle
+are listed in the "move options" pulldown menu.  This parameter is for
+reference only; selecting one of the choices will have no effect on the
+computation.  The 3 ways are:  1) none, 2) move counterclockwise (increase
+the angle), and 3) move clockwise (decrease the angle).  Determine a
+sequence of increasing/decreasing that you want to implement and put the
+corresponding numbers (1, 2, 3) into the "map string" variable.  The first
+action is represented by the rightmost digit, working forward to the last
+action (left digit).  The sequence is repeated, one digit each iteration,
+until the maximum number of iterations is reached.
+
+For example, if the angle is to be constantly increased (say, from 0
+to 45 degrees to 90, 135, 180, etc.), then the "map string" variable
+would simply be "2".  To alternate between 0, 30 degrees, 0, and -30,
+use the string "2332".  The actual degree measure of increase or decrease
+is the "icc angle increment" parameter.
+
+While the shape of the inversion curve is given by a, b, and c, its
+overall size can be controlled using the sizing parameters.  There
+are 3 methods, listed in the "size options" pulldown.  Like the other
+"types" pulldowns, this menu is for reference only and doesn't affect the
+computation.  The 3 methods are:  1) none, 2) bigger, and 3) smaller.  How
+much bigger or smaller depends on the "curve size factor" parameter, and is
+always referenced to the current size.  The size factor starts out at 1.0.
+To have an iteration sequence where the curves were half the previous size,
+then half again, then twice the size, and repeating, the "size string"
+variable would be "233", and the "size factor" would be 2.0.
+
+Since inversions don't lend themselves to "escapes" like the quadratic
+map (Mandelbrot and Julia sets) does, all the pixels will be "inside"
+pixels with this formula.  Iteration numbers can typically be set low
+(less than 100), especially when using the sizing options.  The "Range"
+coloring method works well, showing how lines and circles get transformed.
+Also, try merging multiple layers in which only one type of parameter
+(curve shape, sizing sequence, or movement sequence) has been altered.
+
+Have fun!
+
+}
+
+inversions { ; Kerry Mitchell 01mar99
+;
+; Inversions about polar shapes, with variable
+; inversion curve size and location
+;
+init:
+  #z=#pixel
+  float r=0.0
+  float t=0.0
+  float twopi=2.0*#pi
+  float curvesize=1.0
+  float curverad=0.0
+  curvecenter=@iccradius*(1.0,0.0)
+  float iccangle=0.0
+  float diccangle=@deltaicca/180.0*#pi
+  int movestring=@movestring0
+  int movedigit=0
+  int sizestring=@sizestring0
+  int sizedigit=0
+loop:
+;
+; find r&t and perform inversion
+;
+  r=cabs(#z-curvecenter)
+  t=atan2(#z-curvecenter)
+  curverad=curvesize*(@curvea*cos(@curveb*t)+@curvec)
+  r=curverad*curverad/r
+  #z=r*(cos(t)+flip(sin(t)))+curvecenter
+;
+; move around inversion curve center circle
+; by either increasing or decreasing iccangle
+;
+  movedigit=movestring%10
+  if(movedigit==2)                    ; move ccw
+    iccangle=iccangle+diccangle
+  elseif(movedigit==3)                ; move cw
+    iccangle=iccangle-diccangle
+  endif
+  if(iccangle>twopi)
+    iccangle=iccangle-twopi
+  endif
+  if(iccangle<-twopi)
+    iccangle=iccangle+twopi
+  endif
+  curvecenter=@iccradius*(cos(iccangle)+flip(sin(iccangle)))
+;
+; determine which sizing to use & adjust curve size
+;
+  sizedigit=sizestring%10
+  if(sizedigit==2)                    ; bigger
+    curvesize=curvesize*@sizefac
+  elseif(sizedigit==3)                ; smaller
+    curvesize=curvesize/@sizefac
+  endif
+;
+; cycle strings for next iteration
+; if the cycle is finished, start over with original string
+;
+  movestring=round((movestring-movedigit)/10)
+  if(movestring==0)
+    movestring=@movestring0
+  endif
+  sizestring=round((sizestring-sizedigit)/10)
+  if(sizestring==0)
+    sizestring=@sizestring0
+  endif
+bailout:
+;
+; force all points to be inside points by never escaping
+;
+  0==0
+default:
+  title="Inversions"
+  maxiter=16
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+;
+; curve shape parameters
+;
+  param curvea
+    caption="curve a"
+    hint="r = a*cos(b*t)+c"
+    default=0.0
+  endparam
+  param curveb
+    caption="curve b"
+    hint="r = a*cos(b*t)+c"
+    default=0.0
+  endparam
+  param curvec
+    caption="curve c"
+    hint="r = a*cos(b*t)+c"
+    default=1.0
+  endparam
+;
+; curve center parameters
+;
+  param movelist
+    caption="move options"
+    hint="This is just a listing of the movement options.  Use these numbers \
+      to make the move string"
+    enum="1: none" "2: move ccw" "3: move cw"
+  endparam
+  param movestring0
+    caption="move string"
+    default=1
+    min=1
+  endparam
+  param iccradius
+    caption="icc circle radius"
+    hint="radius of circle for inversion curve center"
+    default=0.0
+  endparam
+  param deltaicca
+    caption="icc angle increment"
+    hint="angle, in degrees, added to inversion curve center angle"
+    default=0.0
+  endparam
+;
+; curve sizing parameters
+;
+  param sizelist
+    caption="size options"
+    hint="This is just a listing of the sizing options.  Use these numbers \
+      to make the size string"
+    enum="1: none" "2: bigger" "3: smaller"
+  endparam
+  param sizestring0
+    caption="size string"
+    default=1
+    min=1
+  endparam
+  param sizefac
+    caption="curve size factor"
+    hint="must be >= 1.0"
+    default=1.0
+    min=1.0
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 01mar99
+
+Mitch's Mandelbrot & Julia
+
+I wanted an extension of the quadratic map (z^2+c), that was also a
+rational function (ratio of 2 polynomials--interesting things happen
+when the denominator gets close to 0).  So, I came up with this formula
+which isn't too computationally taxing.  It also has some interesting
+features, like 4-fold symmetry, a lacy structure, and repeating of the
+Julia sets inside the Mandelbrot set image.
+
+}
+
+mitch-mandelbrot { ; Kerry Mitchell 01mar99
+;
+; c*(z^2+1/z^2) Mandelbrot
+;
+; updated 19feb06 to change bailout variable
+;
+init:
+  bool done=false
+  z=@manparam
+  c=#pixel
+loop:
+  z2=sqr(z)
+  z=c*(z2+1/z2)
+  if((@bailtype==0)&&(|z|>@bailout))
+    done=true
+  elseif((@bailtype==1)&&(|z*c|>@bailout))
+    done=true
+  endif
+bailout:
+  done==false
+default:
+  title="Mitch's Mandelbrot"
+  periodicity=0
+  magn=2
+  param manparam
+    caption="Mandelbrot start"
+    default=(1,0)
+    hint="use (1,0) for standard set"
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param bailtype
+    caption="bailout type"
+    default=0
+    enum="|z|" "|z*c|"
+  endparam
+switch:
+  type="mitch-julia"
+  julparam=#pixel
+  bailout=bailout
+  bailtype=bailtype
+}
+
+mitch-julia { ; Kerry Mitchell 01mar99
+;
+; c*(z^2+1/z^2) Mandelbrot
+;
+; updated 19feb06 to change bailout variable
+;
+init:
+  bool done=false
+  c=@julparam
+  z=#pixel
+loop:
+  z2=sqr(z)
+  z=c*(z2+1/z2)
+  if((@bailtype==0)&&(|z|>@bailout))
+    done=true
+  elseif((@bailtype==1)&&(|z*c|>@bailout))
+    done=true
+  endif
+bailout:
+  done==false
+default:
+  title="Mitch's Julia"
+  periodicity=0
+  param julparam
+    caption="Julia parameter"
+    default=(1,1)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param bailtype
+    caption="bailout type"
+    default=0
+    enum="|z|" "|z*c|"
+  endparam
+switch:
+  type="mitch-mandelbrot"
+  bailout=bailout
+  bailtype=bailtype
+}
+
+comment { ; copyright Kerry Mitchell 02apr99
+
+Cell 4
+
+This is a simple map that is based loosely on the Baker's Transformation.
+As with the Baker's map, the plane is broken into square cells of a
+particular size.  Then, these squares can be rotated (90, 180, or 270
+degrees), flipped (horizontally or vertically), or left alone.  However,
+the Baker's map transforms each square into a square with the same
+boundaries.  Due to an algorithmic mistake, the Cell 4 map can move parts
+of the square outside of the original boundaries, into the area of another
+square.  While not mathematically correct, it makes for a more interesting
+fractal formula.
+
+The 5 different types of maps (rotations and flips) are numbered 2-6
+(1 is reserved for "none"), and are shown on the "map types" pulldown
+list.  (This parameter is for reference only and does not affect the
+calculation.)  With the "map string" variable, the order in which the
+maps are to be used can be specified.  For example, to use map 2 (90
+degrees counter-clockwise rotation) followed by 4 (90 degrees clockwise),
+then 2, 4, 2, 4, etc., the map string would be "42".  The first map to be
+used is the rightmost digit of the string, then work left.  After the last
+entry in the string is used, the formula starts over, until the iterating
+is completed (due to reaching the maximum number of iterations).
+
+The Cell 4 transformation is implemented on a square, so a way is needed
+to break the complex (z) plane into squares.  This is done with the
+trunc() function, which returns the truncated components of the complex
+input:  trunc(3.9,5.2) = (3,5).  The locations of the square's boundaries
+can be changed with the movement parameters.  This would allow for taking
+a square from (0.0,0.0) to (1.0,1.0) on one iteration, and then a square
+from (0.5,-0.5) to (1.5,0.5) on the next, for example, giving overlapping
+squares.  There are 9 movement types, listed on the "movement type" pulldown:
+
+     1: none            2: left           3: right
+     4: up              5: down           6: left & up
+     7: left & down     8: right & up     9: right & down
+
+The movement type numbers are assembled into the "move string"
+variable:  to move left, then right, then up, then down, then repeat,
+the string would be "5432".  This string works in the same basic
+fashion as the "map string", above.  The degree of motion is controlled
+by the "movement amount" parameter.
+
+Using trunc() by itself results in a grid with 1.0 x 1.0 squares.  The
+size of the squares can be controlled using the sizing parameters.  There
+are 3 methods, listed in the "sizing types" pulldown.  Like the other
+"types" pulldowns, this menu is for reference only and doesn't affect the
+computation.  The 3 methods are:  1) none, 2) bigger, and 3) smaller.  How
+much bigger or smaller depends on the "size factor" parameter, and is
+always referenced to the current size.  The grid starts out at 1.0 on a
+side.  To have an iteration sequence where the squares were twice the
+previous size, then twice again, then half, and repeating, the "size
+string" variable would be "322", and the "size factor" would be 2.0.
+
+Since the Cell 4 transformation doesn't lend itself to "escapes" like
+the quadratic map (Mandelbrot and Julia sets), all the pixels will be
+"inside" pixels with this formula.  Iteration numbers can typically be
+set low (less than 100), especially when using the sizing options.  The
+"Basic" coloring method works well, showing either the magnitude or
+polar angle of the iterate.  Also, try merging multiple layers in which
+only one type of parameter (map sequence, sizing sequence, or movement
+sequence) has been altered.
+
+Have fun!
+
+}
+
+cell4 { ; Kerry Mitchell 02apr99
+;
+; Loosely based on the Baker's transformation,
+; with variable direction,
+; cell sizing, and cell location
+;
+init:
+  #z=#pixel
+  float cell=@cell0
+  cellcenter=(0.0,0.0)
+  float x=0.0
+  float tempx=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+  int mapstring=@mapstring0
+  int mapdigit=0
+  int movestring=@movestring0
+  int movedigit=0
+  int sizestring=@sizestring0
+  int sizedigit=0
+loop:
+  x=real(#z-cellcenter)
+  tempx=trunc(x/cell)*cell
+  fracx=x-tempx
+  y=imag(#z-cellcenter)
+  tempy=trunc(y/cell)*cell
+  fracy=y-tempy
+;
+; determine which mapping to use
+;
+  mapdigit=mapstring%10
+  if(mapdigit==2)              ; 90 deg counter-clockwise rotation
+    fracu=-fracy
+    fracv=fracx
+  elseif(mapdigit==3)          ; 180 deg rotation
+    fracu=-fracx
+    fracv=-fracy
+  elseif(mapdigit==4)          ; 90 deg clockwise rotation
+    fracu=fracy
+    fracv=-fracx
+  elseif(mapdigit==5)          ; flip horizontally
+    fracu=-fracx
+    fracv=fracy
+  elseif(mapdigit==6)          ; flip vertically
+    fracu=fracx
+    fracv=-fracy
+  else                         ; no change
+    fracu=fracx
+    fracv=fracy
+  endif
+  u=tempx+fracu
+  v=tempy+fracv
+  #z=u+flip(v)+cellcenter
+;
+; move cell center
+;
+  movedigit=movestring%10
+  if(movedigit==2)              ; left
+    cellcenter=cellcenter+@movement*(-1.0,0.0)
+  elseif(movedigit==3)          ; left
+    cellcenter=cellcenter+@movement*(1.0,0.0)
+  elseif(movedigit==4)          ; left
+    cellcenter=cellcenter+@movement*(0.0,1.0)
+  elseif(movedigit==5)          ; left
+    cellcenter=cellcenter+@movement*(0.0,-1.0)
+  elseif(movedigit==6)          ; left & up
+    cellcenter=cellcenter+@movement*(-1.0,1.0)
+  elseif(movedigit==7)          ; left & down
+    cellcenter=cellcenter+@movement*(-1.0,-1.0)
+  elseif(movedigit==8)          ; right & up
+    cellcenter=cellcenter+@movement*(1.0,1.0)
+  elseif(movedigit==9)          ; right & down
+    cellcenter=cellcenter+@movement*(1.0,-1.0)
+  endif
+;
+; determine which sizing to use & adjust cell size
+;
+  sizedigit=sizestring%10
+  if(sizedigit==2)             ; bigger cell
+    cell=cell*@sizefac
+  elseif(sizedigit==3)         ; smaller cell
+    cell=cell/@sizefac
+  endif
+;
+; cycle strings for next iteration
+; if the cycle is finished, start over with original string
+;
+  mapstring=round((mapstring-mapdigit)/10)
+  if(mapstring==0)
+    mapstring=@mapstring0
+  endif
+  movestring=round((movestring-movedigit)/10)
+  if(movestring==0)
+    movestring=@movestring0
+  endif
+  sizestring=round((sizestring-sizedigit)/10)
+  if(sizestring==0)
+    sizestring=@sizestring0
+  endif
+bailout:
+;
+; force all points to be inside points by never escaping
+;
+  0==0
+default:
+  title="Cell 4"
+  maxiter=16
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+;
+; mapping parameters
+;
+  param maplist
+    caption="map types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the map string"
+    enum="1: none" "2: 90 deg ccw" "3: 180 deg" "4: 90 deg cw" \
+      "5: flip horiz" "6: flip vert"
+  endparam
+  param mapstring0
+    caption="map string"
+    default=2
+    min=1
+  endparam
+;
+; translation parameters
+;
+  param movelist
+    caption="movement types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the move string"
+    enum="1: none" "2: left" "3: right" "4: up" "5: down"\
+      "6: left & up" "7: left & down" "8: right & up" "9: right & down"
+  endparam
+  param movestring0
+    caption="move string"
+    default=1
+    min=1
+  endparam
+  param movement
+    caption="movement amount"
+    hint="must be >= 0.0"
+    default=0.0
+    min=0.0
+  endparam
+;
+; sizing parameters
+;
+  param sizelist
+    caption="size options"
+    hint="This is just a listing of the sizing options.  Use these numbers \
+      to make the size string"
+    enum="1: same size" "2: bigger" "3: smaller"
+  endparam
+  param sizestring0
+    caption="size string"
+    default=1
+    min=1
+  endparam
+  param cell0
+    caption="initial cell size"
+    default=1.0
+  endparam
+  param sizefac
+    caption="cell size factor"
+    default=1.0
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 02apr99
+
+S Curve
+
+The S Curve map is an extension of the Horseshoe map.  It is a
+two-dimensional map that takes a square and maps it back to a square.
+Specifically, take a square like this:
+
+        AAABBBCCC
+        AAABBBCCC
+        AAABBBCCC
+        DDDEEEFFF
+        DDDEEEFFF
+        DDDEEEFFF
+        GGGHHHIII
+        GGGHHHIII
+        GGGHHHIII
+
+then squish it to 1/3 its width while stretching it to 3 times its height:
+
+        ABC
+        ABC
+        [7 more ABC lines]
+        DEF
+        DEF
+        [7 more ABC lines]
+        GHI
+        GHI
+        [7 more ABC lines]
+
+Now, fold the top third down and against the left side of the existing
+middle.  Then, fold the top third up and against the right side of the
+middle:
+
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+        CBADEFIHG
+
+This has the effect of taking the bottom third of the original square,
+mirroring it, and making it the right third of the new square, and taking
+the top third of the original square, mirroring it, and making it the left
+side of the new one.
+
+It is a simple map that exhibits chaos and fractal characteristics,
+although its aesthetics leave something to be desired.  When used over
+many iterations, it transforms the square into a series of vertical lines,
+without much apparent shape or structure.  The formula below was designed
+to have a bit more visual appeal and flexibility.
+
+The map as illustrated above can be classified as "top to left".  That
+is, it maps the top of the old square to the left side of the new.  There
+are 3 other ways this map can be expressed, based on which half of the
+original square gets mapped where:  "left to bottom", "bottom to left", and
+"left to top".  Using these alternatives in various sequences can yield
+images made of vertical lines, horizontal lines, squares, or rectangles.
+These maps are numbered 2 - 5, respectively, (1 is reserved for "none"),
+and are shown on the "map types" pulldown list.  (This parameter is for
+reference only and does not affect the calculation.)  With the "map string"
+variable, the order in which the maps are to be used can be specified.
+For example, to use map 3 ("top to left") followed by 4 ("left to top"),
+then 3, 4, 3, 4, etc., the map string would be "43".  The first map to be
+used is the rightmost digit of the string, then work left.  After the last
+entry in the string is used, the formula starts over, until the iterating
+is completed (due to reaching the maximum number of iterations).
+
+The S Curve transformation is implemented on a square, so a way is needed
+to break the complex (z) plane into squares.  This is done with the
+round() function, which returns the rounded components of the complex
+input:  round(3.9,5.2) = (4,5).  When this rounded z is subtracted from
+the actual z, the result is a number whose components both vary from -0.5
+to 0.5.  Adding 0.5 to each creates a square from 0.0 to 1.0 in both
+directions.
+
+More precisely, this results in a square grid, as the round() function
+creates boundaries at every integer (-1.0, 3.0, etc.).  The locations
+of these boundaries can be changed with the movement parameters.  This
+would allow for taking a square from (0.0,0.0) to (1.0,1.0) on one
+iteration, and then a square from (0.5,-0.5) to (1.5,0.5) on the next,
+for example, giving overlapping squares.  There are 9 movement types,
+listed on the "movement type" pulldown:
+
+     1: none            2: left           3: right
+     4: up              5: down           6: left & up
+     7: left & down     8: right & up     9: right & down
+
+The movement type numbers are assembled into the "move string"
+variable:  to move left, then right, then up, then down, then repeat,
+the string would be "5432".  This string works in the same basic
+fashion as the "map string", above.  The degree of motion is controlled
+by the "movement amount" parameter.
+
+Using round() by itself results in a grid with 1.0 x 1.0 squares.  The
+size of the squares can be controlled using the sizing parameters.  There
+are 3 methods, listed in the "sizing types" pulldown.  Like the other
+"types" pulldowns, this menu is for reference only and doesn't affect the
+computation.  The 3 methods are:  1) none, 2) bigger, and 3) smaller.  How
+much bigger or smaller depends on the "size factor" parameter, and is
+always referenced to the current size.  The grid starts out at 1.0 on a
+side.  To have an iteration sequence where the squares were twice the
+previous size, then twice again, then half, and repeating, the "size
+string" variable would be "322", and the "size factor" would be 2.0.
+
+Since the S Curve transformation doesn't lend itself to "escapes" like
+the quadratic map (Mandelbrot and Julia sets), all the pixels will be
+"inside" pixels with this formula.  Iteration numbers can typically be
+set low (less than 100), especially when using the sizing options.  The
+"Basic" coloring method works well, showing either the magnitude or
+polar angle of the iterate.  Also, try merging multiple layers in which
+only one type of parameter (map sequence, sizing sequence, or movement
+sequence) has been altered.
+
+Have fun!
+
+}
+
+scurve { ; Kerry Mitchell 02apr99
+;
+; S Curve map, an extension of the
+; Horseshoe map, with variable direction,
+; cell sizing, and cell location
+;
+init:
+  #z=#pixel
+  float cell=1.0
+  cellcenter=(0.0,0.0)
+  float x=0.0
+  float tempx=0.0
+  float wholex=0.0
+  float fracx=0.0
+  float y=0.0
+  float tempy=0.0
+  float wholey=0.0
+  float fracy=0.0
+  float u=0.0
+  float fracu=0.0
+  float v=0.0
+  float fracv=0.0
+  int mapstring=@mapstring0
+  int mapdigit=0
+  int movestring=@movestring0
+  int movedigit=0
+  int sizestring=@sizestring0
+  int sizedigit=0
+  float onethird=1.0/3.0
+loop:
+;
+; break plane into cells by taking fractional parts of x & y
+;
+  x=real(#z-cellcenter)
+  tempx=x/cell
+  wholex=round(tempx)
+  fracx=tempx-wholex
+  y=imag(#z-cellcenter)
+  tempy=y/cell
+  wholey=round(tempy)
+  fracy=tempy-wholey
+;
+; determine which mapping to use and apply it
+;
+  mapdigit=mapstring%10
+  if(mapdigit==2)               ; bottom to left
+    u=3.0*fracx
+    v=onethird*fracy
+    if(u<-0.5)
+      fracu=-1.0-u
+      fracv=-onethird-v
+    elseif(u>0.5)
+      fracu=1.0-u
+      fracv=onethird-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(mapdigit==3)           ; left to bottom
+    u=onethird*fracx
+    v=3.0*fracy
+    if(v<-0.5)
+      fracu=-onethird-u
+      fracv=-1.0-v
+    elseif(v>0.5)
+      fracu=onethird-u
+      fracv=1.0-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(mapdigit==4)           ; top to left
+    u=3.0*fracx
+    v=onethird*fracy
+    if(u<-0.5)
+      fracu=-1.0-u
+      fracv=onethird-v
+    elseif(u>0.5)
+      fracu=1.0-u
+      fracv=-onethird-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  elseif(mapdigit==5)           ; left to top
+    u=onethird*fracx
+    v=3.0*fracy
+    if(v<-0.5)
+      fracu=onethird-u
+      fracv=-1.0-v
+    elseif(v>0.5)
+      fracu=-onethird-u
+      fracv=1.0-v
+    else
+      fracu=u
+      fracv=v
+    endif
+  else                          ; none
+    fracu=fracx
+    fracv=fracy
+  endif
+;
+; reassemble z with new fractional parts
+;
+  u=(wholex+fracu)*cell
+  v=(wholey+fracv)*cell
+  #z=u+flip(v)+cellcenter
+;
+; move cell center
+;
+  movedigit=movestring%10
+  if(movedigit==2)              ; left
+    cellcenter=cellcenter+@movement*(-1.0,0.0)
+  elseif(movedigit==3)          ; left
+    cellcenter=cellcenter+@movement*(1.0,0.0)
+  elseif(movedigit==4)          ; left
+    cellcenter=cellcenter+@movement*(0.0,1.0)
+  elseif(movedigit==5)          ; left
+    cellcenter=cellcenter+@movement*(0.0,-1.0)
+  elseif(movedigit==6)          ; left & up
+    cellcenter=cellcenter+@movement*(-1.0,1.0)
+  elseif(movedigit==7)          ; left & down
+    cellcenter=cellcenter+@movement*(-1.0,-1.0)
+  elseif(movedigit==8)          ; right & up
+    cellcenter=cellcenter+@movement*(1.0,1.0)
+  elseif(movedigit==9)          ; right & down
+    cellcenter=cellcenter+@movement*(1.0,-1.0)
+  endif
+;
+; resize cell
+;
+  sizedigit=sizestring%10
+  if(sizedigit==2)              ; bigger
+    cell=cell*@sizefac
+  elseif(sizedigit==3)          ; smaller
+    cell=cell/@sizefac
+  endif
+;
+; cycle strings for next iteration
+; if the cycle is finished, start over with original string
+;
+  mapstring=round((mapstring-mapdigit)/10)
+  if(mapstring==0)
+    mapstring=@mapstring0
+  endif
+  movestring=round((movestring-movedigit)/10)
+  if(movestring==0)
+    movestring=@movestring0
+  endif
+  sizestring=round((sizestring-sizedigit)/10)
+  if(sizestring==0)
+    sizestring=@sizestring0
+  endif
+bailout:
+;
+; force all points to be inside points by never escaping
+;
+  0==0
+default:
+  title="S Curve"
+  maxiter=16
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+;
+; mapping parameters
+;
+  param maplist
+    caption="map types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the map string"
+    enum="1: none" "2: bottom to left" "3: left to bottom"\
+      "4: top to left" "5: left to top"
+  endparam
+  param mapstring0
+    caption="map string"
+    default=2
+    min=1
+  endparam
+;
+; translation parameters
+;
+  param movelist
+    caption="movement types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the move string"
+    enum="1: none" "2: left" "3: right" "4: up" "5: down"\
+      "6: left & up" "7: left & down" "8: right & up" "9: right & down"
+  endparam
+  param movestring0
+    caption="move string"
+    default=1
+    min=1
+  endparam
+  param movement
+    caption="movement amount"
+    hint="must be >= 0.0"
+    default=0.0
+    min=0.0
+  endparam
+;
+; sizing parameters
+;
+  param sizelist
+    caption="sizing types"
+    hint="This is just a listing of the map types.  Use these numbers \
+      to make the size string"
+    enum="1: none" "2: bigger" "3: smaller"
+  endparam
+  param sizestring0
+    caption="size string"
+    default=1
+    min=1
+  endparam
+  param sizefac
+    caption="size factor"
+    hint="must be >= 1.0"
+    default=1.0
+    min=1.0
+  endparam
+}
+
+comment {
+
+Divide and Average
+
+The "divide and average" algorithm is a technique for finding square roots.
+It works by starting with an initial guess (z) of the number whose square
+we're trying to find (c).  Then, the iteration proceeds by dividing c by
+z, giving y.  The new value of z is the average of the old z and y.  For
+example, take c=3 and start with z=1:
+
+step  z     y      new z
+1     1     3      1.5
+2     1.5   2      1.75
+3     1.75  1.714  1.732
+
+After 3 steps, the result is accurate to 3 decimal places.  It works so well
+because it is just Newton's method rewritten.
+
+In addition to the variables c and z, there is an algorithmic parameter,
+the quotient.  In the standard method, the quotient is 2; z and y are added
+together and divided by 2 (the quotient) to get the new z.  Using different
+values for the quotient (after Arne Richter) allows this formula to generate
+a variety of fractals.  This formula also supports different exponents,
+going beyond the standard 2 for square root.  If the quotient is set to
+the exponent, then this formula becomes Newton's method for the desired
+root.
+
+Another page was stolen from Arne's playbook.  Typically, root-finding
+formulas stop iterating when the iterate has converged to a final answer.
+Convergence is usually measured by the magnitude of the difference in
+subsequent iterates.  However, other types of convergence checking can be
+used, with interesting fractal results.  Here, the user can choose between
+checking the magnitude of the difference, the real part, or the imaginary
+part.  In all cases, the actual bailout value is the reciprocal of the
+difference between iterates, so setting a very large bailout value will
+mean iterating until the difference is very small.  This is in keeping with
+coloring formulas that look for a large variable upon bailout.
+
+}
+
+divide-and-average { ; Kerry Mitchell 20jun99
+;
+; Based on Arne Richter's variation of the Newton
+; method for finding a square root
+;
+init:
+  znew=#pixel
+  c=@julparam
+  q=1/@quotient
+  float nm1=1.0-@nexp
+  float r=0.0
+loop:
+  zold=znew
+  if(@nexp==2.0)
+    znew=q*(zold+c/zold)
+  else
+    znew=q*(-nm1*zold+c*(zold^nm1))
+  endif
+  #z=1/(znew-zold)
+  if(@convtype==1)
+    r=abs(real(#z))
+  elseif(@convtype==2)
+    r=abs(imag(#z))
+  else
+    r=cabs(#z)
+  endif
+bailout:
+  r<@bailout
+default:
+  title="Divide and Average"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+  param julparam
+    caption="seed"
+    default=(1.0,0.0)
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+  endparam
+  param quotient
+    caption="quotient"
+    default=(2.0,0.0)
+    hint="make = exponent for standard Newton's method"
+  endparam
+  param bailout
+    caption="bailout"
+    default=100.0
+    hint="1/(difference between subsequent iterates)--make big"
+  endparam
+  param convtype
+    caption="convergence type"
+    enum="magnitude" "real" "imaginary"
+    default=0
+  endparam
+}
+
+Null { ; Kerry Mitchell 02jul99
+;
+; Do-nothing formula, merely to serve as a place-holder
+; between transform and coloring.
+; 
+init:
+  z = #pixel
+;
+; If both x and y flags are 0, it probably means that no
+; transform was used; set to "inside" point.  Otherwise, 
+; make an "outside" point.
+;
+  bool done=true
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+  if((xflag==0)&&(yflag==0))
+    done=false
+  endif
+loop:
+bailout:
+  done==false
+default:
+  title="Null"
+  method=multipass
+  periodicity=0
+  maxiter=1
+}
+
+comment { ; copyright Kerry Mitchell 26sep99
+
+Predictor Schemes
+
+These two formulas (Mandelbrot and Julia variations) use an interpolation
+technique to predict the next iterate based on previous values, and then
+color the pixel according to the error between the prediction and the
+actual value.
+
+The prediction is based on Lagrange Interpolation.  In such an interpolation
+scheme, a polynomial is made to pass exactly through a series of given
+points.  Then, the polynomial can be used to predict the value of the
+function at other points.
+
+To find the interpolation function f(x), a set of points (x, y) is given,
+through which the function will pass.  The function f(x) is a weighted
+sum of basis functions f1(x), f2(x), etc.  The basis functions are
+constructed so that f1(x1) = 1 and f1(x) = 0 for x2, x3, etc.  Likewise,
+f2(x2) = 1 and f2(x) = 0 for x1, x3, etc.  And f3(x3) = 1, and f3(x) = 0
+for x1, x2, etc.  The weights are the y values, so for this 3 point example:
+
+f(x) = y1 * f1(x) + y2 * f2(x) + y3 * f3(x).
+
+While polynomials are typically used for the basis functions because
+they are "nice" functions, other functions (sine, cosine, exponential, etc.)
+can also be used, as they are here.
+
+In these formulas, the user can choose between 2-, 3-, and 4-point
+predictors.  For a 2-point predictor, the "x" values are 1 and 2.  The "y"
+values are the previous iterate (for x = 2) and the one before that (for
+x = 1).  The function f(x) is then constructed.  The prediction comes
+from setting x = 3, and finding f(3).  This is the predicted value of the
+next iterate.  The actual iteration is performed, and the error is found.
+Then, the iterate for x=2 moves to the x=1 spot, and the newly found
+iterate is placed in the x=2 spot.  A new prediction is found for x=3,
+and the process continues.
+
+The 3- and 4-point predictors work in a similar fashion, just using more
+points.  With the extra points comes extra flexibility in constructing
+the basis functions.  For the 2-point predictor, any of the standard
+functions can be used.  With the 3-point predictor, 2 functions are used,
+which can be the same or different.  The 4-point predictor uses 3
+independent functions.  In the cases of multiple functions, changing the
+order will change the results (e.g., using sine for the first function
+and cosine for the second, vs. cosine for the first and sine for the
+second).  One other choice, no-point, simply bypasses the predictor
+logic, which may be helpful in quickly finding an image area of interest.
+
+The primary area of interest with a prediction scheme is the error between
+the prediction and the actual result.  Since these are calculation formulas,
+the value of z must be set and passed to the coloring formula.  Four
+choices are given:  last error, last relative error, average error, and
+average relative error.  The error is simply the difference between the
+prediction and the actual iteration.  The relative error is the error
+divided by the actual iteration.  With the "average" z types, the averaging
+is performed over the entire orbit.  That is, the error is summed, and that
+sum is divided by the number of iterations.
+
+The "switch" feature is enabled in both formulas, allowing a quick move from
+one to the other, maintaining the original predictor settings.
+
+}
+
+predictor-general-mandelbrot { ; Kerry Mitchell 26sep99
+init:
+  c=#pixel
+  z1=@manparam
+  z2=(0.0,0.0)
+  z3=(0.0,0.0)
+  z4=(0.0,0.0)
+  zp=(0.0,0.0)
+  zlast=(0.0,0.0)
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float k=0.0
+  float kfrac=0.0
+  float fac1=0.0
+  float fac2=0.0
+  weight1=(0.0,0.0)
+  weight2=(0.0,0.0)
+  weight3=(0.0,0.0)
+  weight4=(0.0,0.0)
+  err=(0.0,0.0)
+  relerr=(0.0,0.0)
+  toterr=(0.0,0.0)
+  totrelerr=(0.0,0.0)
+
+;
+; set up constants
+;
+  if(@npp==1)                        ; 2 point predictor
+    z2=z1^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    weight1=(f1of3-f1of2)/(f1of1-f1of2)
+    weight2=(f1of3-f1of1)/(f1of2-f1of1)
+
+  elseif(@npp==2)                    ; 3 point predictor
+    z2=z1^@nexp+c
+    z3=z2^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    f1of4=@f1ofz(4)
+    f2of1=@f2ofz(1)
+    f2of2=@f2ofz(2)
+    f2of3=@f2ofz(3)
+    f2of4=@f2ofz(4)
+    weight1=(f1of4-f1of2)/(f1of1-f1of2)*(f2of4-f2of3)/(f2of1-f2of3)
+    weight2=(f1of4-f1of3)/(f1of2-f1of3)*(f2of4-f2of1)/(f2of2-f2of1)
+    weight3=(f1of4-f1of1)/(f1of3-f1of1)*(f2of4-f2of2)/(f2of3-f2of2)
+
+  elseif(@npp==3)                    ; 4 point predictor
+    z2=z1^@nexp+c
+    z3=z2^@nexp+c
+    z4=z3^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    f1of4=@f1ofz(4)
+    f1of5=@f1ofz(5)
+    f2of1=@f2ofz(1)
+    f2of2=@f2ofz(2)
+    f2of3=@f2ofz(3)
+    f2of4=@f2ofz(4)
+    f2of5=@f2ofz(5)
+    f3of1=@f3ofz(1)
+    f3of2=@f3ofz(2)
+    f3of3=@f3ofz(3)
+    f3of4=@f3ofz(4)
+    f3of5=@f3ofz(5)
+    weight1=(f1of5-f1of2)/(f1of1-f1of2)*(f2of5-f2of3)/(f2of1-f2of3)
+    weight1=weight1*(f3of5-f3of4)/(f3of1-f3of4)
+    weight2=(f1of5-f1of3)/(f1of2-f1of3)*(f2of5-f2of4)/(f2of2-f2of4)
+    weight2=weight2*(f3of5-f3of1)/(f3of2-f3of1)
+    weight3=(f1of5-f1of4)/(f1of3-f1of4)*(f2of5-f2of1)/(f2of3-f2of1)
+    weight3=weight3*(f3of5-f3of2)/(f3of3-f3of2)
+    weight4=(f1of5-f1of1)/(f1of4-f1of1)*(f2of5-f2of2)/(f2of4-f2of2)
+    weight4=weight4*(f3of5-f3of3)/(f3of4-f3of3)
+
+  endif
+loop:
+  iter=iter+1
+;
+; find new predicted value, zp
+;
+  if(@npp==1)                        ; 2 point predictor
+    zp=weight1*z1+weight2*z2
+    z1=z2
+    z2=z2^@nexp+c
+    zlast=z2
+  elseif(@npp==2)                    ; 3 point predictor
+    zp=weight1*z1+weight2*z2+weight3*z3
+    z1=z2
+    z2=z3
+    z3=z3^@nexp+c
+    zlast=z3
+  elseif(@npp==3)                    ; 4 point predictor
+    zp=weight1*z1+weight2*z2+weight3*z3+weight4*z4
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z4^@nexp+c
+    zlast=z4
+  else                               ; bypass predictor logic
+    z1=z1^@nexp+c
+    zlast=z1
+  endif
+  err=zp-zlast
+  relerr=err/zlast
+  toterr=toterr+err
+  totrelerr=totrelerr+relerr
+;
+; set z value for coloring
+;
+  if(@ztype==1)                      ; z = absolute error
+    z=err
+  elseif(@ztype==2)                  ; z = relative error
+    z=relerr
+  elseif(@ztype==3)                  ; z = mean absolute error
+    z=toterr/iter
+  elseif(@ztype==4)                  ; z = mean relative error
+    z=totrelerr/iter
+  else                               ; z = iterate
+    z=zlast
+  endif
+;
+; bailout
+;   if mean error chosen, perform one more iteration and use
+;   renormalization smoothing
+;
+  if(|zlast|>@bailout)
+    done=true
+    if(@ztype>2)
+      iter=iter+1
+      fac1=log(log(cabs(zlast)))-llbail
+      if(@npp==1)                    ; 2 point predictor
+        zp=weight1*z1+weight2*z2
+        z1=z2
+        z2=z2^@nexp+c
+        zlast=z2
+      elseif(@npp==2)                ; 3 point predictor
+        zp=weight1*z1+weight2*z2+weight3*z3
+        z1=z2
+        z2=z3
+        z3=z3^@nexp+c
+        zlast=z3
+      elseif(@npp==3)                ; 4 point predictor
+        zp=weight1*z1+weight2*z2+weight3*z3+weight4*z4
+        z1=z2
+        z2=z3
+        z3=z4
+        z4=z4^@nexp+c
+        zlast=z4
+      else                           ; bypass predictor logic
+        z1=z1^@nexp+c
+        zlast=z1
+      endif
+      err=zp-zlast
+      relerr=err/zlast
+      fac2=log(log(cabs(zlast)))-llbail-logn
+      k=exp((fac1+fac2)/2.0)
+      kfrac=(k-1.0)/(@nexp-1.0)
+      if(@ztype==3)                  ; mean absolute error
+        z=kfrac*toterr/iter+(1.0-kfrac)*(toterr+err)/(iter+1)
+      elseif(@ztype==4)              ; mean relative error
+        z=kfrac*totrelerr/iter+(1.0-kfrac)*(totrelerr+relerr)/(iter+1)
+      endif
+    endif
+  endif
+bailout:
+  done==false
+default:
+  title="Predictor General Mandelbrot"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="Mandelbrot start"
+    default=(0.0,0.0)
+    hint="use (0,0) for standard Mandelbrot"
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+  param ztype
+    caption="z type"
+    default=4
+    enum="iterate" "last error" "last relative error" \
+      "average error" "average relative error"
+  endparam
+  param npp
+    caption="predictor points"
+    default=1
+    enum="none" "2" "3" "4"
+    hint="Number of predictor points.  Choose 'none' to bypass \
+      predictor logic."
+  endparam
+  func f1ofz
+    caption="first function"
+    default=ident()
+    hint="Use indent() for linear interpolation."
+  endfunc
+  func f2ofz
+    caption="second function"
+    default=ident()
+    hint="Used with 3 & 4 point predictor.  Use indent() for linear interpolation."
+  endfunc
+  func f3ofz
+    caption="third function"
+    default=ident()
+    hint="Only used with 4 point predictor. Use indent() for linear interpolation."
+  endfunc
+switch:
+  type="predictor-general-julia"
+  julparam=#pixel
+  bailout=@bailout
+  nexp=@nexp
+  ztype=@ztype
+  npp=@npp
+  f1ofz=@f1ofz
+  f2ofz=@f2ofz
+  f3ofz=@f3ofz
+}
+
+predictor-general-julia { ; Kerry Mitchell 26sep99
+init:
+  c=@julparam
+  z1=#pixel
+  z2=(0.0,0.0)
+  z3=(0.0,0.0)
+  z4=(0.0,0.0)
+  zp=(0.0,0.0)
+  zlast=(0.0,0.0)
+  int iter=0
+  bool done=false
+  float logn=log(@nexp)
+  float llbail=log(log(@bailout))+log(0.5)
+  float k=0.0
+  float kfrac=0.0
+  float fac1=0.0
+  float fac2=0.0
+  weight1=(0.0,0.0)
+  weight2=(0.0,0.0)
+  weight3=(0.0,0.0)
+  weight4=(0.0,0.0)
+  err=(0.0,0.0)
+  relerr=(0.0,0.0)
+  toterr=(0.0,0.0)
+  totrelerr=(0.0,0.0)
+
+;
+; set up constants
+;
+  if(@npp==1)                        ; 2 point predictor
+    z2=z1^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    weight1=(f1of3-f1of2)/(f1of1-f1of2)
+    weight2=(f1of3-f1of1)/(f1of2-f1of1)
+
+  elseif(@npp==2)                    ; 3 point predictor
+    z2=z1^@nexp+c
+    z3=z2^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    f1of4=@f1ofz(4)
+    f2of1=@f2ofz(1)
+    f2of2=@f2ofz(2)
+    f2of3=@f2ofz(3)
+    f2of4=@f2ofz(4)
+    weight1=(f1of4-f1of2)/(f1of1-f1of2)*(f2of4-f2of3)/(f2of1-f2of3)
+    weight2=(f1of4-f1of3)/(f1of2-f1of3)*(f2of4-f2of1)/(f2of2-f2of1)
+    weight3=(f1of4-f1of1)/(f1of3-f1of1)*(f2of4-f2of2)/(f2of3-f2of2)
+
+  elseif(@npp==3)                    ; 4 point predictor
+    z2=z1^@nexp+c
+    z3=z2^@nexp+c
+    z4=z3^@nexp+c
+    f1of1=@f1ofz(1)
+    f1of2=@f1ofz(2)
+    f1of3=@f1ofz(3)
+    f1of4=@f1ofz(4)
+    f1of5=@f1ofz(5)
+    f2of1=@f2ofz(1)
+    f2of2=@f2ofz(2)
+    f2of3=@f2ofz(3)
+    f2of4=@f2ofz(4)
+    f2of5=@f2ofz(5)
+    f3of1=@f3ofz(1)
+    f3of2=@f3ofz(2)
+    f3of3=@f3ofz(3)
+    f3of4=@f3ofz(4)
+    f3of5=@f3ofz(5)
+    weight1=(f1of5-f1of2)/(f1of1-f1of2)*(f2of5-f2of3)/(f2of1-f2of3)
+    weight1=weight1*(f3of5-f3of4)/(f3of1-f3of4)
+    weight2=(f1of5-f1of3)/(f1of2-f1of3)*(f2of5-f2of4)/(f2of2-f2of4)
+    weight2=weight2*(f3of5-f3of1)/(f3of2-f3of1)
+    weight3=(f1of5-f1of4)/(f1of3-f1of4)*(f2of5-f2of1)/(f2of3-f2of1)
+    weight3=weight3*(f3of5-f3of2)/(f3of3-f3of2)
+    weight4=(f1of5-f1of1)/(f1of4-f1of1)*(f2of5-f2of2)/(f2of4-f2of2)
+    weight4=weight4*(f3of5-f3of3)/(f3of4-f3of3)
+
+  endif
+loop:
+  iter=iter+1
+;
+; find new predicted value, zp
+;
+  if(@npp==1)                        ; 2 point predictor
+    zp=weight1*z1+weight2*z2
+    z1=z2
+    z2=z2^@nexp+c
+    zlast=z2
+  elseif(@npp==2)                    ; 3 point predictor
+    zp=weight1*z1+weight2*z2+weight3*z3
+    z1=z2
+    z2=z3
+    z3=z3^@nexp+c
+    zlast=z3
+  elseif(@npp==3)                    ; 4 point predictor
+    zp=weight1*z1+weight2*z2+weight3*z3+weight4*z4
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z4^@nexp+c
+    zlast=z4
+  else                               ; bypass predictor logic
+    z1=z1^@nexp+c
+    zlast=z1
+  endif
+  err=zp-zlast
+  relerr=err/zlast
+  toterr=toterr+err
+  totrelerr=totrelerr+relerr
+;
+; set z value for coloring
+;
+  if(@ztype==1)                      ; z = absolute error
+    z=err
+  elseif(@ztype==2)                  ; z = relative error
+    z=relerr
+  elseif(@ztype==3)                  ; z = mean absolute error
+    z=toterr/iter
+  elseif(@ztype==4)                  ; z = mean relative error
+    z=totrelerr/iter
+  else                               ; z = iterate
+    z=zlast
+  endif
+;
+; bailout
+;   if mean error chosen, perform one more iteration and use
+;   renormalization smoothing
+;
+  if(|zlast|>@bailout)
+    done=true
+    if(@ztype>2)
+      iter=iter+1
+      fac1=log(log(cabs(zlast)))-llbail
+      if(@npp==1)                    ; 2 point predictor
+        zp=weight1*z1+weight2*z2
+        z1=z2
+        z2=z2^@nexp+c
+        zlast=z2
+      elseif(@npp==2)                ; 3 point predictor
+        zp=weight1*z1+weight2*z2+weight3*z3
+        z1=z2
+        z2=z3
+        z3=z3^@nexp+c
+        zlast=z3
+      elseif(@npp==3)                ; 4 point predictor
+        zp=weight1*z1+weight2*z2+weight3*z3+weight4*z4
+        z1=z2
+        z2=z3
+        z3=z4
+        z4=z4^@nexp+c
+        zlast=z4
+      else                           ; bypass predictor logic
+        z1=z1^@nexp+c
+        zlast=z1
+      endif
+      err=zp-zlast
+      relerr=err/zlast
+      fac2=log(log(cabs(zlast)))-llbail-logn
+      k=exp((fac1+fac2)/2.0)
+      kfrac=(k-1.0)/(@nexp-1.0)
+      if(@ztype==3)                  ; mean absolute error
+        z=kfrac*toterr/iter+(1.0-kfrac)*(toterr+err)/(iter+1)
+      elseif(@ztype==4)              ; mean relative error
+        z=kfrac*totrelerr/iter+(1.0-kfrac)*(totrelerr+relerr)/(iter+1)
+      endif
+    endif
+  endif
+bailout:
+  done==false
+default:
+  title="Predictor General Julia"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia Parameter"
+    default=(0.0,1.0)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000000.0
+    min=0.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=2.0
+    hint="z exponent, > 1.0"
+    min=1.0
+  endparam
+  param ztype
+    caption="z type"
+    default=4
+    enum="iterate" "last error" "last relative error" \
+      "average error" "average relative error"
+  endparam
+  param npp
+    caption="predictor points"
+    default=1
+    enum="none" "2" "3" "4"
+    hint="Number of predictor points.  Choose 'none' to bypass \
+      predictor logic."
+  endparam
+  func f1ofz
+    caption="first function"
+    default=ident()
+    hint="Use indent() for linear interpolation."
+  endfunc
+  func f2ofz
+    caption="second function"
+    default=ident()
+    hint="Used with 3 & 4 point predictor.  Use indent() for linear interpolation."
+  endfunc
+  func f3ofz
+    caption="third function"
+    default=ident()
+    hint="Only used with 4 point predictor. Use indent() for linear interpolation."
+  endfunc
+switch:
+  type="predictor-general-mandelbrot"
+  bailout=@bailout
+  nexp=@nexp
+  ztype=@ztype
+  npp=@npp
+  f1ofz=@f1ofz
+  f2ofz=@f2ofz
+  f3ofz=@f3ofz
+}
+
+piston { ; Kerry Mitchell 29may2000
+;
+; Semi-realistic modelling of the chaotic bouncing of a perfect
+; ball on a vibrating piston.  May not be suitable for general
+; fractal creation.
+;
+init:
+  float g=@gravity
+  float a=@amplitude
+  float f=@frequency*2*#pi
+  float af=a*f
+  float yb=0.0
+  float ybnew=@yb0
+  float vb=0.0
+  float vbnew=@vb0
+  float yp=0.0
+  float ypnew=0.0
+  float vp=0.0
+  float vpnew=af
+  float r=0.0
+  float rmin=1e20
+  float dt=@timestep
+  float dt2=@timestep/2
+  float twopi=2.0*#pi
+  float t=0.0
+  float tmod=0.0
+  float t1=0.0
+  float t2=0.0
+  float t3=0.0
+  int bounce=0
+  bool done=false
+loop:
+;
+; reset y (height), v (velocity) values
+;
+  yp=ypnew
+  vp=vpnew
+  yb=ybnew
+  if(yb<=yp)                 ; bounce off of piston
+    bounce=bounce+1
+    if(bounce==1)
+      t1=t
+      t2=t
+      t3=3
+    elseif(bounce==2)
+      t2=t
+      t3=t
+    elseif(bounce==3)
+      t3=t
+    else
+      t1=t2
+      t2=t3
+      t3=t
+    endif
+    yb=2*yp-yb
+    vb=2*vp-vbnew
+  else                       ; mid-air, reset
+    vb=vbnew
+  endif
+;
+; advance time
+;
+  t=t+dt
+  ybnew=yb+dt*(vb-g*dt2)
+  vbnew=(ybnew-yb)/dt
+  tmod=(f*t)%twopi
+  ypnew=a*sin(tmod)
+  vpnew=af*cos(tmod)
+;
+; determine z
+;
+  if(@ztype==1)              ; v-y phase space
+    z=vbnew+flip(ybnew)
+    r=cabs(z-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==2)          ; bounce intervals
+    z=(t2-t1)+flip(t3-t2)
+    r=cabs(z-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; trajectory
+    z=t+flip(ybnew)
+    r=cabs(z-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=t+flip(ypnew)
+    r=cabs(z-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  endif
+bailout:
+  done==false
+default:
+  title="Piston"
+  helpfile="lkm-help\lkm-piston.html"
+  method=multipass
+  maxiter=1000
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param yb0
+    caption="ball start"
+    default=2.0
+    min=0.0
+    hint="Initial height of ball, > 0."
+  endparam
+  param vb0
+    caption="ball velocity"
+    default=0.0
+    hint="Initial velocity of ball, + upward, - downward."
+  endparam
+  param amplitude
+    caption="piston amplitude"
+    default=0.0833333333333333333333333
+    hint="Piston moves from -amplitude to +amplitude."
+  endparam
+  param frequency
+    caption="piston frequency"
+    default=2.0
+    hint="How fast piston oscilates."
+  endparam
+  param gravity
+    caption="gravity"
+    default=32.0
+    hint="Strength of gravity, + downward."
+  endparam
+  param timestep
+    caption="timestep"
+    default=0.001
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="trajectory" "ball phase" "bounce times"
+    hint="Variable that is sent to coloring routine."
+  endparam
+}
+
+gravity2-comet { ; Kerry Mitchell 29may2000
+;
+; Models the 2D gravitational interaction between 2 stars and
+; a (massless) comet.  Shows the chaos in the "many body" problem
+; of Newtonian gravity.  May not be suitable for general fractaling.
+;
+init:
+  z1new=@z10
+  z2new=@z20
+  zcnew=@zc0
+  v1new=@v10
+  v2new=@v20
+  vcnew=@vc0
+  float r=0.0
+  float rmin=1e20
+  float m1=@mass1
+  float m2=@mass2
+  float dt=@timestep
+  float dt2=@timestep/2
+loop:
+;
+; reset z, v values
+;
+  z1=z1new
+  z2=z2new
+  zc=zcnew
+  v1=v1new
+  v2=v2new
+  vc=vcnew
+;
+; find new accelerations and integrate
+;
+;   star 1
+;
+  r2=z2-z1
+  a2=m2*r2/(cabs(r2)*|r2|)
+  z1new=z1+dt*(v1+dt2*a2)
+  v1new=(z1new-z1)/dt
+;
+;   star 2
+;
+  r1=z1-z2
+  a1=m1*r1/(cabs(r1)*|r1|)
+  z2new=z2+dt*(v2+dt2*a1)
+  v2new=(z2new-z2)/dt
+;
+;   comet
+;
+  r1=z1-zc
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-zc
+  a2=m2*r2/(cabs(r2)*|r2|)
+  zcnew=zc+dt*(vc+dt2*(a1+a2))
+  vcnew=(zcnew-zc)/dt
+;
+; determine z
+;
+  if(@ztype==1)              ; star 1 position
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==2)          ; star 2 position
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==3)          ; both star positions
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; comet position
+    r=cabs(zcnew-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  endif
+bailout:
+  |z1|<@bailout
+default:
+  title="Gravity 2 with Comet"
+  helpfile="lkm-help\lkm-gravity.html"
+  method=multipass
+  maxiter=628
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param zc0
+    caption="comet start"
+    default=(0,1)
+    hint="Initial position of comet."
+  endparam
+  param vc0
+    caption="comet velocity"
+    default=(0,-1)
+    hint="Initial velocity of comet."
+  endparam
+  param z10
+    caption="star 1 start"
+    default=(1,0)
+    hint="Initial position of star 1."
+  endparam
+  param z20
+    caption="star 2 start"
+    default=(-1,0)
+    hint="Initial position of star 2."
+  endparam
+  param v10
+    caption="star 1 velocity"
+    default=(0,1)
+    hint="Initial velocity of star 1."
+  endparam
+  param v20
+    caption="star 2 velocity"
+    default=(0,-1)
+    hint="Initial velocity of star 2."
+  endparam
+  param mass1
+    caption="star 1 mass"
+    default=8.0
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass2
+    caption="star 2 mass"
+    default=8.0
+    hint="Increase mass to increase gravity."
+  endparam
+  param timestep
+    caption="timestep"
+    default=0.01
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="comet position" "star 1 position" \
+      "star 2 position" "both stars"
+    hint="Variable that is sent to coloring routine."
+  endparam
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+}
+
+gravity3-comet { ; Kerry Mitchell 29may2000
+;
+; Models the 2D gravitational interaction between 3 stars and
+; a (massless) comet.  Shows the chaos in the "many body" problem
+; of Newtonian gravity.  May not be suitable for general fractaling.
+;
+init:
+  z1new=@z10
+  z2new=@z20
+  z3new=@z30
+  zcnew=@zc0
+  v1new=@v10
+  v2new=@v20
+  v3new=@v30
+  vcnew=@vc0
+  float r=0.0
+  float rmin=1e20
+  float m1=@mass1
+  float m2=@mass2
+  float m3=@mass3
+  float dt=@timestep
+  float dt2=@timestep/2
+loop:
+;
+; reset z, v values
+;
+  z1=z1new
+  z2=z2new
+  z3=z3new
+  zc=zcnew
+  v1=v1new
+  v2=v2new
+  v3=v3new
+  vc=vcnew
+;
+; find new accelerations and integrate
+;
+;   star 1
+;
+  r2=z2-z1
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r3=z3-z1
+  a3=m3*r3/(cabs(r3)*|r3|)
+  z1new=z1+dt*(v1+dt2*(a2+a3))
+  v1new=(z1new-z1)/dt
+;
+;   star 2
+;
+  r1=z1-z2
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r3=z3-z2
+  a3=m3*r3/(cabs(r3)*|r3|)
+  z2new=z2+dt*(v2+dt2*(a1+a3))
+  v2new=(z2new-z2)/dt
+;
+;   star 3
+;
+  r1=z1-z3
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-z3
+  a2=m2*r2/(cabs(r2)*|r2|)
+  z3new=z3+dt*(v3+dt2*(a1+a2))
+  v3new=(z3new-z3)/dt
+;
+;   comet
+;
+  r1=z1-zc
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-zc
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r3=z3-zc
+  a3=m3*r3/(cabs(r3)*|r3|)
+  zcnew=zc+dt*(vc+dt2*(a1+a2+a3))
+  vcnew=(zcnew-zc)/dt
+;
+; determine z
+;
+  if(@ztype==1)              ; star 1 position
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==2)          ; star 2 position
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==3)          ; star 3 position
+    r=cabs(z3new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==4)          ; all star positions
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z3new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; comet position
+    r=cabs(zcnew-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  endif
+bailout:
+  |z1|<@bailout
+default:
+  title="Gravity 3 with Comet"
+  helpfile="lkm-help\lkm-gravity.html"
+  method=multipass
+  maxiter=628
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param zc0
+    caption="comet start"
+    default=(-2,-2)
+    hint="Initial position of comet."
+  endparam
+  param vc0
+    caption="comet velocity"
+    default=(0.5,0.5)
+    hint="Initial velocity of comet."
+  endparam
+  param z10
+    caption="star 1 start"
+    default=(1,0)
+    hint="Initial position of star 1."
+  endparam
+  param z20
+    caption="star 2 start"
+    default=(-0.5,0.866025403784438646763723170752936)
+    hint="Initial position of star 2."
+  endparam
+  param z30
+    caption="star 3 start"
+    default=(-0.5,-0.866025403784438646763723170752936)
+    hint="Initial position of star 3."
+  endparam
+  param v10
+    caption="star 1 velocity"
+    default=(0,1)
+    hint="Initial velocity of star 1."
+  endparam
+  param v20
+    caption="star 2 velocity"
+    default=(-0.866025403784438646763723170752936,-0.5)
+    hint="Initial velocity of star 2."
+  endparam
+  param v30
+    caption="star 3 velocity"
+    default=(0.866025403784438646763723170752936,-0.5)
+    hint="Initial velocity of star 3."
+  endparam
+  param mass1
+    caption="star 1 mass"
+    default=3.466
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass2
+    caption="star 2 mass"
+    default=3.466
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass3
+    caption="star 3 mass"
+    default=3.466
+    hint="Increase mass to increase gravity."
+  endparam
+  param timestep
+    caption="timestep"
+    default=0.01
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="comet position"\
+      "star 1 position" "star 2 position" \
+      "star 3 position" "all stars"
+    hint="Variable that is sent to coloring routine."
+  endparam
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+}
+
+gravity4-comet { ; Kerry Mitchell 29may2000
+;
+; Models the 2D gravitational interaction between 4 stars and
+; a (massless) comet.  Shows the chaos in the "many body" problem
+; of Newtonian gravity.  May not be suitable for general fractaling.
+;
+init:
+  z1new=@z10
+  z2new=@z20
+  z3new=@z30
+  z4new=@z40
+  zcnew=@zc0
+  v1new=@v10
+  v2new=@v20
+  v3new=@v30
+  v4new=@v40
+  vcnew=@vc0
+  float r=0.0
+  float rmin=1e20
+  float m1=@mass1
+  float m2=@mass2
+  float m3=@mass3
+  float m4=@mass4
+  float dt=@timestep
+  float dt2=@timestep/2
+loop:
+;
+; reset z, v values
+;
+  z1=z1new
+  z2=z2new
+  z3=z3new
+  z4=z4new
+  zc=zcnew
+  v1=v1new
+  v2=v2new
+  v3=v3new
+  v4=v4new
+  vc=vcnew
+;
+; find new accelerations and integrate
+;
+;   star 1
+;
+  r2=z2-z1
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r3=z3-z1
+  a3=m3*r3/(cabs(r3)*|r3|)
+  r4=z4-z1
+  a4=m4*r4/(cabs(r4)*|r4|)
+  z1new=z1+dt*(v1+dt2*(a2+a3+a4))
+  v1new=(z1new-z1)/dt
+;
+;   star 2
+;
+  r1=z1-z2
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r3=z3-z2
+  a3=m3*r3/(cabs(r3)*|r3|)
+  r4=z4-z2
+  a4=m4*r4/(cabs(r4)*|r4|)
+  z2new=z2+dt*(v2+dt2*(a1+a3+a4))
+  v2new=(z2new-z2)/dt
+;
+;   star 3
+;
+  r1=z1-z3
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-z3
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r4=z4-z3
+  a4=m4*r4/(cabs(r4)*|r4|)
+  z3new=z3+dt*(v3+dt2*(a1+a2+a4))
+  v3new=(z3new-z3)/dt
+;
+;   star 4
+;
+  r1=z1-z4
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-z4
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r3=z3-z4
+  a3=m3*r3/(cabs(r3)*|r3|)
+  z4new=z4+dt*(v4+dt2*(a1+a2+a3))
+  v4new=(z4new-z4)/dt
+;
+;   comet
+;
+  r1=z1-zc
+  a1=m1*r1/(cabs(r1)*|r1|)
+  r2=z2-zc
+  a2=m2*r2/(cabs(r2)*|r2|)
+  r3=z3-zc
+  a3=m3*r3/(cabs(r3)*|r3|)
+  r4=z4-zc
+  a4=m4*r4/(cabs(r4)*|r4|)
+  zcnew=zc+dt*(vc+dt2*(a1+a2+a3+a4))
+  vcnew=(zcnew-zc)/dt
+;
+; determine z
+;
+  if(@ztype==1)              ; star 1 position
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==2)          ; star 2 position
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==3)          ; star 3 position
+    r=cabs(z3new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==4)          ; star 4 position
+    r=cabs(z4new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==5)          ; all star positions
+    r=cabs(z1new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z3new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z4new-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; comet position
+    r=cabs(zcnew-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  endif
+bailout:
+  |z1|<@bailout
+default:
+  title="Gravity 4 with Comet"
+  helpfile="lkm-help\lkm-gravity.html"
+  method=multipass
+  maxiter=628
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  param zc0
+    caption="comet start"
+    default=(-1,1)
+    hint="Initial position of comet."
+  endparam
+  param vc0
+    caption="comet velocity"
+    default=(1,-1)
+    hint="Initial velocity of comet."
+  endparam
+  param z10
+    caption="star 1 start"
+    default=(1,0)
+    hint="Initial position of star 1."
+  endparam
+  param z20
+    caption="star 2 start"
+    default=(0,1)
+    hint="Initial position of star 2."
+  endparam
+  param z30
+    caption="star 3 start"
+    default=(-1,0)
+    hint="Initial position of star 3."
+  endparam
+  param z40
+    caption="star 4 start"
+    default=(0,-1)
+    hint="Initial position of star 4."
+  endparam
+  param v10
+    caption="star 1 velocity"
+    default=(0,1)
+    hint="Initial velocity of star 1."
+  endparam
+  param v20
+    caption="star 2 velocity"
+    default=(-1,0)
+    hint="Initial velocity of star 2."
+  endparam
+  param v30
+    caption="star 3 velocity"
+    default=(0,-1)
+    hint="Initial velocity of star 3."
+  endparam
+  param v40
+    caption="star 4 velocity"
+    default=(1,0)
+    hint="Initial velocity of star 4."
+  endparam
+  param mass1
+    caption="star 1 mass"
+    default=2.09
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass2
+    caption="star 2 mass"
+    default=2.09
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass3
+    caption="star 3 mass"
+    default=2.09
+    hint="Increase mass to increase gravity."
+  endparam
+  param mass4
+    caption="star 4 mass"
+    default=2.09
+    hint="Increase mass to increase gravity."
+  endparam
+  param timestep
+    caption="timestep"
+    default=0.01
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="comet position"\
+      "star 1 position" "star 2 position" \
+      "star 3 position" "star 4 position" "all stars"
+    hint="Variable that is sent to coloring routine."
+  endparam
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+}
+
+vortex2 { ; Kerry Mitchell 29may00
+;
+; Simulates the chaotic motion of the fluid around 2 point vortices.
+; May not be suitable for general fractaling.
+;
+init:
+  r1=(0,0)
+  r2=(0,0)
+  z1=@z10
+  z2=@z20
+  zp=#pixel
+  float dist=0.0
+  float r=0.0
+  float rmin=1e20
+  float fac=8.0*#pi
+  k1=fac*@gamma1
+  k2=fac*@gamma2
+  dt=@timestep
+  dt2=@timestep/2
+  dt6=@timestep/6
+loop:
+;
+; full step predictor
+;
+;    vortex 1
+;
+  r2=z1-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v11=v2temp
+;
+;    vortex 2
+;
+  r1=z2-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  v21=v1temp
+;
+;    field point
+;
+  r1=zp-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  vp1=v1temp+v2temp
+;
+; half step corrector
+;     
+  z12=z1+dt2*v11
+  z22=z2+dt2*v21
+  zp2=zp+dt2*vp1
+;
+;    vortex 1
+;
+  r2=z12-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v12=v2temp
+;
+;    vortex 2
+;
+  r1=z22-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  v22=v1temp
+;
+;    field point
+;
+  r1=zp2-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp2-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  vp2=v1temp+v2temp
+;
+; another half step
+;
+  z13=z1+dt2*v12
+  z23=z2+dt2*v22
+  zp3=zp+dt2*vp2
+;
+;    vortex 1
+;
+  r2=z13-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v13=v2temp
+;
+;    vortex 2
+;
+  r1=z23-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  v23=v1temp
+;
+;    field point
+;
+  r1=zp3-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp3-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  vp3=v1temp+v2temp
+;
+; another full step
+;
+  z14=z1+dt*v13
+  z24=z2+dt*v23
+  zp4=zp+dt*vp3
+;
+;    vortex 1
+;
+  r2=z14-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v14=v2temp
+;
+;    vortex 2
+;
+  r1=z24-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  v24=v1temp
+;
+;    field point
+;
+  r1=zp4-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp4-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  vp4=v1temp+v2temp
+;
+; put it all together
+;
+
+  z1=z1+dt6*(v11+2*v12+2*v13+v14)+dt*@freestream
+  z2=z2+dt6*(v21+2*v22+2*v23+v24)+dt*@freestream
+  vp=dt6*(vp1+2*vp2+2*vp3+vp4)+dt*@freestream
+  dist=dist+cabs(vp)
+  zp=zp+vp
+;
+; determine z
+;
+  if(@ztype==1)              ; field point position
+    z=zp
+  elseif(@ztype==2)          ; field point velocity
+    z=vp
+  elseif(@ztype==3)          ; vortex 1 position
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==4)          ; vortex 2 position
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==5)          ; both vortex positions
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; field point distance
+    z=dist
+  endif
+bailout:
+  |zp|<@bailout
+default:
+  title="Vortex 2"
+  helpfile="lkm-help\lkm-vortex.html"
+  method=multipass
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=0.5
+  angle=0
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+  param z10
+    caption="vortex 1 start"
+    default=(2,0)
+    hint="Initial position of vortex 1."
+  endparam
+  param z20
+    caption="vortex 2 start"
+    default=(-2,0)
+    hint="Initial position of vortex 2."
+  endparam
+  param gamma1
+    caption="vortex 1 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma2
+    caption="vortex 2 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param freestream
+    caption="freestream"
+    default=(0,0)
+    hint="Velocity of oncoming flow."
+  endparam
+  param timestep
+    caption="timestep"
+    default=(0.01,0)
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="field distance" "field position" "field velocity"\
+      "vortex 1 position" "vortex 2 position" \
+      "both positions"
+    hint="Variable that is sent to coloring routine."
+  endparam
+}
+
+vortex3 { ; Kerry Mitchell 29may00
+;
+; Simulates the chaotic motion of the fluid around 3 point vortices.
+; May not be suitable for general fractaling.
+;
+init:
+  r1=(0,0)
+  r2=(0,0)
+  r3=(0,0)
+  z1=@z10
+  z2=@z20
+  z3=@z30
+  zp=#pixel
+  float dist=0.0
+  float r=0.0
+  float rmin=1e20
+  float fac=4.0*#pi
+  k1=fac*@gamma1
+  k2=fac*@gamma2
+  k3=fac*@gamma3
+  dt=@timestep
+  dt2=@timestep/2
+  dt6=@timestep/6
+loop:
+;
+; full step predictor
+;
+;    vortex 1
+;
+  r2=z1-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z1-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v11=v2temp+v3temp
+;
+;    vortex 2
+;
+  r1=z2-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z2-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v21=v1temp+v3temp
+;
+;    vortex 3
+;
+  r1=z3-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z3-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v31=v1temp+v2temp
+;
+;    field point
+;
+  r1=zp-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  vp1=v1temp+v2temp+v3temp
+;
+; half step corrector
+;     
+  z12=z1+dt2*v11
+  z22=z2+dt2*v21
+  z32=z3+dt2*v31
+  zp2=zp+dt2*vp1
+;
+;    vortex 1
+;
+  r2=z12-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z12-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v12=v2temp+v3temp
+;
+;    vortex 2
+;
+  r1=z22-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z22-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v22=v1temp+v3temp
+;
+;    vortex 3
+;
+  r1=z32-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z32-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v32=v1temp+v2temp
+;
+;    field point
+;
+  r1=zp2-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp2-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp2-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  vp2=v1temp+v2temp+v3temp
+;
+; another half step
+;
+  z13=z1+dt2*v12
+  z23=z2+dt2*v22
+  z33=z3+dt2*v32
+  zp3=zp+dt2*vp2
+;
+;    vortex 1
+;
+  r2=z13-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z13-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v13=v2temp+v3temp
+;
+;    vortex 2
+;
+  r1=z23-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z23-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v23=v1temp+v3temp
+;
+;    vortex 3
+;
+  r1=z33-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z33-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v33=v1temp+v2temp
+;
+;    field point
+;
+  r1=zp3-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp3-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp3-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  vp3=v1temp+v2temp+v3temp
+;
+; another full step
+;
+  z14=z1+dt*v13
+  z24=z2+dt*v23
+  z34=z3+dt*v33
+  zp4=zp+dt*vp3
+;
+;    vortex 1
+;
+  r2=z14-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z14-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v14=v2temp+v3temp
+;
+;    vortex 2
+;
+  r1=z24-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z24-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v24=v1temp+v3temp
+;
+;    vortex 3
+;
+  r1=z34-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z34-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  v34=v1temp+v2temp
+;
+;    field point
+;
+  r1=zp4-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp4-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp4-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  vp4=v1temp+v2temp+v3temp
+;
+; put it all together
+;
+  z1=z1+dt6*(v11+2*v12+2*v13+v14)+dt*@freestream
+  z2=z2+dt6*(v21+2*v22+2*v23+v24)+dt*@freestream
+  z3=z3+dt6*(v31+2*v32+2*v33+v34)+dt*@freestream
+  vp=dt6*(vp1+2*vp2+2*vp3+vp4)+dt*@freestream
+  dist=dist+cabs(vp)
+  zp=zp+vp
+;
+; determine z
+;
+  if(@ztype==1)              ; field point position
+    z=zp
+  elseif(@ztype==2)          ; field point velocity
+    z=vp
+  elseif(@ztype==3)          ; vortex 1 position
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==4)          ; vortex 2 position
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==5)          ; vortex 3 position
+    r=cabs(z3-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==6)          ; all vortex positions
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z3-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; field point distance
+    z=dist
+  endif
+bailout:
+  |zp|<@bailout
+default:
+  title="Vortex 3"
+  helpfile="lkm-help\lkm-vortex.html"
+  method=multipass
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=0.5
+  angle=0
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+  param z10
+    caption="vortex 1 start"
+    default=(2,0)
+    hint="Initial position of vortex 1."
+  endparam
+  param z20
+    caption="vortex 2 start"
+    default=(-1,1.7320508075689)
+    hint="Initial position of vortex 2."
+  endparam
+  param z30
+    caption="vortex 3 start"
+    default=(-1,-1.7320508075689)
+    hint="Initial position of vortex 3."
+  endparam
+  param gamma1
+    caption="vortex 1 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma2
+    caption="vortex 2 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma3
+    caption="vortex 3 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param freestream
+    caption="freestream"
+    default=(0,0)
+    hint="Velocity of oncoming flow."
+  endparam
+  param timestep
+    caption="timestep"
+    default=(0.01,0)
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="field distance" "field position" "field velocity"\
+      "vortex 1 position" "vortex 2 position" \
+      "vortex 3 position" "all positions"
+    hint="Variable that is sent to coloring routine."
+  endparam
+}
+
+vortex4 { ; Kerry Mitchell 29may00
+;
+; Simulates the chaotic motion of the fluid around 4 point vortices.
+; May not be suitable for general fractaling.
+;
+init:
+  r1=(0,0)
+  r2=(0,0)
+  r3=(0,0)
+  r4=(0,0)
+  z1=@z10
+  z2=@z20
+  z3=@z30
+  z4=@z40
+  zp=#pixel
+  float dist=0.0
+  float r=0.0
+  float rmin=1e20
+  float fac=8.0/3.0*#pi
+  k1=fac*@gamma1
+  k2=fac*@gamma2
+  k3=fac*@gamma3
+  k4=fac*@gamma4
+  dt=@timestep
+  dt2=@timestep/2
+  dt6=@timestep/6
+loop:
+;
+; full step predictor
+;
+;    vortex 1
+;
+  r2=z1-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z1-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z1-z4                   ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v11=v2temp+v3temp+v4temp
+;
+;    vortex 2
+;
+  r1=z2-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z2-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z2-z4                   ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v21=v1temp+v3temp+v4temp
+;
+;    vortex 3
+;
+  r1=z3-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z3-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r4=z3-z4                   ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v31=v1temp+v2temp+v4temp
+;
+;    vortex 4
+;
+  r1=z4-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z4-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z4-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v41=v1temp+v2temp+v3temp
+;
+;    field point
+;
+  r1=zp-z1                   ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp-z2                   ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp-z3                   ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=zp-z4                   ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  vp1=v1temp+v2temp+v3temp+v4temp
+;
+; half step corrector
+;     
+  z12=z1+dt2*v11
+  z22=z2+dt2*v21
+  z32=z3+dt2*v31
+  z42=z4+dt2*v41
+  zp2=zp+dt2*vp1
+;
+;    vortex 1
+;
+  r2=z12-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z12-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z12-z42                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v12=v2temp+v3temp+v4temp
+;
+;    vortex 2
+;
+  r1=z22-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z22-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z22-z42                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v22=v1temp+v3temp+v4temp
+;
+;    vortex 3
+;
+  r1=z32-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z32-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r4=z32-z42                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v32=v1temp+v2temp+v4temp
+;
+;    vortex 4
+;
+  r1=z42-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z42-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z42-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v42=v1temp+v2temp+v3temp
+;
+;    field point
+;
+  r1=zp2-z12                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp2-z22                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp2-z32                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=zp2-z42                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  vp2=v1temp+v2temp+v3temp+v4temp
+;
+; another half step
+;
+  z13=z1+dt2*v12
+  z23=z2+dt2*v22
+  z33=z3+dt2*v32
+  z43=z4+dt2*v42
+  zp3=zp+dt2*vp2
+;
+;    vortex 1
+;
+  r2=z13-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z13-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z13-z43                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v13=v2temp+v3temp+v4temp
+;
+;    vortex 2
+;
+  r1=z23-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z23-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z23-z43                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v23=v1temp+v3temp+v4temp
+;
+;    vortex 3
+;
+  r1=z33-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z33-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r4=z33-z43                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v33=v1temp+v2temp+v4temp
+;
+;    vortex 4
+;
+  r1=z43-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z43-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z43-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v43=v1temp+v2temp+v3temp
+;
+;    field point
+;
+  r1=zp3-z13                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp3-z23                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp3-z33                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=zp3-z43                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  vp3=v1temp+v2temp+v3temp+v4temp
+;
+; another full step
+;
+  z14=z1+dt*v13
+  z24=z2+dt*v23
+  z34=z3+dt*v33
+  z44=z4+dt*v43
+  zp4=zp+dt*vp3
+;
+;    vortex 1
+;
+  r2=z14-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z14-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z14-z44                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v14=v2temp+v3temp+v4temp
+;
+;    vortex 2
+;
+  r1=z24-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r3=z24-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=z24-z44                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v24=v1temp+v3temp+v4temp
+;
+;    vortex 3
+;
+  r1=z34-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z34-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r4=z34-z44                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  v34=v1temp+v2temp+v4temp
+;
+;    vortex 4
+;
+  r1=z44-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=z44-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=z44-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  v44=v1temp+v2temp+v3temp
+;
+;    field point
+;
+  r1=zp4-z14                 ; from vortex 1
+  if(cabs(r1)<1.0)           ; inside the core
+    v1temp=k1*r1
+  else                       ; outside the core
+    v1temp=k1*r1/|r1|
+  endif
+  r2=zp4-z24                 ; from vortex 2
+  if(cabs(r2)<1.0)           ; inside the core
+    v2temp=k2*r2
+  else                       ; outside the core
+    v2temp=k2*r2/|r2|
+  endif
+  r3=zp4-z34                 ; from vortex 3
+  if(cabs(r3)<1.0)           ; inside the core
+    v3temp=k3*r3
+  else                       ; outside the core
+    v3temp=k3*r3/|r3|
+  endif
+  r4=zp4-z44                 ; from vortex 4
+  if(cabs(r4)<1.0)           ; inside the core
+    v4temp=k4*r4
+  else                       ; outside the core
+    v4temp=k4*r4/|r4|
+  endif
+  vp4=v1temp+v2temp+v3temp+v4temp
+;
+; put it all together
+;
+  z1=z1+dt6*(v11+2*v12+2*v13+v14)+dt*@freestream
+  z2=z2+dt6*(v21+2*v22+2*v23+v24)+dt*@freestream
+  z3=z3+dt6*(v31+2*v32+2*v33+v34)+dt*@freestream
+  z4=z4+dt6*(v41+2*v42+2*v43+v44)+dt*@freestream
+  vp=dt6*(vp1+2*vp2+2*vp3+vp4)+dt*@freestream
+  dist=dist+cabs(vp)
+  zp=zp+vp
+;
+; determine z
+;
+  if(@ztype==1)              ; field point position
+    z=zp
+  elseif(@ztype==2)          ; field point velocity
+    z=vp
+  elseif(@ztype==3)          ; vortex 1 position
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==4)          ; vortex 2 position
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==5)          ; vortex 3 position
+    r=cabs(z3-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==6)          ; vortex 4 position
+    r=cabs(z4-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  elseif(@ztype==7)          ; all vortex positions
+    r=cabs(z1-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z2-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z3-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    r=cabs(z4-#pixel)
+    if(r<rmin)
+      rmin=r
+    endif
+    z=rmin
+  else                       ; field point distance
+    z=dist
+  endif
+bailout:
+  |zp|<@bailout
+default:
+  title="Vortex 4"
+  helpfile="lkm-help\lkm-vortex.html"
+  method=multipass
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=0.5
+  angle=0
+  param bailout
+    caption="bailout"
+    default=1000.0
+    hint="All points will be 'inside', for reasonable \
+      parameters choices."
+  endparam
+  param z10
+    caption="vortex 1 start"
+    default=(2,0)
+    hint="Initial position of vortex 1."
+  endparam
+  param z20
+    caption="vortex 2 start"
+    default=(0,2)
+    hint="Initial position of vortex 2."
+  endparam
+  param z30
+    caption="vortex 3 start"
+    default=(-2,0)
+    hint="Initial position of vortex 3."
+  endparam
+  param z40
+    caption="vortex 4 start"
+    default=(0,-2)
+    hint="Initial position of vortex 4."
+  endparam
+  param gamma1
+    caption="vortex 1 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma2
+    caption="vortex 2 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma3
+    caption="vortex 3 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param gamma4
+    caption="vortex 4 strength"
+    default=(0,2)
+    hint="Real part is source strength, imaginary part is vortex strength."
+  endparam
+  param freestream
+    caption="freestream"
+    default=(0,0)
+    hint="Velocity of oncoming flow."
+  endparam
+  param timestep
+    caption="timestep"
+    default=(0.01,0)
+    hint="How much time transpires between iterations. \
+      Smaller is usually better."
+  endparam
+  param ztype
+    caption="z variable"
+    default=0
+    enum="field distance" "field position" "field velocity"\
+      "vortex 1 position" "vortex 2 position" \
+      "vortex 3 position" "vortex 4 position" "all positions"
+    hint="Variable that is sent to coloring routine."
+  endparam
+}
+
+general-tent-mandelbrot { ; Kerry Mitchell 05oct2000
+;
+; Variation on the standard tent map
+;
+init:
+  z=@manparam
+  c=pixel
+  float r=0.0
+  if(@rotunit==1)            ; radians
+    r=@rotamount
+  else                       ; degrees
+    r=@rotamount*#pi/180
+  endif 
+  rot0=cos(r)+flip(sin(r))
+  rot=rot0
+  temp=(0,0)
+loop:
+;
+; rotate the map
+;
+  if(@rottype==1)            ; constant rotation
+    temp=rot0*z
+  elseif(@rottype==2)        ; progressive rotation
+    rot=rot*rot0
+    temp=rot*z
+  elseif(@rottype==3)        ; oscillating rotation
+    rot=rot0/rot
+    temp=rot*z
+  else                       ; no rotation
+    temp=z
+  endif
+;
+; choose the map variable
+;
+  if(@rtype==1)              ; real part
+    r=real(temp)
+  elseif(@rtype==2)          ; imag part
+    r=imag(temp)
+  elseif(@rtype==3)          ; real*imag
+    r=imag(temp)*real(temp)
+  elseif(@rtype==4)          ; imag/real
+    r=imag(temp)/real(temp)
+  else                       ; magnitude
+    r=cabs(temp)
+  endif
+;
+; execute tent map
+;
+  if(r<=1.0)
+    z=c*temp
+  else
+    z=c*(2-temp)
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="General Tent Mandelbrot"
+  helpfile="lkm-help\lkm-tent.html"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  magn=1.0
+  angle=0
+  param manparam
+    caption="initial z"
+    default=(1,0)
+    hint="Use (1,0) for the standard map."
+  endparam
+  param bailout
+    caption="bailout"
+    default=1000.
+  endparam
+  param rtype
+    caption="r type"
+    default=1
+    enum="magnitude" "real part" "imag part" "real*imag" "imag/real"
+    hint="Determines the r value used in the tent map."
+  endparam
+  param rottype
+    caption="rotation type"
+    default=0
+    enum="none" "constant" "progressive" "oscillating"
+    hint="In 'constant' mode, the same angle is used every iteration. \
+      In 'progressive' mode, the angle is increased by the amount every \
+      iteration. In 'oscillating' mode, the map is rotated forward, then \
+      back, then forward, etc."
+  endparam
+  param rotamount
+    caption="rotation amount"
+    default=45.0
+    hint="How much the map is rotated."
+  endparam
+  param rotunit
+    caption="rotation units"
+    default=0
+    enum="degrees" "radians"
+    hint="Units in which the rotation is expressed."
+  endparam
+switch:
+  type="general-tent-julia"
+  julparam=#pixel
+  bailout=bailout
+  rtype=rtype
+  rottype=rottype
+  rotamount=rotamount
+  rotunit=rotunit
+}
+
+general-tent-julia { ; Kerry Mitchell 05oct2000
+;
+; Variation on the standard tent map
+;
+init:
+  c=@julparam
+  z=pixel
+  float r=0.0
+  if(@rotunit==1)            ; radians
+    r=@rotamount
+  else                       ; degrees
+    r=@rotamount*#pi/180
+  endif 
+  rot0=cos(r)+flip(sin(r))
+  rot=rot0
+  temp=(0,0)
+loop:
+;
+; rotate the map
+;
+  if(@rottype==1)            ; constant rotation
+    temp=rot0*z
+  elseif(@rottype==2)        ; progressive rotation
+    rot=rot*rot0
+    temp=rot*z
+  elseif(@rottype==3)        ; oscillating rotation
+    rot=rot0/rot
+    temp=rot*z
+  else                       ; no rotation
+    temp=z
+  endif
+;
+; choose the map variable
+;
+  if(@rtype==1)              ; real part
+    r=real(temp)
+  elseif(@rtype==2)          ; imag part
+    r=imag(temp)
+  elseif(@rtype==3)          ; real*imag
+    r=imag(temp)*real(temp)
+  elseif(@rtype==4)          ; imag/real
+    r=imag(temp)/real(temp)
+  else                       ; magnitude
+    r=cabs(temp)
+  endif
+;
+; execute tent map
+;
+  if(r<=1.0)
+    z=c*temp
+  else
+    z=c*(2-temp)
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="General Tent Julia"
+  helpfile="lkm-help\lkm-tent.html"
+  maxiter=100
+  periodicity=0
+  center=(1,0)
+  magn=1.0
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(1.5,0.5)
+  endparam
+  param bailout
+    caption="bailout"
+    default=1000.
+  endparam
+  param rtype
+    caption="r type"
+    default=1
+    enum="magnitude" "real part" "imag part" "real*imag" "imag/real"
+    hint="Determines the r value used in the tent map."
+  endparam
+  param rottype
+    caption="rotation type"
+    default=0
+    enum="none" "constant" "progressive" "oscillating"
+    hint="In 'constant' mode, the same angle is used every iteration. \
+      In 'progressive' mode, the angle is increased by the amount every \
+      iteration. In 'oscillating' mode, the map is rotated forward, then \
+      back, then forward, etc."
+  endparam
+  param rotamount
+    caption="rotation amount"
+    default=45.0
+    hint="How much the map is rotated."
+  endparam
+  param rotunit
+    caption="rotation units"
+    default=0
+    enum="degrees" "radians"
+    hint="Units in which the rotation is expressed."
+  endparam
+switch:
+  type="general-tent-mandelbrot"
+  bailout=bailout
+  rtype=rtype
+  rottype=rottype
+  rotamount=rotamount
+  rotunit=rotunit
+}
+
+compounding-tweaked-mandelbrot { ; Kerry Mitchell 23oct00
+;
+; Tweaks either c or z each iteration, so that the tweaking compounds
+;
+init:
+  z=@manparam
+  c=#pixel
+loop:
+  z=z^@nexp+c
+  if(@tweaktype==1)
+    c=c+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==2)
+    c=c+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==3)
+    c=c+@tweakage*@tweakfunction(z/c)
+  elseif(@tweaktype==4)
+    z=z+@tweakage*@tweakfunction(c)
+  elseif(@tweaktype==5)
+    z=z+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==6)
+    z=z+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==7)
+    z=z+@tweakage*@tweakfunction(z/c)
+  else
+    c=c+@tweakage*@tweakfunction(c)
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="Compounding Tweaked Mandelbrot"
+  helpfile="lkm-help\lkm-compounding.html"
+  maxiter=100
+  periodicity=0
+  center=(-0.5,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+  param manparam
+    caption="initial z"
+    default=(0.0,0.0)
+    hint="Use (0,0) for something resembling the \
+      standard Mandelbrot set."
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param nexp
+    caption="exponent"
+    default=(2,0)
+    hint="Use 2.0 for something resembling the \
+      standard Mandelbrot set."
+  endparam
+  param tweaktype
+    caption="tweaking type"
+    default=0
+    enum="c; fn(c)" "c; fn(z)" "c; fn(c*z)" "c; fn(z/c)" \
+      "z; fn(c)" "z; fn(z)" "z; fn(c*z)" "z; fn(z/c)"
+    hint="Sets what gets tweaked, and how."
+  endparam
+  param tweakage
+    caption="tweaking amount"
+    default=(0.01,0.0)
+    hint="Make small for something resembling the \
+      standard Mandelbrot set."
+  endparam
+  func tweakfunction
+    caption="tweaking function"
+    default=recip()
+    hint="Function of the tweaking variable."
+  endfunc
+switch:
+  type="compounding-tweaked-julia"
+  julparam=#pixel
+  nexp=nexp
+  bailout=bailout
+  tweaktype=tweaktype
+  tweakage=tweakage
+}
+
+compounding-tweaked-julia { ; Kerry Mitchell 23oct2000
+;
+; Tweaks either c or z each iteration, so that the tweaking compounds
+;
+init:
+  z=#pixel
+  c=@julparam
+loop:
+  z=z^@nexp+c
+  if(@tweaktype==1)
+    c=c+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==2)
+    c=c+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==3)
+    c=c+@tweakage*@tweakfunction(z/c)
+  elseif(@tweaktype==4)
+    z=z+@tweakage*@tweakfunction(c)
+  elseif(@tweaktype==5)
+    z=z+@tweakage*@tweakfunction(z)
+  elseif(@tweaktype==6)
+    z=z+@tweakage*@tweakfunction(c*z)
+  elseif(@tweaktype==7)
+    z=z+@tweakage*@tweakfunction(z/c)
+  else
+    c=c+@tweakage*@tweakfunction(c)
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="Compounding Tweaked Julia"
+  helpfile="lkm-help\lkm-compounding.html"
+  maxiter=100
+  periodicity=0
+  center=(0,0)
+  magn=1
+  angle=0
+  method=multipass
+  param julparam
+    caption="Julia seed"
+    default=(0.0,1.0)
+  endparam
+  param nexp
+    caption="exponent"
+    default=(2,0)
+    hint="Use 2.0 for something resembling the \
+      standard Julia set."
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param tweaktype
+    caption="tweaking type"
+    default=0
+    enum="c; fn(c)" "c; fn(z)" "c; fn(c*z)" "c; fn(z/c)" \
+      "z; fn(c)" "z; fn(z)" "z; fn(c*z)" "z; fn(z/c)"
+    hint="Sets what gets tweaked, and how."
+  endparam
+  param tweakage
+    caption="tweaking amount"
+    default=(0.01,0.0)
+    hint="Make small for something resembling the \
+      standard Julia set."
+  endparam
+  func tweakfunction
+    caption="tweaking function"
+    default=recip()
+    hint="Function of the tweaking variable."
+  endfunc
+switch:
+  type="compounding-tweaked-mandelbrot"
+  bailout=bailout
+  nexp=nexp
+  tweaktype=tweaktype
+  tweakage=tweakage
+}
+
+pixel { ; Kerry Mitchell 12nov2000
+; 
+; Does nothing.  All pixels are "outside".
+;
+init:
+  z=#pixel
+loop:
+  z=#pixel
+bailout:
+  0==1
+default:
+  title="Pixel"
+  maxiter=1
+  method=multipass
+  periodicity=0
+}
+
+fibonacci-mandelbrot { ; Kerry Mitchell 06dec2000
+;
+; Uses previous z values instead of powers of the last z.
+;
+init:
+  z1=@initialz
+  z2=@initialz
+  z3=@initialz
+  z4=@initialz
+  z5=@initialz
+  z=(0,0)
+  c=#pixel
+loop:
+  if(@order==1)
+    z=@weight1*z1+(1-@weight1)*z3
+    z=z*(@weight2*z2+(1-@weight2)*z3)
+    z=z*z3+c
+    z1=z2
+    z2=z3
+    z3=z
+  elseif(@order==2)
+    z=@weight1*z1+(1-@weight1)*z4
+    z=z*(@weight2*z2+(1-@weight2)*z4)
+    z=z*(@weight3*z3+(1-@weight3)*z4)
+    z=z*z4+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z
+  elseif(@order==3)
+    z=@weight1*z1+(1-@weight1)*z5
+    z=z*(@weight2*z2+(1-@weight2)*z5)
+    z=z*(@weight3*z3+(1-@weight3)*z5)
+    z=z*(@weight4*z4+(1-@weight4)*z5)
+    z=z*z5+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z5
+    z5=z
+  else
+    z=@weight1*z1+(1-@weight1)*z2
+    z=z*z2+c
+    z1=z2
+    z2=z
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="Fibonacci Mandelbrot"
+  helpfile="lkm-help\lkm-fibonacci.html"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+  param initialz
+    caption="initial z"
+    default=(0,0)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param order
+    caption="order"
+    hint="Similar to power."
+    default=0
+    enum="2" "3" "4" "5"
+  endparam
+  param weight1
+    caption="weight 1"
+    hint="How much of first iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight2
+    caption="weight 2"
+    hint="How much of second iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight3
+    caption="weight 3"
+    hint="How much of third iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight4
+    caption="weight 4"
+    hint="How much of fourth iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+switch:
+  type="fibonacci-julia"
+  julparam=#pixel
+  bailout=bailout
+  order=order
+  weight1=weight1
+  weight2=weight2
+  weight3=weight3
+  weight4=weight4
+}
+
+fibonacci-julia { ; Kerry Mitchell 06dec2000
+;
+; Uses previous z values instead of powers of the last z.
+;
+init:
+  z1=#pixel
+  z2=#pixel
+  z3=#pixel
+  z4=#pixel
+  z5=#pixel
+  z=(0,0)
+  c=@julparam
+loop:
+  if(@order==1)
+    z=@weight1*z1+(1-@weight1)*z3
+    z=z*(@weight2*z2+(1-@weight2)*z3)
+    z=z*z3+c
+    z1=z2
+    z2=z3
+    z3=z
+  elseif(@order==2)
+    z=@weight1*z1+(1-@weight1)*z4
+    z=z*(@weight2*z2+(1-@weight2)*z4)
+    z=z*(@weight3*z3+(1-@weight3)*z4)
+    z=z*z4+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z
+  elseif(@order==3)
+    z=@weight1*z1+(1-@weight1)*z5
+    z=z*(@weight2*z2+(1-@weight2)*z5)
+    z=z*(@weight3*z3+(1-@weight3)*z5)
+    z=z*(@weight4*z4+(1-@weight4)*z5)
+    z=z*z5+c
+    z1=z2
+    z2=z3
+    z3=z4
+    z4=z5
+    z5=z
+  else
+    z=@weight1*z1+(1-@weight1)*z2
+    z=z*z2+c
+    z1=z2
+    z2=z
+  endif
+bailout:
+  |z|<@bailout
+default:
+  title="Fibonacci Julia"
+  helpfile="lkm-help\lkm-fibonacci.html"
+  maxiter=100
+  periodicity=0
+  center=(0.0,0.0)
+  magn=1.0
+  angle=0
+  method=multipass
+  param julparam
+    caption="Julia parameter"
+    default=(0,1)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=1000.0
+  endparam
+  param order
+    caption="order"
+    hint="Similar to power."
+    default=0
+    enum="2" "3" "4" "5"
+  endparam
+  param weight1
+    caption="weight 1"
+    hint="How much of first iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight2
+    caption="weight 2"
+    hint="How much of second iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight3
+    caption="weight 3"
+    hint="How much of third iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+  param weight4
+    caption="weight 4"
+    hint="How much of fourth iterate is used. Use (0,0) for standard \
+      Mandelbrot."
+    default=(1,0)
+  endparam
+switch:
+  type="fibonacci-mandelbrot"
+  bailout=bailout
+  order=order
+  weight1=weight1
+  weight2=weight2
+  weight3=weight3
+  weight4=weight4
+}

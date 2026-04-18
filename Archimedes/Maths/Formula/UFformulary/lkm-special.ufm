@@ -1,0 +1,801 @@
+comment {
+
+Special calculation formulas developed by Kerry Mitchell
+
+Note! These are experimental, beta tests, highly specialized,
+or worse. Not for the faint of heart or new to UF. In general,
+there's little to no support or documentation. In short, you're
+on your own.
+
+Have fun! :-)
+}
+
+aug01-transcendental-mandelbrot2 {
+init:
+  c=#pixel
+  if(cabs(@manparam)==0.0)
+    if(@functype==1)         ; exp(z)*c
+      z=0
+    elseif(@functype==2)     ; sin(z)+c
+      z=c+1
+    elseif(@functype==3)     ; sin(z)*c
+      z=c
+    elseif(@functype==4)     ; cos(z)+c
+      z=c+1
+    elseif(@functype==5)     ; cos(z)*c
+      z=c
+    elseif(@functype==6)     ; tan(z)+c
+      z=c+(0,1)
+    elseif(@functype==7)     ; tan(z)*c
+      z=c*(0,1)
+    else                     ; exp(z)+c
+      z=c
+    endif
+  else
+    z=@manparam
+  endif
+  bool done=false
+  float r=0.0
+loop:
+  if(@functype==1)           ; exp(z)*c
+    z=exp(z)*c
+    r=real(z)
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==2)       ; sin(z)+c
+    z=sin(z)+c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==3)       ; sin(z)*c
+    z=sin(z)*c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==4)       ; cos(z)+c
+    z=cos(z)+c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==5)       ; cos(z)*c
+    z=cos(z)*c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==6)       ; tan(z)+c
+    z=tan(z)+c
+    r=cabs(z)
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==7)       ; tan(z)*c
+    z=tan(z)*c
+    r=cabs(z)
+    if(r>@bailout)
+      done=true
+    endif
+  else                       ; exp(z)+c
+    z=exp(z)+c
+    r=real(z)
+    if(r>@bailout)
+      done=true
+    endif
+  endif
+bailout:
+  done==false
+default:
+  title="Transcendental Mandelbrot2"
+  maxiter=100
+  center=(0,0)
+  magn=0.25
+  periodicity=0
+  method=multipass
+  param manparam
+    caption="initial z"
+    default=(0,0)
+    hint="Use (0,0) for critical point."
+  endparam
+  param bailout
+    caption="bailout"
+    default=16.0
+    min=0.0
+  endparam
+  param functype
+    caption="function type"
+    default=0
+    enum="exp(z)+c" "exp(z)*c" "sin(z)+c" "sin(z)*c"\
+      "cos(z)+c" "cos(z)*c" "tan(z)+c" "tan(z)*c"
+  endparam
+switch:
+  type="aug01-transcendental-julia2"
+  julparam=#pixel
+  bailout=bailout
+  functype=functype
+}
+
+aug01-transcendental-julia2 {
+init:
+  z=#pixel
+  c=@julparam
+  bool done=false
+  float r=0.0
+loop:
+  if(@functype==1)           ; exp(z)*c
+    z=exp(z)*c
+    r=real(z)
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==2)       ; sin(z)+c
+    z=sin(z)+c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==3)       ; sin(z)*c
+    z=sin(z)*c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==4)       ; cos(z)+c
+    z=cos(z)+c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==5)       ; cos(z)*c
+    z=cos(z)*c
+    r=abs(imag(z))
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==6)       ; tan(z)+c
+    z=tan(z)+c
+    r=cabs(z)
+    if(r>@bailout)
+      done=true
+    endif
+  elseif(@functype==7)       ; tan(z)*c
+    z=tan(z)*c
+    r=cabs(z)
+    if(r>@bailout)
+      done=true
+    endif
+  else                       ; exp(z)+c
+    z=exp(z)+c
+    r=real(z)
+    if(r>@bailout)
+      done=true
+    endif
+  endif
+bailout:
+  done==false
+default:
+  title="Transcendental Julia2"
+  maxiter=100
+  center=(0,0)
+  magn=0.25
+  periodicity=0
+  method=multipass
+  param julparam
+    caption="Julia parameter"
+    default=(1,1)
+  endparam
+  param bailout
+    caption="bailout"
+    default=16.0
+    min=0.0
+  endparam
+  param functype
+    caption="function type"
+    default=0
+    enum="exp(z)+c" "exp(z)*c" "sin(z)+c" "sin(z)*c"\
+      "cos(z)+c" "cos(z)*c" "tan(z)+c" "tan(z)*c"
+  endparam
+switch:
+  type="aug01-transcendental-mandelbrot2"
+  bailout=bailout
+  functype=functype
+}
+
+jul01-embossed-trans-mandelbrot2 {
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  c1=#pixel-dr
+  c2=#pixel+dr
+  if(cabs(@manparam)==0.0)
+    if(@functype==1)         ; exp(z)*c
+      z1=0
+      z2=0
+    elseif(@functype==2)     ; sin(z)+c
+      z1=c1+1
+      z2=c2+1
+    elseif(@functype==3)     ; sin(z)*c
+      z1=c1
+      z2=c2
+    elseif(@functype==4)     ; cos(z)+c
+      z1=c1+1
+      z2=c2+1
+    elseif(@functype==5)     ; cos(z)*c
+      z1=c1
+      z2=c2
+    elseif(@functype==6)     ; tan(z)+c
+      z1=c1+(0,1)
+      z2=c2+(0,1)
+    elseif(@functype==7)     ; tan(z)*c
+      z1=c1*(0,1)
+      z2=c2*(0,1)
+    else                     ; exp(z)+c
+      z1=c1
+      z2=c2
+    endif
+  else
+    z1=@manparam
+    z2=@manparam
+  endif
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float rmin1=1e20
+  float rmin2=1e20
+  float t=0.0
+  int part1=0
+  int part2=0
+loop:
+  iter=iter+1
+;
+; iterate 1st test point
+;
+  if(iter1==0)
+    if(@functype==1)         ; exp(z)*c
+      z1=exp(z1)*c1
+      r=real(z1)
+      t=imag(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==2)     ; sin(z)+c
+      z1=sin(z1)+c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==3)     ; sin(z)*c
+      z1=sin(z1)*c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==4)     ; cos(z)+c
+      z1=cos(z1)+c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==5)     ; cos(z)*c
+      z1=cos(z1)*c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==6)     ; tan(z)+c
+      z1=tan(z1)+c1
+      r=cabs(z1)
+      t=atan2(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==7)     ; tan(z)*c
+      z1=tan(z1)*c1
+      r=cabs(z1)
+      t=atan2(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    else                     ; exp(z)+c
+      z1=exp(z1)+c1
+      r=real(z1)
+      t=imag(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    endif
+;
+; embossing types
+;
+    if(@parttype==1)         ; last bailout variable
+      if(@logscale==true)
+        r=log(abs(r))
+      endif
+      part1=round(r*@numsect)
+    elseif(@parttype==2)     ; last complement
+      if(@logscale==true)
+        t=log(abs(t))
+      endif
+      part1=round(t*@numsect)
+    elseif(@parttype==3)     ; iteration at smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        part1=iter
+      endif
+    elseif(@parttype==4)     ; smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        if(@logscale==true)
+          r=log(abs(r))
+        endif
+        part1=round(r*@numsect)
+      endif
+    elseif(@parttype==5)     ; complement at smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        if(@logscale==true)
+          t=log(abs(t))
+        endif
+        part1=round(t*@numsect)
+      endif
+    else                     ; iteration at bailout
+      part1=iter1
+    endif
+  endif
+;
+; iterate 2nd test point
+;
+  if(iter2==0)
+    if(@functype==1)         ; exp(z)*c
+      z2=exp(z2)*c2
+      r=real(z2)
+      t=imag(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==2)     ; sin(z)+c
+      z2=sin(z2)+c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==3)     ; sin(z)*c
+      z2=sin(z2)*c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==4)     ; cos(z)+c
+      z2=cos(z2)+c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==5)     ; cos(z)*c
+      z2=cos(z2)*c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==6)     ; tan(z)+c
+      z2=tan(z2)+c2
+      r=cabs(z2)
+      t=atan2(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==7)     ; tan(z)*c
+      z2=tan(z2)*c2
+      r=cabs(z2)
+      t=atan2(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    else                     ; exp(z)+c
+      z2=exp(z2)+c2
+      r=real(z2)
+      t=imag(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    endif
+;
+; embossing types
+;
+    if(@parttype==1)         ; last bailout variable
+      if(@logscale==true)
+        r=log(abs(r))
+      endif
+      part2=round(r*@numsect)
+    elseif(@parttype==2)     ; last complement
+      if(@logscale==true)
+        t=log(abs(t))
+      endif
+      part2=round(t*@numsect)
+    elseif(@parttype==3)     ; iteration at smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        part2=iter
+      endif
+    elseif(@parttype==4)     ; smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        if(@logscale==true)
+          r=log(abs(r))
+        endif
+        part2=round(r*@numsect)
+      endif
+    elseif(@parttype==5)     ; complement at smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        if(@logscale==true)
+          t=log(abs(t))
+        endif
+        part2=round(t*@numsect)
+      endif
+    else                     ; iteration at bailout
+      part2=iter2
+    endif
+  endif
+;
+; assemble z for coloring
+;
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Trans. Mandelbrot2"
+  maxiter=100
+  periodicity=0
+  method=multipass
+  center=(0,0)
+  magn=0.25
+  angle=0
+  param manparam
+    caption="initial z"
+    default=(0,0)
+    hint="Use (0,0) for critical point."
+  endparam
+  param bailout
+    caption="bailout value"
+    default=16.0
+    min=0.0
+  endparam
+  param functype
+    caption="function type"
+    default=0
+    enum="exp(z)+c" "exp(z)*c" "sin(z)+c" "sin(z)*c"\
+      "cos(z)+c" "cos(z)*c" "tan(z)+c" "tan(z)*c"
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iterations to bailout" "last b.v" "last complement"\
+      "iterations to min b.v." "minimum b.v." "comp. @ min b.v."
+  endparam
+  param numsect
+    caption="# of sections"
+    default=32.0
+    min=0.0
+  endparam
+  param logscale
+    caption="log scale?"
+    default=false
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparent light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+switch:
+  type="jul01-embossed-trans-julia2"
+  julparam=#pixel
+  bailout=bailout
+  functype=functype
+  parttype=parttype
+  numsect=numsect
+  logscale=logscale
+  lightangle=lightangle
+  sizefac=sizefac
+}
+
+jul01-embossed-trans-julia2 {
+init:
+  float theta=@lightangle*pi/180.0
+  float size=@sizefac*0.0065/#magn
+  dr=size*(cos(theta)+flip(sin(theta)))
+  z1=#pixel-dr
+  z2=#pixel+dr
+  c1=@julparam
+  c2=@julparam
+  int iter1=0
+  int iter2=0
+  int iter=0
+  float r=0.0
+  float rmin1=1e20
+  float rmin2=1e20
+  float t=0.0
+  int part1=0
+  int part2=0
+loop:
+  iter=iter+1
+;
+; iterate 1st test point
+;
+  if(iter1==0)
+    if(@functype==1)         ; exp(z)*c
+      z1=exp(z1)*c1
+      r=real(z1)
+      t=imag(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==2)     ; sin(z)+c
+      z1=sin(z1)+c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==3)     ; sin(z)*c
+      z1=sin(z1)*c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==4)     ; cos(z)+c
+      z1=cos(z1)+c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==5)     ; cos(z)*c
+      z1=cos(z1)*c1
+      r=abs(imag(z1))
+      t=abs(real(z1))
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==6)     ; tan(z)+c
+      z1=tan(z1)+c1
+      r=cabs(z1)
+      t=atan2(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    elseif(@functype==7)     ; tan(z)*c
+      z1=tan(z1)*c1
+      r=cabs(z1)
+      t=atan2(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    else                     ; exp(z)+c
+      z1=exp(z1)+c1
+      r=real(z1)
+      t=imag(z1)
+      if(r>@bailout)
+        iter1=iter
+      endif
+    endif
+;
+; embossing types
+;
+    if(@parttype==1)         ; last bailout variable
+      if(@logscale==true)
+        r=log(abs(r))
+      endif
+      part1=round(r*@numsect)
+    elseif(@parttype==2)     ; last complement
+      if(@logscale==true)
+        t=log(abs(t))
+      endif
+      part1=round(t*@numsect)
+    elseif(@parttype==3)     ; iteration at smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        part1=iter
+      endif
+    elseif(@parttype==4)     ; smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        if(@logscale==true)
+          r=log(abs(r))
+        endif
+        part1=round(r*@numsect)
+      endif
+    elseif(@parttype==5)     ; complement at smallest b.v.
+      if(r<rmin1)
+        rmin1=r
+        if(@logscale==true)
+          t=log(abs(t))
+        endif
+        part1=round(t*@numsect)
+      endif
+    else                     ; iteration at bailout
+      part1=iter1
+    endif
+  endif
+;
+; iterate 2nd test point
+;
+  if(iter2==0)
+    if(@functype==1)         ; exp(z)*c
+      z2=exp(z2)*c2
+      r=real(z2)
+      t=imag(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==2)     ; sin(z)+c
+      z2=sin(z2)+c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==3)     ; sin(z)*c
+      z2=sin(z2)*c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==4)     ; cos(z)+c
+      z2=cos(z2)+c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==5)     ; cos(z)*c
+      z2=cos(z2)*c2
+      r=abs(imag(z2))
+      t=abs(real(z2))
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==6)     ; tan(z)+c
+      z2=tan(z2)+c2
+      r=cabs(z2)
+      t=atan2(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    elseif(@functype==7)     ; tan(z)*c
+      z2=tan(z2)*c2
+      r=cabs(z2)
+      t=atan2(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    else                     ; exp(z)+c
+      z2=exp(z2)+c2
+      r=real(z2)
+      t=imag(z2)
+      if(r>@bailout)
+        iter2=iter
+      endif
+    endif
+;
+; embossing types
+;
+    if(@parttype==1)         ; last bailout variable
+      if(@logscale==true)
+        r=log(abs(r))
+      endif
+      part2=round(r*@numsect)
+    elseif(@parttype==2)     ; last complement
+      if(@logscale==true)
+        t=log(abs(t))
+      endif
+      part2=round(t*@numsect)
+    elseif(@parttype==3)     ; iteration at smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        part2=iter
+      endif
+    elseif(@parttype==4)     ; smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        if(@logscale==true)
+          r=log(abs(r))
+        endif
+        part2=round(r*@numsect)
+      endif
+    elseif(@parttype==5)     ; complement at smallest b.v.
+      if(r<rmin2)
+        rmin2=r
+        if(@logscale==true)
+          t=log(abs(t))
+        endif
+        part2=round(t*@numsect)
+      endif
+    else                     ; iteration at bailout
+      part2=iter2
+    endif
+  endif
+;
+; assemble z for coloring
+;
+  z=part1+flip(part2)
+bailout:
+  (iter1==0)||(iter2==0)
+default:
+  title="Embossed Trans. Julia2"
+  maxiter=100
+  periodicity=0
+  method=multipass
+  center=(0,0)
+  magn=0.25
+  angle=0
+  param julparam
+    caption="Julia parameter"
+    default=(1,1)
+  endparam
+  param bailout
+    caption="bailout value"
+    default=16.0
+    min=0.0
+  endparam
+  param functype
+    caption="function type"
+    default=0
+    enum="exp(z)+c" "exp(z)*c" "sin(z)+c" "sin(z)*c"\
+      "cos(z)+c" "cos(z)*c" "tan(z)+c" "tan(z)*c"
+  endparam
+  param parttype
+    caption="emboss type"
+    default=0
+    enum="iterations to bailout" "last b.v" "last complement"\
+      "iterations to min b.v." "minimum b.v." "comp. @ min b.v."
+  endparam
+  param numsect
+    caption="# of sections"
+    default=32.0
+    min=0.0
+  endparam
+  param logscale
+    caption="log scale?"
+    default=false
+  endparam
+  param lightangle
+    caption="light angle"
+    default=0.0
+    hint="Angle of apparent light source, in degrees"
+  endparam
+  param sizefac
+    caption="contour size"
+    default=1.0
+    hint="relative size of contours bands"
+  endparam
+switch:
+  type="jul01-embossed-trans-mandelbrot2"
+  bailout=bailout
+  functype=functype
+  parttype=parttype
+  numsect=numsect
+  logscale=logscale
+  lightangle=lightangle
+  sizefac=sizefac
+}

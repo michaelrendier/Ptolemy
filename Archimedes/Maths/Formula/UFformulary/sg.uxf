@@ -1,0 +1,1079 @@
+Triptych { ; Sylvie Gallet, Feb 19, 2000
+
+transform:
+
+  bool use_c = @central
+  float w = #width/3
+  float x = real(#screenpixel)
+  if trunc(x/w) != @part
+    #solid = true
+  elseif (use_c == true)
+    #pixel = (#pixel - #center) * e^-flip(#angle) + #center
+    #pixel = #pixel + (1-@part) * #width / #height / #magn
+    #pixel = (#pixel - #center) * e^flip(#angle) + #center
+  endif
+
+default:
+  title = "Triptych"
+param part
+  caption = "Part"
+  enum = "Left" "Middle" "Right"
+endparam
+param central
+  caption = "Use central part of the fractal"
+  default = false
+endparam
+}
+
+Heart { ; Sylvie Gallet, Feb 13, 2000
+
+transform:
+
+#pixel = #pixel - @center
+#pixel = #pixel / @size
+if @rot != 0
+  #pixel = #pixel * e^(1i * @rot * pi / 180)
+endif
+
+float x = real(#pixel)
+float y = imag(#pixel)
+complex c1 =  (1.0,0.0)
+complex c2 = (-1.0,0.0)
+complex d1 =  (2.0,0.0)
+complex d2 = (-2.0,0.0)
+
+if y >= 0
+  if cabs(#pixel - c1) <= 1 || cabs(#pixel - c2) <= 1
+    y0 = sqrt(1 - sqr(abs(x) - 1))
+    #pixel = x + flip(y/y0)
+  else
+    #solid = true
+  endif
+elseif y < 0
+  if cabs(#pixel - d1) <= 4 && cabs(#pixel - d2) <= 4
+    y0 = sqrt(16 - sqr(abs(x) + 2))
+    #pixel = x + flip(y/y0)
+  else
+    #solid = true
+  endif
+else
+  #solid = true
+endif
+
+if @rot != 0
+  #pixel = #pixel * e^(-1i * @rot * pi / 180)
+endif
+#pixel = #pixel * @size
+#pixel = #pixel + @center
+
+default:
+  title = "Heart"
+param center
+  caption = "Center"
+  default = (0.0,0.0)
+endparam
+param size
+  caption = "Size"
+  default = 1.0
+  min = 0.0
+endparam
+param rot
+  caption = "Angle"
+  default = 0.0
+  min = -360.0
+  max = 360.0
+endparam
+}
+
+parquet { ; Sylvie Gallet - Dec 20, 1999
+
+transform:
+
+if @scale != 0
+  #pixel = #pixel/@scale
+endif
+
+if @angle != 0
+  #pixel = #pixel * e^(1i * @angle*pi/180)
+endif
+
+float x = real(#pixel)
+float y = imag(#pixel)
+int Ex = floor(x)
+int Ey = floor(y)
+float Dx = x - Ex
+float Dy = y - Ey
+complex rot1 = (1 + 1i) * sqrt(0.5)
+complex rot2 = conj(rot1)
+
+if Ey % 2 == 0
+
+  if Dx + Dy > 1
+
+    temp = rot1 * #pixel
+    center = (floor(#pixel) + 0.75 + 0.75i) * rot1
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot2 * temp
+    endif
+
+  elseif Dy > Dx
+
+    temp = rot1 * #pixel
+    center = (floor(#pixel) -0.25 + 0.75i) * rot1
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot2 * temp
+    endif
+
+  else
+
+    temp = rot2 * #pixel
+    center = (floor(#pixel) + 0.25 -0.25i) * rot2
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot1 * temp
+    endif
+
+  endif
+
+else
+
+  if Dy > Dx
+
+    temp = rot2 * #pixel
+    center = (floor(#pixel) + 0.25 + 0.75i) * rot2
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot1 * temp
+    endif
+
+  elseif Dx + Dy > 1
+
+    temp = rot2 * #pixel
+    center = (floor(#pixel) + 1.25 + 0.75i) * rot2
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot1 * temp
+    endif
+
+  else
+
+    temp = rot1 * #pixel
+    center = (floor(#pixel) + 0.75 - 0.25i) * rot1
+    if (abs(real(temp-center)) > (0.707 - @w))        \
+       || (abs(imag(temp-center)) > (0.3535 - @w))
+      #solid = true
+    else
+      temp = real(temp)*real(@s) + imag(temp)*imag(@s)*1i
+      #pixel = rot2 * temp
+    endif
+
+  endif
+
+endif
+
+if @scale != 0
+  #pixel = #pixel * @scale
+endif
+
+if @angle != 0
+  #pixel = #pixel * e^(-1i * @angle*pi/180)
+endif
+
+default:
+  title = "Parquet"
+
+  param s
+    caption = "Stretch factor"
+    default = (1.0,1.0)
+  endparam
+
+  param w
+    caption = "Line width"
+    default = 0.02
+    min = 0.0
+    max = 0.2
+    Hint = "Min: 0.0 - Max: 0.2"
+  endparam
+
+  param scale
+    caption = "Scale"
+    default = 1.0
+    min = 0
+    hint = "Use 0 or 1 for default scale"
+  endparam
+
+  param angle
+    caption = "Rotation"
+    default = 0.0
+    min = -180.0
+    max = 180.0
+  endparam
+
+}
+
+Lake {
+;
+; Transformation written by Sylvie Gallet
+; December 11, 1999
+; Third and almost final version...
+; Wavelet extension by Dave Makin
+; February 10th 2003
+;
+transform:
+
+  if (@use_sc)
+    centr = #center
+  else
+    centr = @wl
+  endif
+
+  if (@use_la)
+    float ang = #angle
+  else
+    float ang = @rot * pi / 180
+  endif
+
+  float amp = @a
+
+  if (ang != 0)
+    #pixel = (#pixel - centr) * e^flip(-ang) + centr
+  endif
+  float y = imag(#pixel)
+  if (y < imag(centr))
+    float dy = imag(centr) - y
+    y = 2 * imag(centr) - y
+    if @wavelets
+      amp = amp * sin(sin(@inter*dy)+@size*real(#pixel)*dy^-0.5)
+    endif
+    y = y + amp * dy * sin (@f * dy^0.2)
+    #pixel = real(#pixel) + flip(y)
+  endif
+  if (ang != 0)
+    #pixel = (#pixel - centr) * e^flip(ang) + centr
+  endif
+
+default:
+  title = "Lake"
+
+  param wl
+    caption = "Water level"
+    default = (0.0,0.0)
+  endparam
+
+  param use_sc
+    caption = "Use screen center"
+    default = true
+  endparam
+
+  param rot
+    caption = "Angle"
+    default = 0.0
+    min = -360.0
+    max = 360.0
+  endparam
+
+  param use_la
+    caption = "Use Location tab angle"
+    default = true
+  endparam
+
+  param a
+    caption = "Amplitude"
+    default = 0.2
+  endparam
+
+  param f
+    caption = "Frequency"
+    default = 300.0
+    min = 0.0
+  endparam
+
+  param wavelets
+    caption = "Add wavelets"
+    default = false
+    hint = "You will probably need to adjust the wavelet \
+            scale and interference values to suit the main \
+            frequency and amplitude."
+  endparam
+
+  param size
+    caption = "Wavelet scale"
+    default = 8.0
+    hint = "Larger values produce smaller wavelets."
+  endparam
+
+  param inter
+    caption = "Wavelet interference"
+    default = 80.0
+    hint = "Helps stop the wavelets appear too regular. \
+            Larger values produce more interference."
+  endparam
+}
+
+Checkerboard {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; February 7, 1999
+
+transform:
+
+  IF (@mode == 0)                ; rectangular
+    int a = floor(real(#pixel - @center) / @tw)
+    int b = floor(imag(#pixel - @center) / @th)
+    if ((a + b) % 2 == 0 && !@inverse) ||               \
+       ((a + b) % 2 != 0 && @inverse)
+      #solid = true
+    endif
+  elseif (@mode == 1)            ; triangular
+    float sq3 = sqrt(3)
+    float h = @tw * sq3 / 2
+    int a = floor((real(#pixel - @center) -             \
+                   imag(#pixel - @center) / sq3) / @tw)
+    int b = floor(imag(#pixel - @center) / h)
+    int c = floor((real(#pixel - @center) +             \
+                   imag(#pixel - @center) / sq3) / @tw)
+    if ((a + b + c) % 2 == 0 && !@inverse) ||           \
+       ((a + b + c) % 2 != 0 && @inverse)
+      #solid = true
+    endif
+  endif
+
+default:
+  title = "Checkerboard"
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Rectangular" "Triangular" "None"
+  endparam
+  param tw
+    caption = "Tile width"
+    default = 2.0
+    min = 0.0
+  endparam
+  param th
+    caption = "Tile height"
+    default = 1.5
+    min = 0.0
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param inverse
+    caption = "Inverse"
+    default = false
+  endparam
+}
+
+Rectangular_tiling {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; February 3, 1999 - Updated May 2, 1999
+
+transform:
+
+  IF (@mode == 0)             ; normal
+     #pixel = #pixel - @center
+     new_x = real(#pixel) - floor(real(#pixel)/@tw) * @tw
+     new_y = imag(#pixel) - floor(imag(#pixel)/@th) * @th
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 1)         ; horizontal symmetry
+     w = 2 * @tw
+     #pixel = #pixel - @center
+     new_x = real(#pixel) - floor(real(#pixel)/w) * w
+     new_y = imag(#pixel) - floor(imag(#pixel)/@th) * @th
+     if new_x > @tw
+       new_x = w - new_x
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 2)         ; vertical symmetry
+     h = 2 * @th
+     #pixel = #pixel - @center
+     new_x = real(#pixel) - floor(real(#pixel)/@tw) * @tw
+     new_y = imag(#pixel) - floor(imag(#pixel)/h) * h
+     if new_y > @th
+       new_y = h - new_y
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 3)         ; horizontal + vertical symmetry
+     w = 2 * @tw
+     h = 2 * @th
+     #pixel = #pixel - @center
+     new_x = real(#pixel) - floor(real(#pixel)/w) * w
+     new_y = imag(#pixel) - floor(imag(#pixel)/h) * h
+     if new_x > @tw
+       new_x = w - new_x
+     endif
+     if new_y > @th
+       new_y = h - new_y
+     endif
+     #pixel = new_x + flip(new_y) + @center
+
+  ELSEIF (@mode == 4)         ; Main tile
+     #pixel = #pixel - @center
+     if real(#pixel) < 0  ||  real(#pixel) > @tw  ||     \
+        imag(#pixel) < 0  ||  imag(#pixel) > @th
+       if (real(#screenpixel) + imag(#screenpixel)) % 2 == 0
+          #solid = true
+       endif
+     endif
+     #pixel = #pixel + @center
+  ENDIF
+
+default:
+  title = "Rectangular Tiling"
+  param mode
+    caption = "Tiling Mode"
+    default = 0
+    enum = "normal" "horizontal symmetry" "vertical symmetry" \
+           "horz + vert symmetry" "Main tile" "none"
+    hint = "Style of symmetry.  Use 'Main tile' to see the main \
+            tile and to adjust 'Center', 'Tile height', and \
+            'Tile width'"
+
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+    hint = "Coordinates of the bottom left corner of the main tile"
+  endparam
+  param tw
+    caption = "Tile width"
+    default = 2.0
+    min = 0.0
+  endparam
+  param th
+    caption = "Tile height"
+    default = 1.5
+    min = 0.0
+  endparam
+}
+
+Hexagonal_tiling {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; February 4, 1999 - Updated May 2, 1999
+
+transform:
+
+  IF (@mode == 0)
+     #pixel = #pixel - @center
+     sq3 = sqrt(3)
+     h = @tw * sq3
+     th = h / 2
+     w3 = 3 * @tw
+     c = - 1.5 * @tw - flip(th)
+     new_y = imag(#pixel) - floor(imag(#pixel) / h) * h
+     if new_y > th
+        new_y = h - new_y
+     endif
+     dx = new_y / sq3
+     new_x = real(#pixel) - floor(real(#pixel - dx) / w3) * w3
+     #pixel = new_x + flip(new_y)
+     if new_y > -sq3 * new_x + 2 * h
+        #pixel = conj(#pixel + c)
+     endif
+     if imag(#pixel) < sq3 * real(#pixel) - h
+        #pixel = (#pixel + c) * e^(flip(pi / 1.5))
+     endif
+     if imag(#pixel) > -sq3 * real(#pixel) + h
+        #pixel = conj(#pixel + c) * e^(flip(-pi / 1.5))
+     endif
+     #pixel = #pixel + @center
+  ELSEIF (@mode == 1)
+     #pixel = #pixel - @center
+     sq3 = sqrt(3)
+     h = @tw * sq3
+     if imag(#pixel) > -sq3 * real(#pixel) + h  ||    \
+        imag(#pixel) >  sq3 * real(#pixel)      ||    \
+        imag(#pixel) < 0
+       if (real(#screenpixel) + imag(#screenpixel)) % 2 == 0
+          #solid = true
+       endif
+    endif
+    #pixel = #pixel + @center
+  ENDIF
+
+default:
+  title = "Hexagonal Tiling"
+  param mode
+    caption = "Tiling Mode"
+    default = 0
+    enum = "hexagonal tiling" "Main tile" "none"
+    hint = "Use 'Main tile' to see the main tile and to adjust \
+            'Center' and 'Tile width'"
+  endparam
+  param tw
+    caption = "Tile width"
+    default = 1.0
+    min = 0.0
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+    hint = "Coordinates of the bottom left corner of the main tile"
+  endparam
+}
+
+L {
+
+; Transformation for Ultra Fractal 2
+; by Sylvie Gallet
+; May 26, 1999
+
+transform:
+
+  complex a = e^flip(- #pi * @rotation / 180)
+  #pixel = #pixel * a - @center
+  float sq_3 = sqrt(3.0)
+  x = real(#pixel) / @scale , y = imag(#pixel) / @scale
+
+  if  y > sq_3 * x + 4  ||  y > - sq_3 * x + 6  ||    \
+      y < -3  ||  y < sq_3 * x - 10  ||               \
+      (y > -2  &&  y < sq_3 * x + 2)  ||              \
+      (y > 0  &&  y > - sq_3 * x + 2)
+    #solid = true
+  endif
+  #pixel = (#pixel + @center) / a
+
+default:
+  title = "L"
+
+param scale
+  caption = "Scale"
+  default = 1.0
+  min = 0.0
+endparam
+
+param center
+  caption = "Center"
+  default = (0.0,0.0)
+endparam
+
+param rotation
+  caption = "Rotation angle"
+  default = 0.0
+  min = 0.0
+  max = 360.0
+endparam
+
+}
+
+L4 {
+
+; Transformation for Ultra Fractal
+; by Sylvie Gallet
+; May 27, 1999
+
+transform:
+
+  complex a = e^flip(- #pi * @rotation / 180)
+  #pixel = #pixel * a - @center
+  x = real(#pixel) / @scale , y = imag(#pixel) / @scale
+
+  if  y < -4  ||  y > 2  ||  x < -3  ||  y < x - 7  ||   \
+      (y > -3 && x > -2)
+    #solid = true
+  endif
+  #pixel = (#pixel + @center) / a
+
+default:
+  title = "L4"
+
+param scale
+  caption = "Scale"
+  default = 1.0
+  min = 0.0
+endparam
+
+param center
+  caption = "Center"
+  default = (0.0,0.0)
+endparam
+
+param rotation
+  caption = "Rotation angle"
+  default = 0.0
+  min = 0.0
+  max = 360.0
+endparam
+
+}
+
+sg_polygon_v1 {
+
+; Transformation for Ultra Fractal
+; by Sylvie Gallet
+; October 14, 1999
+
+transform:
+  x1 = real(@point_1) , y1 = imag(@point_1)
+  x2 = real(@point_2) , y2 = imag(@point_2)
+  x3 = real(@point_3) , y3 = imag(@point_3)
+  x4 = real(@point_4) , y4 = imag(@point_4)
+  x = real(#pixel) , y = imag(#pixel)
+  bool temp = false
+
+  if @inside
+    temp = true
+  endif
+
+  if (x2-x1)*(y-y1) - (y2-y1)*(x-x1) > 0
+    temp = !temp
+  endif
+
+  if (x3-x2)*(y-y2) - (y3-y2)*(x-x2) > 0
+    temp = !temp
+  endif
+
+  if (x4-x3)*(y-y3) - (y4-y3)*(x-x3) > 0
+    temp = !temp
+  endif
+
+  if (x1-x4)*(y-y4) - (y1-y4)*(x-x4) > 0
+    temp = !temp
+  endif
+
+  if temp == true
+    #solid = true
+  endif
+
+default:
+  title = "sg_polygon"
+
+param point_1
+  caption = "Point #1"
+  default = (-1.0,1.0)
+endparam
+
+param point_2
+  caption = "Point #2"
+  default = (1.0,1.0)
+endparam
+
+param point_3
+  caption = "Point #3"
+  default = (1.0,-1.0)
+endparam
+
+param point_4
+  caption = "Point #4"
+  default = (-1.0,-1.0)
+endparam
+
+param inside
+  caption = "inside"
+  default = false
+endparam
+
+}
+
+sg_polygon_4 {
+
+; Transformation for Ultra Fractal
+; by Sylvie Gallet
+; October 15, 1999
+
+transform:
+  x1 = real(@point_1) , y1 = imag(@point_1)
+  x2 = real(@point_2) , y2 = imag(@point_2)
+  x3 = real(@point_3) , y3 = imag(@point_3)
+  x4 = real(@point_4) , y4 = imag(@point_4)
+  x = real(#pixel) , y = imag(#pixel)
+  bool temp = false
+
+  if @inside
+    temp = true
+  endif
+
+  if y1 == y2
+    if y == y1
+      if x <= x1 || x <= x2
+;      if (x >= x1 && x <= x2) || (x <= x1 && x >= x2)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y1) / (y2 - y1)
+    if 0 <= t && t <= 1
+      if x <= x1 + t * (x2 - x1)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y2 == y3
+    if y == y2
+      if x <= x2 || x <= x3
+;      if (x >= x2 && x <= x3) || (x <= x2 && x >= x3)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y2) / (y3 - y2)
+    if 0 <= t && t <= 1
+      if x <= x2 + t * (x3 - x2)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y3 == y4
+    if y == y3
+      if x <= x3 || x <= x4
+;      if (x >= x3 && x <= x4) || (x <= x3 && x >= x4)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y3) / (y4 - y3)
+    if 0 <= t && t <= 1
+      if x <= x3 + t * (x4 - x3)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y4 == y1
+    if y == y4
+      if x <= x4 || x <= x1
+;      if (x >= x4 && x <= x1) || (x <= x4 && x >= x1)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y4) / (y1 - y4)
+    if 0 <= t && t <= 1
+      if x <= x4 + t * (x1 - x4)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if temp == true
+    #solid = true
+  endif
+
+default:
+  title = "sg_polygon_4"
+
+param point_1
+  caption = "Point #1"
+  default = (1.0,0.0)
+endparam
+
+param point_2
+  caption = "Point #2"
+  default = (0.0,1.0)
+endparam
+
+param point_3
+  caption = "Point #3"
+  default = (-1.0,0.0)
+endparam
+
+param point_4
+  caption = "Point #4"
+  default = (0.0,-1.0)
+endparam
+
+param inside
+  caption = "inside"
+  default = false
+endparam
+
+}
+
+sg_polygon_5 {
+
+; Transformation for Ultra Fractal
+; by Sylvie Gallet
+; October 15, 1999
+
+transform:
+  x1 = real(@point_1) , y1 = imag(@point_1)
+  x2 = real(@point_2) , y2 = imag(@point_2)
+  x3 = real(@point_3) , y3 = imag(@point_3)
+  x4 = real(@point_4) , y4 = imag(@point_4)
+  x5 = real(@point_5) , y5 = imag(@point_5)
+  x = real(#pixel) , y = imag(#pixel)
+  bool temp = false
+
+  if @inside
+    temp = true
+  endif
+
+  if y1 == y2
+    if y == y1
+      if (x >= x1 && x <= x2) || (x <= x1 && x >= x2)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y1) / (y2 - y1)
+    if 0 <= t && t <= 1
+      if x <= x1 + t * (x2 - x1)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y2 == y3
+    if y == y2
+      if (x >= x2 && x <= x3) || (x <= x2 && x >= x3)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y2) / (y3 - y2)
+    if 0 <= t && t <= 1
+      if x <= x2 + t * (x3 - x2)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y3 == y4
+    if y == y3
+      if (x >= x3 && x <= x4) || (x <= x3 && x >= x4)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y3) / (y4 - y3)
+    if 0 <= t && t <= 1
+      if x <= x3 + t * (x4 - x3)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y4 == y5
+    if y == y4
+      if (x >= x4 && x <= x5) || (x <= x4 && x >= x5)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y4) / (y5 - y4)
+    if 0 <= t && t <= 1
+      if x <= x4 + t * (x5 - x4)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if y5 == y1
+    if y == y5
+      if (x >= x5 && x <= x1) || (x <= x5 && x >= x1)
+        temp = !temp
+      endif
+    endif
+  else
+    t = (y - y5) / (y1 - y5)
+    if 0 <= t && t <= 1
+      if x <= x5 + t * (x1 - x5)
+        temp = !temp
+      endif
+    endif
+  endif
+
+  if temp == true
+    #solid = true
+  endif
+
+default:
+  title = "sg_polygon_5"
+
+param point_1
+  caption = "Point #1"
+  default = (1.0000,0.0000)
+endparam
+
+param point_2
+  caption = "Point #2"
+  default = (-0.8090,0.5878)
+endparam
+
+param point_3
+  caption = "Point #3"
+  default = (0.3090,-0.9511)
+endparam
+
+param point_4
+  caption = "Point #4"
+  default = (0.3090,0.9511)
+endparam
+
+param point_5
+  caption = "Point #5"
+  default = (-0.8090,-0.5878)
+endparam
+
+param inside
+  caption = "inside"
+  default = false
+endparam
+
+}
+
+Truchet-Tiles {
+
+; Written by Sylvie Gallet, Nov 2, 2000
+; After Samuel Monnier's TruchetTiles UCL
+
+transform:
+
+z = #pixel/@size*exp(1i*pi/180*@rot)
+zc = round(z)
+zz = z - zc
+
+t = abs((real(zc) + imag(zc))) % 2
+if @mask == 2
+  t = 1 - t
+endif
+
+cr = 2 * (@seed/(zc + 124) - round(@seed/(zc + 124)))
+
+if @mask == 0
+  if real(cr) > 0
+    if @mode == 0
+      d1 = abs(cabs(zz + (0.5,0.5)) - 0.5)
+      d2 = abs(cabs(zz - (0.5,0.5)) - 0.5)
+    else
+      d1 = abs(real(zz) - imag(zz) - 0.5)
+      d2 = abs(real(zz) - imag(zz) + 0.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  else
+    if @mode == 0
+      d1 = abs(cabs(zz + (0.5,-0.5)) - 0.5)
+      d2 = abs(cabs(zz - (0.5,-0.5)) - 0.5)
+    else
+      d1 = abs(real(zz) + imag(zz) - 0.5)
+      d2 = abs(real(zz) + imag(zz) + 0.5)
+    endif
+    if d2 < d1
+      d1 = d2
+    endif
+  endif
+
+  if d1 < @thick
+    #solid = true
+  endif
+
+else
+
+  if real(cr) > 0
+    if @mode == 0
+      d1 = cabs(zz + (0.5,0.5)) , d2 = cabs(zz - (0.5,0.5))
+      if t == 0
+        if d1 < 0.5 || d2 < 0.5
+          #solid = true
+        endif
+      else
+        if d1 > 0.5 && d2 > 0.5
+          #solid = true
+        endif
+      endif
+    else
+      d = abs(real(zz) - imag(zz))
+      if t == 0
+        if d < 0.5 || d > 1.5
+          #solid = true
+        endif
+      else
+        if d > 0.5 && d < 1.5
+          #solid = true
+        endif
+      endif
+    endif
+  else
+    if @mode == 0
+      d1 = cabs(zz + (0.5,-0.5)) , d2 = cabs(zz - (0.5,-0.5))
+      if t == 1
+        if d1 < 0.5 || d2 < 0.5
+          #solid = true
+        endif
+      else
+        if d1 > 0.5 && d2 > 0.5
+          #solid = true
+        endif
+      endif
+    else
+      d = abs(real(zz) + imag(zz))
+      if t == 1
+        if d < 0.5 || d > 1.5
+          #solid = true
+        endif
+      else
+        if d > 0.5 && d < 1.5
+          #solid = true
+        endif
+      endif
+    endif
+  endif
+
+endif
+
+default:
+
+  title = "Truchet Tiles Transform"
+
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Roundy" "Squarry"
+  endparam
+
+  param mask
+    caption = "Mask"
+    default = 0
+    enum = "None" "Mask 1" "Mask 2"
+  endparam
+
+  param size
+    caption = "Pattern Size"
+    default = 1.0
+  endparam
+
+  param rot
+    caption = "Pattern Rotation"
+    default = 0.0
+  endparam
+
+  param thick
+    caption = "Thickness"
+    default = 0.1
+  endparam
+
+  param seed
+    caption = "Seed"
+    default = 1234567890
+  endparam
+}

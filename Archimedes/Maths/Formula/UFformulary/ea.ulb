@@ -1,0 +1,483 @@
+;
+; Ed Algra, April 2016
+;
+public:
+;
+   class ea_ConversionMenu {
+;
+   func ea_ConversionMenu()
+   endfunc
+;
+;  Content
+;
+;     Complex ---> Complex
+;
+;     1.1.1] Hokum
+;     1.1.2] Gonio
+;     1.1.3] Cheby Basic
+;     1.1.4] Functions according to Ron Barnett and Otto Magus
+;
+;     1.2.1 ]Float ---> Float
+;
+;***********************************************************************
+;   1.1.1] Hokum
+;      mathematically a nonsence function
+;      useful for e.g. glassy or jelly images
+;
+    static complex func Hokum(complex z, int mode, float p, int vs_Hokum)
+;   possible call:
+;     z = ea_ConversionMenu.Hokum(z,@mode,@p,100)
+;   in default:
+;     enum = "A" "B" "C" "D" "E" "F" "G"
+;
+     complex result = (0.0,0.0)
+     if vs_Hokum==100
+        if mode==0
+           result = real(z) + flip(p*imag(z))
+        elseif mode==1
+           result = cabs(z) + flip(p*atan2(z))
+        elseif mode==2
+           result = real(z) + flip(p*atan2(z))
+        elseif mode==3
+           result = imag(z) + flip(p*atan2(z))
+        elseif mode==4
+           result = p*atan(z) + flip(cabs(z))
+        elseif mode==5
+           result = p*atan(z) + flip(real(z))
+        elseif mode==6
+           result = p*atan(z) + flip(imag(z))
+        endif
+     endif
+     return result
+  endfunc
+;
+;------------------------------------------------------------------------
+;
+;   1.1.2] Gonio
+;      Enhancement of standard goniometric functions
+;
+    static complex func Gonio(complex z, int k, float p0, float p1, \
+            float p2, float p3, float p4, int vs_Gonio)
+;   possible call:
+;     z = ea_ConversionMenu.Gonio(z,@fmode1,@a10,@a11,@a12,@a13,@a14,100)
+;   in default:
+;     enum = "sin" "cos" "tan" "cotan" "sec" "cosec" \
+;            "sinh" "cosh" "tanh" "cotanh" "sech" "cosech" \
+;            "asin" "acos" "atan" "acotan" "asec" "acosec" \
+;            "asinh\acosh" "atanh\acotanh" "asech\acosech"
+;
+     complex result = (0,0)
+     complex t0 = 1i
+     complex t1 = exp(z)
+     complex t2 = exp(-z)
+     complex t3 = exp(1i*z)
+     complex t4 = exp(-1i*z)
+
+     if vs_Gonio==100
+        if k==0 ; sin
+            result = p0 + 1i*0.5*(p1*t4 - p2*t3)
+        elseif k==1 ; cos
+            result = p0 + 0.5*(p1*t4 - p2*t3)
+        elseif k==2 ; tan
+            result = p0 + t0*(p1*t4 - p2*t3)/(p3*t4 + p4*t3)
+        elseif k==3 ; cotan
+            result = p0 + t0*(p1*t4 + p2*t3)/(p3*t4 - p4*t3)
+        elseif k==4 ; sec
+            result = p0 + 2/(p1*t1 - p2*t2)
+        elseif k==5 ; cosec
+            result = p0 + 1i*2/(p1*t1 - p2*t2)
+
+        elseif k==6 ; sinh
+            result = p0 + 0.5*(p1*t1 - p2*t2)
+        elseif k==7 ; cosh
+            result = p0 + 0.5*(p1*t1 + p2*t2)
+        elseif k==8 ; tanh
+            result = p0 + (p1*t1 - p2*t2)/(p3*t1 + p4*t2)
+        elseif k==9 ; cotanh
+            result = p0 + (p1*t1 + p2*t2)/(p3*t1 - p4*t2)
+        elseif k==10 ; sech
+            result = p0 + 2/(p1*t1-p2*t2)
+        elseif k==11 ; cosech
+            result = p0 + 1i*2/(p1*t1-p2*t2)
+
+        elseif k==12 ; asin
+            result = p0 - t0*log(p1*t0*z + (p2-p3*z*z)^(0.5*p4))
+        elseif k==13 ; acos
+            result = p0 + 0.5*pi + t0*log(p1*t0*z + (p2-p3*z*z)^(0.5*p4))
+        elseif k==14 ; atan
+            result = p0 + 0.5*t0*log((p1-p2*t0*z)/(p3+p4*t0*z))
+        elseif k==15 ; acotan
+            result = p0 + 0.5*log((p1*z-p2*t0)/(p3*z+p4*t0))
+        elseif k==16 ; asec
+            result = p0 + 0.5*pi + p1*t0*log(sqrt(p2-p3/(z*z)) + p4*t0/z)
+        elseif k==17 ; acosec
+            result = p0 - p1*t0*log(sqrt(p2-p3/(z*z)) + p4*t0/z)
+
+        elseif k==18 ; asinh\acosh
+            result = p0 + log(p1*z+ (p2*z*z+p3)^(0.5*p4))
+        elseif k==19 ; atanh\acotanh
+            result = p0 + 0.5*log((p1+p2*z)/(p3-p4*z))
+        elseif k==20 ; asech\acosech
+            result = p0 + log((p1+(p2*z*z+p3)^(0.5*p4))/z)
+        endif
+     endif
+     return result
+   endfunc
+;------------------------------------------------------------------------
+;
+;   1.1.3] Cheby Basic
+;      Basic Chebychev Polynomials (max. T[12] and U[12])
+;
+    static complex func ChebyBas(complex z, int k, int n, int vs_ChebyB)
+;
+;   possible call:
+;     z = ea_ConversionMenu.ChebyBas(z,@kind,@n,100)
+;   in default:
+;     enum = "first kind" "second kind"
+;
+     complex result = (0.0,0.0)
+     complex t[12]
+     complex u[12]
+     int j = 1
+     if vs_ChebyB==100
+        t[0] = (1.0,0.0)
+        t[1] = (1.0,0.0)*z
+        u[0] = (1.0,0.0)
+        u[1] = (2.0,0.0)*z
+        while j<12
+           j = j + 1
+           t[j] = 2*z*t[j-1] - t[j-2]
+           u[j] = 2*z*u[j-1] - u[j-2]
+        endwhile
+        if k==0
+           result = t[n]
+        elseif k==1
+           result = u[n]
+        endif
+     endif
+     return result
+   endfunc
+;
+;   1.1.4] Functions according to Ron Barnett and Otto Magus
+;          Enhancement of standard functions
+;
+    static complex func REB_OM_FuncCmpl(complex pz, int k, int vs_RBF)
+;
+;   possible call:
+;     z = eah_ConversionMenu.REB_OM_FuncCmpl(z,@fmode,100)
+;   in default:
+;
+; enum = \
+; "ident"      "sinxx"    "cosec"      "sinc"       "haversin" \
+; "versin"     "sinhc"    "ahaversin"  "aversin"    "cosxx"    \
+; "havercos"   "exsec"    "excsc"      "aexsec"     "aexcsc"   \
+; "vercos"     "sec"      "asec"       "acsc"       "ahavercos"\
+; "avercos"    "tanc"     "tanhc"      "coversin"   "acoversin"\
+; "hacoversin" "covercos" "acovercos"  "hacovercos" "acotan"   \
+; "acotanh"    "sech"     "crd"        "acrd"       "asech"    \
+; "cosech"     "acosech"  "coshc"      "cosc"       "cotanc"   \
+; "cotanhc"    "secc"     "sechc"      "cosecc"     "cosechc"  \
+; "logistic"   "softplus" "primecount" "atan2"      "cube"     \
+; "cuberoot"   "logit"    "colog"      "gauss"      "gd"       \
+; "agd"        "sigmoid"           \
+;                          
+     complex ci = (0.0,1.0)
+     if k==0 ; ident
+        pz = pz
+     elseif k==1 ; sinxx
+        pz = conj(sin(pz))
+     elseif k==2 ; cosec
+        pz = 1/sin(pz)
+     elseif k==3 ; sinc
+        if cabs(pz) != 0, pz = sin(pz)/pz, else, pz = 1, endif
+     elseif k==4 ; haversin
+        pz = (1-cos(pz))/2
+     elseif k==5 ; versin
+        pz = 1-cos(pz)
+     elseif k==6 ; sinhc
+        if cabs(pz) != 0, pz = sinh(pz)/pz, else, pz = 1, endif
+     elseif k==7 ; ahaversin
+        pz = 2*asin(sqrt(pz))
+     elseif k==8 ; aversin
+        pz = acos(1-pz)
+     elseif k==9 ; cosxx
+        pz = conj(cos(pz))
+     elseif k==10 ; havercos
+        pz = (1+cos(pz))/2
+     elseif k==11 ; exsec
+        pz = 1/cos(pz) -1
+     elseif k==12 ; excsc
+        pz = 1/sin(pz) -1
+     elseif k==13 ; aexsec
+        pz = acos(1/(pz+1))
+     elseif k==14 ; aexcsc
+        pz = asin(1/(pz+1))
+     elseif k==15 ; vercos
+        pz = 1+cos(pz)
+     elseif k==16 ; sec
+        pz = 1/cos(pz)
+     elseif k==17 ; asec
+        pz = acos(1/pz)
+     elseif k==18 ; acsc
+        pz = -ci*log(sqrt(1-1/sqr(pz)) + ci/pz)
+     elseif k==19 ; ahavercos
+        pz = 2*acos(sqrt(pz))
+     elseif k==20 ; avercos
+        pz = acos(1+pz)
+     elseif k==21 ; tanc
+        if cabs(pz) != 0, pz = tan(pz)/pz, else, pz = 1, endif
+     elseif k==22 ; tanhc
+        if cabs(pz) != 0, pz = tanh(pz)/pz, else, pz = 1, endif
+     elseif k==23 ; coversin
+        pz = 1-sin(pz)
+     elseif k==24 ; acoversin
+        pz = asin(1-pz)
+     elseif k==25 ; hacoversin
+        pz = (1-sin(pz))/2
+     elseif k==26 ; covercos
+        pz = 1 + sin(pz)
+     elseif k==27 ; acovercos
+        pz = asin(1+pz)
+     elseif k==28 ; hacovercos
+        pz = (1+sin(pz))/2
+     elseif k==29 ; acotan
+        pz = atan(1/pz)
+     elseif k==30 ; acotanh
+        pz = atanh(1/pz)
+     elseif k==31 ; sech
+        pz = 1/(cosh(pz))
+     elseif k==32 ; crd
+        pz = 2*sin(pz/2)
+     elseif k==33 ; acrd
+        pz = 2*asin(pz/2)
+     elseif k==34 ; asech
+        pz = acosh(1/pz)
+     elseif k==35 ; cosech
+        pz = 1/sinh(pz)
+     elseif k==36 ; acosech
+        pz = asinh(1/pz)
+     elseif k==37 ; coshc
+        if cabs(pz) != 0, pz = cosh(pz)/pz, else, pz = 1, endif
+     elseif k==38 ; cosc
+        if cabs(pz) != 0, pz = cos(pz)/pz, else, pz = 1, endif
+     elseif k==39 ; cotanc
+        if cabs(pz) != 0, pz = cotan(pz)/pz, else, pz = 1, endif
+     elseif k==40 ; cotanhc
+        if cabs(pz) != 0, pz = cotanh(pz)/pz, else, pz = 1, endif
+     elseif k==41 ; secc
+        if cabs(pz) != 0, pz = 1/(pz*cos(pz)), else, pz = 1, endif
+     elseif k==42 ; sechc
+        if cabs(pz) != 0, pz = 1/(pz*cosh(pz)), else, pz = 1, endif
+     elseif k==43 ; cosecc
+        if cabs(pz) != 0, pz = 1/(pz*sin(pz)), else, pz = 1, endif
+     elseif k==44 ; cosechc
+        if cabs(pz) != 0, pz = 1/(pz*sinh(pz)), else, pz = 1,endif
+     elseif k==45 ; logistic
+        pz = 1/(1+exp(-pz))
+     elseif k==46 ; softplus
+        pz = log(1+exp(pz))
+     elseif k==47 ; primecount
+        pz = pz/log(pz)
+     elseif k==48 ; atan2
+        pz = atan2(pz)
+     elseif k==49 ; cube
+        pz = pz^3
+     elseif k==50 ; cuberoot
+        pz = pz^(1/3)
+     elseif k==51 ; logit
+        pz = log(pz/(1-pz))
+     elseif k==52 ; colog
+        pz = -log(pz)
+     elseif k==53 ; gauss
+        pz = exp(-sqr(pz))
+     elseif k==54 ; gd
+        pz = 2*atan(tanh(0.5*pz))
+     elseif k==55 ; agd
+        pz = 2*atanh(tan(0.5*pz))
+     elseif k==56 ; sigmoid
+        pz = 1/(1+exp(-pz))
+     endif
+     return pz
+   endfunc
+
+;***********************************************************************
+;
+;   1.2.1] FloatFunc
+;
+  static float func FloatFunc(float x, int k, float fshift, int vs)
+;
+; menu for float functions
+;
+; x = shift + f(x)     float ---> float function
+;
+;   possible call:
+;     x = ea_ConversionMenu.FloatFunc(x,@k,@xshift,100)
+;
+; enum = "ident" "sqr" "sqrt" "log" "exp" "sin" "asin" "sinh" "asinh" "cos"\
+;        "acos" "cosh" "acosh" "sec" "csc" "sech" "csch" "tan" "atan" "tanh"\
+;        "atanh" "cotan" "cotanh" "abs" "recip" "round" "trunc" "ceil" "floor"                
+;
+    if vs==100
+       x = x + fshift
+       if k==0,      x = ident(x)
+       elseif k==1,  x = sqr(x)
+       elseif k==2,  x = sqrt(x)
+       elseif k==3,  x = log(x)
+       elseif k==4,  x = exp(x)
+       elseif k==5,  x = sin(x)
+       elseif k==6,  x = asin(x)
+       elseif k==7,  x = sinh(x)
+       elseif k==8,  x = asinh(x)
+       elseif k==9,  x = cos(x)
+       elseif k==10, x = acos(x)
+       elseif k==11, x = cosh(x)
+       elseif k==12, x = acosh(x)
+       elseif k==13, x = 1/cos(x) ; sec
+       elseif k==14, x = 1/sin(x) ; csc
+       elseif k==15, x = 1/cosh(x); sech
+       elseif k==16, x = 1/sinh(x); csch
+       elseif k==17, x = tan(x)
+       elseif k==18, x = atan(x)
+       elseif k==19, x = tanh(x)
+       elseif k==20, x = atanh(x)
+       elseif k==21, x = cotan(x)
+       elseif k==22, x = cotanh(x)
+       elseif k==23, x = abs(x)
+       elseif k==24, x = recip(x)
+       elseif k==25, x = round(x)
+       elseif k==26, x = trunc(x)
+       elseif k==27, x = ceil(x)
+       elseif k==28, x = floor(x)
+       endif
+    endif
+    return x
+  endfunc
+}
+;
+;*******************************************
+;
+   class ea_CombiMenu {
+;
+   func ea_CombiMenu()
+   endfunc
+;
+;  Content
+;
+;     Complex ---> Complex
+;
+;     2.1.1] Simple
+;     2.1.2] Mean
+;     2.1.3] Mean related
+;
+;***********************************************************************
+   static complex func CCSimple(complex a, complex b, int k, float q1,\
+                                float q2, float s1, float s2, int vs)
+;   possible call:
+;      z = ea_CombiMenu.CCSimple(za,z,@k1,q1,q2,s1,s2,100)
+;
+;   enum = "a+b" "a.b" "a/b" "b/a" "a^b" "b^a" "Pythagoras" "Pythagoras related"          
+;
+       complex z = (0.0,0.0)
+       if vs==100
+          if k==0,     z = s1*a + s2*b
+          elseif k==1, z = (a+q1)*(b+q2)
+          elseif k==2, z = (a+q1)/(b+q2)
+          elseif k==3, z = (b+q2)/(a+q1)
+          elseif k==4, z = (a+q1)^(b+q2)
+          elseif k==5, z = (b+q2)^(a+q1)
+          elseif k==6, z = sqrt(sqr(a+q1) + sqr(b+q2))
+          elseif k==7, z = s1*(sqr(a+q1) + s2*sqr(b+q2))
+          endif
+       endif
+       return z
+    endfunc
+
+;--------------------------------------------------------------------------------
+   static complex func CCMean(complex a, complex b, int k, int r, float h, int vs)
+;   possible call:
+;      z = ea_CombiMenu.CCMean(za,z,@k2,@r,@h,100)
+;
+;   enum = "arithmetic" \
+;          "variance" \
+;          "geometric" \
+;          "harmonic" \
+;          "contraharmonic" \
+;          "quadratic" \
+;          "Lehmer" \
+;          "Heinz" 
+;
+       complex z = (0.0,0.0)
+       if vs==100
+          if k==0,     z = 0.5*(a+b)
+          elseif k==1, z = 0.5*(sqr(a)+sqr(b)-a-b)
+          elseif k==2, z = sqrt(a*b)
+          elseif k==3, z = 2*a*b/(a+b)
+          elseif k==4, z = (sqr(a)+sqr(b))/(a+b)
+          elseif k==5, z = 0.5*(sqr(a)+sqr(b))
+          elseif k==6, z = (a^r+b^r)/(a^(r-1)+b^(r-1))
+          elseif k==7, z = 0.5*(a^h*b^(1-h) + a^(1-h)*b^h)
+          endif
+       endif
+       return z
+    endfunc
+;--------------------------------------------------------------------------------
+
+   static complex func CCMeanRel(complex a, complex b, int k, float p,\
+                                 complex q, int r, int vs)
+;   possible call:
+;      z = ea_CombiMenu.CCMeanRel(za,z,@k3,@p,@qq,@h,100)
+;  
+;   enum = "arithmetic" \
+;          "geometric" \
+;          "harmonic" \
+;          "contraharmonic" \
+;          "quadratic" \
+;          "Lehmer"
+;
+       complex z = (0.0,0.0)
+       float q1 = real(q)
+       float q2 = imag(q)
+       if vs==100
+          if k>1, a = q1*a, b = q2*b, endif
+             
+          if k==0,     z = p*a+(1-p)*b
+          elseif k==1, z = a^p * b^(1-p)
+          elseif k==2, z = a*b/(a+b)
+          elseif k==3, z = (sqr(a)+sqr(b))/(a+b)
+          elseif k==4, z = sqr(a)+sqr(b)
+          elseif k==5, z = (a^p+b^p)/(a^(p-1)+b^(p-1))
+          endif
+       endif
+       return z
+    endfunc
+;--------------------------------------------------------------------------------
+}
+
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

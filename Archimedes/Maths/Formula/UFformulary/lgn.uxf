@@ -1,0 +1,552 @@
+kaleid_transform {
+
+    #pixel = @fn1((@rzoom*#pixel-@cen)^@p1)/@p1
+
+default:
+  title = "Multimirror Transformation"
+  complex param p1
+    caption = "Kaleid factor"
+    default = (4, 0)
+  endparam
+  complex param cen
+    caption = "Kaleid center"
+    default = (0, 0)
+  endparam
+  complex param rzoom
+    caption = "Kaleid pre-rotozoom"
+    default = (1, 0)
+  endparam
+  func fn1
+    caption = "Kaleid function"
+    default = log()
+  endfunc
+}
+
+nestgabe { ;04 01 2011
+; Modified from Mark Jeronimus 'mjdFunction' with
+; 'my' functions (well, my implementations of Gamma and Beta...)
+; Applies N times the special functions Gamma and Beta; the more you nest
+; and the more the map comes crazy :D
+transform:
+  complex func gamma(const complex x)
+    ; don't get in trouble!
+    if (x==0), return @g0, endif ; Avoids some troubles - G(0) redefinition
+    ; because 1/0 is a trouble :)
+    if (cabs(x) > @gmx), return x, endif
+    int s = @Gacc
+    if (s > 1000), s=1000, endif ; For mental safety. :P
+
+    complex gam = 1/x, int i = 1
+    while (i <= s)
+    ;if (cabs(gam) > @gmx)
+    ;return gam / x
+    ;else
+    gam = gam / (1+x/i) * ((1+1/i)^x)   ; I divide at first - should be better
+    ;endif
+
+    i = i + 1
+    endwhile
+    return gam
+  endfunc
+
+  complex func beta(const complex x, const complex y)
+    ; don't get in trouble!
+    if (x==0)||(y==0), return @b0, endif ; Avoids some troubles - B(0) redefinition
+    ; because 1/0 is a trouble :)
+    if (cabs(x*y) > @bmx), return sqrt(2*#pi), endif
+    int s = @Bacc
+    if (s > 1000), s=1000, endif ; For mental safety. :P
+
+    complex bet = (x+y)/(x*y), int i = 1
+    while (i <= s)
+    bet = bet / (1 + (x*y/(i*(x+y+i))) )
+    i = i + 1
+    endwhile
+    return bet
+  endfunc
+
+    int s = @repts
+    if (s > 1000), s=1000, endif ; For mental safety. :P
+
+    int i = 1
+    while (i <= s)
+          #pixel=((gamma(#pixel*@rzg+@centg)-@centg)*@weg + \
+          (beta(#pixel*@rzb+@centb,1+@centb2)-@centb)*@web \
+          + @fn1(#pixel))/(1+@web+@weg)
+          i=i+1
+    endwhile
+default:
+  title="Nested Gamma + Beta mapping"
+  int param repts
+    caption = "Map nesting"
+    default = 5
+    hint = "1 to 100; more nesting = more complexity and less speed. \
+    Another way to obtain this result is copy/paste this mapping n times. \
+    This can give unexpected results if you change params after pasting..."
+    min = 1
+    max = 100
+  endparam
+
+  func fn1
+    caption = "Pixel function"
+    default = ident()
+  endfunc
+
+  float param weg
+    caption="Weight of gamma"
+    default=1.0
+    min = 0.0
+  endparam
+  
+  float param web
+    caption="Weight of beta"
+    default=0.2
+    min = 0.0
+  endparam
+  
+  heading
+    caption = "Gamma() modes"
+    text = "Set G(0) = 100 to see a closer approx. of the real Gamma function. \
+    G(0) = 1 is a 'wrong' value I set for convenience."
+    expanded = false
+  endheading
+  
+  param centg
+    caption="Shift"
+    default=(-1,0)
+  endparam
+  
+  param rzg
+    caption="Roto-zoom"
+    default=(1,0)
+  endparam
+  
+  param g0
+    caption = "G(0) = "
+    hint = "G(0) doesn't exist, so I redefined it"
+    default = (1,0)
+  endparam
+
+  int param Gacc
+    caption = "G() iterations"
+    default = 10
+    hint = "2 to 100; more iterations = more accuracy and less speed. \
+    But 'inaccurate plot' doesn't mean 'weird plot'."
+    min = 2
+    max = 100
+  endparam
+
+  float param gmx
+    caption = "G() cutoff"
+    default = 100
+    hint = "1 to 1e100; whenever this value the calculation stops. \
+    Remember that Gamma function grows VERY fast (even more than Exp)."
+    min = 1
+    max = 1e100
+  endparam
+
+  heading
+    caption = "Beta() modes"
+    expanded = false
+  endheading
+  
+  param centb
+    caption="Shift 1"
+    default=(1,0)
+  endparam
+  
+  param centb2
+    caption="Shift 2"
+    default=(0,0)
+  endparam
+  
+  param rzb
+    caption="Roto-zoom"
+    default=(1,0)
+  endparam
+  
+  param b0
+    caption = "B(0) = "
+    hint = "B(0) doesn't exist, so I redefined it"
+    default = (1,0)
+  endparam
+
+  int param Bacc
+    caption = "B() iterations"
+    default = 10
+    hint = "2 to 100; more iterations = more accuracy and less speed. \
+    But 'inaccurate plot' doesn't mean 'weird plot'."
+    min = 2
+    max = 100
+  endparam
+
+  float param bmx
+    caption = "B() cutoff"
+    default = 1e20
+    hint = "1 to 1e100; whenever this value the calculation stops - I leave \
+    a very high value because Beta has less 'troubles' than Gamma."
+    min = 1
+    max = 1e100
+  endparam
+}
+
+mapbe2 { ;05 01 2011
+; Modified from Mark Jeronimus 'mjdFunction' with
+; my implementations of Beta
+; Applies N times the special function Beta (but with real & imag parts of pixel)
+; It's a weird mapping, so be careful! :o
+transform:
+  complex func beta(const complex x, const complex y)
+    ; don't get in trouble!
+    if (x==0)||(y==0), return @b0, endif ; Avoids some troubles - B(0) redefinition
+    ; because 1/0 is a trouble :)
+    if (cabs(x*y) > @bmx), return sqrt(2*#pi), endif
+    int s = @Bacc
+    if (s > 1000), s=1000, endif ; For mental safety. :P
+
+    complex bet = (x+y)/(x*y), int i = 1
+    while (i <= s)
+    bet = bet / (1 + (x*y/(i*(x+y+i))) )
+    i = i + 1
+    endwhile
+    return bet
+  endfunc
+
+    int s = @repts
+    if (s > 1000), s=1000, endif ; For mental safety. :P
+
+    int i = 1
+    while (i <= s)
+          #pixel=((beta(-@fnr(real(#pixel)*@rzb+@centb),-@fni(flip(imag(#pixel)*@rzb+@centb2))) \
+          -@centb - flip(@centb2))*@web \
+          + @fn1(#pixel))/(1+@web)
+          i=i+1
+    endwhile
+default:
+  title="Beta glass"
+  int param repts
+    caption = "Map nesting"
+    default = 1
+    hint = "1 to 100; more nesting = more complexity and less speed. \
+    Another way to obtain this result is copy/paste this mapping n times. \
+    This can give unexpected results if you change params after pasting..."
+    min = 1
+    max = 100
+  endparam
+
+  func fn1
+    caption = "Pixel function"
+    default = ident()
+  endfunc
+  
+  func fnr
+    caption = "Re() function"
+    default = cabs()
+  endfunc
+  
+  func fni
+    caption = "Im() function"
+    default = cabs()
+  endfunc
+
+  float param web
+    caption="Weight of beta"
+    default=0.01
+    min = 0.0
+  endparam
+
+  heading
+    caption = "Beta() modes"
+    expanded = false
+  endheading
+
+  param centb
+    caption="Re() shift"
+    default=(1,1)
+  endparam
+
+  param centb2
+    caption="Im() shift "
+    default=(-1,-1)
+  endparam
+
+  param rzb
+    caption="Roto-zoom"
+    default=(1,0)
+  endparam
+
+  param b0
+    caption = "B(0) = "
+    hint = "B(0) doesn't exist, so I redefined it"
+    default = (1,0)
+  endparam
+
+  int param Bacc
+    caption = "B() iterations"
+    default = 50
+    hint = "2 to 100; more iterations = more accuracy and less speed. \
+    But 'inaccurate plot' doesn't mean 'weird plot'."
+    min = 2
+    max = 100
+  endparam
+
+  float param bmx
+    caption = "B() cutoff"
+    default = 1e20
+    hint = "1 to 1e100; whenever this value the calculation stops - I leave \
+    a very high value because Beta has less 'troubles' than Gamma."
+    min = 1
+    max = 1e100
+  endparam
+}
+
+pseudo_mobius {
+; Extension of the Mobius transformation with post-autoscaling.
+; It is very easy and funny to use! Too bad, Mobius toolbox in sdc.uxf
+; (it is a beautiful mapping, anyway)
+; hadn't the autoscale and it's too hard to handle it... ;)
+; So this mapping automatically shifts the center and rotates
+; in the "correct" place. Well, you know that after a Mobius
+; transform nothing is correct :D
+global:
+
+  complex p0 = (0,0)
+  complex p1 = @refp
+  if (@refp != (0,0))
+  int ig = 1  ; i GLOBAL
+  ; AUTO MODE calculate fix points
+    while (ig <= @nest)
+    p0 = (@fn1(@rzoom1*p0-@cen1)+@c1) \
+            /(@fn2(@rzoom2*p0-@cen2)+@c2)
+    p1 = (@fn1(@rzoom1*p1-@cen1)+@c1) \
+            /(@fn2(@rzoom2*p1-@cen2)+@c2)
+    ig = ig+1
+    endwhile
+  endif
+transform:
+  complex px = @prefu( @presc*#pixel - @precen ), int i=1  ; RESET I
+  
+  ; Calculate transform
+    while (i <= @nest)
+    px = (@fn1(@rzoom1*px-@cen1)+@c1) \
+            /(@fn2(@rzoom2*px-@cen2)+@c2)
+    i = i+1
+    endwhile
+    
+    if (@refp == (0,0))
+    ; Manual adjustment
+      #pixel = @finfu( @finsc*px - @fincen )
+    else
+      ; AUTO MODE (reccomended...)
+      if @adm == 1
+      #pixel = @finfu( @finsc*(px-p0)/cabs(p1-p0) - @fincen )
+      elseif @adm == 2
+      #pixel = @finfu( @finsc*(px-p0) - @fincen )
+      else
+      #pixel = @finfu( @finsc*(px-p0)/(p1-p0) - @fincen )
+      endif
+    endif
+
+default:
+  title = "Pseudo-Mobius"
+  heading
+  caption = "Pure tranform params"
+    text = "Set a small magnification (loc. tab) to see clearly the map. \
+    When you use 'ident' as function, you don't need to modify centers, \
+    or they will 'contrast' the constants. If you don't know what to do here, try  \
+    to modify extra params only. If the map shows 'pixelated' zones, use \
+    additional precision please (to fix floating point bugs)."
+  endheading
+  complex param c1
+    caption = "Constant (up)"
+    default = (.5, 0)
+  endparam
+  complex param cen1
+    caption = "Center (up)"
+    default = (0, 0)
+  endparam
+  complex param rzoom1
+    caption = "Rotozoom (up)"
+    default = (1, 0)
+    hint = "Do NOT choose (0,0)"
+  endparam
+  func fn1
+    caption = "Function (up)"
+    default = ident()
+  endfunc
+  complex param c2
+    caption = "Constant (down)"
+    default = (1.5, 0)
+  endparam
+  complex param cen2
+    caption = "Center (down)"
+    default = (0, 0)
+  endparam
+  complex param rzoom2
+    caption = "Rotozoom (down)"
+    hint = "Do NOT choose (0,0)"
+    default = (1, 0)
+  endparam
+  func fn2
+    caption = "Function (down)"
+    default = ident()
+  endfunc
+  heading
+  caption = "Extra params"
+    text = "Nesting is useless as long as you use ident() as functions, \
+    because M(M(z)) = M'(z) where M'(z) is another Mobius (linear) transform. \
+    Set Unit point = (0,0) to disable auto-adjustment of the mapping \
+    (much faster, useful when auto doesn't work but less easy to use). \
+    Adjusting the 'angle' corrupts the mapping, but it's somewhat funny."
+  endheading
+  int param nest
+    caption = "Nesting order"
+    default = 1
+    hint = "1 to 50; the transformation will be repeated this many times"
+    min = 1
+    max = 50
+  endparam
+  complex param refp
+    caption = "Unit point"
+    default = (1,0)
+  endparam
+  param adm
+    caption = "Adjust mode"
+    enum = "Center, zoom, angle" "Center, zoom" "Center"
+    default = 1
+  endparam
+  func prefu
+    caption = "Pre function"
+    default = ident()
+  endfunc
+  complex param presc
+    caption = "Pre rotozoom"
+    hint = "Do NOT choose (0,0)"
+    default = (1,0)
+  endparam
+  complex param precen
+    caption = "Pre center"
+    default = (0,0)
+  endparam
+  func finfu
+    caption = "Final function"
+    default = ident()
+  endfunc
+  complex param finsc
+    caption = "Final rotozoom"
+    hint = "Do NOT choose (0,0)"
+    default = (1,0)
+  endparam
+  complex param fincen
+    caption = "Final center"
+    default = (0,0)
+  endparam
+
+}
+
+pseudo_mobius_wf {
+; without functions & centers (simplified)
+; This is not the "complete" Mobius transform but a rototranslation of it
+; M(z) = (az +b) / (cz + d)  in general. But it is redundant and not easy to use!
+; I want to satisfy those conditions
+; 1) M(0) = 0
+; 2) M(k)=k with k=user defined point
+; It is straightforward that it is true when b = 0 & c = (a-d)/k
+; There is one parameter that can be written in function of
+; the others so assuming d=1 won't affect the map, so here we go
+; Modification; The precedent expressions are not valid when d=0 (singular transform)
+; But also if d=0 transform is of kind M(z) = a/c + b/(c*z) (it's a rototransl. of a
+; regular inversion, T(z) = 1/z)
+; In addition, transforms of the kind M(z) = az/(cz+d) are singular when a=0
+; So I decided a=0 -> M(z) = 1/(cz) (controllable via center shift)
+; My note; This transformation is perfect used with Lambda set, because it
+; can transform circles to straight lines, and can trasform circles in reversed
+; circles, giving a number of quite cool effects; when you zoom in you can
+; find some zones with properties very similar to Mobius circle inversions!
+global:
+  complex c = @mA-1
+  if (@refp!=0)
+  c = c/@refp
+  else
+  c = 1 ; Reference must be nonzero
+  endif
+transform:
+  complex px = @prefu( @presc*#pixel - @precen ) ; , int i=1  ; RESET I
+
+  ; In reality if you assume d=1 you don't lose any possible
+  ; additional effect because there is a division, believe me
+  
+  ; Calculate transform
+    ;while (i <= @nest)
+    if (@mA==0)
+      if (c!=0)
+      px = 1 /(c*px) ;Singular case -> Regular inversion - M(0) doesn't exist
+      endif
+      ; c=a=0 is a nonsense... Ignore it
+    else
+    px = (@mA*px) / (c*px+1)  ; Normal case -> Non-singular Mobius transform with M(0)=0
+    endif
+    ;i = i+1
+    ;endwhile
+
+    ; Manual adjustment
+    #pixel = @finfu( px - @fincen )
+default:
+  title = "Simplified Mobius"
+  heading
+  caption = "Pure tranform params"
+    text = "Mobius transform with M(0)=0, M(p)=p, all possible transforms \
+    are rototranslations of this one. You can easily get any possible \
+    effect manipulating just the first two params, all other are just \
+    'bells and whistles'."
+  endheading
+  complex param refp
+    caption = "Unshifted point"
+    default = (1,0)
+  endparam
+  complex param mA
+    caption = "Transform rotozoom"
+    default = (1, 0)
+    hint = "Do NOT choose (0,0). Choosing (1,0) involves in a idle transformation."
+  endparam
+  ; Redundant parameter, but can be useful for a quick look around. lol
+  complex param fincen
+    caption = "Center shift"
+    default = (0,0)
+  endparam
+  ; Nesting a Mobius transform gives another Mobius transform, so I removed this
+  ;int param nest
+  ;  caption = "Nesting order"
+  ;  default = 1
+  ;  hint = "1 to 50; the transformation will be repeated this many times"
+  ;  min = 1
+  ;  max = 50
+  ;endparam
+  complex param presc
+    caption = "Linear rotozoom"
+    hint = "Do NOT choose (0,0)"
+    default = (1,0)
+  endparam
+  complex param precen
+    caption = "Transform center"
+    hint = "Useful to simply 'move around' the fractal (if you really need to...)"
+    default = (0,0)
+  endparam
+  ; You may get some cool effects with these
+  func prefu
+    caption = "Pre function"
+    default = ident()
+  endfunc
+  func finfu
+    caption = "Final function"
+    default = ident()
+  endfunc
+  ; Redundant parameter.
+  ; You can get the same effects manipulating all other factors
+  ;complex param finsc
+  ;  caption = "Final rotozoom"
+  ;  hint = "Do NOT choose (0,0)"
+  ;  default = (1,0)
+  ;endparam
+
+}

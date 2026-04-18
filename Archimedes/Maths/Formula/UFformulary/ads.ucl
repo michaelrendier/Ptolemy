@@ -1,0 +1,232 @@
+Blur(OUTSIDE) {
+; Creates a blurred orbit trap
+init:
+float w1=1
+final:
+
+IF @random=="on"
+ IF @type=="10"
+  w1=10
+ ENDIF
+ IF @type=="50"
+  w1=50
+ ENDIF
+ IF @type=="100"
+  w1=100
+ ENDIF
+ IF @type=="150"
+  w1=150
+ ENDIF
+ IF @type=="200"
+  w1=200
+ ENDIF
+ IF @type=="250"
+  w1=250
+ ENDIF
+
+ IF @type=="350"
+  w1=350
+ ENDIF
+ 
+ IF @type=="1000"
+  w1=1000
+ ENDIF
+
+ IF @random=="On"
+   #index= real(abs(-abs(#z-#random*sin(w1))))
+ ENDIF
+ENDIF 
+ IF @random=="Off"
+  
+  #index= real(flip(abs(#z*cos(w1))))
+ ENDIF
+
+default:
+  title = "Blurred"
+  param random
+   caption= "Blur"
+   enum= "On" "Off"
+   default= 0
+  endparam
+  
+  param type
+   caption= "Blur Factor"
+   default= 0
+enum= "10" "50" "100" "150" "200" "250" "300" "350" "1000"
+  endparam
+}
+
+Blends{
+init:
+ complex v=(1,3)
+final:
+
+
+IF @type=="Sine"
+ v=real(sin(@seed))
+ENDIF
+IF @type=="Cosine"
+ v= cos(cos(@seed))
+ENDIF
+IF @type=="Tangent"
+ v= cos(tan(@seed))
+ENDIF
+IF @type=="Arc-Sine"
+ v= #pi*asin(@seed)
+ENDIF
+IF @type=="Arc-Cosine"
+ v= flip((acos(@seed)))
+ENDIF
+IF @type=="Arc-Tangent"
+ v= (atan(@seed)*#pi)
+ENDIF
+
+
+
+IF @sharpen=="On"
+ IF @s_factor=="High"
+   #index= abs(real(flip(v+#z)+#random/5))
+ ENDIF
+ 
+ IF @s_factor=="Medium"
+   #index= abs(real(flip(v+#z)+#random/7))
+ ENDIF
+
+ IF @s_factor=="Lower"
+   #index= abs(real(flip(v+#z)+#random/9))
+ ENDIF
+ENDIF
+
+IF @sharpen=="Off"
+ #index= abs(real(flip(v+#z)))
+ENDIF
+
+default:
+
+ param S_Factor
+  caption= "Shading Factor"
+  default= 0
+  enum= "High" "Medium" "Lower"
+ endparam
+ 
+ param Sharpen
+  caption= "Shading"
+  default= 1
+  enum= "On" "Off"
+ endparam
+ 
+ param Seed
+  default= (1,3)
+ endparam
+ 
+ param Type
+  caption= "Function"
+  enum= "Sine" "Cosine" "Tangent" "Arc-Sine" "Arc-Cosine" "Arc-Tangent"
+ endparam
+}
+
+
+
+
+
+
+
+Distortion{
+;
+init:
+int a= 10
+final:
+IF(@color== "Blue")
+ a=10
+ENDIF
+IF(@color=="Multi-Colored")
+ a=1
+ENDIF
+IF(@blur=="On")
+#index= abs(imag(cos(#pixel*#random)/a))
+ENDIF
+
+IF(@blur=="Off")
+#index= abs(imag(cos(#pixel)*a))
+ENDIF
+default:
+ title= "Distortion"
+param blur
+ default= 0
+ enum= "On" "Off"
+endparam 
+
+param @color
+ default= 0
+ enum= "Blue" "Multi-Colored"
+endparam
+}
+
+Box&Swirl{
+final:
+#index= abs(imag(cos(#pixel)*-999))
+default:
+title= "Boxs and Swirls"
+}
+
+
+Swanson{
+;
+;
+init:
+float v=1e10
+complex com= (1,1)
+int num= #maxiter
+
+loop:
+ v=|#z|/2.5
+ if(@type=="Square")
+  com= sqr(v)
+ endif
+ 
+ if(@type=="Square Root")
+  com= sqrt(v)
+ endif
+ 
+ if(@type=="Logarithm")
+  com= log(v)
+ endif
+ 
+ if(v<num)
+  v= v-(real(com)-imag(com))
+ endif
+final:
+#index= v
+
+default:
+ param Type
+  caption= "Function"
+  enum= "Square" "Square Root" "Logarithm"
+  default=2
+ endparam
+}
+
+Drake{
+;(sqr(q)*.01+|#z|-log(pix))
+;
+init:
+ float q=3
+ float v=3
+ float pix= |#z|
+ 
+loop:
+ q=sqr(q)%@seed+|#z|-log(pix)+(|#z|*log(v))
+ v=sqrt(v)*@seed+|#z|-log(pix)
+
+final:
+ #index=abs(q)
+ 
+default:
+ param Seed
+  default= .001
+ endparam
+ 
+}
+
+
+

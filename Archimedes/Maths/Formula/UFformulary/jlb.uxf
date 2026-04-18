@@ -1,0 +1,2756 @@
+Grid2 {
+; Original by red williams, 2000, rdw.uxf;
+; A transformation which overlays a grid on the image window.
+;
+; Slight modification November 2021 to allow thicker grid lines
+transform:
+;$define debug
+;complex jk1 = (900,300)
+;complex jk2 = (  0,300)
+  float xsp = real(@space)
+  float ysp = imag(@space)
+  float xoff = real(@off)
+  float yoff = imag(@off)
+  float tx = real(@thick) - 0.001
+  float ty = imag(@thick) - 0.001
+
+  float x = (real(#screenpixel) + xoff) / xsp
+  float y = (imag(#screenpixel) + yoff) / ysp
+  float xr = xsp * (x - round(x))
+  float yr = ysp * (y - round(y))
+  #solid =  abs(xr) < tx || abs(yr) < ty
+
+default:
+  title = "Grid2"
+  param space
+    caption = "Grid Spacing"
+    default = (100,100)
+    hint = "Re portion is x spacing and Im part is y spacing"
+  endparam
+  param off
+    caption = "Grid Offset"
+    default = (0.5,0.5)
+    hint = "Re portion is x offset and Im part is y offset - \
+            useful for positioning grid."
+  endparam
+  complex param thick
+    caption = "Grid thickness"
+    default = (1,1)
+    ;min = 1
+    hint = "Real portion is x thickness; imag portion is y thickness."
+  endparam
+}
+
+jlb_3d_map {
+; General 3D perspective mapping. This is a modification and generalization of
+; fs-3d-map in fs.uxf. Thanks to Frederik Slijkerman.
+;
+; The 3D transformations/formulas use the left-handed coordinate
+; system, where X points to the right, Y points up, and Z points
+; into the screen. To determine the direction of a rotation,
+; hold your left hand such that your thumb points into the direction
+; of the axis around which the rotation takes place, and then your
+; curled fingers point into the direction of positive rotation.
+;
+; Rotation is performed first around the X axis, then around the
+; Y axis, and finally around the Z axis. Scaling must be done using
+; UF's zooming feature. Translation is performed after the rotation.
+;
+; The only shapes supported now are a plane and a sphere: more shapes
+; should be added in the future. Also I intend to write a coloring
+; algorithm which would perform proper 3D shading for these shapes.
+
+global:
+
+  ; Convert angles from degrees to radians.
+  float angx = (@rotx * #pi) / 180
+  float angy = (@roty * #pi) / 180
+  float angz = (@rotz * #pi) / 180
+
+
+transform:
+  float tt = 0
+  float lambda = 0
+  float u = 0, float v = 0
+  float x = 0, float y = 0, float z = 0
+  float a = 0, float b = 0, float c = 0
+
+  ; Construct a line from the current pixel on the screen through 3D space.
+  ; The line is defined by (sx, sy, sz) + lambda * (dx, dy, dz) where
+  ; lambda can be any real value > 0. So the line does not extend behind
+  ; the screen.
+
+  float sx = -@transx
+  float sy = -@transy
+  float sz = -@transz
+  float dx = real(#pixel)
+  float dy = imag(#pixel)
+  float dz = 4
+
+
+  ; Rotate the line according to the (rotx, roty, rotz) angle.
+
+  ; Apply rotation around Z axis
+  tt = cos(angz) * sy - sin(angz) * sx
+  sx = cos(angz) * sx + sin(angz) * sy
+  sy = tt
+  tt = cos(angz) * dy - sin(angz) * dx
+  dx = cos(angz) * dx + sin(angz) * dy
+  dy = tt
+
+  ; Apply rotation around Y axis
+  tt = cos(angy) * sx - sin(angy) * sz
+  sz = cos(angy) * sz + sin(angy) * sx
+  sx = tt
+  tt = cos(angy) * dx - sin(angy) * dz
+  dz = cos(angy) * dz + sin(angy) * dx
+  dx = tt
+
+  ; Apply rotation around X axis
+  tt = cos(angx) * sz - sin(angx) * sy
+  sy = cos(angx) * sy + sin(angx) * sz
+  sz = tt
+  tt = cos(angx) * dz - sin(angx) * dy
+  dy = cos(angx) * dy + sin(angx) * dz
+  dz = tt
+
+  ; Now compute the intersection of the line with the shape, and return
+  ; the intersection point in #pixel (texture coordinates).
+  ; This is the only shape-dependent part.
+  ; Solve:
+  ; [ sx ]          [ dx ]   [ x ]
+  ; [ sy ] + lambda [ dy ] = [ y ]
+  ; [ sz ]          [ dz ]   [ z ]
+  ; together with the formula of shape.
+  
+  if (@shape == "Plane")
+
+    ; This equation must be solved:
+    ; [ sx ]          [ dx ]   [ u ]
+    ; [ sy ] + lambda [ dy ] = [ 0 ]
+    ; [ sz ]          [ dz ]   [ v ]
+    ; where (u,v) are the texture coordinates to return in #pixel.
+
+    lambda = -sy / dy
+    if lambda <= 0
+      ; The line does not intersect the plane.
+      #solid = true
+    else
+      ; Calculate intersection point.
+      u = sx + lambda * dx
+      v = sz + lambda * dz
+      #pixel = u + flip(v)
+    endif
+
+  elseif (@shape == "Sphere")
+
+    ; The shape's formula is
+    ; x^2 + y^2 + z^2 = radius^2
+
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    lambda = quad(a, b, c)
+
+  elseif (@shape == "Egg")
+
+    ; The shape's formula is
+    ;    for y >= 0)
+    ; x^2 + (p_top * y)^2 + z^2 = radius^2
+    ;    (for y <= 0)
+    ; x^2 + (p_bot * y)^2 + z^2 = radius^2
+    ;
+    ; Get intersections for each and see which half, if any, intersects.
+
+    sy = sy * @p_bot
+    dy = dy * @p_bot
+
+    ; solve a*lambda^2 + b*lambda +c = 0
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    float xbot = 0, float ybot = +1, float zbot = 0
+    lambda = quad(a, b, c)
+    if (lambda >= 0)
+      xbot = sx + lambda * dx
+      ybot = sy + lambda * dy
+      zbot = sz + lambda * dz
+    endif
+
+    sy = sy * @p_top/@p_bot
+    dy = dy * @p_top/@p_bot
+
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    float xtop = 0, float ytop = -1, float ztop = 0
+    lambda = quad(a, b, c)
+    if (lambda >= 0)
+      xtop = sx + lambda * dx
+      ytop = sy + lambda * dy
+      ztop = sz + lambda * dz
+    endif
+    
+    if (ytop >= 0)
+      x = xtop
+      y = ytop
+      z = ztop
+      #pixel = pix(x, y, z)
+    elseif (ybot <= 0)
+      x = xbot
+      y = ybot
+      z = zbot
+      #pixel = pix(x, y, z)
+    else
+      #solid = true
+    endif
+    
+  elseif (@shape == "Cylinder")
+
+    ; The shape's formula is
+    ; x^2 + (p_cyl * z)^2 = radius^2
+
+    sz = sz * @p_cyl
+    dz = dz * @p_cyl
+
+    ; solve a*lambda^2 + b*lambda +c = 0
+    a = sqr(dx) + sqr(dz)
+    b = 2*sx*dx + 2*sz*dz
+    c = sqr(sx) + sqr(sz)- sqr(@radius)
+
+    lambda = quad(a, b, c)
+
+  elseif (@shape == "Hyperboloid")
+
+    ; The shape's formula is
+    ; x^2 - (p_hyp * y)^2 + z^2 = radius^2
+
+    sy = sy * @p_hyp
+    dy = dy * @p_hyp
+    a = sqr(dx) - sqr(dy) + sqr(dz)
+    b = 2*sx*dx - 2*sy*dy + 2*sz*dz
+    c = sqr(sx) - sqr(sy) + sqr(sz)
+    if (@b_hyp)
+      c = c - sqr(@radius)
+    else
+      c = c + sqr(@radius)
+    endif
+
+    lambda = quad(a, b, c)
+
+   elseif (@shape == "Paraboloid")
+
+     ; The shape's formula is
+     ; x^2 - p_par * y + z^2 = 0
+
+     a = sqr(dx) + sqr(dz)
+     b = 2*sx*dx - @p_par*dy + 2*sz*dz
+     c = sqr(sx) - @p_par*sy + sqr(sz)
+
+     lambda = quad(a, b, c)
+     
+  endif      ; shape
+    
+  if (@shape != "Plane" && @shape != "Egg")
+    if lambda <= 0
+      ; Intersection point is behind the screen, or no intersection point.
+      #solid = true
+    else
+      x = sx + lambda * dx
+      y = sy + lambda * dy
+      z = sz + lambda * dz
+      #pixel = pix(x, y, z)
+    endif
+  endif
+
+  ; Corrections
+  #pixel = @fraccenter + #pixel * exp(flip((@fracangle * #pi) / 180)) / @fracmagn
+
+; Functions used for several shapes
+;
+; Solve a*U^2 + b*U + c = 0 for smaller positive real root
+; return -1 if no real positive root exists
+; -b/a is the sum of the two roots; c/a is the product of the two roots.
+float func quad(float a, float b, float c)
+  if (a == 0.0)
+    float u = -c/b
+    if (u >= 0)
+      return u
+    else
+      return -1
+    endif
+  endif
+  b = b/a
+  c = c/a
+  float d = b*b - 4*c
+  if (d < 0)
+    return -1
+  endif
+  d = sqrt(d)
+  float u1
+  ; Do carefully to avoid loss of precision
+  if (b >= 0)             ; sum of roots is negative, so at least one is negative
+    u1 = (-b - d)/2     ; t is negative
+    ; u1 is negative
+    ; u2 = c/u1
+    if (c < 0)
+      return c/u1
+    else
+      return -1
+    endif
+  else  ; (b < 0)        sum of roots is positive, so at least one is positive
+    u1 = (-b+d)/2    ; u1 is positive
+    if (c <= 0)
+      return u1
+    endif
+    float u2 = c/u1        ; positive
+    if (u2 < u1)
+      return u2
+    endif
+    return u1
+  endif
+endfunc
+
+complex func pix(const float x, const float y, const float z)
+  float u, float v
+  if z == 0
+    if x > 0
+      u = 2
+    else
+      u = -2
+    endif
+  else
+    u = (4 / #pi) * atan(x / abs(z))
+  endif
+  v = (4 / #pi) * atan(y / sqrt(sqr(x) + sqr(z)))
+  return u + flip(v)
+endfunc
+
+default:
+  title = "3D Mapping+jlb"
+
+  param shape
+    caption = "Shape"
+    enum = "Plane" "Sphere" "Egg" "Cylinder" "Hyperboloid" "Paraboloid"
+    hint = "The fractal is mapped onto this shape."
+  endparam
+  
+  float param radius
+    caption = "Radius"
+    default = 0.5
+    hint = "For sphere and cylinder, it's the only radius. For egg, it's the \
+           maximum radius. For hyperboloid, it's the minimum radius."
+    min = 0.1
+;     max = 1
+    visible = (@shape > 0) && (@shape < 5)
+  endparam
+
+  float param p_top
+    caption = "Egg top parameter"
+    default = 0.6     ; 24/35
+    hint = "Smaller numbers mean more pointy; 1 is circular."
+    min = 0.1
+    max = 10
+    visible = (@shape == 2)
+  endparam
+
+  float param p_bot
+    caption = "Egg bottom parameter"
+    default = 0.9    ; 6/7
+    hint = "Smaller numbers mean more pointy; 1 is circular."
+    min = 0.1
+    max = 10
+    visible = (@shape == 2)
+  endparam
+
+  float param p_cyl
+    caption = "Cylinder radius"
+    default = 1
+    min = 0.1
+    max = 10
+    visible = (@shape == 3)
+  endparam
+
+  float param p_hyp
+    caption = "Hyperboloid parameter"
+    default = 1
+   hint = "Smaller numbers give a thinner ahape."
+    min = 0.1
+    max = 10
+    visible = (@shape == 4)
+  endparam
+  bool param b_hyp
+    caption = "One sheet"
+    default = true
+    visible = (@shape == 4)
+  endparam
+
+  float param p_par
+    caption = "Parabola parameter"
+    default = 1
+   ;hint = "Smaller numbers give a thinner ahape."
+;     min = 0.1
+;     max = 10
+    visible = (@shape == 5)
+  endparam
+
+  param rotx
+    caption = "X rotation"
+    default = 0.0
+    hint = "Rotation around the x-axis, in degrees. The x-axis points to \
+            the right. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing to \
+            the right. Your (curled) fingers now indicate the direction of \
+            positive X rotation."
+  endparam
+
+  param roty
+    caption = "Y rotation"
+    default = 0.0
+    hint = "Rotation around the y-axis, in degrees. The y-axis points \
+            upwards. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing \
+            upwards. Your (curled) fingers now indicate the direction of \
+            positive Y rotation."
+  endparam
+
+  param rotz
+    caption = "Z rotation"
+    default = 0.0
+    hint = "Rotation around the z-axis, in degrees. The z-axis points into \
+            the screen. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing into \
+            the screen. Your (curled) fingers now indicate the direction of \
+            positive Z rotation."
+  endparam
+
+  param transx
+    caption = "X Translation"
+    default = 0.0
+    hint = "Translation along the x-axis. The x-axis points to the right, \
+            so increasing this value will move the fractal to the right, too."
+  endparam
+
+  param transy
+    caption = "Y Translation"
+    default = 0.0
+    hint = "Translation along the y-axis. The y-axis points upwards, \
+            so increasing this value will move the fractal upwards, too."
+  endparam
+
+  param transz
+    caption = "Z Translation"
+    default = 2.0
+    hint = "Translation along the z-axis. The z-axis points into the screen, \
+            so increasing this value will move the fractal away."
+  endparam
+
+  param fraccenter
+    caption = "Fractal Center"
+    default = (0,0)
+    hint = "Center of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracmagn
+    caption = "Fractal Magnification"
+    default = 1.0
+    hint = "Magnification of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracangle
+    caption = "Fractal Rotation"
+    default = 0.0
+    hint = "Rotation angle (in degrees) of the fractal image. Use here \
+            what you would normally enter in the Location tab."
+  endparam
+}
+
+GlassLens {
+; original by Luke Plant, modified JLB 080124
+;		
+; Was glass hemisphere;
+; now a spherical lens cap, up to a hemisphere.
+;
+global:
+  float hrad = @radius*sqrt(1 + @h*@h)  ; hemisphere radius
+transform:
+  complex zz = #pixel-@ctr
+  float r = cabs(zz)/@radius
+  if (r < 1.0)
+	r = r * @radius/hrad
+    float theta = acos(r)
+    float beta = asin(r/@index)
+    complex d = (1-@h/hrad)*zz*tan(theta)*real(tan(#pi/2-theta-beta))
+    ;#pixel = @ctr + z2/r * x2
+    #pixel = #pixel - d
+  endif
+default:
+  title = "Glass lens"
+  float param index
+    caption = "Refractive index"
+    default = 1.5
+    min = 1.0
+    hint = "Refactive index of 'glass'"
+  endparam
+  complex param ctr
+    caption = "Center"
+    default = (0,0)
+    hint = "Center of hemisphere"
+  endparam
+  float param radius
+    caption = "Radius"
+    default = 1.0
+    hint = "Radius of lens"
+  endparam
+  float param h
+    caption = "Height above sphere center"
+    default = 0.0
+    hint = "h=0 gives a glass hemisphere; h>0 gives a plano-convex lens; \
+    h<0 is unphysical but may be interesting."
+    ;min = 0.0
+  endparam
+}
+
+JLB-dmj3-DeluxeClipping {
+;
+; copied from dmj3.uxf. Only change is to add power to Ellipse clippings.
+;
+; New clipping transform created for Janet Parke's Masking
+; course for Ultra Fractal.
+;
+; This transform is intended to be useful both for students
+; and for experienced UF artists.
+;
+global:
+  int digits[11]
+  digits[0] = 432534
+  digits[1] = 139874
+  digits[2] = 1000086
+  digits[3] = 430742
+  digits[4] = 195170
+  digits[5] = 925327
+  digits[6] = 433798
+  digits[7] = 139807
+  digits[8] = 431766
+  digits[9] = 399254
+  digits[10] = 0
+
+transform:
+  complex p = (0,0)
+  complex r = (0,1) ^ (@rotation / 90)
+  complex c = (0,0)
+  complex q = (0,0)
+  complex n = (0,0)
+  complex s = (0,0)
+  complex t = (0,0)
+  complex o = ((0,1) ^ (@offsetangle / 90)) * @offsetamount
+  float d = 0.0
+  float a = 1.0
+  bool in = false
+  int j = 0
+  int k = 0
+  int l = 0
+
+  complex polypoints[1001]; arbitrary polygon points
+  IF (@shape == "arbitrary polygon"); doing a polygon; copy endpoints
+    polypoints[0] = @polypoint1
+    polypoints[1] = @polypoint2
+    polypoints[2] = @polypoint3
+    polypoints[3] = @polypoint4
+    polypoints[4] = @polypoint5
+    polypoints[5] = @polypoint6
+    polypoints[6] = @polypoint7
+    polypoints[7] = @polypoint8
+    polypoints[8] = @polypoint9
+    polypoints[9] = @polypoint10
+    polypoints[10] = @polypoint11
+    polypoints[11] = @polypoint12
+    polypoints[12] = @polypoint13
+    polypoints[13] = @polypoint14
+    polypoints[14] = @polypoint15
+    polypoints[15] = @polypoint16
+    polypoints[16] = @polypoint17
+    polypoints[17] = @polypoint18
+    polypoints[18] = @polypoint19
+    polypoints[19] = @polypoint20
+    polypoints[@polyorder] = @polypoint1
+  ENDIF
+  int polypointcount = @polyorder
+
+  complex curvepoints[1001]; curve control points
+  BOOL curveauto[1001]; auto-generate tangent point flags
+  BOOL curveclose[1001]; close curve
+  IF (@shape == "Bézier curve"); doing a curve; copy control points
+    curvepoints[0] = @curvepoint1
+    curvepoints[1] = @curvepoint2
+    curvepoints[2] = @curvepoint3
+    curvepoints[3] = @curvepoint4
+    curvepoints[4] = @curvepoint5
+    curvepoints[5] = @curvepoint6
+    curvepoints[6] = @curvepoint7
+    curvepoints[7] = @curvepoint8
+    curvepoints[8] = @curvepoint9
+    curvepoints[9] = @curvepoint10
+    curvepoints[10] = @curvepoint11
+    curvepoints[11] = @curvepoint12
+    curvepoints[12] = @curvepoint13
+    curvepoints[13] = @curvepoint14
+    curvepoints[14] = @curvepoint15
+    curvepoints[15] = @curvepoint16
+    curvepoints[16] = @curvepoint17
+    curvepoints[17] = @curvepoint18
+    curvepoints[18] = @curvepoint19
+    curvepoints[19] = @curvepoint20
+    polypoints[0] = @curvetangent1; copy tangent points
+    polypoints[1] = @curvetangent2
+    polypoints[2] = @curvetangent3
+    polypoints[3] = @curvetangent4
+    polypoints[4] = @curvetangent5
+    polypoints[5] = @curvetangent6
+    polypoints[6] = @curvetangent7
+    polypoints[7] = @curvetangent8
+    polypoints[8] = @curvetangent9
+    polypoints[9] = @curvetangent10
+    polypoints[10] = @curvetangent11
+    polypoints[11] = @curvetangent12
+    polypoints[12] = @curvetangent13
+    polypoints[13] = @curvetangent14
+    polypoints[14] = @curvetangent15
+    polypoints[15] = @curvetangent16
+    polypoints[16] = @curvetangent17
+    polypoints[17] = @curvetangent18
+    polypoints[18] = @curvetangent19
+    polypoints[19] = @curvetangent20
+    curveauto[0] = @curvetangent1auto; copy auto-generate flags
+    curveauto[1] = @curvetangent2auto
+    curveauto[2] = @curvetangent3auto
+    curveauto[3] = @curvetangent4auto
+    curveauto[4] = @curvetangent5auto
+    curveauto[5] = @curvetangent6auto
+    curveauto[6] = @curvetangent7auto
+    curveauto[7] = @curvetangent8auto
+    curveauto[8] = @curvetangent9auto
+    curveauto[9] = @curvetangent10auto
+    curveauto[10] = @curvetangent11auto
+    curveauto[11] = @curvetangent12auto
+    curveauto[12] = @curvetangent13auto
+    curveauto[13] = @curvetangent14auto
+    curveauto[14] = @curvetangent15auto
+    curveauto[15] = @curvetangent16auto
+    curveauto[16] = @curvetangent17auto
+    curveauto[17] = @curvetangent18auto
+    curveauto[18] = @curvetangent19auto
+    curveauto[19] = @curvetangent20auto
+    curveclose[0] = false ;@curveclose1; copy curve-close flags
+    curveclose[1] = @curveclose2
+    curveclose[2] = @curveclose3
+    curveclose[3] = @curveclose4
+    curveclose[4] = @curveclose5
+    curveclose[5] = @curveclose6
+    curveclose[6] = @curveclose7
+    curveclose[7] = @curveclose8
+    curveclose[8] = @curveclose9
+    curveclose[9] = @curveclose10
+    curveclose[10] = @curveclose11
+    curveclose[11] = @curveclose12
+    curveclose[12] = @curveclose13
+    curveclose[13] = @curveclose14
+    curveclose[14] = @curveclose15
+    curveclose[15] = @curveclose16
+    curveclose[16] = @curveclose17
+    curveclose[17] = @curveclose18
+    curveclose[18] = @curveclose19
+    curveclose[19] = false ;@curveclose20
+    curvepoints[@curveorder] = curvepoints[0]
+    polypoints[@curveorder] = polypoints[0]
+    curveauto[@curveorder] = curveauto[0]
+  ENDIF
+
+  ; While debugging, a test pixel was helpful in
+  ; identifying results of inside/outside tests
+  ; for individual line/curve segments. If you
+  ; want to see how the winding number algorithm
+  ; works, enable debugging and set the testx/y
+  ; to the pixel coordinates you'd like to see.
+;  $define debug
+  int testx = -50
+  int testy = -50
+
+  complex anchorpoints[102]; anchor point locations
+  int anchorpointcount = 0
+  int anchorpointtype[102]; anchor point type
+  int anchorpointnumber[102]
+  WHILE (j < 102)
+    anchorpointtype[j] = 0; by default, all are tangent points
+    anchorpointnumber[j] = 0; without numbers
+    j = j + 1
+  ENDWHILE
+
+  ; determine pixel location
+  IF (@screenrelative); relative coordinates
+    p = real(#screenpixel)/#width + flip(1.0-imag(#screenpixel)/#height)
+    a = #width/#height; aspect ratio of screen, used to enforce squareness
+  ELSE; absolute coordinates
+    p = #pixel
+  ENDIF
+
+  ; apply offset
+  p = p - o
+
+  IF (@shape == "circle"); circle clipping area
+    IF (@circletype == "bounding box"); bounding box method
+      c = (@circleupperleft + @circlelowerright) * 0.5
+      IF (abs(real(@circleupperleft)-real(@circlelowerright)) > abs(imag(@circleupperleft)-imag(@circlelowerright)))
+        d = sqr(abs(imag(@circleupperleft)-imag(@circlelowerright)) * 0.5)
+        ;d = (abs(imag(@circleupperleft)-imag(@circlelowerright)) * 0.5)^@p_circle
+      ELSE
+        d = sqr(abs(real(@circleupperleft)-real(@circlelowerright)) * 0.5)
+        ;d = (abs(real(@circleupperleft)-real(@circlelowerright)) * 0.5)^@p_circle
+      ENDIF
+      anchorpoints[0] = @circleupperleft
+      anchorpointtype[0] = 1
+      anchorpoints[1] = @circlelowerright
+      anchorpointtype[1] = 1
+      anchorpointcount = 2
+    ELSEIF (@circletype == "center and edge"); center and edge method
+      c = @circlecenter
+      s = @circleedge
+      s = real(s-c)*a + flip(imag(s-c)) + c; correct for aspect distortion, centered on c
+      d = |s - c|
+      anchorpoints[0] = @circlecenter
+      anchorpointtype[0] = 2
+      anchorpoints[1] = @circleedge
+      anchorpointcount = 2
+    ELSEIF (@circletype == "opposite edges"); opposite edges method
+      c = (@circleedge1 + @circleedge2) * 0.5
+      s = @circleedge1
+      s = real(s-c)*a + flip(imag(s-c)) + c; correct for aspect distortion, centered on c
+      d = |s - c|
+      anchorpoints[0] = @circleedge1
+      anchorpoints[1] = @circleedge2
+      anchorpointcount = 2
+    ELSEIF (@circletype == "three edge points"); three edge points method
+      ; from mathworld.wolfram.com
+      float ca = real(@circleedge1)*(imag(@circleedge2)*1-imag(@circleedge3)*1) - \
+                 imag(@circleedge1)*(real(@circleedge2)*1-real(@circleedge3)*1) + \
+                 1*(real(@circleedge2)*imag(@circleedge3)-real(@circleedge3)*imag(@circleedge2))
+      float cd = -( (|@circleedge1|)*(imag(@circleedge2)*1-imag(@circleedge3)*1) - \
+                    imag(@circleedge1)*((|@circleedge2|)*1-(|@circleedge3|)*1) + \
+                    1*((|@circleedge2|)*imag(@circleedge3)-(|@circleedge3|)*imag(@circleedge2)) )
+      float ce = (|@circleedge1|)*(real(@circleedge2)*1-real(@circleedge3)*1) - \
+                 real(@circleedge1)*((|@circleedge2|)*1-(|@circleedge3|)*1) + \
+                 1*((|@circleedge2|)*real(@circleedge3)-(|@circleedge3|)*real(@circleedge2))
+      float cf = -( (|@circleedge1|)*(real(@circleedge2)*imag(@circleedge3)-real(@circleedge3)*imag(@circleedge2)) - \
+                    real(@circleedge1)*((|@circleedge2|)*imag(@circleedge3)-(|@circleedge3|)*imag(@circleedge2)) + \
+                    imag(@circleedge1)*((|@circleedge2|)*real(@circleedge3)-(|@circleedge3|)*real(@circleedge2)) )
+      c = -cd / (2*ca) + flip( -ce / (2*ca) )
+      d = (sqr(cd)+sqr(ce)) / (4*sqr(ca)) - cf/ca
+      anchorpoints[0] = @circleedge1
+      anchorpoints[1] = @circleedge2
+      anchorpoints[2] = @circleedge3
+      anchorpointcount = 3
+    ENDIF
+    p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+    IF (|c-p| <= d)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape == "ellipse"); ellipse clipping area
+    IF (@ellipsetype == "three corners")
+      c = (@ellipseupperleft + @ellipselowerright) * 0.5
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@ellipseupperleft-c)*a + flip(imag(@ellipseupperleft-c)) + c; correct for aspect distortion, centered on c
+      t = real(@ellipseupperright-c)*a + flip(imag(@ellipseupperright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      d = cabs(q - c)
+      s = c + (t-c)*d/cabs(t-c); corrected upper-right
+      n = (s-q) / cabs(s-q); unit vector along the top edge
+      s = (s-c)*conj(n)
+      p = (p-c)*conj(n)
+      s = abs(s)
+      ;IF (sqr(real(p)/real(s))+sqr(imag(p)/imag(s)) <= 1)
+      IF ((real(p)/real(s))^@p_ellipse+(imag(p)/imag(s))^@p_ellipse <= 1)
+        in = true
+      ENDIF
+      anchorpoints[0] = @ellipseupperleft
+      anchorpointtype[0] = 1
+      anchorpoints[1] = @ellipselowerright
+      anchorpointtype[1] = 1
+      anchorpoints[2] = @ellipseupperright
+      anchorpointtype[2] = 1
+      anchorpointcount = 3
+    ELSEIF (@ellipsetype == "center and two edges")
+      c = @ellipsecenter
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@ellipsetop-c)*a + flip(imag(@ellipsetop-c)) + c; correct for aspect distortion, centered on c
+      t = real(@ellipseright-c)*a + flip(imag(@ellipseright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      n = (q-c) / cabs(q-c); unit vector to top edge
+      n = conj(flip(n))
+      s = real((t-c)*conj(n)) + flip(imag((q-c)*conj(n)))
+      p = (p-c)*conj(n)
+      s = abs(s)
+      ;IF (sqr(real(p)/real(s))+sqr(imag(p)/imag(s)) <= 1)
+      IF (abs((real(p)/real(s)))^@p_ellipse+abs((imag(p)/imag(s)))^@p_ellipse <= 1)
+        in = true
+      ENDIF
+      anchorpoints[0] = @ellipsetop
+      anchorpoints[1] = @ellipseright
+      anchorpoints[2] = @ellipsecenter
+      anchorpointtype[2] = 2
+      anchorpointcount = 3
+    ELSEIF (@ellipsetype == "fixed angle")
+      c = @ellipsecenter
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@ellipsetop-c)*a + flip(imag(@ellipsetop-c)) + c; correct for aspect distortion, centered on c
+      t = real(@ellipseright-c)*a + flip(imag(@ellipseright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      n = (0,1)^(@ellipse/90); unit vector along top edge
+      s = real((t-c)*conj(n)) + flip(imag((q-c)*conj(n)))
+      p = (p-c)*conj(n)
+      s = abs(s)
+      ;IF (sqr(real(p)/real(s))+sqr(imag(p)/imag(s)) <= 1)
+      IF (abs((real(p)/real(s)))^@p_ellipse+abs((imag(p)/imag(s)))^@p_ellipse <= 1)
+        in = true
+      ENDIF
+      anchorpoints[0] = @ellipsetop
+      anchorpoints[1] = @ellipseright
+      anchorpoints[2] = @ellipsecenter
+      anchorpointtype[2] = 2
+      anchorpointcount = 3
+    ENDIF
+
+  ELSEIF (@shape == "rectangle"); rectangle clipping area
+    IF (@recttype == "three corners")
+      c = (@rectupperleft + @rectlowerright) * 0.5
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@rectupperleft-c)*a + flip(imag(@rectupperleft-c)) + c; correct for aspect distortion, centered on c
+      t = real(@rectupperright-c)*a + flip(imag(@rectupperright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      d = cabs(q - c)
+      s = c + (t-c)*d/cabs(t-c); corrected upper-right
+      n = (s-q) / cabs(s-q); unit vector along the top edge
+      s = (s-c)*conj(n)
+      p = (p-c)*conj(n)
+      s = abs(s)
+      IF (real(p) >= -real(s) && real(p) <= real(s) && imag(p) >= -imag(s) && imag(p) <= imag(s))
+        in = true
+      ENDIF
+      anchorpoints[0] = @rectupperleft
+      anchorpoints[1] = @rectupperright
+      anchorpoints[2] = @rectlowerright
+      anchorpointcount = 3
+    ELSEIF (@recttype == "center and two edges")
+      c = @rectcenter
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@recttop-c)*a + flip(imag(@recttop-c)) + c; correct for aspect distortion, centered on c
+      t = real(@rectright-c)*a + flip(imag(@rectright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      n = (q-c) / cabs(q-c); unit vector to top edge
+      n = conj(flip(n))
+      s = real((t-c)*conj(n)) + flip(imag((q-c)*conj(n)))
+      p = (p-c)*conj(n)
+      s = abs(s)
+      IF (real(p) >= -real(s) && real(p) <= real(s) && imag(p) >= -imag(s) && imag(p) <= imag(s))
+        in = true
+      ENDIF
+      anchorpoints[0] = @recttop
+      anchorpoints[1] = @rectcenter
+      anchorpointtype[1] = 2
+      anchorpoints[2] = @rectright
+      anchorpointcount = 3
+    ELSEIF (@recttype == "fixed angle")
+      c = @rectcenter
+      p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+      q = real(@recttop-c)*a + flip(imag(@recttop-c)) + c; correct for aspect distortion, centered on c
+      t = real(@rectright-c)*a + flip(imag(@rectright-c)) + c; correct for aspect distortion, centered on c
+      p = (p - c) * conj(r) + c; apply rotation
+      n = (0,1)^(@rectangle/90); unit vector along top edge
+      s = real((t-c)*conj(n)) + flip(imag((q-c)*conj(n)))
+      p = (p-c)*conj(n)
+      s = abs(s)
+      IF (real(p) >= -real(s) && real(p) <= real(s) && imag(p) >= -imag(s) && imag(p) <= imag(s))
+        in = true
+      ENDIF
+      anchorpoints[0] = @recttop
+      anchorpoints[1] = @rectcenter
+      anchorpointtype[1] = 2
+      anchorpoints[2] = @rectright
+      anchorpointcount = 3
+    ENDIF
+
+  ELSEIF (@shape == "regular polygon"); regular polygon clipping area
+    c = @polygoncenter
+    p = real(p-c)*a + flip(imag(p-c)) + c; correct for aspect distortion, centered on c
+    p = (p - c) * conj(r) + c; apply rotation
+    IF (@polygontype == "fixed angle")
+      s = @polygonedge
+      d = (floor((atan2(s-c)-@polygonangle*#pi/180) * @polygonorder * 0.5/#pi + 0.5 + @polygonorder) % @polygonorder) * 4/@polygonorder
+      anchorpoints[0] = @polygoncenter
+      anchorpoints[1] = @polygonedge
+      anchorpointcount = 2
+    ELSEIF (@polygontype == "center and corner")
+      s = @polygoncorner
+      anchorpoints[0] = @polygoncenter
+      anchorpoints[1] = @polygoncorner
+      anchorpointcount = 2
+    ELSEIF (@polygontype == "center and edge")
+      s = @polygonedge
+      anchorpoints[0] = @polygoncenter
+      anchorpoints[1] = @polygonedge
+      anchorpointcount = 2
+    ENDIF
+    anchorpointtype[0] = 2
+    s = real(s-c)*a + flip(imag(s-c)) + c; correct for aspect distortion, centered on c
+    in = true; assume we're inside the polygon
+    j = 0
+    WHILE (j < @polygonorder); test each line segment in the polygon
+      IF (@polygontype == "center and corner"); specified corner rather than edge
+        n = c + (s - c) * ((0,1)^((j+0.5)*4/@polygonorder))
+        q = c + (s - c) * ((0,1)^(j*4/@polygonorder))
+        IF (real((q-p) * conj(n-c)) < 0)
+          in = false
+        ENDIF
+      ELSEIF (@polygontype == "center and edge")
+        q = c + (s - c) * ((0,1)^(j*4/@polygonorder))
+        IF (real((q-p) * conj(q-c)) < 0)
+          in = false
+        ENDIF
+      ELSEIF (@polygontype == "fixed angle")
+        n = c + (0,1)^((j*4)/@polygonorder+@polygonangle/90+d)
+        q = c + (s - c) * ((0,1)^(j*4/@polygonorder))
+        IF (real((q-p) * conj(n-c)) < 0)
+          in = false
+        ENDIF
+      ENDIF
+      j = j + 1
+    ENDWHILE
+
+  ELSEIF (@shape == "arbitrary polygon"); arbitrary polygon clipping area
+    IF (@polystar); doing a star!
+      l = @polystarorder
+      IF (@polystarlimit > 0)
+        l = @polystarlimit
+      ENDIF
+      k = 1
+      WHILE (k < l)
+        q = (0,1) ^ (k * 4 / @polystarorder); rotation vector
+        j = 0
+        WHILE (j < @polyorder)
+          IF (k*@polyorder + j < 1000)
+            polypoints[k*@polyorder + j] = (polypoints[j]-@polystarcenter) * q + @polystarcenter
+          ENDIF
+          j = j + 1
+        ENDWHILE
+        k = k + 1
+      ENDWHILE
+      polypointcount = @polyorder * l
+      IF (polypointcount > 1000)
+        polypointcount = 1000
+      ENDIF
+      IF (@polystarlimit > 0 && @polystarusecenter)
+        polypoints[polypointcount] = @polystarcenter
+        polypointcount = polypointcount + 1
+      ENDIF
+      polypoints[polypointcount] = polypoints[0]
+    ENDIF
+
+    j = 0; copy control points before rotating them
+    WHILE (j < @polyorder)
+      anchorpoints[j] = polypoints[j]
+      anchorpointnumber[j] = j + 1
+      j = j + 1
+    ENDWHILE
+
+    c = (0,0); assume center is at origin
+    j = 0
+    WHILE (j < polypointcount)
+      c = c + polypoints[j]; sum corner points
+      j = j + 1
+    ENDWHILE
+    c = c / polypointcount; center is average of all points
+    j = 0
+    WHILE (j <= polypointcount)
+      polypoints[j] = (polypoints[j]-c) * r + c; rotate each point around center
+      j = j + 1
+    ENDWHILE
+
+    IF (@polywinding == "convex polygon only")
+      in = true; assume we're inside the polygon
+      BOOL out = true; assume we're outside the polygon
+      j = 0
+      WHILE (j < polypointcount)
+        n = polypoints[j+1] - polypoints[j]; edge vector
+        IF (n != 0)
+          n = -imag(n) + flip(real(n)); normal to edge vector (90-degree left turn)
+          IF (real((p-polypoints[j]) * conj(n)) < 0)
+            in = false
+          ELSE
+            out = false
+          ENDIF
+        ENDIF
+        j = j + 1
+      ENDWHILE
+      in = in || out
+
+    ELSE; some variant of winding formula
+      ; The winding number method counts all line segments
+      ; that cross the vertical position of the pixel to
+      ; the RIGHT of it. Segments that cross up increment
+      ; the count, segments that cross down decrement it.
+      ; With a closed shape, this will equal zero if the
+      ; point is not inside (regardless of the clockwise/
+      ; counter-clockwise direction of points). Very
+      ; clever algorithm.
+
+      int wn = 0
+      j = 0
+      WHILE (j < polypointcount)
+        IF (imag(polypoints[j]) <= imag(p)); line segment imag <= point imag
+          IF (imag(polypoints[j+1]) > imag(p)); upward crossing
+            IF ( (real(polypoints[j+1]) - real(polypoints[j])) * (imag(p) - imag(polypoints[j])) - \
+                 (real(p) - real(polypoints[j])) * (imag(polypoints[j+1]) - imag(polypoints[j])) > 0 )
+              wn = wn + 1
+            ENDIF
+          ENDIF
+        ELSE
+          IF (imag(polypoints[j+1]) <= imag(p)); downward crossing
+            IF ( (real(polypoints[j+1]) - real(polypoints[j])) * (imag(p) - imag(polypoints[j])) - \
+                 (real(p) - real(polypoints[j])) * (imag(polypoints[j+1]) - imag(polypoints[j])) < 0 )
+              wn = wn - 1
+            ENDIF
+          ENDIF
+        ENDIF
+        j = j + 1
+      ENDWHILE
+
+      IF (@polywinding == "all inside")
+        in = (wn != 0)
+      ELSE
+        in = (wn % 2 != 0)
+      ENDIF
+
+    ENDIF
+
+    IF (@polystar)
+      anchorpoints[@polyorder] = @polystarcenter
+      anchorpointcount = @polyorder + 1
+      anchorpointtype[@polyorder] = 2
+    ELSE
+      anchorpointcount = @polyorder
+    ENDIF
+
+  ELSEIF (@shape == "Bézier curve"); arbitrary curve clipping area
+    ; Just so you know, I worked this out myself. No doubt there's
+    ; source code I could have ripped into a formula, but I wanted
+    ; the satisfaction of knowing I could do it. I am quite sure
+    ; this is not the most optimal method, but it does work. Pay
+    ; particular attention to the use of < vs. <= as if you make a
+    ; mistake, you will have horizontal line segment errors in the
+    ; drawn shape.
+
+    ; This is essentially the same algorithm as arbitrary polygon,
+    ; but extended so that each segment can be a quadratic Bézier
+    ; curve rather than just a straight line. Each curve is
+    ; described by a triangle, and a parabola inscribed within the
+    ; triangle such that two sides of the triangle are tangents
+    ; to the parabola. Points that do not lie within the triangle
+    ; are treated the same as the arbitrary polygon (only the chord
+    ; cutting across the parabola, the third side of the triangle,
+    ; matters) but for points inside the triangle a determination
+    ; must be made as to whether the point is to the left of the
+    ; parabola or not. There are a few edge cases where the
+    ; parabola loops back on itself and the winding number can be
+    ; changed multiple times for each segment.
+
+    polypointcount = @curveorder
+    IF (@curvestar); doing a star!
+      l = @curvestarorder
+      IF (@curvestarlimit > 0)
+        l = @curvestarlimit
+      ENDIF
+      k = 1
+      WHILE (k < l)
+        q = (0,1) ^ (k * 4 / @curvestarorder); rotation vector
+        j = 0
+        WHILE (j < @curveorder)
+          IF (k*@curveorder + j < 1000)
+            polypoints[k*@curveorder + j]  = (polypoints[j]-@curvestarcenter) * q + @curvestarcenter
+            curvepoints[k*@curveorder + j] = (curvepoints[j]-@curvestarcenter) * q + @curvestarcenter
+            curveauto[k*@curveorder + j]   = curveauto[j]
+            curveclose[k*@curveorder + j]  = curveclose[j]
+          ENDIF
+          j = j + 1
+        ENDWHILE
+        k = k + 1
+      ENDWHILE
+      polypointcount = @curveorder * l
+      IF (polypointcount > 1000)
+        polypointcount = 1000
+      ENDIF
+      IF (@curvestarlimit > 0 && @curvestarusecenter)
+        polypoints[polypointcount] = @curvestarcenter
+        curvepoints[polypointcount] = (@curvestarcenter + polypoints[0]) * 0.5
+        curveauto[polypointcount] = false
+        polypointcount = polypointcount + 1
+      ENDIF
+      polypoints[polypointcount] = polypoints[0]
+    ENDIF
+
+    curveclose[polypointcount-1] = true
+
+    j = 0
+    k = 0
+    l = -1
+    WHILE (j < polypointcount)
+      IF (curveauto[j]); compute anchor point if necessary
+        IF (j == l+1)
+          l = l + 2
+          WHILE (l < polypointcount && !curveclose[l])
+            l = l + 1
+          ENDWHILE
+          polypoints[j] = (curvepoints[j] + curvepoints[l]) * 0.5
+          polypoints[l] = polypoints[j]
+        ELSE
+          polypoints[j] = (curvepoints[j] + curvepoints[j-1]) * 0.5
+        ENDIF
+        anchorpointtype[k] = 3
+      ENDIF
+
+      IF (j < @curveorder)
+        anchorpointnumber[k] = j + 1
+
+        anchorpoints[k] = polypoints[j]
+        k = k + 1
+
+        anchorpoints[k] = curvepoints[j]
+        anchorpointtype[k] = 1
+        anchorpointnumber[k] = j + 1
+        k = k + 1
+      ENDIF
+
+      j = j + 1
+
+    ENDWHILE
+    anchorpointcount = k
+
+    IF (@curvestar)
+      anchorpoints[anchorpointcount] = @curvestarcenter
+      anchorpointtype[anchorpointcount] = 2
+      anchorpointcount = anchorpointcount + 1
+    ENDIF
+
+    int wn = 0
+    float isleft1
+    float isleft2
+    float isleft3
+    float isleft4
+    float px
+    float py
+    float isy
+    j = 0
+    l = 0
+
+;    testx = 240
+;    testy = 206
+
+    WHILE (j < polypointcount)
+      $ifdef debug
+      IF (#x == testx && #y == testy)
+        print(j, " ", #x, ",", #y)
+      ENDIF
+      $endif
+
+      ; determine index of endpoint for this segment
+      IF (curveclose[j]); curve is closed
+        k = l; endpoint is last saved starting point
+        l = j + 1; save next starting point
+      ELSE; curve is not closed here
+        k = j + 1
+      ENDIF
+
+      ; three cases: pixel is below triangle containing curve, above it, or between top and bottom of it
+      ; if either of the first two, don't examine this curve further
+      IF ((imag(p) >= imag(polypoints[j]) && (imag(p) < imag(polypoints[k]) || imag(p) < imag(curvepoints[j]))) || \
+          (imag(p) < imag(polypoints[j]) && (imag(p) >= imag(polypoints[k]) || imag(p) >= imag(curvepoints[j]))))
+        $ifdef debug
+        IF (#x == testx && #y == testy)
+          print(j, " considered for curve segment")
+        ENDIF
+        $endif
+
+        ; pixel is between top and bottom of curve
+        ; see if it's within the triangle
+        isleft1 = (real(polypoints[k]) - real(polypoints[j])) * (imag(p) - imag(polypoints[j])) - \
+                 (real(p) - real(polypoints[j])) * (imag(polypoints[k]) - imag(polypoints[j]))
+        isleft2 = (real(curvepoints[j]) - real(polypoints[k])) * (imag(p) - imag(polypoints[k])) - \
+                 (real(p) - real(polypoints[k])) * (imag(curvepoints[j]) - imag(polypoints[k]))
+        isleft3 = (real(polypoints[j]) - real(curvepoints[j])) * (imag(p) - imag(curvepoints[j])) - \
+                 (real(p) - real(curvepoints[j])) * (imag(polypoints[j]) - imag(curvepoints[j]))
+
+        IF ((isleft1 <= 0 && isleft2 < 0 && isleft3 < 0) || (isleft1 >= 0 && isleft2 > 0 && isleft3 > 0))
+          ; point is inside the triangle; determine if/where the ray
+          ; intersects the parabola. start by normalizing the parabola
+          ; and the ray
+          $ifdef debug
+          IF (#x == testx && #y == testy)
+            print(j, " considered inside triangle")
+          ENDIF
+          $endif
+
+          q = 2*conj(polypoints[k]-polypoints[j]) / |polypoints[k]-polypoints[j]|; rotation and scaling vector
+          c = (polypoints[j] + polypoints[k]) * 0.5
+          t = (p - c) * q; transform pixel so line segment is rotated to X-axis and centered at origin
+          s = (curvepoints[j] - c) * q; transform control point the same way
+          isy = 1/imag(s); precalc
+          px = real(t) - imag(t)*real(s)*isy; shear
+          py = imag(t)*isy; squash
+
+          d = 0.5-0.5*sqr(px); height of parabola at this point
+          isleft4 = py - d
+          IF (imag(s) < 0)
+            isleft4 = -isleft4
+          ENDIF
+          IF (imag(polypoints[k]) > imag(polypoints[j])); upward crossing
+            IF (imag(p) >= imag(polypoints[j]) && imag(p) < imag(polypoints[k])); within line segment
+              IF (isleft4 > 0)
+                wn = wn + 1; confirmed upward crossing
+              ENDIF
+            ELSE; outside line segment
+              IF (isleft1 < 0); loop back occurs to the left
+                IF (isleft4 > 0)
+                  wn = wn + 1
+                ENDIF
+              ELSE; loop back occurs to the right
+                IF (isleft4 < 0)
+                  wn = wn - 1; loop back; downward crossing
+                ENDIF
+              ENDIF
+            ENDIF
+
+          ELSE; downward crossing
+            IF (imag(p) < imag(polypoints[j]) && imag(p) >= imag(polypoints[k])); within line segment
+              IF (isleft4 < 0)
+                wn = wn - 1; confirmed downward crossing
+              ENDIF
+            ELSE; outside line segment
+              IF (isleft1 > 0); loop back occurs to the left
+                IF (isleft4 < 0)
+                  wn = wn - 1
+                ENDIF
+              ELSE; loop back occurs to the right
+                IF (isleft4 > 0)
+                  wn = wn + 1; loop back; upward crossing
+                ENDIF
+              ENDIF
+            ENDIF
+
+          ENDIF; upward/downward
+
+        ELSE
+          $ifdef debug
+          IF (#x == testx && #y == testy)
+            print(j, " tested against line segment only")
+          ENDIF
+          $endif
+
+          ; point is outside the triangle; all that matters is its relation to the line segment
+          IF (imag(polypoints[j]) <= imag(p)); line segment imag < point imag
+            IF (imag(polypoints[k]) > imag(p)); upward crossing
+              IF ( isleft1 > 0 )
+                wn = wn + 1
+              ENDIF
+            ENDIF
+          ELSE
+            IF (imag(polypoints[k]) <= imag(p)); downward crossing
+              IF ( isleft1 < 0 )
+                wn = wn - 1
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ENDIF
+      ENDIF
+
+      $ifdef debug
+      IF (#x == testx && #y == testy)
+        print(j, " test results: ", isleft1 > 0, " ", isleft2 > 0, " ", isleft3 > 0, " ", isleft4 > 0)
+        print(j, " current winding: ", wn)
+      ENDIF
+      $endif
+
+      j = j + 1
+    ENDWHILE
+
+    IF (@curvewinding == "all inside")
+      in = (wn != 0)
+    ELSE
+      in = (abs(wn) % 2 != 0)
+    ENDIF
+
+    $ifdef debug
+    IF (#x == testx && #y == testy)
+      print("final result: ", in)
+      in = !in
+    ENDIF
+    $endif
+  ENDIF
+
+  IF (@insideoutside == "outside")
+    in = !in
+  ENDIF
+
+  ; handle display
+  ; if you'd like to rip this out and use it in your own
+  ; formulas, please give appropriate credit; this was a
+  ; bit obnoxious to write
+  ; handle types:
+  ; 0: square
+  ; 1: circle
+  ; 2: diamond
+  ; 3: X
+
+  IF (@showhandles && (#width > @handlesnopreviewsize || #height > @handlesnopreviewsize || !@handlesnopreview) && ((#width < @handlesnorendersize && #height < @handlesnorendersize) || !@handlesnorender))
+    ; compute pixel coordinates of anchor points
+    ; first determine the reverse transform, to
+    ; go from complex plane back to pixel coordinates
+
+    float sa = sin(#angle)
+    float ca = cos(#angle)
+
+    IF (#width*3 <= #height*4)
+      float pd = 4 / (#width*#magn)
+    ELSE
+      float pd = 3 / (#height*#magn)
+    ENDIF
+
+    float dx = 0
+    float dy = 0
+    float sx = 0
+    float sy = 0
+    float osx = 0
+    float osy = 0
+    float fsx = 0
+    float fsy = 0
+    float lsx = 0
+    float lsy = 0
+
+    j = 0
+    l = 0
+    WHILE (j < anchorpointcount+1)
+      IF (j == anchorpointcount)
+        sx = testx
+        sy = testy
+      ELSEIF (@screenrelative)
+        sx = real(anchorpoints[j]) * #width
+        sy = (1 - imag(anchorpoints[j])) * #height
+      ELSE
+        p = (anchorpoints[j] - #center) / pd
+        sx = ca*real(p) + sa*imag(p)
+        sy = ca*imag(p) - sa*real(p)
+        sx = sx*#stretch + sy * tan(#skew)
+        sx = sx + #width/2
+        sy = -sy + #height/2
+      ENDIF
+
+      dx = abs(#x - sx)
+      dy = abs(#y - sy)
+
+      ; handle
+      IF ((anchorpointtype[j] == 0 && \
+           (dx >= @handlesize || dy >= @handlesize) && \
+           (dx < @handlesize+@handlewidth && dy < @handlesize+@handlewidth)) || \
+          (anchorpointtype[j] == 1 && \
+           dx*dx+dy*dy >= @handlesize*@handlesize && dx*dx+dy*dy < sqr(@handlesize+@handlewidth)) || \
+          (anchorpointtype[j] == 2 && \
+           dx+dy >= @handlesize && dx+dy < @handlesize+@handlewidth) || \
+          (anchorpointtype[j] == 3 && \
+           2*abs(dx-dy) < @handlewidth && (dx < @handlesize+@handlewidth && dy < @handlesize+@handlewidth)))
+        in = !in
+      ENDIF
+      ; number
+      IF (@handleswithnumbers && \
+          anchorpointnumber[j] > 0 && \
+          #x >= sx+@handlesize+@handlewidth && #x < sx+@handlesize+@handlewidth*10 && \
+          #y >= sy+@handlesize+@handlewidth && #y < sy+@handlesize+@handlewidth*6)
+        dx = floor((#x-sx-@handlesize-@handlewidth)/@handlewidth)
+        dy = floor((#y-sy-@handlesize-@handlewidth)/@handlewidth)
+        IF (dx < 4)
+          IF (anchorpointnumber[j] < 10)
+            k = anchorpointnumber[j]
+          ELSE
+            k = floor(anchorpointnumber[j] / 10)
+          ENDIF
+        ELSEIF (dx > 4)
+          IF (anchorpointnumber[j] < 10)
+            k = 10
+          ELSE
+            k = anchorpointnumber[j] % 10
+          ENDIF
+          dx = dx - 5
+ELSE
+  k = 10
+        ENDIF
+        dx = (3-dx) + 4*dy
+        dy = 2^dx
+        IF (floor(digits[k] / dy) % 2 > 0)
+          in = !in
+        ENDIF
+      ENDIF
+      ; line segment
+      IF (@shape == "Bézier curve" && @handleswithlines)
+        IF (j > 0)
+          IF (anchorpointtype[j-1] != 2 && anchorpointtype[j] != 2)
+            IF (j == anchorpointcount || (l > 0 && curveclose[l-1] && anchorpointtype[j-1] == 1))
+              lsx = sx
+              lsy = sy
+              sx = fsx
+              sy = fsy
+            ENDIF
+            d = sqrt(sqr(sx-osx)+sqr(sy-osy))
+            dx = ((sx - osx) * (#y - osy) - (#x - osx) * (sy - osy)) / d
+            dy = ((sy - osy) * (#y - osy) - (#x - osx) * (osx - sx)) / d
+            IF (abs(dx) < 1 && dy > @handlesize*1.5 && dy < d-@handlesize*1.5 && dy-floor(dy*0.5/@handlesize)*@handlesize*2 > @handlesize)
+              in = !in
+            ENDIF
+          ENDIF
+        ENDIF
+      ENDIF
+
+      osx = sx
+      osy = sy
+      IF (j == 0)
+        fsx = sx
+        fsy = sy
+      ENDIF
+      IF (l > 0)
+        IF (curveclose[l-1] && anchorpointtype[j-1] == 1)
+          fsx = lsx
+          fsy = lsy
+          osx = lsx
+          osy = lsy
+        ENDIF
+      ENDIF
+
+      j = j + 1
+      IF (anchorpointtype[j] == 1)
+        l = l + 1
+      ENDIF
+    ENDWHILE
+  ENDIF
+
+  #solid = in
+
+default:
+  title = "Deluxe Clipping (djm3+)"
+  helpfile = "dmj-pub\dmj-pub-uf-deluxe.htm"
+
+  heading
+    caption = "General"
+  endheading
+  param clipversion
+    caption = "Clipping Formula Version"
+    default = 101
+    hint = "You should never see this parameter; it's used internally to track \
+        which version of the formula was used to create your image, so that \
+        if a bug is found which breaks backwards-compatibility, the formula \
+        can adapt transparently."
+    visible = (@clipversion < 101)
+    enabled = false
+  endparam
+  param insideoutside
+    caption = "Clipping Region"
+    default = 1
+    enum = "inside" "outside"
+    hint = "Determines whether points inside the clipping shape or outside the \
+        clipping shape will be solid-colored."
+  endparam
+  param screenrelative
+    caption = "Screen-Relative Coordinates"
+    default = false
+    hint = "If checked, all coordinates are relative to screen coordinates. \
+        Real numbers indicate horizontal values, imaginary numbers indicate \
+        vertical values. 0 indicates the left and bottom edges, 1 indicates \
+        the right and top edges. Since these coordinates are relative to the \
+        screen and not the fractal location, they will not change as you zoom. \
+        Also note that if your image is not square, circles and squares will \
+        not be true; they will be squashed or stretched by whatever amount \
+        your image isn't square."
+  endparam
+  param offsetamount
+    caption = "Offset Amount"
+    default = 0.0
+    hint = "If you need to shift your entire clipping region without altering its \
+        shape, you can specify an amount and a direction to offset it. Keep in \
+        mind that if you have an offset enabled, it will still be in effect \
+        while you use the eyedropper or explorer tools to select points."
+  endparam
+  param offsetangle
+    caption = "Offset Angle"
+    default = 0.0
+    visible = (@offsetamount != 0.0)
+    hint = "Indicates the angle of the offset. Note that, if your image is rotated, \
+        and you're not using screen-relative clipping, offset angles will be \
+        rotated too. Normally an angle of 0 is to the right and 90 is up, if \
+        your image is not rotated."
+  endparam
+  param rotation
+    caption = "Rotation"
+    default = 0.0
+    visible = (@shape != "circle" && @shape != "arbitrary polygon" && @shape != "Bézier curve")
+    hint = "Rotates the clipping shape. Note that, if you're using screen-relative \
+        coordinates and your image is not square, or if you've squashed or \
+        stretched the zoombox, the clipping shape will deform as you rotate it. \
+        Angles are in degrees, counter-clockwise."
+  endparam
+
+  heading
+    caption = "Visual Aids"
+  endheading
+  param showhandles
+    caption = "Show Handles"
+    default = true
+    hint = "If enabled, shows 'handles' in the image to mark where the control points \
+            of the shape are located. Very useful for working, but you probably want \
+            to turn this off before a final render."
+  endparam
+  param handlesnopreview
+    caption = "Not on previews"
+    default = true
+    visible = (@showhandles == true)
+    hint = "If checked, handles will not be shown on previews. Handles don't scale with \
+            window size, so they appear disproportionately large in the preview window."
+  endparam
+  param handlesnopreviewsize
+    caption = "Preview Threshold"
+    default = 275
+    visible = (@showhandles == true && @handlesnopreview == true)
+    hint = "Sets the threshold for determining a preview. Anything this size or \
+            smaller is considered a preview and handles will be hidden."
+  endparam
+  param handlesnorender
+    caption = "Not on renders"
+    default = true
+    visible = (@showhandles == true)
+    hint = "If checked, handles will be disabled for any image above a certain size. \
+            This is useful for automatically disabling handles on disk renders."
+  endparam
+  param handlesnorendersize
+    caption = "Render Threshold"
+    default = 1600
+    visible = (@showhandles == true && @handlesnorender == true)
+    hint = "Sets the threshold for determining a disk render. Anything this size or \
+            larger is considered a final render and handles will be hidden."
+  endparam
+  param handleswithnumbers
+    caption = "Show Numbers"
+    default = true
+    visible = (@showhandles == true && (@shape == "arbitrary polygon" || @shape == "Bézier curve"))
+    hint = "If checked, handles will be numbered."
+  endparam
+  param handleswithlines
+    caption = "Show Lines"
+    default = true
+    visible = (@showhandles == true && @shape == "Bézier curve")
+    hint = "If checked, dashed lines connecting tangent points to control points will be shown."
+  endparam
+  param handlesize
+    caption = "Handle Size"
+    default = 8
+    visible = (@showhandles == true)
+    hint = "Sets the size of the inside area of the handle. You may need to adjust this \
+            to make the handles more visible on some fractals."
+  endparam
+  param handlewidth
+    caption = "Handle Thickness"
+    default = 2
+    visible = (@showhandles == true)
+    hint = "Sets the thickness of the handles. You may need to adjust this to make the \
+            handles more visible on some fractals."
+  endparam
+
+  heading
+    caption = "Shape"
+  endheading
+  param shape
+    caption = "Clipping Shape"
+    default = 2
+    enum = "circle" "ellipse" "rectangle" "regular polygon" "arbitrary polygon" "Bézier curve"
+    hint = "Determines the shape of the clipping region. For squares, use a \
+        regular polygon with four sides."
+  endparam
+
+  ; circle parameters
+;   float param p_circle
+;     caption = "circle power"
+;     min = 0
+;     default = 2
+;     hint = "Use 2 for circle shape, >2 for squarer, 1 for diamond, 0.5 for astroid"
+;     visible = (@shape == "circle")
+;   endparam
+  param circletype
+    caption = "Define Circle By"
+    default = 1
+    enum = "bounding box" "center and edge" "opposite edges" "three edge points"
+    visible = (@shape == "circle")
+    hint = "Choose how you want to define where the circle is. Different methods \
+        are useful in different circumstances."
+  endparam
+  complex param circleupperleft
+    caption = "Box Upper Left"
+    default = #center - 1/#magn + flip(1/#magn)
+    visible = (@shape == "circle") && (@circletype == "bounding box")
+    hint = "Sets the upper left corner of the bounding box that the circle fits in. \
+        Note that if your image is rotated, and you're not using screen-relative \
+        clipping, the bounding box for your circle will be rotated along with the \
+        image. In that case, you may find 'center and edge' easier to use."
+  endparam
+  complex param circlelowerright
+    caption = "Box Lower Right"
+    default = #center + 1/#magn - flip(1/#magn)
+    visible = (@shape == "circle") && (@circletype == "bounding box")
+    hint = "Sets the upper left corner of the bounding box that the circle fits in. \
+        Note that if your image is rotated, and you're not using screen-relative \
+        clipping, the bounding box for your circle will be rotated along with the \
+        image. In that case, you may find 'center and edge' easier to use."
+  endparam
+  complex param circlecenter
+    caption = "Circle Center"
+    default = #center
+    visible = (@shape == "circle") && (@circletype == "center and edge")
+    hint = "Sets the center of the circle. If you're not sure exactly where the center \
+        should go, you may find 'opposite edges' easier to use."
+  endparam
+  complex param circleedge
+    caption = "Circle Edge"
+    default = #center + 1/#magn
+    visible = (@shape == "circle") && (@circletype == "center and edge")
+    hint = "Sets the edge of the circle. If you need the edge to line up with something \
+        else in the image, you may find 'bounding box' easier to use."
+  endparam
+  complex param circleedge1
+    caption = "Circle Edge 1"
+    default = #center - 1/#magn
+    visible = (@shape == "circle") && (@circletype == "opposite edges" || @circletype == "three edge points")
+    hint = "Sets one of the edge points of the circle."
+  endparam
+  complex param circleedge2
+    caption = "Circle Edge 2"
+    default = #center + 1/#magn
+    visible = (@shape == "circle") && (@circletype == "opposite edges" || @circletype == "three edge points")
+    hint = "Sets one of the edge points of the circle."
+  endparam
+  complex param circleedge3
+    caption = "Circle Edge 3"
+    default = #center + flip(1/#magn)
+    visible = (@shape == "circle") && (@circletype == "three edge points")
+    hint = "Sets one of the edge points of the circle."
+  endparam
+
+  ; ellipse parameters
+  float param p_ellipse
+    caption = "ellipse power"
+    min = 0
+    default = 2
+    hint = "Use 2 for standard ellipse, >2 for squarer, 1 for diamond, 0.5 for astroid"
+    visible = (@shape == "ellipse")
+  endparam
+  param ellipsetype
+    caption = "Define Ellipse By"
+    default = 2
+    enum = "three corners" "center and two edges" "fixed angle"
+    visible = (@shape == "ellipse")
+    hint = "Choose how you want to define where the bounding box of the \
+        ellipse is. Different methods are useful in different circumstances."
+  endparam
+  complex param ellipseupperleft
+    caption = "Ellipse Upper Left"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "ellipse") && (@ellipsetype == "three corners")
+    hint = "Selects the upper left corner of the bounding box of the ellipse."
+  endparam
+  complex param ellipselowerright
+    caption = "Ellipse Lower Right"
+    default = #center + (1/#magn + flip(-0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "ellipse") && (@ellipsetype == "three corners")
+    hint = "Selects the lower right corner of the bounding box of the ellipse."
+  endparam
+  complex param ellipseupperright
+    caption = "Ellipse Upper Right"
+    default = #center + (1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "ellipse") && (@ellipsetype == "three corners")
+    hint = "Selects one of the other corners of the bounding box of the ellipse (upper right is \
+        suggested, but not required). Note that only points that are on a \
+        circle, centered on the ellipse's center, and passing through \
+        the upper left and lower right corners of the bounding box, will produce a valid \
+        bounding box; whatever point you actually choose for this third corner \
+        will be moved to that circle in order to produce a proper bounding box, and the \
+        ellipse will be placed inside that box. \
+        Practically speaking, you should use this corner to set the overall \
+        angle of the ellipse, after selecting opposite corners."
+  endparam
+  float param ellipse
+    caption = "Ellipse Angle"
+    default = #angle*180/#pi
+    visible = (@shape == "ellipse") && (@ellipsetype == "fixed angle")
+    hint = "Selects the rotation angle of the ellipse. This is a bit different \
+        from the general 'Rotation' parameter. If 'Rotation' is zero, then \
+        this parameter is used to set the angle of the ellipse, and the \
+        point you select for 'Ellipse Top Edge' will lie exactly on the ellipse bounding box's \
+        top edge, even if it's not the center of that edge. Changing this parameter \
+        after you've selected ellipse bounding box edge points will change the size of the \
+        ellipse, as different parts of the box edges have to pass through the points \
+        to make your bounding box. If you want to rotate the clipping shape without \
+        changing the size, use the general 'Rotation' parameter. Doing so, \
+        however, will affect your selection of 'Ellipse Edge' with the eyedropper \
+        or explorer tools. Angles are in degrees, counter-clockwise."
+  endparam
+  complex param ellipsecenter
+    caption = "Ellipse Center"
+    default = #center
+    visible = (@shape == "ellipse") && (@ellipsetype == "center and two edges" || @ellipsetype == "fixed angle")
+    hint = "Selects the center point of the ellipse."
+  endparam
+  complex param ellipsetop
+    caption = "Ellipse Top Edge"
+    default = #center + (flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "ellipse") && (@ellipsetype == "center and two edges" || @ellipsetype == "fixed angle")
+    hint = "Selects the center of the top edge of the bounding box of the ellipse, for 'center and \
+        two edges', or any point on the top edge of the bounding box, for 'fixed angle'. Note that, \
+        for 'center and two edges', this point also sets an implicit rotation for the ellipse."
+  endparam
+  complex param ellipseright
+    caption = "Ellipse Right Edge"
+    default = #center + (-1/#magn) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "ellipse") && (@ellipsetype == "center and two edges" || @ellipsetype == "fixed angle")
+    hint = "Selects the right edge of the bounding box of the ellipse. It can be anywhere on the \
+        right edge of the bounding box."
+  endparam
+
+  ; rectangle parameters
+  param recttype
+    caption = "Define Rect By"
+    default = 2
+    enum = "three corners" "center and two edges" "fixed angle"
+    visible = (@shape == "rectangle")
+    hint = "Choose how you want to define where the rectangle is. Different methods \
+        are useful in different circumstances."
+  endparam
+  complex param rectupperleft
+    caption = "Rect Upper Left"
+    default = #center + (-1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "rectangle") && (@recttype == "three corners")
+    hint = "Selects the upper left corner of the rectangle."
+  endparam
+  complex param rectlowerright
+    caption = "Rect Lower Right"
+    default = #center + (1/#magn + flip(-1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "rectangle") && (@recttype == "three corners")
+    hint = "Selects the lower right corner of the rectangle."
+  endparam
+  complex param rectupperright
+    caption = "Rect Upper Right"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "rectangle") && (@recttype == "three corners")
+    hint = "Selects one of the other corners of the rectangle (upper right is \
+        suggested, but not required). Note that only points that are on a \
+        circle, centered on the rectangle's center, and passing through \
+        the upper left and lower right corners, will produce a valid \
+        rectangle; whatever point you actually choose for this third corner \
+        will be moved to that circle in order to produce a proper rectangle. \
+        Practically speaking, you should use this corner to set the overall \
+        angle of the rectangle, after selecting opposite corners."
+  endparam
+  float param rectangle
+    caption = "Rectangle Angle"
+    default = #angle*180/#pi
+    visible = (@shape == "rectangle") && (@recttype == "fixed angle")
+    hint = "Selects the rotation angle of the rectangle. This is a bit different \
+        from the general 'Rotation' parameter. If 'Rotation' is zero, then \
+        this parameter is used to set the angle of the rectangle, and the \
+        point you select for 'Rect Top Edge' will lie exactly on the rectangle's \
+        top edge, even if it's not the center of that edge. Changing this parameter \
+        after you've selected rectangle edge points will change the size of the \
+        rectangle, as different parts of the edges have to pass through the points \
+        to make your rectangle. If you want to rotate the clipping shape without \
+        changing the size, use the general 'Rotation' parameter. Doing so, \
+        however, will affect your selection of 'Rect Edge' with the eyedropper \
+        or explorer tools. Angles are in degrees, counter-clockwise."
+  endparam
+  complex param rectcenter
+    caption = "Rect Center"
+    default = #center
+    visible = (@shape == "rectangle") && (@recttype == "center and two edges" || @recttype == "fixed angle")
+    hint = "Selects the center point of the rectangle."
+  endparam
+  complex param recttop
+    caption = "Rect Top Edge"
+    default = #center + (flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "rectangle") && (@recttype == "center and two edges" || @recttype == "fixed angle")
+    hint = "Selects the center of the top edge of the rectangle, for 'center and \
+        two edges', or any point on the top edge, for 'fixed angle'. Note that, \
+        for 'center and two edges', this point also sets an implicit rotation for the rectangle."
+  endparam
+  complex param rectright
+    caption = "Rect Right Edge"
+    default = #center + (-1/#magn) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "rectangle") && (@recttype == "center and two edges" || @recttype == "fixed angle")
+    hint = "Selects the right edge of the rectangle. It can be anywhere on the \
+        right edge of the rectangle."
+  endparam
+
+  ; regular polygon parameters
+  param polygontype
+    caption = "Define Polygon By"
+    default = 2
+    enum = "center and corner" "center and edge" "fixed angle"
+    visible = (@shape == "regular polygon")
+    hint = "Choose how you want to define where the polygon is. Different methods \
+        are useful in different circumstances."
+  endparam
+  param polygonorder
+    caption = "Polygon Sides"
+    default = 3.0
+    min = 1
+    visible = (@shape == "regular polygon")
+    hint = "Sets the number of sides to the polygon. Note that you can use 2 to \
+        create a 'line' polygon, if you're using the 'center and edge' method. \
+        You can use 1 side to clip half the plane (one side of the line is \
+        clipped, the other is not clipped)."
+  endparam
+  float param polygonangle
+    caption = "Polygon Angle"
+    default = #angle*180/#pi
+    visible = (@shape == "regular polygon") && (@polygontype == "fixed angle")
+    hint = "Selects the rotation angle of the polygon. This is a bit different \
+        from the general 'Rotation' parameter. If 'Rotation' is zero, then \
+        this parameter is used to set the angle of the polygon, and the \
+        point you select for 'Polygon Edge' will lie exactly on the polygon's \
+        edge, even if it's not the center of that edge. Changing this parameter \
+        after you've selected a polygon edge point will change the size of the \
+        polygon, as different parts of the edge have to pass through the point \
+        to make your polygon. If you want to rotate the clipping shape without \
+        changing the size, use the general 'Rotation' parameter. Doing so, \
+        however, will affect your selection of 'Polygon Edge' with the eyedropper \
+        or explorer tools. Angles are in degrees, counter-clockwise."
+  endparam
+  complex param polygoncenter
+    caption = "Polygon Center"
+    default = #center
+    visible = (@shape == "regular polygon")
+    hint = "Sets the center of the polygon."
+  endparam
+  complex param polygoncorner
+    caption = "Polygon Corner"
+    default = #center + (1/#magn) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "regular polygon") && (@polygontype == "center and corner")
+    hint = "Selects one corner of the polygon. Note that if you have 'Lock Rotation' \
+        checked, you're only selecting a point on the circumscribed circle, and \
+        you must use the general 'Rotation' parameter to rotate the polygon."
+  endparam
+  complex param polygonedge
+    caption = "Polygon Edge"
+    default = #center + (1/#magn) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "regular polygon") && (@polygontype == "center and edge" || @polygontype == "fixed angle")
+    hint = "Selects the center of an edge of the polygon, for 'center and edge'; \
+        selects an edge point (not necessarily the center of an edge) for \
+        'fixed angle'."
+  endparam
+
+  ; arbitrary polygon parameters
+  param polywinding
+    caption = "Overlap Handling"
+    default = 1
+    enum = "convex polygon only" "all inside" "invert overlaps"
+    hint = "Chooses how to handle overlapped regions of a polygon. 'Convex polygon \
+        only' is the original behavior and requires your polygon be purely \
+        convex; it is provided for backwards-compatibility with your old \
+        parameters. 'All inside' will treat all inside areas the same even \
+        if they are part of your polygon overlapping itself. 'Invert overlaps' \
+        will treat inside, but overlapped, areas of your polygon as outside."
+    visible = (@shape == "arbitrary polygon")
+    enabled = (@clipversion >= 101)
+  endparam
+  param polystar
+    caption = "Polygon is a Star"
+    default = false
+    visible = (@shape == "arbitrary polygon")
+    hint = "If set, the polygon is a star. You need only set the shape of one arm \
+            of the star, and the center; the rest of the points will be computed \
+            for you."
+  endparam
+  complex param polystarcenter
+    caption = "Star Center"
+    default = #center
+    visible = (@shape == "arbitrary polygon") && (@polystar == true)
+    hint = "Sets the center of the star shape. The polygon shape you set will be \
+            rotated around this point. Note that moving the center will change \
+            the star's shape."
+  endparam
+  param polystarorder
+    caption = "Star Points"
+    default = 8
+    visible = (@shape == "arbitrary polygon") && (@polystar == true)
+    hint = "Sets the number of arms in the star. Note that the number of arms \
+            multiplied by the number of points in the polygon must be less than \
+            1000. Also note that the larger this product is, the slower this \
+            transform will become."
+  endparam
+  param polystarlimit
+    caption = "  Limit to"
+    default = 0
+    visible = (@shape == "arbitrary polygon") && (@polystar == true)
+    hint = "If not zero, this will limit the star to just this many repetitions. \
+            You can use this to create fans with a particular edge."
+  endparam
+  param polystarusecenter
+    caption = "Include Center"
+    default = true
+    visible = (@shape == "arbitrary polygon") && (@polystar == true) && (@polystarlimit > 0)
+    hint = "If checked, the center point will be included in the limited star shape."
+  endparam
+
+  param polyorder
+    caption = "Polygon Sides"
+    default = 3
+    min = 2
+    max = 20
+    visible = (@shape == "arbitrary polygon")
+    hint = "Sets the number of sides to the polygon."
+  endparam
+  complex param polypoint1
+    caption = "Point 1"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon")
+    hint = "Sets the first point in the polygon."
+  endparam
+  complex param polypoint2
+    caption = "Point 2"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon")
+    hint = "Sets the second point in the polygon."
+  endparam
+  complex param polypoint3
+    caption = "Point 3"
+    default = #center + (0.75/#magn + flip(-0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 3)
+    hint = "Sets the third point in the polygon."
+  endparam
+  complex param polypoint4
+    caption = "Point 4"
+    default = #center + (0.25/#magn + flip(-0.75/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 4)
+    hint = "Sets the fourth point in the polygon."
+  endparam
+  complex param polypoint5
+    caption = "Point 5"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 5)
+    hint = "Sets the fifth point in the polygon."
+  endparam
+  complex param polypoint6
+    caption = "Point 6"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 6)
+    hint = "Sets the sixth point in the polygon."
+  endparam
+  complex param polypoint7
+    caption = "Point 7"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 7)
+    hint = "Sets the seventh point in the polygon."
+  endparam
+  complex param polypoint8
+    caption = "Point 8"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 8)
+    hint = "Sets the eighth point in the polygon."
+  endparam
+  complex param polypoint9
+    caption = "Point 9"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 9)
+    hint = "Sets the ninth point in the polygon."
+  endparam
+  complex param polypoint10
+    caption = "Point 10"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 10)
+    hint = "Sets the tenth point in the polygon."
+  endparam
+  complex param polypoint11
+    caption = "Point 11"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 11)
+    hint = "Sets the eleventh point in the polygon."
+  endparam
+  complex param polypoint12
+    caption = "Point 12"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 12)
+    hint = "Sets the twelfth point in the polygon."
+  endparam
+  complex param polypoint13
+    caption = "Point 13"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 13)
+    hint = "Sets the thirteenth point in the polygon."
+  endparam
+  complex param polypoint14
+    caption = "Point 14"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 14)
+    hint = "Sets the fourteenth point in the polygon."
+  endparam
+  complex param polypoint15
+    caption = "Point 15"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 15)
+    hint = "Sets the fifteenth point in the polygon."
+  endparam
+  complex param polypoint16
+    caption = "Point 16"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 16)
+    hint = "Sets the sixteenth point in the polygon."
+  endparam
+  complex param polypoint17
+    caption = "Point 17"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 17)
+    hint = "Sets the seventeenth point in the polygon."
+  endparam
+  complex param polypoint18
+    caption = "Point 18"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 18)
+    hint = "Sets the eighteenth point in the polygon."
+  endparam
+  complex param polypoint19
+    caption = "Point 19"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 19)
+    hint = "Sets the nineteenth point in the polygon."
+  endparam
+  complex param polypoint20
+    caption = "Point 20"
+    default = #center + (-0.5/#magn + flip(-0.25/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "arbitrary polygon") && (@polyorder >= 20)
+    hint = "Sets the twentieth point in the polygon."
+  endparam
+
+  ; Bézier curve parameters
+  param curvewinding
+    caption = "Overlap Handling"
+    default = 1
+    enum = "all inside" "invert overlaps"
+    hint = "Chooses how to handle overlapped regions of a curve. 'All inside' will \
+            treat all inside areas the same even if they are part of your polygon \
+            overlapping itself. 'Invert overlaps' will treat inside, but overlapped, \
+            areas of your polygon as outside."
+    visible = (@shape == "Bézier curve")
+  endparam
+  param curvestar
+    caption = "Curve is a Star"
+    default = false
+    visible = (@shape == "Bézier curve")
+    hint = "If set, the curve is a star. You need only set the shape of one arm \
+            of the star, and the center; the rest of the points will be computed \
+            for you."
+  endparam
+  complex param curvestarcenter
+    caption = "Star Center"
+    default = #center
+    visible = (@shape == "Bézier curve") && (@curvestar == true)
+    hint = "Sets the center of the star shape. The curve shape you set will be \
+            rotated around this point. Note that moving the center will change \
+            the star's shape."
+  endparam
+  param curvestarorder
+    caption = "Star Points"
+    default = 8
+    visible = (@shape == "Bézier curve") && (@curvestar == true)
+    hint = "Sets the number of arms in the star. Note that the number of arms \
+            multiplied by the number of points in the curve must be less than \
+            1000. Also note that the larger this product is, the slower this \
+            transform will become."
+  endparam
+  param curvestarlimit
+    caption = "  Limit to"
+    default = 0
+    visible = (@shape == "Bézier curve") && (@curvestar == true)
+    hint = "If not zero, this will limit the star to just this many repetitions. \
+            You can use this to create fans with a particular edge."
+  endparam
+  param curvestarusecenter
+    caption = "Include Center"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curvestar == true) && (@curvestarlimit > 0)
+    hint = "If checked, the center point will be included in the limited star shape."
+  endparam
+
+  param curveorder
+    caption = "Curve Control Points"
+    default = 3
+    min = 1
+    max = 20
+    visible = (@shape == "Bézier curve")
+    hint = "Sets the number of control points in the curve."
+  endparam
+  param curvetangent1auto
+    caption = "Automatically set point 1"
+    default = true
+    visible = (@shape == "Bézier curve")
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent1
+    caption = "Tangent Point 1"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent1auto == false)
+    hint = "Sets the first tangent point on the curve."
+  endparam
+  complex param curvepoint1
+    caption = "Control Point 1"
+    default = #center + (-0.5/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve")
+    hint = "Sets the first control point in the curve."
+  endparam
+;  param curveclose1
+;    caption = "Close curve at this point"
+;    default = false
+;    visible = (@shape == "Bézier curve") && (@curveorder >= 2)
+;    hint = "Sets whether the curve is closed (looped back to its starting \
+;            point) at this point. You can add another curve within the same \
+;            transform by adding more points; they will be a separate curve."
+;  endparam
+  param curvetangent2auto
+    caption = "Automatically set point 2"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 2)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent2
+    caption = "Tangent Point 2"
+    default = #center + (0/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent2auto == false) && (@curveorder >= 2)
+    hint = "Sets the second tangent point on the curve."
+  endparam
+  complex param curvepoint2
+    caption = "Control Point 2"
+    default = #center + (0.75/#magn + flip(0.75/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 2)
+    hint = "Sets the second control point in the curve."
+  endparam
+  param curveclose2
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 3 || (@curveorder >= 2 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent3auto
+    caption = "Automatically set point 3"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 3)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent3
+    caption = "Tangent Point 3"
+    default = #center + (1/#magn + flip(-0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent3auto == false) && (@curveorder >= 3)
+    hint = "Sets the third tangent point on the curve."
+  endparam
+  complex param curvepoint3
+    caption = "Control Point 3"
+    default = #center + (0/#magn + flip(-1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 3)
+    hint = "Sets the third control point in the curve."
+  endparam
+  param curveclose3
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 4 || (@curveorder >= 3 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent4auto
+    caption = "Automatically set point 4"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 4)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent4
+    caption = "Tangent Point 4"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent4auto == false) && (@curveorder >= 4)
+    hint = "Sets the fourth tangent point on the curve."
+  endparam
+  complex param curvepoint4
+    caption = "Control Point 4"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 4)
+    hint = "Sets the fourth control point in the curve."
+  endparam
+  param curveclose4
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 5 || (@curveorder >= 4 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent5auto
+    caption = "Automatically set point 5"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 5)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent5
+    caption = "Tangent Point 5"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent5auto == false) && (@curveorder >= 5)
+    hint = "Sets the fifth tangent point on the curve."
+  endparam
+  complex param curvepoint5
+    caption = "Control Point 5"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 5)
+    hint = "Sets the fifth control point in the curve."
+  endparam
+  param curveclose5
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 6 || (@curveorder >= 5 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent6auto
+    caption = "Automatically set point 6"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 6)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent6
+    caption = "Tangent Point 6"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent6auto == false) && (@curveorder >= 6)
+    hint = "Sets the sixth tangent point on the curve."
+  endparam
+  complex param curvepoint6
+    caption = "Control Point 6"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 6)
+    hint = "Sets the sixth control point in the curve."
+  endparam
+  param curveclose6
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 7 || (@curveorder >= 6 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent7auto
+    caption = "Automatically set point 7"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 7)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent7
+    caption = "Tangent Point 7"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent7auto == false) && (@curveorder >= 7)
+    hint = "Sets the seventh tangent point on the curve."
+  endparam
+  complex param curvepoint7
+    caption = "Control Point 7"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 7)
+    hint = "Sets the seventh control point in the curve."
+  endparam
+  param curveclose7
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 8 || (@curveorder >= 7 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent8auto
+    caption = "Automatically set point 8"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 8)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent8
+    caption = "Tangent Point 8"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent8auto == false) && (@curveorder >= 8)
+    hint = "Sets the eighth tangent point on the curve."
+  endparam
+  complex param curvepoint8
+    caption = "Control Point 8"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 8)
+    hint = "Sets the eighth control point in the curve."
+  endparam
+  param curveclose8
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 9 || (@curveorder >= 8 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent9auto
+    caption = "Automatically set point 9"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 9)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent9
+    caption = "Tangent Point 9"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent9auto == false) && (@curveorder >= 9)
+    hint = "Sets the ninth tangent point on the curve."
+  endparam
+  complex param curvepoint9
+    caption = "Control Point 9"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 9)
+    hint = "Sets the ninth control point in the curve."
+  endparam
+  param curveclose9
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 10 || (@curveorder >= 9 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent10auto
+    caption = "Automatically set point 10"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 10)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent10
+    caption = "Tangent Point 10"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent10auto == false) && (@curveorder >= 10)
+    hint = "Sets the tenth tangent point on the curve."
+  endparam
+  complex param curvepoint10
+    caption = "Control Point 10"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 10)
+    hint = "Sets the tenth control point in the curve."
+  endparam
+  param curveclose10
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 11 || (@curveorder >= 10 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent11auto
+    caption = "Automatically set point 11"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 11)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent11
+    caption = "Tangent Point 11"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent11auto == false) && (@curveorder >= 11)
+    hint = "Sets the eleventh tangent point on the curve."
+  endparam
+  complex param curvepoint11
+    caption = "Control Point 11"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 11)
+    hint = "Sets the eleventh control point in the curve."
+  endparam
+  param curveclose11
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 12 || (@curveorder >= 11 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent12auto
+    caption = "Automatically set point 12"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 12)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent12
+    caption = "Tangent Point 12"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent12auto == false) && (@curveorder >= 12)
+    hint = "Sets the twelfth tangent point on the curve."
+  endparam
+  complex param curvepoint12
+    caption = "Control Point 12"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 12)
+    hint = "Sets the twelfth control point in the curve."
+  endparam
+  param curveclose12
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 13 || (@curveorder >= 12 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent13auto
+    caption = "Automatically set point 13"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 13)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent13
+    caption = "Tangent Point 13"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent13auto == false) && (@curveorder >= 13)
+    hint = "Sets the thirteenth tangent point on the curve."
+  endparam
+  complex param curvepoint13
+    caption = "Control Point 13"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 13)
+    hint = "Sets the thirteenth control point in the curve."
+  endparam
+  param curveclose13
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 14 || (@curveorder >= 13 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent14auto
+    caption = "Automatically set point 14"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 14)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent14
+    caption = "Tangent Point 14"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent14auto == false) && (@curveorder >= 14)
+    hint = "Sets the fourteenth tangent point on the curve."
+  endparam
+  complex param curvepoint14
+    caption = "Control Point 14"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 14)
+    hint = "Sets the fourteenth control point in the curve."
+  endparam
+  param curveclose14
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 15 || (@curveorder >= 14 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent15auto
+    caption = "Automatically set point 15"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 15)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent15
+    caption = "Tangent Point 15"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent15auto == false) && (@curveorder >= 15)
+    hint = "Sets the fifteenth tangent point on the curve."
+  endparam
+  complex param curvepoint15
+    caption = "Control Point 15"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 15)
+    hint = "Sets the fifteenth control point in the curve."
+  endparam
+  param curveclose15
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 16 || (@curveorder >= 15 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent16auto
+    caption = "Automatically set point 16"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 16)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent16
+    caption = "Tangent Point 16"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent16auto == false) && (@curveorder >= 16)
+    hint = "Sets the sixteenth tangent point on the curve."
+  endparam
+  complex param curvepoint16
+    caption = "Control Point 16"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 16)
+    hint = "Sets the sixteenth control point in the curve."
+  endparam
+  param curveclose16
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 17 || (@curveorder >= 16 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent17auto
+    caption = "Automatically set point 17"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 17)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent17
+    caption = "Tangent Point 17"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent17auto == false) && (@curveorder >= 17)
+    hint = "Sets the seventeenth tangent point on the curve."
+  endparam
+  complex param curvepoint17
+    caption = "Control Point 17"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 17)
+    hint = "Sets the seventeenth control point in the curve."
+  endparam
+  param curveclose17
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 18 || (@curveorder >= 17 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent18auto
+    caption = "Automatically set point 18"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 18)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent18
+    caption = "Tangent Point 18"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent18auto == false) && (@curveorder >= 18)
+    hint = "Sets the eighteenth tangent point on the curve."
+  endparam
+  complex param curvepoint18
+    caption = "Control Point 18"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 18)
+    hint = "Sets the eighteenth control point in the curve."
+  endparam
+  param curveclose18
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 19 || (@curveorder >= 18 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent19auto
+    caption = "Automatically set point 19"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 19)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent19
+    caption = "Tangent Point 19"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent19auto == false) && (@curveorder >= 19)
+    hint = "Sets the nineteenth tangent point on the curve."
+  endparam
+  complex param curvepoint19
+    caption = "Control Point 19"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 19)
+    hint = "Sets the nineteenth control point in the curve."
+  endparam
+  param curveclose19
+    caption = "Close curve at this point"
+    default = false
+    visible = (@shape == "Bézier curve") && (@curveorder >= 20 || (@curveorder >= 19 && @curvestar))
+    hint = "Sets whether the curve is closed (looped back to its starting \
+            point) at this point. You can add another curve within the same \
+            transform by adding more points; they will be a separate curve."
+  endparam
+  param curvetangent20auto
+    caption = "Automatically set point 20"
+    default = true
+    visible = (@shape == "Bézier curve") && (@curveorder >= 20)
+    hint = "If checked, the tangent point will be automatically computed by \
+            averaging adjacent control points. This will ensure a smooth \
+            line between the two. If you need a corner, uncheck this box \
+            and set the tangent point to be the corner."
+  endparam
+  complex param curvetangent20
+    caption = "Tangent Point 20"
+    default = #center + (-1/#magn + flip(0.5/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curvetangent20auto == false) && (@curveorder >= 20)
+    hint = "Sets the twentieth tangent point on the curve."
+  endparam
+  complex param curvepoint20
+    caption = "Control Point 20"
+    default = #center + (1/#magn + flip(1/#magn)) * ((0,1)^(#angle*2/#pi))
+    visible = (@shape == "Bézier curve") && (@curveorder >= 20)
+    hint = "Sets the twentieth control point in the curve."
+  endparam
+  ; curve always closes here!
+;  param curveclose20
+;    caption = "Close curve at this point"
+;    default = false
+;    visible = (@shape == "Bézier curve") && (@curveorder >= 21 || (@curveorder >= 20 && @curvestar))
+;    hint = "Sets whether the curve is closed (looped back to its starting \
+;            point) at this point. You can add another curve within the same \
+;            transform by adding more points; they will be a separate curve."
+;  endparam
+}
+
+
+JLB_waves {
+; original in mt.uxf by Mark Townsend, 16 Oct 1999
+; 220906 added phase option
+transform:
+  float xp = real(#pixel)
+  float yp = imag(#pixel)
+  float xphase = @hp0*(#pi/180) + @hpa*sin(@hpt*xp)
+  float x = @ha * sin(@ht * imag(@fn1(#pixel)) + xphase)
+
+  float yphase = @vp0*(#pi/180) + @vpa*sin(@vpt*yp)
+;   float y = @va * sin(@vt * real(@fn2(#pixel)) + yphase)
+  float y = @va * ( sin(@vt*xp) + 0.5*sin( 2*@vt*xp) )
+  #pixel = #pixel + x + flip(y)
+default:
+  title = "Waves"
+  float param ht
+    caption = "Horizontal frequency"
+    default = 2.0
+  endparam
+  float param ha
+    caption = "Horizontal amplitude"
+    default = 0.5
+  endparam
+  func fn1
+    caption = "Horizontal function"
+    default = ident()
+  endfunc
+  float param hp0
+    caption = "Horizontal phase offset"
+    default = 0
+  endparam
+  float param hpt
+    caption = "Horizontal phase frequency"
+    default = 0
+  endparam
+  float param hpa
+    caption = "Horizontal phase amplitude"
+    default = 0
+  endparam
+
+  heading
+  endheading
+
+  float param vt
+    caption = "Vertical frequency"
+    default = 2.0
+  endparam
+  float param va
+    caption = "Vertical amplitude"
+    default = 0.5
+  endparam
+  func fn2
+    caption = "Vertical function"
+    default = ident()
+  endfunc
+  float param vp0
+    caption = "Vertical phase offset"
+    default = 0
+  endparam
+  float param vpt
+    caption = "Vertical phase frequency"
+    default = 0
+  endparam
+  float param vpa
+    caption = "Vertical phase amplitude"
+    default = 0
+  endparam
+}

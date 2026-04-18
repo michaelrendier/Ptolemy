@@ -1,0 +1,1770 @@
+Stripes {
+; Jussi Härkönen, 07-01-02
+; See Fibers and Things by Ron Barnett for a similar coloring
+; for convergent fractals.
+;
+; TIA originally developed by Kerry Mitchell
+; Curvature originally developed by Damien Jones
+;
+; 07-02-15 Added the interpolation mode parameter
+; 07-03-07 Added the "None" interpolation mode
+; 07-03-30 Added Skip iterations, seed (TIA only) and Mandel version (TIA only)
+;          parameters
+;
+; 16-10-30 Stripes + Perlin routines added by jam.
+;
+global:
+  ; Precalculate the attenuation factor for attenuated sum
+  float attenuationFactor = 1 - exp(-@attenuation)
+  float lp = log(log(@bailout))
+  float twopi = 2 * #pi
+
+; Perlin noise settings
+int perlinperms[2048] ; maximum grid size is 1024
+float perlingrads[2048,2]
+int indexi = int indexj = int swapint = int tempint = 0
+int seed = @perlinseed
+float tempfloat = 0.0
+int tempint = 0
+int gridfraction = int tempcount = 0 ; for @perlingridstyle 'sapphire'
+bool switch = FALSE
+int perlinarraysz = 0
+
+if @perlingridsize == "16"
+	perlinarraysz = 16
+elseif @perlingridsize == "64"	
+	perlinarraysz = 64
+elseif @perlingridsize == "256"	
+	perlinarraysz = 256
+elseif @perlingridsize == "1024"	
+	perlinarraysz = 1024
+endif ; @perlingridsize	
+
+if @enableperlin
+	; Fill the first N permutation array elements with the consecutive integers 0 thru N-1.
+	; Simultaneously fill the first N gradient array elements with random gradient vectors,
+	; or with other gradient vectors depending upon parameter @perlingridstyle
+	gridfraction = round(@perlingridsize/8)
+	indexi = 0
+	while indexi < perlinarraysz
+		perlinperms[indexi] = indexi
+		indexj = 0
+		while indexj < 2
+			if @perlingridstyle == "Perlin"
+				seed = random(seed)
+				perlingrads[indexi, indexj] = seed/#randomrange ; gradient between -1 and 1
+			elseif @perlingridstyle == "topaz"
+				if indexj == 0
+					perlingrads[indexi, indexj] = -1
+				else
+					perlingrads[indexi, indexj] = 1
+				endif ; indexj
+			elseif @perlingridstyle == "opal"
+				if indexi%2 == 0
+					if indexj == 0
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				else
+					if indexj == 1
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				endif ; indexi
+			elseif @perlingridstyle == "ruby"
+				if indexi%3 == 0
+					if indexj == 0
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				else
+					if indexj == 1
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				endif ; indexi
+			elseif @perlingridstyle == "emerald"
+				if (indexi%4 == 0) || (indexi%4 == 3)
+					if indexj == 0
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				elseif (indexi%4 == 1) || (indexi%4 == 2)
+					if indexj == 0
+						perlingrads[indexi, indexj] = 1
+					else
+						perlingrads[indexi, indexj] = -1
+					endif ; indexj
+				endif ; indexi
+			elseif @perlingridstyle == "sapphire"
+				tempcount = tempcount + 1
+				if tempcount > gridfraction ; reset count and toggle alternation flag
+					tempcount = 1
+					switch = !switch
+				endif ; tempcount
+				if switch
+					if indexj == 0
+						perlingrads[indexi, indexj] = -1
+					else
+						perlingrads[indexi, indexj] = 1
+					endif ; indexj
+				else
+					if indexj == 0
+						perlingrads[indexi, indexj] = 1
+					else
+						perlingrads[indexi, indexj] = -1
+					endif ; indexj
+				endif ; switch
+			endif ; @perlingridstyle
+			indexj = indexj + 1
+		endwhile ; indexj
+		; now normalize the gradient vectors
+		tempfloat = sqrt(sqr(perlingrads[indexi,0]) + sqr(perlingrads[indexi,1])) ; gradient magnitude
+		perlingrads[indexi,0] = perlingrads[indexi,0]/tempfloat
+		perlingrads[indexi,1] = perlingrads[indexi,1]/tempfloat
+		indexi = indexi + 1
+	endwhile ; indexi
+	; now scramble the N entries so that the integers 0 thru N-1 are in a random order
+	indexi = perlinarraysz
+	repeat
+		indexj = indexi
+		indexi = indexi - 1
+		seed = random(seed)
+		tempint = abs(seed % indexj)
+		swapint = perlinperms[indexi]
+		perlinperms[indexi]= perlinperms[tempint]
+		perlinperms[tempint] = swapint
+	until indexi == 1 ; repeat indexj
+	; now duplicate the N array entries into array elements N - (2N-1)
+	indexi = 0
+	while indexi < perlinarraysz
+		perlinperms[indexi + perlinarraysz] = perlinperms[indexi]
+		indexj = 0
+		while indexj < 2
+			perlingrads[indexi + perlinarraysz, indexj] = perlingrads[indexi, indexj]
+			indexj = indexj + 1
+		endwhile ; indexj
+		indexi = indexi + 1
+	endwhile ; indexi
+endif ; @enableperlin
+
+init:
+  int iteration = 0
+  float tempcolor = 0.0
+
+  ; Sums (needed for smooth interpolation)
+  float sum = 0; S(k)
+  float sum1 = 0; S(k-1)
+  float sum2 = 0; S(k-2)
+  float sum3 = 0; S(k-3)
+
+  ; k'th term in the sum
+  float Tk = 0
+
+  ; |C| or |seed| for TIA
+  float cAbs = 0
+  if (@usePixel)
+    cAbs = cabs(#pixel)
+  else
+    cAbs = cabs(@seed)
+  endif
+  float znAbs = 0
+
+  ; Array for previous iterations. Curvature needs current and 2 previous
+  ; values so always reserve at least 3 iterates. First is newest (z(k))
+  int numZPrev = @skipIter + 3
+  complex zPrevArray[@skipIter + 3]
+  ; Fill with zeros
+  int k = 0
+  while (k < numZPrev)
+    zPrevArray[k] = 0
+    k = k + 1
+  endwhile
+
+  ; Shortcut values of old z for TIA and Curvature
+  complex z = (0,0)
+  complex zPrev = (0,0)
+  complex zPrev2 = (0,0)
+
+  ; Fractional iteration count
+  float il = 0 ; Assigned in the final section
+
+; Perlin noise variables
+int gridx0 = int gridx1 = int gridy0 = int gridy1 = 0
+int grad00 = int grad10 = int grad01 = int grad11 = 0
+float fracx0 = float fracx1 = float fracy0 = float fracy1 = 0.0
+float xsmoothing = float ysmoothing = 0.0
+float temp1 = float temp2 = 0.0
+float noisesum = float noiseamplitude = 0.0
+complex zperlin = complex zrotate = complex zunit = (0,0)
+float utemp = float vtemp = float atemp = float btemp = 0.0
+float zpart = 0.0
+int perlinmodulus = 0
+complex perlinzsave = complex perlinzsave2 = complex perlinztest = (0,0)
+float perlinfsave = float perlinftest = 0.0
+float perlinfsave2 = 0.0
+if (@perlinaverage == "geometric") || (@perlinaverage == "HG") ; initialize for multiplicative avgs
+	perlinfsave = 1.0
+	perlinzsave = (1,0)
+endif ; @perlinaverage
+bool perlintest = FALSE
+int perlincount = 0
+
+if (@perlincriterion == "minimum") || (@perlincriterion == "2nd min")
+	perlinfsave = 1e20
+	perlinfsave2 = 1e20
+endif ; @perlincriterion	
+
+loop:
+  ; k:th iteration, ranging from 1 to N-1
+  ; z(N) is first outside bailout, and |z|^2 > bailout
+  ; (Note that UF evaluates "|z|" as the square of magnitude, |z|^2)
+
+  iteration = iteration + 1
+  if (@skipIter == 0)
+    zPrev2 = zPrev
+    zPrev = z
+    z = #z
+  else ; @skipiter > 0
+    ; Update preceding terms for next iteration
+    k = numZPrev - 1
+    while (k > 0)
+      zPrevArray[k] = zPrevArray[k-1]
+      k = k - 1
+    endwhile
+    zPrevArray[0] = #z
+
+    ; Get old z
+    z = zPrevArray[@skipIter]
+    zPrev = zPrevArray[@skipIter+1]
+    zPrev2 = zPrevArray[@skipIter+2]
+  endif
+
+if (iteration > @skipIter)
+  if (@coloring == "Stripes")
+    ; Angle dependent component  in [-1,1]
+    float TkAng = sin(@angularFrequency * atan2(z) + @angularOffset)
+
+    ; Radius-dependent component in [-1,1]
+    float TkRad = sin(@circularFrequency * log((cabs(z))) + @circularOffset)
+
+    ; The weighted sum of radius and angle dependent terms is in [-1,1]
+    ; Scale and translate it to [0,1]
+    Tk = 0.5 + 0.5 * ((1 - @circularWeight) * TkAng + @circularWeight * TkRad)
+
+  elseif (@coloring == "Curvature")
+    ; Skip two first iterations in order to get two nonzero previous values
+
+    if (iteration > @skipIter + 2)
+      q = (z - zPrev) / (zPrev - zPrev2)
+      Tk = (abs(atan2(q)) / (pi))
+    else
+      Tk = 0
+    endif
+  else ; "TIA"
+    ; Skip first iteration
+    if (iteration > 1 + @skipIter)
+      ; |z(k-1)^n|
+      if (@usePixel)
+        ; Use pixel value
+        znAbs = cabs(z - #pixel)
+      else
+        ; Use seed specified by the user
+        znAbs = cabs(z - @seed)
+      endif
+
+      ; Bounds:
+      ; m(k) = ||z(k-1)|^n - |c||
+      float lowBound = abs(znAbs - cAbs)
+      ; M(k) = |z(k-1)|^n + |c|
+      float upBound = znAbs + cAbs
+
+      ; T(k)
+      Tk = (cabs(z) - lowBound) / (upBound - lowBound)
+    endif
+  endif
+
+  ; Update previous sums
+  sum3 = sum2
+  sum2 = sum1
+  sum1 = sum
+
+
+  ; Calculate S(k)
+  if (@attenuate)
+    sum = attenuationFactor*sum + Tk
+  else
+    sum = sum + Tk
+  endif
+
+endif
+
+	; Make some Perlin calculations if enabled and necessary
+	if @enableperlin
+		if @perlininitpoint == "z0"
+			perlinztest = z
+			perlintest = TRUE
+		elseif @perlininitpoint == "z1"
+			perlinztest = zPrev
+			perlintest = TRUE
+		elseif @perlininitpoint == "z2"
+			perlinztest = zPrev2
+			perlintest = TRUE
+		elseif @perlininitpoint == "combination"
+			perlintest = TRUE
+			if @perlincombo == "z0 + z1"
+				perlinztest = z + zPrev
+			elseif @perlincombo == "z0 * z1"	
+				perlinztest = z * zPrev
+			elseif @perlincombo == "z0 - z1"	
+				perlinztest = z - zPrev
+			elseif @perlincombo == "z1 - z0"	
+				perlinztest = zPrev - z
+			elseif @perlincombo == "z0/z1"	
+				perlinztest = z / zPrev
+			elseif @perlincombo == "z1/z0"	
+				perlinztest = zPrev / z
+			elseif @perlincombo == "z0 + z2"
+				perlinztest = z + zPrev2
+			elseif @perlincombo == "z0 * z2"	
+				perlinztest = z * zPrev2
+			elseif @perlincombo == "z0 - z2"	
+				perlinztest = z - zPrev2
+			elseif @perlincombo == "z2 - z0"	
+				perlinztest = zPrev2 - z
+			elseif @perlincombo == "z0/z2"	
+				perlinztest = z / zPrev2
+			elseif @perlincombo == "z2/z0"	
+				perlinztest = zPrev2 / z
+			elseif @perlincombo == "z1 + z2"
+				perlinztest = zPrev + zPrev2
+			elseif @perlincombo == "z1 * z2"	
+				perlinztest = zPrev * zPrev2
+			elseif @perlincombo == "z1 - z2"	
+				perlinztest = zPrev - zPrev2
+			elseif @perlincombo == "z2 - z1"	
+				perlinztest = zPrev2 - zPrev
+			elseif @perlincombo == "z1/z2"	
+				perlinztest = zPrev / zPrev2
+			elseif @perlincombo == "z2/z1"	
+				perlinztest = zPrev2 / zPrev
+			elseif @perlincombo == "z0 + #pixel"	
+				perlinztest = z + #pixel
+			elseif @perlincombo == "z0 * #pixel"	
+				perlinztest = z * #pixel
+			elseif @perlincombo == "z0 - #pixel"	
+				perlinztest = z - #pixel
+			elseif @perlincombo == "#pixel - z0"	
+				perlinztest = #pixel - z
+			elseif @perlincombo == "z0/#pixel"	
+				perlinztest = z / #pixel
+			elseif @perlincombo == "#pixel/z0"	
+				perlinztest = #pixel / z
+			elseif @perlincombo == "z1 + #pixel"	
+				perlinztest = zPrev + #pixel
+			elseif @perlincombo == "z1 * #pixel"	
+				perlinztest = zPrev * #pixel
+			elseif @perlincombo == "z1 - #pixel"	
+				perlinztest = zPrev - #pixel
+			elseif @perlincombo == "#pixel - z1"	
+				perlinztest = #pixel - zPrev
+			elseif @perlincombo == "z1/#pixel"	
+				perlinztest = zPrev / #pixel
+			elseif @perlincombo == "#pixel/z1"	
+				perlinztest = #pixel / zPrev
+			elseif @perlincombo == "z2 + #pixel"	
+				perlinztest = zPrev2 + #pixel
+			elseif @perlincombo == "z2 * #pixel"	
+				perlinztest = zPrev2 * #pixel
+			elseif @perlincombo == "z2 - #pixel"	
+				perlinztest = zPrev2 - #pixel
+			elseif @perlincombo == "#pixel - z2"	
+				perlinztest = #pixel - zPrev2
+			elseif @perlincombo == "z2/#pixel"	
+				perlinztest = zPrev2 / #pixel
+			elseif @perlincombo == "#pixel/z2"	
+				perlinztest = #pixel / zPrev2
+			endif ; @perlincombo		
+		endif ; @perlininitpoint
+		if perlintest
+			if @perlincriterion == "average"
+				if iteration >= (@perlinavgstart - 1)
+					if (@perlinavgiters == 1) || ( perlincount < @perlinavgiters)
+						perlincount = perlincount + 1
+						if @perlinaltmutant
+							perlinftest = cabs(perlinztest)
+						endif; @perlinaltmutant	
+						if @perlinaverage == "arithmetic"
+							perlinfsave = perlinfsave + perlinftest
+							perlinzsave = perlinzsave + perlinztest
+						elseif @perlinaverage == "quadratic"
+							perlinfsave = perlinfsave + sqr(perlinftest)
+							perlinzsave = perlinzsave + sqr(perlinztest)
+						elseif @perlinaverage == "cubic"
+							perlinfsave = perlinfsave + perlinftest*sqr(perlinftest)
+							perlinzsave = perlinzsave + perlinztest*sqr(perlinztest)
+						elseif @perlinaverage == "quartic"
+							perlinfsave = perlinfsave + sqr(sqr(perlinftest))
+							perlinzsave = perlinzsave + sqr(sqr(perlinztest))
+						elseif @perlinaverage == "general power"
+							perlinfsave = perlinfsave + perlinftest^@perlinpower
+							perlinzsave = perlinzsave + perlinztest^@perlinpower
+						elseif @perlinaverage == "geometric"
+							perlinfsave = perlinfsave * perlinftest
+							perlinzsave = perlinzsave * perlinztest
+						elseif @perlinaverage == "harmonic"
+							perlinfsave = perlinfsave + 1/perlinftest
+							perlinzsave = perlinzsave + 1/perlinztest
+						elseif @perlinaverage == "HG"
+							perlinfsave = perlinfsave * 1/perlinftest
+							perlinzsave = perlinzsave * 1/perlinztest
+						elseif @perlinaverage == "function average"
+							if @perlinavgfn == "exp"
+								perlinfsave = perlinfsave + exp(@perlinavgscale*perlinftest)
+								perlinzsave = perlinzsave + exp(@perlinavgscale*perlinztest)
+							elseif @perlinavgfn == "log"
+								perlinfsave = perlinfsave + log(@perlinavgscale*perlinftest)
+								perlinzsave = perlinzsave + log(@perlinavgscale*perlinztest)
+							elseif @perlinavgfn == "sine"
+								perlinfsave = perlinfsave + sin(@perlinavgscale*perlinftest)
+								perlinzsave = perlinzsave + sin(@perlinavgscale*perlinztest)
+							endif ; @perlinavgfn
+						endif ; @perlinaverage
+					endif ; @perlinavgiters	
+				endif ; iter		
+			elseif @perlincriterion == "minimum"
+				perlinftest = cabs(perlinztest)
+				if perlinftest < perlinfsave
+					perlinfsave = perlinftest
+					perlinzsave = perlinztest	
+				endif ; perlinftest
+			elseif @perlincriterion == "2nd min"
+				perlinftest = cabs(perlinztest)
+				if perlinftest < perlinfsave2 ; save2 holds min value, save holds 2nd min
+					perlinfsave = perlinfsave2
+					perlinfsave2 = perlinftest
+					perlinzsave = perlinzsave2
+					perlinzsave2 = perlinztest	
+				endif ; perlinftest
+			elseif @perlincriterion == "maximum"	
+				perlinftest = cabs(perlinztest)
+				if perlinftest > perlinfsave
+					perlinfsave = perlinftest
+					perlinzsave = perlinztest	
+				endif ; perlinftest
+			elseif @perlincriterion == "2nd max"
+				perlinftest = cabs(perlinztest)
+				if perlinftest > perlinfsave2 ; save2 holds max value, save holds 2nd max
+					perlinfsave = perlinfsave2
+					perlinfsave2 = perlinftest
+					perlinzsave = perlinzsave2
+					perlinzsave2 = perlinztest	
+				endif ; perlinftest
+			elseif @perlincriterion == "1st z"
+				if iteration == @skipIter + 1
+					perlinfsave = cabs(perlinztest)
+					perlinzsave = perlinztest
+				endif ; iteration	
+			elseif @perlincriterion == "2nd z"
+				if iteration == @skipIter + 2
+					perlinfsave = cabs(perlinztest)
+					perlinzsave = perlinztest
+				endif ; iteration
+			elseif @perlincriterion == "Nth z"
+				if iteration == @skipIter + @perlinnthiter
+					perlinfsave = cabs(perlinztest)
+					perlinzsave = perlinztest
+				endif ; iteration	
+			elseif @perlincriterion == "last z"
+				perlinfsave = cabs(perlinztest)
+				perlinzsave = perlinztest
+			elseif @perlincriterion == "penultimate z"
+				perlinfsave = perlinfsave2
+				perlinzsave = perlinzsave2
+				perlinfsave2 = cabs(perlinztest)
+				perlinzsave2 = perlinztest
+			endif ; @perlincriterion
+		endif ; perlintest
+	endif ; @enableperlin
+
+final:
+  if (@autoPower)
+    ; Approximate power
+    if (@skipiter > 0)
+      z = zPrevArray[0]
+    endif
+
+    float power = log(|#z|)/log(|z|)
+    il = real(1 / log(power))
+  else
+    ; Use user-specified power
+    il = 1/log(@power)
+  endif
+
+  ; Calculate the decimal part of iteration count
+  ; Note that "log(|#z|)" evaluates to 2*log(|#z|)
+  float u = il*(lp - log(log(|#z|))) + 1
+
+  ; Calculate average sums
+  if (@attenuate)
+    ; Normalize the averages so that the steady-state value is in [0,1]
+    sum = sum * (1 - attenuationFactor)
+    sum1 = sum1 * (1 - attenuationFactor)
+    sum2 = sum2 * (1 - attenuationFactor)
+    sum3 = sum3 * (1 - attenuationFactor)
+  else
+    ; Calculate average
+    sum = sum / #numiter
+    if (#numiter > 3)
+      sum3 = sum3 / (#numiter - 3)
+    endif
+    if (#numiter > 2)
+      sum2 = sum2 / (#numiter - 2)
+    endif
+    if (#numiter > 1)
+      sum1 = sum1 / (#numiter - 1)
+    endif
+  endif
+
+  ; Calculate the index value
+  if (@interpolation == "Smooth")
+    ; Interpolate smoothly using a Catmull-Rom spline
+    float u2 = u^2
+    float u3 = u * u2
+
+    ; Add 1 to the index in order to avoid negative index values
+    tempcolor = 1 + 0.5 *((-sum3 + 3*sum2 - 3*sum1 + sum)*u3 + (2*sum3 - 5*sum2 + 4*sum1 - sum)*u2 + (-sum3 + sum1)*u + 2*sum2)
+
+  elseif (@interpolation == "Linear")
+    ; Interpolate linearly between the sums
+    tempcolor = u*sum + (1-u) * sum1
+  else ; none
+    tempcolor = sum
+  endif
+
+; Perlin noise modulation
+if @enableperlin
+	; first, determine what initialization to use
+	if @perlininitpoint == "pixel"
+		zperlin = #pixel
+	elseif @perlininitpoint == "coloring"
+		zperlin = tempcolor + flip(sum)
+	elseif @perlininitpoint == "test result"
+		zperlin = sum + flip(sum2)
+	else
+		if @perlincriterion != "average"
+			zperlin = perlinzsave
+		else
+			if @perlinaverage == "arithmetic"
+				perlinfsave = perlinfsave/perlincount
+				perlinzsave = perlinzsave/perlincount
+			elseif @perlinaverage == "quadratic"
+				perlinfsave = sqrt(perlinfsave/perlincount)
+				perlinzsave = sqrt(perlinzsave/perlincount)
+			elseif @perlinaverage == "cubic"
+				perlinfsave = (perlinfsave/perlincount)^(1/3)
+				perlinzsave = (perlinzsave/perlincount)^(1/3)
+			elseif @perlinaverage == "quartic"
+				perlinfsave = (perlinfsave/perlincount)^(1/4)
+				perlinzsave = (perlinzsave/perlincount)^(1/4)
+			elseif @perlinaverage == "general power"
+				perlinfsave = (perlinfsave/perlincount)^(1/@perlinpower)
+				perlinzsave = (perlinzsave/perlincount)^(1/@perlinpower)
+			elseif @perlinaverage == "geometric"
+				perlinfsave = perlinfsave^(1/perlincount)
+				perlinzsave = perlinzsave^(1/perlincount)
+			elseif @perlinaverage == "harmonic"
+				perlinfsave = perlincount/perlinfsave
+				perlinzsave = perlincount/perlinzsave
+			elseif @perlinaverage == "HG"
+				perlinfsave = 1/((perlinfsave)^(1/perlincount))
+				perlinzsave = 1/((perlinzsave)^(1/perlincount))
+			elseif @perlinaverage == "function average"
+				if @perlinavgfn == "exp"
+					perlinfsave = log(perlinfsave/perlincount)
+					perlinzsave = log(perlinzsave/perlincount)
+				elseif @perlinavgfn == "log"
+					perlinfsave = exp(perlinfsave/perlincount)
+					perlinzsave = exp(perlinzsave/perlincount)
+				elseif @perlinavgfn == "sine"
+					perlinfsave = asin(perlinfsave/perlincount)
+					perlinzsave = asin(perlinzsave/perlincount)
+					if perlinfsave < 0
+						perlinfsave = perlinfsave + #pi
+					endif ; perlinfsave
+				endif ; @perlinavgfn
+			endif ; @perlinaverage
+			zperlin = perlinzsave
+		endif ; @perlincriterion
+		if @perlinmutate
+			if @perlinmutstyle == "antares"
+				zperlin = perlinfsave + flip(real(perlinzsave))
+			elseif @perlinmutstyle == "fomalhaut"
+				zperlin = perlinfsave + flip(imag(perlinzsave))
+			elseif @perlinmutstyle == "rigel"
+				zperlin = perlinfsave + flip(cabs(perlinzsave))
+			elseif @perlinmutstyle == "arcturus"
+				zperlin = cabs(#pixel) + flip(imag(perlinzsave))
+			elseif @perlinmutstyle == "capella"
+				zperlin = testresult + flip(perlinfsave)
+			elseif @perlinmutstyle == "polaris"
+				zperlin = perlinfsave + flip(oldresult)
+			endif ; @perlinmutstyle	
+		endif ; @perlinmutate	
+	endif ; @perlininitpoint	
+
+	if @perlintransform != "none"
+		if @perlintransform == "circle"
+			ztemp = zperlin - @perlincenter
+			temp2 = atan2(ztemp)
+			if temp2 < 0
+				temp2 = temp2 + twopi
+			endif ; atan2
+			temp1 = @perlinradius * cos(temp2) ; x-coordinate on circle
+			temp2 = @perlinradius * sin(temp2) ; y-coordinate
+			ztemp = temp1 + flip(temp2)
+		elseif @perlintransform == "diamond"	
+			ztemp = zperlin - @perlincenter
+			temp2 = atan2(ztemp) ; angle
+			if temp2 < 0
+				temp2 = temp2 + twopi
+			endif ; atan2
+			temp1 = cos(temp2) ; x-coordinate
+			if temp2 <= halfpi
+				temp2 = 1-temp1 ; y-coordinate
+			elseif temp2 <= #pi
+				temp2 = 1+temp1
+			elseif temp2 <= threehalvespi
+				temp2 = -temp1-1
+			else
+				temp2 = temp1-1
+			endif ; temp2
+			ztemp = @perlinradius * (temp1 + flip(temp2))
+		elseif @perlintransform == "x-axis"	
+			ztemp = @perlinradius * real(zperlin-@perlincenter) + flip(0)
+		endif ; @perlintransform
+		if @transformcombo == "trap"
+			zperlin = ztemp
+		elseif @transformcombo == "sum"
+			zperlin = zperlin + ztemp
+		elseif @transformcombo == "difference 1"
+			zperlin = zperlin - ztemp
+		elseif @transformcombo == "difference 2"
+			zperlin = ztemp - zperlin
+		elseif @transformcombo == "product"
+			zperlin = zperlin * ztemp
+		elseif @transformcombo == "quotient 1"
+			zperlin = zperlin / ztemp
+		elseif @transformcombo == "quotient 2"
+			zperlin = ztemp / zperlin
+		elseif @transformcombo == "power 1"
+			zperlin = zperlin ^ ztemp
+		elseif @transformcombo == "power 2"
+			zperlin = ztemp ^ zperlin
+		elseif @transformcombo == "arithmetic average"
+			zperlin = (zperlin + ztemp) / 2
+		elseif @transformcombo == "geometric average"
+			zperlin = (zperlin * ztemp) ^ (1/2)
+		endif ; @transformcombo	
+	endif ; @perlintransform
+
+	altindex = 0
+	noisesum = 0.0
+	noiseamplitude = 1.0
+	zrotate = (0,1)^(@perlinrotation/90)
+	zunit = (0,1)^(1/5) * (0,1)^(@perlinrotstep/90)
+	zperlin = zperlin * @perlinscale * zrotate + @perlinoffset
+	perlinmodulus = perlinarraysz * 16
+	while altindex < @perlinoctaves
+		zpart = real(zperlin) % perlinmodulus + perlinmodulus
+		gridx0 = floor(zpart) % perlinarraysz
+		gridx1 = (gridx0 + 1) % perlinarraysz
+		fracx0 = zpart - floor(zpart)
+		fracx1 = fracx0 - 1
+		zpart = imag(zperlin) % perlinmodulus + perlinmodulus
+		gridy0 = floor(zpart) % perlinarraysz
+		gridy1 = (gridy0 + 1) % perlinarraysz
+		fracy0 = zpart - floor(zpart)
+		fracy1 = fracy0 - 1
+		grad00 = perlinperms[perlinperms[gridx0] + gridy0]
+		grad10 = perlinperms[perlinperms[gridx1] + gridy0]
+		grad01 = perlinperms[perlinperms[gridx0] + gridy1]
+		grad11 = perlinperms[perlinperms[gridx1] + gridy1]
+		if @perlinfade == "poppy"
+			xsmoothing = sqr(fracx0) * (3-2*fracx0)
+			ysmoothing = sqr(fracy0) * (3-2*fracy0)
+		elseif @perlinfade == "gardenia"	
+			temp1 = sqr(fracx0)
+			temp2 = fracx0*temp1
+			xsmoothing = 6*temp1*temp2 - 15*temp1*temp1 + 10*temp2
+			temp1 = sqr(fracy0)
+			temp2 = fracy0*temp1
+			ysmoothing = 6*temp1*temp2 - 15*temp1*temp1 + 10*temp2
+		elseif @perlinfade == "thistle"	
+			xsmoothing = sqrt(@fadeadjust * abs(fracx0))
+			ysmoothing = sqrt(@fadeadjust * abs(fracy0))
+		elseif @perlinfade == "dandelion"	
+			xsmoothing = sin(@fadeadjust * #pi * fracx0)
+			ysmoothing = sin(@fadeadjust * #pi * fracy0)
+		elseif @perlinfade == "dahlia"	
+			xsmoothing = exp(@fadeadjust * fracx0)
+			ysmoothing = exp(@fadeadjust * fracy0)
+		elseif @perlinfade == "honeysuckle"	
+			xsmoothing = log(@fadeadjust * (abs(fracx0)+1))
+			ysmoothing = log(@fadeadjust * (abs(fracy0)+1))
+		endif ; @perlinfade	
+		utemp = fracx0 * perlingrads[grad00,0] + fracy0 * perlingrads[grad00,1]
+		vtemp = fracx1 * perlingrads[grad10,0] + fracy0 * perlingrads[grad10,1]
+		atemp = utemp + xsmoothing*(vtemp-utemp)
+		utemp = fracx0 * perlingrads[grad01,0] + fracy1 * perlingrads[grad01,1]
+		vtemp = fracx1 * perlingrads[grad11,0] + fracy1 * perlingrads[grad11,1]
+		btemp = utemp + xsmoothing*(vtemp-utemp)
+		noisesum = noisesum + (atemp + ysmoothing*(btemp-atemp)) * noiseamplitude
+		zperlin = zperlin * zunit/@perlinfreq
+		noiseamplitude = noiseamplitude * @perlinamplitude
+		altindex = altindex + 1
+	endwhile ; altindex
+	tempcolor = @avgcolorwt*tempcolor + (noisesum + @perlinadjustment)*@perlinamount*@perlincolorwt
+endif ; @enableperlin	
+
+#index = tempcolor
+
+default:
+  title = "Stripes"
+
+  param coloring
+    caption = "Coloring mode"
+    default = 0
+    enum = "Stripes" "TIA" "Curvature"
+    hint = "Specifies the coloring algorithm."
+  endparam
+
+  param usePixel
+    caption = "Mandel version"
+    default = false
+    visible = @coloring == "TIA"
+    hint = "Specifies whether to use the algorithm adapted \
+            to Julia or Mandelbrot sets"
+  endparam
+
+  param seed
+    caption = "Seed"
+    default = (0.5,0.25)
+    visible = (@coloring == "TIA") && (@usePixel == false)
+    hint = "Seed of the Julia set."
+  endparam
+
+  param interpolation
+    caption = "Interpolation"
+    default = 0
+    enum = "Linear" "Smooth" "None"
+    hint = "Specifies the interpolation method."
+  endparam
+
+  float param circularWeight
+    caption = "Circle weight"
+    default = 0.0
+    visible = (@coloring == "Stripes")
+    min = 0
+    max = 1
+    hint = "Weight of circular and radial components. Weight = 0 shows only \
+            stripes, whereas weight = 1 shows only circles."
+  endparam
+
+  float param circularFrequency
+    caption = "Circle frequency"
+    default = 5.0
+    visible = (@coloring == "Stripes")
+    hint = "Specifies the density of circles. Use integer values for smooth results."
+  endparam
+
+  float param circularOffset
+    caption = "Circle offset"
+    default = 0.0
+    visible = (@coloring == "Stripes")
+    hint = "Circle offset given in radians."
+  endparam
+
+  float param angularFrequency
+    caption = "Stripe density"
+    default = 5.0
+    visible = (@coloring == "Stripes")
+    hint = "Specifies the density of stripes. Use integer values for smooth results."
+  endparam
+
+  float param angularOffset
+    caption = "Stripe offset"
+    default = 0.0
+    visible = (@coloring == "Stripes")
+    hint = "Stripe offset given in radians."
+  endparam
+
+  int param skipIter
+    caption = "Skip iterations"
+    default = 0
+    hint = "Excludes a given number of iterations from the end of the orbit."
+  endparam
+
+  ; Fractional iteration count parameters
+  float param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+    hint = "Bail-out value used by the fractal formula. Use large bailouts for \
+      best results."
+  endparam
+
+  bool param autoPower
+    caption = "Auto-power"
+    default = false
+    hint = "Approximate the power numerically. This gives smooth results for \
+      divergent fractal formulas different from z^n + C."
+  endparam
+
+  float param power
+    caption = "Exponent"
+    default = 2.0
+    visible = (@autoPower == false)
+    hint = "The fractal formula exponent."
+  endparam
+
+  ; Attenuation parameters
+  bool param attenuate
+    caption = "Moving average"
+    default = false
+    hint = "Use moving average instead of average. This may make the coloring \
+      structure appear clearer (especially with TIA), but may also make busy \
+      areas to appear flat."
+  endparam
+
+  float param attenuation
+    caption = "Filter factor"
+    default = 2
+    visible = @attenuate
+    min = 0
+    hint = "Specifies the moving average strength. Values close to 0 cause the last \
+      terms to be weighted creating results similar to Cilia. Large values \
+      make the sum look more like the usual average."
+  endparam
+
+; Perlin noise parameters
+heading
+	caption = "Perlin Noise Settings"
+	text = "These parameters adjust the Perlin noise if it is enabled."
+	expanded = TRUE
+endheading
+param enableperlin
+	caption = "Enable Perlin Noise?"
+	default = FALSE
+	hint = "If enabled, the coloring is modified by the addition of Perlin noise variations."
+endparam
+param perlininitpoint
+	caption = "Perlin Initial Point"
+	enum = "z0" "z1" "z2" "pixel" "coloring" "test result" "combination"
+	default = 1
+	hint = "This parameter determines the initial point input to the Perlin algorithm.  \
+	z0 = current iterate (#z), z1 = previous z, z2 = 2nd-previous z."
+	visible = @enableperlin
+endparam
+param perlincombo
+	caption = "Z Combination"
+	enum = "z0 + z1" "z0 * z1" "z0 - z1" "z1 - z0" "z0/z1" "z1/z0" \
+		"z0 + z2" "z0 * z2" "z0 - z2" "z2 - z0" "z0/z2" "z2/z0" \
+		"z1 + z2" "z1 * z2" "z1 - z2" "z2 - z1" "z1/z2" "z2/z1" \
+		"z0 + #pixel" "z0 * #pixel" "z0 - #pixel" "#pixel - z0" "z0/#pixel" "#pixel/z0" \
+		"z1 + #pixel" "z1 * #pixel" "z1 - #pixel" "#pixel - z1" "z1/#pixel" "#pixel/z1" \
+		"z2 + #pixel" "z2 * #pixel" "z2 - #pixel" "#pixel - z2" "z2/#pixel" "#pixel/z2"
+	default = 0
+	hint = "If 'Perlin Initial Point' is set to 'combination', then this setting \
+		defines which combination is used.  z0 is current #z, z1 is 1st-previous z, \
+		z2 is 2nd-previous z."
+		visible = @enableperlin && (@perlininitpoint == "combination")
+endparam
+param perlincriterion
+	caption = "Initialization Criterion"
+	enum = "minimum" "2nd min" "average" "maximum" "2nd max" "1st z" "2nd z" \
+		"Nth z" "penultimate z" "last z"
+	default = 0
+	hint = "If 'Perlin Initial Point' is set to 'z' or 'combination', then this parameter determines \
+		how z is trapped and used."
+	visible = @enableperlin && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam
+param perlinnthiter
+	caption = "Iteration to Capture"
+	default = 3
+	min = 3
+	hint = "If 'Initialization Criterion' is set to 'Nth z', then this parameter determines \
+		which z-value is trapped."
+	visible = @enableperlin && (@perlincriterion == "Nth z") && \
+		((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam	
+param perlinavgiters
+	caption = "Iterations to Average"
+	default = 6
+	min = 1
+	hint = "If 'Initialization Criterion' is set to 'average', then this parameter determines \
+		how many iterations of z are used.  Min is 1; a value of 1 \
+		means to average ALL iterations."
+	visible = @enableperlin && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination")) && (@perlincriterion == "average")
+endparam	
+param perlinavgstart
+	caption = "Starting Iter to Average"
+	default = 2
+	min = 1
+	hint = "If 'Initialization Criterion' is set to 'average', then this parameter determines \
+		the starting iteration to average."
+	visible = @enableperlin && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination")) && (@perlincriterion == "average")
+endparam	
+param perlinaverage
+	caption = "Noise Averaging"
+	enum = "arithmetic" "quadratic" "cubic" "quartic" "general power" "geometric" \
+		"harmonic" "HG" "function average"
+	default = 0
+	hint = "If 'Initialization Criterion' is set to 'average', then this parameter determines \
+		how the z-values are combined."
+	visible = @enableperlin && (@perlincriterion == "average") && \
+		((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam
+param perlinavgfn
+	caption = "Noise Averaging Function"
+	enum = "exp" "log" "sine"
+	default = 0
+	hint = "If 'Type of Averaging' is set to 'Function Avg', then this is the function."
+	visible = @enableperlin && (@perlinaverage == "function average") && \
+		(@perlincriterion == "average") && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam	
+param perlinavgscale
+	caption = "Average Scale Factor"
+	default = 1.0
+	hint = "This parameter scales the input to the noise averaging function.  For example, \
+		it functions as the frequency if 'Averaging Function' is set to 'sine'."
+	visible = @enableperlin && (@perlinaverage == "function average") && \
+		(@perlincriterion == "average") && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam	
+param perlinpower
+	caption = "Averaging Power"
+	default = 0.5
+	hint = "If 'Noise Averaging' is set to 'general power', then this parameter \
+		is the exponent used."
+	visible = @enableperlin && (@perlincriterion == "average") && (@perlinaverage == "general power") \
+		&& ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam
+param perlinmutate
+	caption = "Mutate Noise?"
+	default = FALSE
+	hint = "This setting provides an alternative set of inputs to the Perlin algorithm \
+		if enabled."
+	visible = @enableperlin && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination"))
+endparam
+param perlinmutstyle
+	caption = "Mutant Style"
+	enum = "antares" "rigel" "fomalhaut" "arcturus" "capella" "polaris"
+	default = 0
+	hint = "This setting which alternative inputs are provided to the Perlin algorithm \
+		if enabled."
+	visible = @enableperlin && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination")) && @perlinmutate
+endparam
+param perlinaltmutant
+	caption = "Alternative Mutants?"
+	default = FALSE
+	hint = "This setting provides an alternative set of inputs to the noise mutation \
+		if enabled."
+	visible = @enableperlin && @perlinmutate && ((@perlininitpoint == "z0") || (@perlininitpoint == "z1") || \
+		(@perlininitpoint == "z2") || (@perlininitpoint == "combination")) && (@perlincriterion == "average")
+endparam
+param perlinscale
+	caption = "Noise Scale"
+	default = 0.3
+	hint = "The overall scale of the Perlin turbulence.  This parameter scales the \
+		initial noise prior to the beginning of Perlin iterations."
+	visible = @enableperlin
+endparam
+param perlinamount
+	caption = "Noise Amount"
+	default = 0.3
+	hint = "If Perlin noise is enabled, this parameter determines the overall \
+		perturbation of the color palette index.  It scales the noise after \
+		the Perlin iterations are completed."
+	visible = @enableperlin
+endparam
+param perlinadjustment
+	caption = "Noise Adjustment"
+	default = 1.0
+	hint = "This parameter is added to the final Perlin noise value \
+		just prior to combining it with the color index."
+	visible = @enableperlin
+endparam	
+param perlinoctaves
+	caption = "Noise Octaves"
+	default = 6
+	min = 1
+	hint = "The number of iterations of the Perlin noise function.  Increasing this value \
+		generally increases the noise."
+	visible = @enableperlin
+endparam
+param perlinfreq
+	caption = "Noise Frequency"
+	default = 0.4
+	hint = "Frequency multiplier for Perlin noise.  Decreasing this value \
+		generally increases the noise."
+	visible = @enableperlin
+endparam
+param perlinamplitude
+	caption = "Noise Stepsize"
+	default = 0.6
+	hint = "Scale (amplitude) step size for Perlin noise iterations.  Increasing this value \
+		generally increases the noise."
+	visible = @enableperlin
+endparam
+param perlinrotstep
+	caption = "Noise Rotation Step"
+	default = 0.0
+	hint = "The angle in degrees for noise function rotation after \
+		each Perlin iteration."
+	visible = @enableperlin
+endparam
+param perlingridsize
+	caption = "Grid Size?"
+	enum = "16" "64" "256" "1024"
+	default = 2
+	hint = "This parameter affects the graininess of the noise function."
+	visible = @enableperlin
+endparam
+param perlingridstyle
+	caption = "Grid Style?"
+	enum = "Perlin" "topaz" "opal" "ruby" "emerald" "sapphire"
+	default = 0
+	hint = "This parameter affects the randomness of the grid."
+	visible = @enableperlin
+endparam
+param perlinrotation
+	caption = "Noise Rotation"
+	default = 0.0
+	hint = "Angular parameter for Perlin noise.  The input point to the Perlin \
+		algorithm can be rotated by this amount."
+	visible = @enableperlin
+endparam
+param perlinoffset
+	caption = "Noise Offset"
+	default = (0.0,0.0)
+	hint = "Offset added to Perlin noise initialization.  The input point to the Perlin \
+		algorithm can be translated by this value."
+	visible = @enableperlin
+endparam
+param avgcolorwt
+	caption = "Weight of Stripes Coloring"
+	default = 0.5
+	hint = "This parameter weights the gradient from the Stripes/Curvature/TIA averaging \
+		as it is blended with the Perlin noise."
+	visible = @enableperlin
+endparam	
+param perlincolorwt
+	caption = "Weight of Perlin Coloring"
+	default = 0.5
+	hint = "This parameter weights the gradient from the Perlin noise \
+		as it is blended with the Stripes/Curvature/TIA averaging."
+	visible = @enableperlin
+endparam	
+param perlinfade
+	caption = "Perlin Fade Function"
+	enum = "poppy" "gardenia" "thistle" "dandelion" "dahlia" "honeysuckle"
+	default = 0
+	hint = "This function smooths the gradient."
+	visible = @enableperlin
+endparam
+param fadeadjust
+	caption = "Perlin Fade Adjustment"
+	default = 1.0
+	hint = "This parameter modifies some of the fade functions"
+	visible = @enableperlin && (@perlinfade > 1)
+endparam
+param perlintransform
+	caption = "Transform Perlin Input?"
+	enum = "none" "circle" "diamond" "x-axis"
+	default = 0
+	hint = "The input to the noise function can be transformed by this setting."
+	visible = @enableperlin
+endparam
+param transformcombo
+	caption = "Transform Type"
+	enum = "trap" "sum" "difference 1" "difference 2" "product" "quotient 1" "quotient 2" \
+		"power 1" "power 2" "arithmetic average" "geometric average"
+	default = 0
+	hint = "This setting determines how the transformed point is combined with the original \
+		noise input."
+	visible = @enableperlin && (@perlintransform != "none")
+endparam	
+param perlinradius
+	caption = "Transform Scale"
+	default = 1.0
+	hint = "If 'Transform Input' is set to 'circle', then this parameter determines \
+		the circle radius; etc."
+	visible = @enableperlin && (@perlintransform != "none")
+endparam	
+param perlincenter
+	caption = "Transform Center"
+	default = (0,0)
+	hint = "If 'Transform Input' is set to 'circle', e.g., then this parameter determines \
+		the circle center; etc."
+	visible = @enableperlin && (@perlintransform != "none")
+endparam	
+param perlinseed
+	caption = "Perlin Random Seed"
+	default = 314159
+	hint = "This setting initializes the random number generator."
+	visible = @enableperlin
+endparam
+}
+
+CircularGrid {
+; Jussi Härkönen, Sep-2006
+; First public version 07-01-13
+;
+; Uses a grid of disks forming circles around the center to
+; trap orbits. The algorithm is based on ideas from and is
+; mathematically related to gaussian integer by Kerry Mitchell.
+;
+; Below,
+; k denotes the index of the circle closest to the position
+; m denotes the index of the closest disk on circle k
+; circle refers to a circle of disks
+; segment refers to the area defined by an interval for radius and angle
+; into which a disk is contained.
+;
+; 2007-02-03 Added "Use solid color" checkbox.
+;
+global:
+  ; Calculate angular step based on number of segments
+  float angleStep = 2*pi / @numSegments
+
+  ; Calculate radial decrease rate so that the segments
+  ; contain as large disk as possible (omitting circle rotation)
+  float radialDecrease = (1 - sin(angleStep / 2))^2
+  init:
+  int iteration = 0
+
+  ; Relative distances inside a segment
+  float distance = 0
+  float minDistance = @size
+  float sumDistances = 0
+
+  ; Segment indices
+  int k = 0
+  int m = 0
+
+  ; A flag indicating wheter this point should be colored solid
+  bool solid = true
+  loop:
+  iteration = iteration + 1
+
+  ; Translate the complex plane so that the trap center is at
+  ; the given position
+  complex position = #z - @trapCenter
+
+  ; Calculate z(n) in polar coordinates (radius and angle of z(n))
+  float radius = cabs(position)
+  ; Get angle in [-pi,pi]
+  float angle = atan2(position)
+  ; Translate to [0,2pi]
+  if (angle < 0)
+    angle = angle + 2*pi
+  endif
+
+  ; Calculate k and m for the segment where z(n) is located
+  k = round(-log(radius) / log(radialDecrease))
+  m = round((angle - k * @rotation) / angleStep - 0.5)
+
+  ; Calculate segment center (r(k), theta(k,m))
+  float radiusCenter = radialDecrease^(-k)
+  float angleCenter = (angleStep * (m + 0.5) + k * @rotation) % (2*pi)
+  complex sectorCenter = radiusCenter * exp(angleCenter * (0,1))
+
+
+  ; Calculate the radius of the disks in the circle k
+  float diskRadius = radiusCenter * (1 - sqrt(radialDecrease))
+
+  ; Calculate relative distance scale based on the radius
+  float iterationScale = 1 - exp(-@iterationIncrease * iteration)
+  float relativeScale = iterationScale * diskRadius * exp(-@radialDecrease * radiusCenter)
+
+  ; Calculate relative distance of z(n) from the sector center
+  float distance = cabs(sectorCenter - position) / relativeScale
+
+  if (@method == "Closest")
+    ; Find minimun distance
+
+    if (distance < minDistance)
+      ; distance < size because minDistance <= size
+      solid = false
+      minDistance = distance
+    endif
+  elseif (@method == "average")
+    ; Find average distance
+
+    if (distance < @size)
+      solid = false
+      float edgeDistance = @size - distance
+      sumDistances = sumDistances + edgeDistance
+    endif
+  endif
+
+final:
+  if (@method == "closest")
+    if (solid)
+      ; Closest point is outside the disks
+      if (@useSolid)
+        #solid = true
+      else ; use first color in the gradient
+        #index = @size
+      endif
+    else
+      #index = minDistance
+    endif
+  elseif (@method == "average")
+    if (solid)
+      ; All points are outside the disks
+      if (@useSolid)
+        #solid = true
+      else ; use first color in the gradient
+        #index = 0
+      endif
+    else
+      #index = sumDistances / 10
+    endif
+  endif
+
+default:
+    title = "Circular Grid Trap"
+
+param method
+    caption = "Method"
+    default = 0
+enum = "average" "closest"
+hint = "Method used to calculate coloring"
+endparam
+
+int param numSegments
+    caption = "Segments"
+    default = 10
+    hint = "Number of disk segments on circles around the center. Large \
+values result in textures similar to the gaussian integer."
+endparam
+
+float param size
+    caption = "Disc size"
+    default = 1
+    min = 0
+    max = 1
+    hint = "Relative disk size: 0 = no disk, 1 = large disk."
+endparam
+
+param trapCenter
+caption = "Trap center"
+default = (0,0)
+hint = "Location of the circles center in the complex plane."
+endparam
+
+float param rotation
+    caption = "Disk rotation"
+    default = 0
+    hint = "Angle, in radians, used to rotate the disk segments \
+on each circle"
+endparam
+
+float param radialDecrease
+    caption = "Disk density"
+    default = 0.1
+    min = 0
+max = 1
+    hint = "Specifies how densely the trap disks are arranged around the \
+center. Large values result in smaller disks far from center."
+endparam
+
+float param iterationIncrease
+    caption = "Iteration increase"
+    default = 3
+    hint = "Specifies how fast trap disk size increases as a function \
+of iteration. Smaller values give smaller disks far from the \
+fractal structure."
+endparam
+
+bool param useSolid
+caption = "Use solid color"
+default = true
+endparam
+}
+
+SmoothIterationCount {
+; Jussi Härkönen, 07-02-03
+;
+; This is the same as the smooth (Mandelbrot) coloring, supplemented
+; with auto-power (needed for the Perforated formulas) and the
+; continuous coloring mode.
+;
+; 07-12-17 Added color offset for smooth palette animation.
+;
+global:
+  float lp = log(log(@bailout))
+
+init:
+  ; Initialize to the power specified by the user
+  float il = 1/log(@power)
+
+  complex zPrev = 0
+loop:
+  ; Get previous iterate
+  zPrev = #z
+final:
+  if (@autoPower)
+    ; Estimate the power
+    float power = log(|#z|)/log(|zPrev|)
+    il = real(1 / log(power))
+  endif
+  ; Else use the power specified by the user
+
+  ; Calculate the decimal part of the iteration count
+  ; Note that "|#z|" evaluates to |z|
+  float f = 0
+  if (@mode == "Smooth")
+    f = 1 + il*(lp - log(log(|#z|)))
+  else ; Continuous
+    f = (@bailout^2 - |#z|) / (@bailout^2 - @bailout)
+  endif
+
+  ; Calculate the smooth/continuous iteration count
+  #index = #numiter + f + @colorOffset
+
+default:
+  title = "Smooth Iteration Count"
+
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Smooth" "Continuous"
+    hint = "Choose between the smooth and continuous iteration counts. Use \
+            a bailout of of about 100"
+  endparam
+
+  float param bailout
+    caption = "Bailout"
+    default = 1e20
+    min = 1
+    hint = "Bail-out value used by the fractal formula. Use large bailouts for \
+            best results."
+  endparam
+
+  float param colorOffset
+    caption = "Color offset"
+    default = 0
+    min = 0
+    hint = "Color index offset."
+  endparam
+
+  bool param autoPower
+  caption = "Auto-power"
+  default = true
+  hint = "Approximate the power numerically. This gives smooth results for \
+          divergent fractal formulas different from z^n + C."
+  endparam
+
+  float param power
+    caption = "Power"
+    default = 2.0
+    visible = (@autoPower == false)
+    hint = "The fractal formula exponent."
+  endparam
+}
+
+InterpolatedImage {
+; Requires UF 5
+;
+; This coloring maps a texture to the iteration levels so that it is scaled
+; proportionally with the fractal shapes. The image is also interpolated with two
+; different scales. The result is continuous for integer power fractals but may
+; look odd with too heterogeneous or non-tiled images. For fractals with
+; non-integer power (that determines the rate of divergence), a discontinuous
+; line perpendicular to the iteration boundaries is introduced.
+;
+; (c) Jussi Härkönen 2008
+;
+; 08-06-29 First version
+; 08-07-14 Added to formula database
+;
+global:
+  Image img = new @imageParam
+  float pixelWidth = 2 / (img.getWidth() + 1)
+  float pixelHeight = 2 / (img.getHeight() + 1)
+
+  ; Calculate bounds for final texture coordinates
+  float xMin = -1
+  float xMax = 1 - pixelHeight
+  float yMin = -1 + pixelWidth
+  float yMax = 1
+
+  float imageAspect = img.getWidth() / img.getHeight()
+
+  ; Calculate how many times the texture is repeated as a function of angle
+  float numRepeats = round(@textureRepeat*2*pi / (log(@bailout) * imageAspect))
+
+init:
+  complex zPrev
+
+loop:
+  zPrev = #z
+
+final:
+  float il
+  float power
+  if (@autoPower)
+    ; Estimate the power
+    power = log(|#z|)/log(|zPrev|)
+    il = real(1 / log(power))
+  else
+    ; Use the power specified by the user
+    power = @power
+    il = 1/log(power)
+  endif
+
+  ; Calculate the decimal part of iteration count
+  ; Note that "log(|#z|)" evaluates to 2*log(|#z|)
+  float u = il*log(log(@bailout) / log(|#z|)) + 1
+
+  ; Calculate angle
+  float angle1 = atan2(#z)
+  ; Translate to [0,2pi]
+  if (angle1 < 0)
+    angle1 = angle1 + 2*pi
+  endif
+
+  ; Scale x to [0,numRepeats]
+  float x = numRepeats * angle1 / (2*pi)
+  ; Wrap x to repeat in [0,1]
+  x = x - floor(x)
+
+  float y = 1 - u
+
+  float x2 = 0
+  float y2 = 0
+  if (@interpolate)
+    ; Calculate angle for previous iteration level
+    float angle2 = atan2(zPrev)
+    ; Translate to [0,2pi]
+    if (angle2 < 0)
+      angle2 = angle2 + 2*pi
+    endif
+
+    x2 = numRepeats * angle2 / (2*pi)
+
+    ; Calculate doubly wrapped coordinates for interpolation
+    x2 = x2 - floor(x2)
+    y2 = y; - floor(y)
+  endif
+
+  if (@useSymmetry)
+    ; Map [0,1] using the triangle function so that the texture is mirrored
+    x = 1 - abs(2*x - 1)
+    y = 1 - abs(2*y - 1)
+
+    if (@interpolate)
+      x2 = 1 - abs(2*x2 - 1)
+      y2 = 1 - abs(2*y2 - 1)
+    endif
+  endif
+
+   ; Map from [0,1] to full tex coordinate range
+  x = xMin + (xMax - xMin) * x
+  y = yMin + (yMax - yMin) * y
+
+  if (@interpolate)
+    x2 = xMin + (xMax - xMin) * x2
+    y2 = yMin + (yMax - yMin) * y2
+  endif
+
+
+  ; Calculate texture colors
+  color innerColor = img.getColor(x + flip(y))
+  color outerColor
+  if (@interpolate)
+    color outerColor = img.getColor(x2 + flip(y2))
+
+    ; Interpolate colors
+    #color = innerColor*u + outerColor * (1-u)
+  else
+    #color = innerColor
+  endif
+
+default:
+  title = "Interpolated Image"
+
+  float param textureRepeat
+    caption = "Texture repeat"
+    default = 1
+    hint = "Specify how many times the texture is repeated along the iteration \
+            levels. This can be used to scale the image to desired proportions."
+  endparam
+
+  bool param useSymmetry
+    caption = "Use symmetry"
+    default = true
+    hint = "Specify whether the texture is mirrored symmetrically. Set to true \
+            if you want continuous coloring using non-tiled texture."
+  endparam
+
+  bool param interpolate
+    caption = "Use interpolation"
+    default = true
+    hint = "Specify whether the texture is interpolated over iteration levels."
+  endparam
+
+  Image param imageParam
+    caption = "Image"
+    hint = "The image file used by the coloring."
+  endparam
+
+  bool param autoPower
+  caption = "Auto-power"
+  default = false
+  hint = "Approximate the power numerically. This may give better results \
+          for divergent fractal formulas different from z^n + C."
+  endparam
+
+  float param power
+    caption = "Power"
+    default = 2
+    enabled = !@autoPower
+    hint = "Power used by the fractal formula."
+  endparam
+
+  float param bailout
+    caption = "Bailout"
+    default = 128
+    hint = "Bailout used by the fractal formula. If you encounter thin transparent \
+            lines at the iteration boundaries, try increasing the bailout value \
+            in both the formula and outside coloring tabs."
+  endparam
+}
+
+AnimatedDistanceToPoint {
+;
+; Jussi Härkönen 10-04-15
+;
+; A modified version of Kerry Mitchell's Distance to a Point coloring with
+; an animation feature to allow smooth animation of the number of iterations
+; used to calculate the coloring sum.
+; Also a gradient offset parameter is provided for smooth gradient
+; animation (UF animates gradient rotation in discrete integer steps).
+; The color is calculated corresponding to Euclidean distance metric and
+; color either by geometric or arithmetic mean settings in Kerry Mitchell's
+; formula.
+;
+init:
+  float d=0.0
+  float dsum=1
+  float iter=0
+  float exp1 = exp(@slope)
+loop:
+  iter=iter+1.0
+  d = cabs(#z-@point)
+
+  if (iter <= @iterations-1.0)
+    ; Complete iterations
+
+    if (@colorBy == "Geometric mean")
+      dsum = dsum * d
+    else
+      ; Arithmetic mean
+      dsum = dsum + d
+    endif
+  elseif (@iterations-1.0 < iter && iter < @iterations)
+    ; Fractional iterations
+    float fraction = @iterations - iter
+
+    if (@colorBy == "Geometric mean")
+      dsum = dsum * d^fraction
+    else
+      ; Arithmetic mean
+      ; Use logarithmic scale for smoother fade-in for new iteration
+      float logFraction = (exp(@slope*fraction) - 1)/(exp1-1)
+      dsum = dsum + logFraction * d
+    endif
+  ; Else omit the rest of the iterations
+  endif
+
+final:
+  float minIter
+  if (iter < @iterations)
+    minIter = iter
+  else
+    minIter = @iterations
+  endif
+
+  #index = log(1 + dsum/minIter) + @offset
+
+default:
+  title="Animated Distance to a Point"
+  param point
+    caption="Reference Point"
+    default=(0,0)
+    hint="Point from which distance is measured."
+  endparam
+  param colorBy
+    caption = "Sum Type"
+    enum = "Geometric mean" "Arithmetic mean"
+    default = 0
+  endparam
+  float param slope
+    caption="Fade-in Velocity"
+    default=4
+    visible=@colorBy == 1
+    hint="Affects the fade-in velocity at which the interpolated iteration is \
+    added to the coloring. Larger values result in slower fade-in."
+  endparam
+  heading
+    caption = "Animation Parameters"
+    expanded = true
+  endheading
+  float param iterations
+    caption="Iterations"
+    default=20.5
+    hint="Number of iterations used for color calculations. Note that Maximum \
+    Iterations in the Formula tab should be greater than this value."
+  endparam
+  float param offset
+    caption="Gradient Offset"
+    default=0
+    hint="Use this parameter for smooth gradient animation rather than \
+    animating the gradient rotation that uses discontinuous integer steps. \
+    note that the value should be positive in order to avoid negative color \
+    indices."
+  endparam
+}
+
+jh-InverseDistanceToPoint {
+;
+; Jussi Härkönen 10-09-15
+; 14-01-16 Added geometric mean, fade-in velocity and iteration limit parameters
+; 14-04-08 Added One iteration mode
+init:
+  float addend = 0.0
+  float sum = 0
+  float product = 1
+  float iteration = 0
+  float expSlope = exp(@slope)
+  float fullIterations = floor(@iterations)
+  float allIterations = ceil(@iterations)
+  float xScale = real(@trapScale)
+  float yScale = imag(@trapScale)
+  complex previous = #z
+loop:
+  ; Addend is 1 at reference point, asymptotically zero at infinity
+  complex zOffset = #z-@point
+
+  if (@addend == "Inverse Distance")
+     addend = 1.0 / (1.0 + |(xScale * real(zOffset) + flip(yScale * imag(zOffset)))|)
+  else
+     addend = 1.0 / (1.0 + |(previous - #z)|)
+     previous = #z
+  endif
+  iteration = iteration + 1.0
+
+  if (iteration <= fullIterations)
+    ; Complete iterations
+    if (@colorBy == "Geometric mean")
+      product = product * addend
+    elseif (@colorBy == "Arithmetic mean")
+      sum = sum + addend
+    else
+      ; One iteration
+      sum = addend
+    endif
+  elseif (fullIterations < iteration && iteration <= allIterations)
+    ; Fractional iterations
+    float fraction = @iterations + 1 - iteration
+    if (@colorBy == "Geometric mean")
+      product = product * addend^fraction
+    elseif (@colorBy == "Arithmetic mean")
+      ; Use exponential scale for smoother fade-in for new iteration
+      float expFraction = (exp(@slope*fraction) - 1)/(expSlope-1)
+      sum = sum + expFraction * addend
+    else
+      ; One iteration
+      sum = addend
+    endif
+  ; Else omit the rest of the iterations
+  endif
+
+final:
+  float minIterations
+  if (iteration < @iterations)
+    minIterations = iteration
+  else
+    minIterations = @iterations
+  endif
+
+  if (@colorBy == "Geometric mean")
+    #index = -log(product)/minIterations + @offset
+  elseif (@colorBy == "Arithmetic mean")
+    #index = sum/minIterations + @offset
+  else
+    #index = sum + @offset
+  endif
+default:
+  title="Inverse Distance to a Point"
+  param addend
+    caption = "Addend Type"
+    enum = "Inverse Distance" "Inverse Difference"
+    default = 0
+  endparam
+  param colorBy
+    caption = "Sum Type"
+    enum = "Arithmetic mean" "Geometric mean" "One iteration"
+    default = 0
+  endparam
+  param point
+    caption="Reference Point"
+    default=(0,0)
+    hint="Point from which distance is measured."
+  endparam
+  complex param trapScale
+    caption="Trap Scale"
+    default=(1,1)
+  endparam
+  float param iterations
+    caption="Iterations"
+    default=1000
+    hint="Number of iterations used for color calculations. Note that Maximum \
+    Iterations in the Formula tab should be greater than this value."
+  endparam
+  float param offset
+    caption="Color Offset"
+    default=0
+    hint="Use this parameter for smooth gradient animation rather than \
+    animating the gradient rotation that uses discontinuous integer steps. \
+    Note that the value should be positive in order to avoid negative color \
+    indices. The offset is affected by Color Density and Transfer Function. \
+    For Density = 1 and Linear Transfer Function, the range [0...1] \
+    corresponds to the entire gradient."
+  endparam
+  float param slope
+    caption="Fade-in Velocity"
+    default=2
+    visible=@colorBy == 0
+    hint="Affects the fade-in velocity at which the interpolated iteration is \
+    added to the coloring. Larger values result in slower fade-in."
+  endparam
+}

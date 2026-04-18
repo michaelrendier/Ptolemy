@@ -1,0 +1,984 @@
+Comment {
+
+Contents: Coloring Algorithms
+Author:   Setemkia FallingTree
+Version:  1.06
+Mod Date: 16 August 2001
+Contents:
+  Fixed Color (BOTH)
+  Eliptical Trap -- First Hit (BOTH) -- Use "Eliptical Orbits v2.00"
+  Eliptical Orbits v2.00 (BOTH)
+  FlexBalls-SFT (BOTH)
+  Radial Invert Sin Trap #1 v1.00 (BOTH)
+  PTEP #01.1 (BOTH)
+  PTEP #02.0 (BOTH)
+
+History:
+  V1.06 Happy Birthday to me!
+  - Added PTEP #2.  This is a major addition.  It is a true generaliz-
+    ation of Paul W. Carlson's Tangent Balls coloring methods and
+    supports the gradients he published.  In fact, except that it
+    generates a double set of tangent balls, when the eliptical path is
+    a circle and granularity is set to 2 it is exactly Carlson's tangent
+    balls.  The granularity parameter, the number of point traps
+    (circles) per quadrant of the eliptical path in PTEP #2 replaces the
+    radius parameter in PTEP #1.  Three colorings are supported, (a)
+    Carlson's 8-part gradient, (b) magnitude, and (c) angle.  Identical
+    images colored by angle and magnitude respectively can be merged to
+    produce a continuous version of Carlson's coloring.
+  v1.05
+  - Added PTEP #1 "Point Traps on Eliptical Path" a new class of
+    coloring in response to a request for a mate to Eliptical Orbits
+    from Kelly Christiansen.  The algorithm generates circles tangent to
+    the elipse both inside and outside and uses them as point trap.
+    This is the initial version with out metric and coloration options.
+  v1.04
+  - Added a "Skip iterations" parameter to Eliptical Orbits for
+    conformance with other ortbit traps (i.e., to let things settle
+    before looking for trapped point).  Defaults to zero do default
+    behavior does not change.  (Normally would default to 50).
+  - Corrected caption and hint for rotation in RIST #1.
+  v1.03:
+  - Added the first in a series of Radial Inverted Sine Traps (RIST).
+    "Radial Inverted Sin Trap #1 v1.00"
+  v1.02:
+  - Renamed FlexBalls to FlexBalls-SFT to prevent confusion with the
+    Luke Plant version.
+  v1.01:
+  - Deleted "Eliptical Trap" -- It didn't work due to a UF bug
+  - Added "Eliptical Orbits v2.00" -- This has all the capabilities of
+    "Eliptical Trap -- First Hit" with much more added.  Special
+    features include generation of normal and inverted mask, ploting
+    both a rotated trap and it's reflection, the standard range of
+    metrics, and a variety of coloring variables.
+  - "Eliptical Trap -- First Hit" is kept for backward compatibility
+    only. "Eliptical Orbits v2.00" should be used insatead.
+  - Added "FlexBalls" by Paul Carlson.  This is a clean-up of the
+    version found in PWC.UCL writen by Luke Plant.  The clean up
+    provides an 8+% performance improvement and expands the coloring
+    range to the entire color gradient.
+
+Notes: v1.01 and v1.02
+  Paul W. Carlson has been most helpful in the tweaking of the FlexBalls
+  algorithm.  Paul now refers to this coloring method as Ring Segments.
+  His ideas, particularly about producing pseudo-3D effects were
+  instrumental of my conception of RIST (Radial Inverted Sine Traps).
+
+Notes: v1.00
+  Kerry Mitchell's "Conic Sections" and "Range" coloring
+  algorithms are a tour de force.  They are standards to
+  strive for.  This being said, I am in the process of
+  duplicating much of the functionality of these wonderfull
+  tools.  I find no fault in Kerry's work, rather, I find
+  the bi-cubic equation Ax^2+Bxy+Cy^2+Dx+Ey+F=0 imposible
+  to work with.  It just does not help me visualize and
+  understand the conic section represented.  I prefer the
+  following parameters:
+    1. Semi-major and semi-minor axies
+    2. Position of center
+    3. Angle of rotation
+  They competely define the conic section and are quite
+  intuitive.  Interestingly, there is one less constant!
+
+  I will eventually post more about my methods and metrics
+  on a personal fractal site.  Coming soon.
+}
+
+FixedColor(BOTH) {
+init:
+loop:
+final:
+  #index = @color
+default:
+  title = "Fixed Color"
+param color
+  caption = "Color Index"
+  hint = "All pixels will receive this color."
+  default = 0.5
+  max = 1.0
+  min = 0.0
+endparam
+}
+
+ElipseFirst(BOTH) { ; Eliptical orbit trap
+init:
+  complex rot = cos(pi/180*@rotation)-flip(sin(pi/180*@rotation))
+  complex z0  = (0,0)
+  complex p   = (0,0)
+  complex t   = (0,0)
+  float   r   = 0
+  bool    out = true
+
+loop:
+  if out
+    if @choose == 0
+      z0 = #pixel
+    else
+      z0 = #z
+    endif
+    z0 = (z0-@center)*rot
+    r = cabs(z0)
+    if r > 1E-10
+      t = z0/r
+      r = @a*@b/sqrt(@b^2+(@a^2-@b^2)*imag(t)^2)
+      p = r*t
+      r = cabs(p-z0)/@delta
+      if r <= 1
+        out = false
+      endif
+    endif
+  endif
+
+final:
+  if out
+    #solid = true
+  else
+    if @choose < 2      ; "Draw Trap Region" and "Magnitude"
+      if |z0| > |p|
+        r = 1+r
+      else
+        r = 1-r
+      endif
+      #index = r/2
+    elseif @choose == 2 ; "Angle"
+      #index = (atan2(t)/#pi+1)/2
+    elseif @choose == 3 ; "Mask"
+      #index = 0.5
+    endif
+  endif
+
+default:
+  title = "Eliptical Trap -- First Hit"
+
+param choose
+  caption = "Color By"
+  hint = "Choose the coloration variable. \
+          Use DRAW to see the trap. \
+          MASK colors all pixels with #index = 0.5."
+  enum = "Draw Trap Region" "Magnitude" "Angle" "Mask"
+  default = 1 ; Magnitude
+endparam
+param a
+  caption = "X Radius"
+  hint = "Half the width of the unrotated elipse."
+  default = 0.5
+  min = 1E-10
+endparam
+param b
+  caption = "Y Radius"
+  hint = "Half the height of the unrotated elipse."
+  default = 0.5
+  min = 1E-10
+endparam
+param delta
+  caption = "Trap width"
+  hint = "One half trap width: maximum allowed distance from ideal orbit."
+  default = 0.03125
+  min = 1E-10
+endparam
+param center
+  caption = "Center"
+  hint = "Trap (elipse) center."
+  default = (0.0,0.0)
+endparam
+param rotation
+  caption = "Elipse Orientation"
+  hint = "Rotation of the elipse's X axis in degrees."
+  default = 0.0
+endparam
+}
+
+ElipticalOrbitsV2.00(BOTH) {
+; Setemkia FallingTree
+; Fawn@SpiritSeeker.net (NO spam, please!)
+; 4 August 2001
+;
+; Eliptical orbit trap coloring.  Others have done it, however
+; I need some options not available in the coloring methods
+; I've looked at so far.  The parameters have extensive hints,
+; so I'll not explain them here.
+;
+; I use a polar equation for elipses.  To wit:
+;     r = a*b/sqrt(b^2+(a^2-b^2)*sin(t)^2)
+; where t is the angle.
+;
+; Given a point z <> (0,0) then u = z/cabs(z) is a unit direction
+; vector.  For any such vector real(u) = sin(atan2(z)) and
+; imag(u) = cos(atan2(z)). Using this reduces the cost of plotting
+; points on the elipse by eliminating as cabs is cheaper than atan2.
+;
+; As a distance metric I use the distance from z to the computed
+; point on the elipse.  These two points lie on a line passing
+; through (0,0).  This metric gives good results, but it is not
+; the minimum distance between z and the elipse.  That metric
+; can be expressed in closed form, but is way too expensive
+; to use here.
+;
+init:
+  int     iter = 0     ; iteration count
+  int     cnt  = 0     ; used for loop control
+  bool    in   = false ; becomes true when a point lands in the trap
+                       ; do2 indicates whether to test second trap.
+                       ; NOTE: Comparing a float to zero is VERY BAD
+                       ; practice.  Floating point arithmetic is
+                       ; imprecise.  The correct way to test for zero
+                       ; is to compare to an arbitrarily small value
+                       ; UNLESS you know the float is going to be set
+                       ; zero.
+  bool    do2  = @mirror && (abs(@rotation%90) > 1E-10)
+
+  ; To simplify computations z is normalized by shifting it towards
+  ; the origin (0,0) and rotating it around the origin in the
+  ; opposite direction the elipse is rotated.  This allows us to
+  ; proceeed as if the @center == (0,0) and @rotation == 0.
+
+  float   rad  = pi/180*@rotation         ; convert degrees to radians
+  complex rot  = cos(rad)-flip(sin(rad))  ; rotation operator
+
+  complex z0   = (0,0) ; normalized value of z
+  complex p    = (0,0) ; point on normalized elipse
+  complex t    = (0,0) ; unit angle vector from (0,0) thru p0 and z0
+  float   rp   = 0     ; cabs(p)
+  float   rz   = 0     ; cabs(z0)
+  float   m    = 0     ; computed metric
+  float   a    = 0     ; atan2(t)
+
+loop:
+  iter = iter+1
+  ; proceed only if trap region has not yet been entered
+  if !in && iter > @skip
+    cnt = 0
+    repeat
+      if @draw
+        z0 = #pixel     ; draw the trap region
+      else
+        z0 = #z         ; color the fractal
+      endif
+      z0 = z0-@center   ; translate back to origin
+      if (cnt == 0)
+        z0 = z0*rot     ; rotate back to real axis
+      else
+        z0 = z0/rot     ; rotate mirrored elipse back to real axis
+      endif
+      rp = cabs(z0)     ; avoid division by zero
+      if rp > 1E-10     ; the origin is not in the trap
+        t  = z0/rp      ; unit direction vector
+        rp = @a*@b/sqrt(@b^2+(@a^2-@b^2)*imag(t)^2)
+        p  = rp*t       ; closest point on the elipse
+        if     @metric == 0
+          rz = cabs(z0)
+        elseif @metric == 1
+          rp = abs(real(p))
+          rz = abs(real(z0))
+        elseif @metric == 2
+          rp = abs(imag(p))
+          rz = abs(imag(z0))
+        elseif @metric == 3
+          rp = abs(real(p))+abs(imag(p))
+          rz = abs(real(z0))+abs(imag(z0))
+        elseif @metric == 4
+          rp = abs(real(p))+abs(imag(p))
+          rz = abs(real(z0))+abs(imag(z0))
+        endif           ; compute distance from elipse
+        m = abs(rp-rz)/@delta
+        if m <= 1
+          in = true
+        endif
+      endif
+      cnt = cnt+1
+    until in || !do2 || cnt == 2
+  endif
+
+final:
+  if @adjust ==2
+    if in
+      #index = 0.5
+    else
+      #solid = true
+    endif
+  elseif @adjust == 3
+    if in
+      #solid = true
+    else
+      #index = 0.5
+    endif
+  elseif !in
+    #solid = true
+  else
+    if @adjust == 0 && @coloring <= 1
+      m = ((rz-rp)/@delta+1)/2
+    endif
+    if @coloring == 1 || @coloring == 2
+      if @adjust == 0
+        a = (atan2(t)/#pi+1)/2
+      else
+        a = abs(atan2(t))/#pi
+      endif
+      if @coloring == 1
+        m = m*a
+      else
+        m = a
+      endif
+    elseif @coloring == 3
+      m = iter/#maxiter
+    endif
+    if     @xfer == 0
+      #index = m
+    elseif @xfer == 1
+      #index = sin(m*#pi/2)
+    elseif @xfer == 2
+      #index = cos(m*#pi/2)
+    endif
+  endif
+
+default:
+  title = "Eliptical Orbits v2.00"
+
+param metric
+  caption = "Trap metric"
+  hint = "Select metric used to test if #z. '1' represents real() \
+          and i represents imag()."
+  enum = "cabs" "|1|" "|i|" "|1|+|i|" "|1+i|"
+  default = 0
+endparam
+param coloring
+  caption = "Color by..."
+  hint = "Select the variable used for coloring."
+  enum = "metric" "metric*atan2(p)" "atan2(p)" "iter"
+  default = 0
+endparam
+param adjust
+  caption = "Coloring method"
+  hint = "Full metric is 1 on outer edge and 0 on inner edge. Folded \
+          metric is 1 on inner/outer edge and 1 in the center.  Mask \
+          is 0.5 in the trap and #solid elsewhere.  Inverted mask is \
+          #solid inside the trap and 0.5 elsewhere."
+  enum = "full metric" "folded metric" "mask" "inverted mask"
+  default = 0
+endparam
+param draw
+  caption = "Draw trap region?"
+  hint = "If false the fractal (#z) is drawn.  Otherwise the trap region \
+          (#pixel) is drawn."
+  default = false
+endparam
+param a
+  caption = "X radius"
+  hint = "Half the width of the unrotated elipse."
+  default = 0.5
+  min = 1E-10
+endparam
+param b
+  caption = "Y radius"
+  hint = "Half the height of the unrotated elipse."
+  default = 0.5
+  min = 1E-10
+endparam
+param delta
+  caption = "Trap width"
+  hint = "One half trap width: maximum allowed distance from ideal orbit."
+  default = 0.03125
+  min = 1E-10
+endparam
+param skip
+  caption = "Skip iterations"
+  hint = "An integer >=0 specifying the number of iterations to ignore \
+          before testing #z."
+  default = 0 ; set to zero for backwards compatibility
+  min = 0
+endparam
+param center
+  caption = "Center"
+  hint = "Trap (elipse) center."
+  default = (0.0,0.0)
+endparam
+param rotation
+  caption = "Elipse orientation"
+  hint = "Rotation of the elipse's X axis in degrees."
+  default = 0.0
+  min = -360.0
+  max =  360.0
+endparam
+param mirror
+  caption = "Show reflection?"
+  hint = "This flag is used only when trap rotation is not \
+          a multiple of 90 degrees.  If true, then z is tested \
+          for both rotations, +rot and - rot."
+  default = false
+endparam
+param xfer
+  caption = "Transfer function"
+  hint = "Scale the color index.  Needed to provide cosine to invert \
+          the coloring.  Linear and sine are provided by UF.  For sine \
+          and cosine the color index is first multiplied by #pi/2."
+  enum = "linear" "sine" "cosine"
+  default = 0
+endparam
+}
+
+FlexBalls-SFT(BOTH){
+; Devised by Paul Carlson
+; converted to colouring method by Luke Plant
+; clean-up and tweaks by Setemkia FallingTree
+;
+; This is a circular orbit trap that creates the effect of 3D bubbles.
+; Ideally it is to be used with a color gradient with 8 distinct sub
+; gradients.
+;
+init:
+  bool  done      = false
+  float d0        = @radius + @width
+  float d1        = sin(#pi/8) * @width
+  float d2        = cos(#pi/8) * @width
+  float dsqd      = d0^2 + @width^2 - 2*d0*d2
+                  ; For a triangle with sides a,b,c and angle t opposite
+                  ; c, then c^2 = a^2 + b^2 - 2*a*b*cos(t).
+  int   iter      = 0
+  float i         = 253
+  float range_num = 0
+  float adjust    = 0
+  float dist      = 0
+  float ratio     = 0
+
+loop:
+  IF (!done && (iter > @skip) && (abs(cabs(#z)-@radius) < @width))
+    done = true
+    float azr = abs(real(#z))
+    float azi = abs(imag(#z))
+    IF (azr >= azi)
+      dist = (azr-d2)^2 + (azi-d1)^2
+      adjust = 1
+    ELSE
+      dist = (azr-d1)^2 + (azi-d2)^2
+      adjust = 0
+   ENDIF
+   IF     (real(#z) >= 0 && imag(#z) >= 0)
+       range_num = 1 - adjust
+   ELSEIF (real(#z) <  0 && imag(#z) >= 0)
+     range_num = 2 + adjust
+   ELSEIF (real(#z) <  0 && imag(#z) <  0)
+     range_num = 5 - adjust
+   ELSE
+     range_num = 6 + adjust
+   ENDIF
+   ratio = sqrt(dist / dsqd) ; is this ratio <= 0?
+   i = 29 * ratio + range_num * 30
+  ENDIF
+  iter = iter + 1
+
+final:
+  if !done
+    #solid = true
+  else
+    #index = ((i+1) % 241) / 241 ; originally  255, not 241
+  endif
+
+default:
+  title = "FlexBalls-SFT"
+
+param radius
+  caption = "Ring radius"
+  default = 0.12
+  hint = "Ring radius"
+endparam
+param width
+  caption = "Ring width"
+  default = 0.1
+  hint = "Ring width"
+endparam
+param skip
+  caption = "Iterations to skip"
+  default = 50
+  hint = "Number of iterations to skip"
+endparam
+}
+
+RadialInvertedSinTrap#1V1.00(BOTH) {
+; Setemkia FallingTree
+; Fawn@SpiritSeeker.net (NO spam, please!)
+; 9 August 2001
+;
+; Copyright © 2001 by Setemkia FallingTree
+; This algorithm may be freely used and modified, provided that Paul W.
+; Carlson is credited as providing the inspiration for this algorithm
+; and that Setemkia FallingTree is credited for originating Radial
+; Inverted Sine orbit traps.
+;
+; NOTES:
+;   1. The number of spokes must be a positive integer.  The degenerate
+;      case, one spoke, produces a tear drop shaped trap.
+;   2. The coloring produced by this algorithm is #solid for points
+;      outside the trap, and constrained to values between and including
+;      1/400 and 399/400.  This range corresponds to UF color gradient
+;      indices of 1 and 300.  There is no ouput between indices 0 and 1
+;      or between 399 and 400 (i.e., 0).
+;   3. Coloring seems to work best when the UF log transfer function is
+;      used.
+;   4. The output is scaled to present a vaguely 3D effect and works
+;      best then the color gradient is least luminous at index 1 and most
+;      luminous at index 399.  However, other colorings also produce good
+;      results.  For instance, "Fire" found in "Maps3".
+;
+init:
+  ; To simplify computations z is normalized by shifting it towards
+  ; the origin (0,0) and rotating it around the origin in the
+  ; opposite direction the elipse is rotated.  This allows us to
+  ; proceeed as if the @center == (0,0) and @rotation == 0.
+  float   rad  = pi/180*@rotation         ; convert degrees to radians
+  complex rot  = cos(rad)-flip(sin(rad))  ; rotation operator
+
+  complex z0   = (0,0) ; normalized value of z
+  float   rp   = 0     ; cabs(p)
+  float   rz   = 0     ; cabs(z0)
+  float   s    = 0     ; temp for sin(@spokes/2*atan2(z0))
+
+  bool    in   = false ; indicates whether a point has been trapped
+  int     iter = 0     ; iteration count
+
+loop:
+  if (!in && iter > @skip) || (@draw && iter == 0)
+    if @draw
+      z0 = #pixel     ; draw the trap region
+    else
+      z0 = #z         ; color the fractal
+    endif
+    z0 = (z0-@center)*rot ; translate back to origin and orientation
+    rz = cabs(z0)
+    if rz <= 1E-25    ; the origin is always in the trap
+      in = true
+      rz = 0.0
+    else              ; check all other points
+      s  = abs(sin(@spokes/2*atan2(z0))) ; compute the adjusted sin
+      if s <= 1E-25   ; approaching asymtote -- automatically in trap
+        in = true
+        rp = 1E25*@radius
+      else            ; compute distance to point on trap
+        rp = @radius/sqrt(s)
+        if rz <= rp
+          in = true   ; z0 is inside the trap
+        endif
+      endif
+    endif
+  endif
+  iter = iter+1
+
+final:
+  if !in              ; points outside are always solid
+    #solid = true
+  elseif rz == 0.0 || rp >= 1E25*@radius
+    #index = 399/400  ; these points have a set index
+  else                ; all other points are the y coordinate of the
+                      ; point on the elipse with semi-major=rp, semi-
+                      ; minor=1, and x=rz
+    #index = 1/400 + 398/400 * sqrt(1-(rz/rp)^2)
+  endif
+
+default:
+  title = "Radial Inverted Sin Trap #1 v1.00"
+
+param spokes
+  caption = "Spokes"
+  hint = "Number of points (spokes) in the star. An integer >= 1."
+  default = 3
+  min = 1
+endparam
+
+param skip
+  caption = "Skip iterations"
+  hint = "An integer >=0 specifying the number of iterations to ignore \
+          before testing #z."
+  default = 50
+  min = 0
+endparam
+
+param radius
+  caption = "Radius"
+  hint = "Closest approach of trap curve to trap center."
+  default = 0.5
+  min = 1E-10
+endparam
+
+param center
+  caption = "Center"
+  hint = "Trap center."
+  default = (0.0,0.0)
+endparam
+
+param rotation
+  caption = "Trap rotation"
+  hint = "Rotation of the trap in degrees."
+  default = 0.0
+  min = -360.0
+  max =  360.0
+endparam
+
+param draw
+  caption = "Draw trap region?"
+  hint = "If false the fractal (#z) is drawn.  Otherwise the trap \
+          region (#pixel) is drawn."
+  default = false
+endparam
+}
+
+PTEP#01.1(BOTH) {
+; Setemkia FallingTree
+; Fawn@SpiritSeeker.net (NO spam, please!)
+; 13 August 2001
+;
+; Copyright © 2001 by Setemkia FallingTree
+; Initial conception by Kelly Christiansen.  Initial design and
+; implementation by Setemkia FallingTree.This algorithm may be freely
+; used and modified, provided that Kelly Christiansen and Setemkia
+; FallingTree are credited for originating this color technique.
+;
+; Notes:
+;   The initial request was for a coloring that would complement
+;   eliptical orbit traps by placing "balls" (c.f., FlexBalls) along the
+;   path of the trapped elipse.  After due consideration it was decided
+;   to place point traps of fixed radius along the path of the elipse.
+;   This implementation places two tangent circles at each selected point
+;   of the elipse, one inside and one outside.  The number of point traps
+;   is inversely proportional to the point trap radius.  The larger the
+;   radius, the fewer the traps or balls painted.
+;
+init:
+  int     iter = 0     ; iteration count
+  bool    stop = false ; becomes true when a point lands in the trap
+
+  float   rad  = pi/180*@rotation         ; convert degrees to radians
+  complex rot  = cos(rad)-flip(sin(rad))  ; rotation operator
+
+  complex z0   = (0,0) ; normalized value of z
+
+                       ; quantize by the geometric mean of the axies
+  float   quantum = 2*#pi/trunc(2*sqrt(@a*@b)*#pi/@radius)
+  float   araw    = 0  ; for quantizing the angle
+  float   aa      = 0  ; angle choice 0
+  float   ab      = 0  ; angle choice 1
+  complex pa      = 0  ; elipse point 0
+  complex pb      = 0  ; elipse point 1
+  complex ta      = 0  ; unit direction vector
+  complex tb      = 0  ; unit direction vector
+  complex ca      = 0  ; center of first trap
+  complex cb      = 0  ; center of second trap
+  float   ma      = 0  ; metric for first trap
+  float   mb      = 0  ; metric for second trap
+
+  float   sign    = 0  ; 1 if z0 outside elipse, -1 if z0 inside elipse
+
+loop:
+  iter = iter+1
+  if (!stop && iter > @skip) || @draw
+    if @draw
+      z0 = #pixel          ; draw the trap region
+    else
+      z0 = #z              ; color the fractal
+    endif
+    z0 = (z0-@center)*rot  ; normalize the point
+    if |z0| > 1E-25        ; check if z0 ~= @center
+
+      ; check to see if z0 is inside or outside the elipse
+      if (real(z0)/@a)^2+(imag(z0)/@b)^2 < 1
+        sign = -1*@radius
+      else
+        sign =  1*@radius
+      endif
+
+      ; quantize the polar angle from center to z0
+      araw = atan2(z0)
+      if araw < 0          ; keep the angle positive (0 to 2*#pi)
+        araw = 2*#pi+araw
+      endif
+      aa = trunc(araw/quantum)*quantum
+      ab = aa+quantum
+
+      ; computations for angle aa
+      ta = cos(aa)+flip(sin(aa))
+      pa = ta*@a*@b/sqrt(@b^2+(@a^2-@b^2)*imag(ta)^2)
+      ta = (@a^2*real(ta))+flip(@b^2*imag(ta))
+      ta = ta/cabs(ta)     ; this is normal to the elipse at pa
+      ca = pa+sign*ta      ; trap center
+      ma = |z0-ca|         ; crude metric
+
+      ; computations for angle ab
+      tb = cos(ab)+flip(sin(ab))
+      pb = tb*@a*@b/sqrt(@b^2+(@a^2-@b^2)*imag(tb)^2)
+      tb = (@a^2*real(tb))+flip(@b^2*imag(tb))
+      tb = tb/cabs(tb)     ; this is normal to the elipse at pb
+      cb = pb+sign*tb      ; trap center
+      mb = |z0-cb|         ; crude metric
+
+      ; which is closest?
+      if mb < ma
+        ca = cb            ; if z0 closer to cb use these settings
+        ma = mb
+      endif
+      ma = sqrt(ma)/@radius; normalized metric
+
+      if ma <= 1
+        stop = true
+      endif
+    endif
+  endif
+
+final:
+  if stop
+    #index = 1-ma
+  else
+    #solid = true
+  endif
+
+default:
+  title = "PTEP #01.1"
+
+param a
+  caption = "X radius"
+  hint = "Half the width of the unrotated elipse."
+  default = 0.5
+  min = 1E-25
+endparam
+
+param b
+  caption = "Y radius"
+  hint = "Half the height of the unrotated elipse."
+  default = 0.5
+  min = 1E-25
+endparam
+
+param radius
+  caption = "Point Trap Radius"
+  hint = "Radius of the point traps."
+  default = 0.02
+  min = 1E-25
+endparam
+
+param center
+  caption = "Center"
+  hint = "Trap (elipse) center."
+  default = (0.0,0.0)
+endparam
+
+param rotation
+  caption = "Elipse orientation"
+  hint = "Rotation of the elipse's X axis in degrees."
+  default = 0.0
+  min = -360.0
+  max =  360.0
+endparam
+
+param skip
+  caption = "Skip iterations"
+  hint = "An integer >=0 specifying the number of iterations to ignore \
+          before testing #z."
+  default = 50
+  min = 0
+endparam
+
+param xfer
+  caption = "Transfer function"
+  hint = "Scale the color index.  Needed to provide cosine to invert \
+          the coloring.  Linear and sine are provided by UF.  For sine \
+          and cosine the color index is first multiplied by #pi/2."
+  enum = "linear" "sine" "cosine"
+  default = 0
+endparam
+
+param draw
+  caption = "Draw trap region?"
+  hint = "If false the fractal (#z) is drawn.  Otherwise the trap region \
+          (#pixel) is drawn."
+  default = false
+endparam
+}
+
+PTEP#02.0(BOTH) {
+; Setemkia FallingTree
+; Fawn@SpiritSeeker.net (NO spam, please!)
+; 16 August 2001
+;
+; Copyright © 2001 by Setemkia FallingTree
+; Initial conception by Kelly Christiansen.  Initial design and
+; implementation by Setemkia FallingTree.  Both initial conception and
+; design of this coloring algorithm owe inspiration to Paul W. Carlson's
+; Tangent Balls Coloring technique.  In fact, with a=b, and grain=2 this
+; devolves to the Tangent Balls Coloring.  Accordingly, this algorithm
+; may be freely used and modified, provided that Kelly Christiansen,
+; Setemkia FallingTree, and Paul W. Carlson are credited with its origin.
+;
+; Notes:
+;   The initial request was for a coloring that would complement
+;   eliptical orbit traps by placing "balls" (c.f., FlexBalls) along the
+;   path of the trapped elipse.  After due consideration it was decided
+;   to place point traps of fixed radius along the path of the elipse.
+;   This implementation places two tangent circles at each selected point
+;   of the elipse, one inside and one outside.  The number of point traps
+;   is specified by the granularity.
+;
+init:
+  int     iter = 0     ; iteration count
+  bool    stop = false ; becomes true when a point lands in the trap
+
+  float   rad  = pi/180*@rotation         ; convert degrees to radians
+  complex rot  = cos(rad)-flip(sin(rad))  ; rotation operator
+
+  complex z0   = (0,0) ; normalized value of z
+  complex c    = (0,0) ; trap center
+
+  float   quantum = #pi/2/@grain    ; angular trap width
+  float   hquant  = quantum/2       ; half the angular trap width
+  float   sinhq   = sin(hquant)
+  float   kin     = 1+sinhq         ; to locate inner center
+  float   kout    = 1-sinhq         ; to locate outer center
+
+  float   m       = 0               ; computed metric
+
+loop:
+  iter = iter+1
+  if !stop && (iter > @skip || @draw)
+    if @draw
+      z0 = #pixel          ; draw the trap region
+    else
+      z0 = #z              ; color the fractal
+    endif
+    z0 = (z0-@center)*rot  ; normalize the point
+    if |z0| > 1E-25        ; check if z0 ~= @center
+
+      ; quantize the polar angle from center to z0
+      float araw = atan2(z0)
+      if araw < 0          ; keep the angle positive (0 to 2*#pi)
+        araw = 2*#pi+araw
+      endif
+      int n = trunc(araw/quantum)
+      float ang = n*quantum
+      if (araw-ang) >= hquant
+        ang = (n+1)*quantum
+      endif
+
+      ; compute point on the elipse and trap center
+      complex t = cos(ang)+flip(sin(ang))
+      float   r = @a*@b/sqrt(@b^2+(@a^2-@b^2)*imag(t)^2)
+      float   d = 0
+      if (real(z0)/@a)^2 + (imag(z0)/@b)^2 < 1
+        d = r/kin
+      else
+        d = r/kout
+      endif
+      complex c = d*t
+
+      ; compute distance from trap
+      m = cabs(c-z0)/abs(r-d)
+      if m <= 1
+        stop = true
+      endif
+    endif
+  endif
+
+final:
+  if !stop
+    #solid = true
+  else ; nested iff to avoid UF compiler bug
+    if     @coloring == 0 ; carlson
+      m = (1-m)*38/400
+      complex p = z0-c
+      if     real(p) >= 0 && imag(p) >= 0
+        if real(p) >= imag(p)
+          #index =   1/400+m
+        else
+          #index =  51/400+m
+        endif
+      elseif real(p) <  0 && imag(p) >= 0
+        if imag(p) >= - real(p)
+          #index = 101/400+m
+        else
+          #index = 151/400+m
+        endif
+      elseif real(p) <  0 && imag(p) <  0
+        if -real(p) >= - imag(p)
+          #index = 201/400+m
+        else
+          #index = 251/400+m
+        endif
+      else
+        if -imag(p) >= real(p)
+          #index = 301/400+m
+        else
+          #index = 351/400+m
+        endif
+      endif
+    elseif @coloring == 1 ; magnitude
+      #index = 1-m
+    elseif @coloring == 2 ; polar angle
+      ang = atan2(z0-c)
+      if ang < 0
+        ang = 2*#pi+ang
+      endif
+      #index = ang/2/#pi
+    endif
+  endif
+
+default:
+  title = "PTEP #02.0"
+  helpfile = "http://FractArt.net/Fawn/PTEP-2/"
+
+param a
+  caption = "X radius"
+  hint = "Half the width of the unrotated elipse."
+  default = 0.5
+  min = 1E-25
+endparam
+
+param b
+  caption = "Y radius"
+  hint = "Half the height of the unrotated elipse."
+  default = 0.5
+  min = 1E-25
+endparam
+
+param grain
+  caption = "Granularity"
+  hint = "An integer >= 2 indicating the number of traps to place along \
+          the elipse per quadrant.  Trap radius is inversely \
+          proportional to granularity."
+  default = 10
+  min = 2
+endparam
+
+param coloring
+  caption = "Select coloring method"
+  hint = "Select a coloring method.  Magnitude and Angle are scaled to \
+          range 0 to 1.  Carlson plots Magnitude and Angle%45, and \
+          requires a special gradient."
+  enum = "Carlson" "Magnitude" "Angle"
+  default = 1
+endparam
+
+param center
+  caption = "Center"
+  hint = "Trap (elipse) center."
+  default = (0.0,0.0)
+endparam
+
+param rotation
+  caption = "Elipse orientation"
+  hint = "Rotation of the elipse's X axis in degrees."
+  default = 0.0
+  min = -360.0
+  max =  360.0
+endparam
+
+param skip
+  caption = "Skip iterations"
+  hint = "An integer >=0 specifying the number of iterations to ignore \
+          before testing #z."
+  default = 50
+  min = 0
+endparam
+
+param draw
+  caption = "Draw trap region?"
+  hint = "If false the fractal (#z) is drawn.  Otherwise the trap region \
+          (#pixel) is drawn."
+  default = false
+endparam
+}
+

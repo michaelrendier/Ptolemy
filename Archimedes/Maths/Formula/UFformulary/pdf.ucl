@@ -1,0 +1,1280 @@
+pgd_Smooth(INSIDE) {
+;
+; This coloring method provides smooth iteration
+; colors for convergent fractals.
+;
+; Based on smooth (OUTSIDE) formula accompanying UF3 and on DMJ's FiniteAttractor (which isn't smooth).
+;
+; Takes final orbit value and iterates again until it converges.
+init:
+  complex il = 1/log(@power); Inverse log (power).
+  float lp = log(log(@bailout)); log(log bailout).
+  complex z_values[#maxit+1]
+  int i = 0
+loop:
+  i = i + 1
+  z_values[i] = #z
+final:
+  i = 0
+  bool found = false
+  WHILE (i < #maxit && !found)
+    IF (|#z-z_values[i]| < 1/@bailout)
+      found = true
+    ELSE
+      i = i + 1
+    ENDIF
+  ENDWHILE
+  int j = i
+  i = i + 1
+  WHILE (i < #maxit && !found)
+    IF (|#z-z_values[i]| < 1/@bailout)
+      found = true
+    ELSE
+      i = i + 1
+    ENDIF
+  ENDWHILE
+  #index = 0.05 * real(j + il*lp - il*log(log(cabs(recip(#z-z_values[j])))))
+
+default:
+  title = "Smooth (Convergent)"
+
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    min = 1
+  endparam
+}
+
+pgd_Smooth2(INSIDE) {
+;
+; This coloring method provides smooth iteration
+; colors for convergent fractals.
+;
+; Variation uses different math. Hopefully avoids discontinuities when attractor doesn't superattract.
+;
+; Takes final orbit value and iterates again until it converges.
+init:
+  complex z_values[#maxit+1]
+  int i = 0
+loop:
+  i = i + 1
+  z_values[i] = #z
+final:
+  int j = #maxit
+  i = 0
+  bool found = false
+  WHILE (i < #maxit && !found)
+    IF (|#z-z_values[i]| < 1/@bailout)
+      found = true
+    ELSE
+      i = i + 1
+    ENDIF
+  ENDWHILE
+  int k = i + 1
+  int n = -1
+  found = false
+  WHILE (k < #maxit && !found)
+    IF (|#z-z_values[k]| < 1/@bailout)
+      found = true
+    ELSE
+      k = k + 1
+      n = -n
+    ENDIF
+  ENDWHILE
+  int p = k - i
+  float tween = abs((sqrt(1/@bailout) - cabs(z_values[j]-z_values[i])))/(abs(cabs(z_values[j-p]-z_values[i-p]) - cabs(z_values[j]-z_values[i])))
+  #index =  0.05 * (i - tween*p)
+
+default:
+  title = "Smooth 2 (Convergent)"
+
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    min = 1
+  endparam
+}
+
+pgd_Smooth3 {
+;
+; This coloring method provides smooth iteration
+; colors for convergent and divergent fractals and logmap and powermap options.
+;
+; Variation uses different math. Hopefully avoids discontinuities when attractor doesn't superattract.
+;
+; Takes final orbit value and iterates again until it converges.
+init:
+  complex il = 1/log(@power); Inverse log (power).
+  float lp = log(log(@bailout)); log(log bailout).
+  complex z_values[#maxit+1]
+  int i = 0
+loop:
+  i = i + 1
+  z_values[i] = #z
+final:
+  float ix
+  IF (@convergent)
+    int j = #maxit
+    i = 0
+    bool found = false
+    WHILE (i < #maxit && !found)
+      IF (|#z-z_values[i]| < 1/@bailout)
+        found = true
+      ELSE
+        i = i + 1
+      ENDIF
+    ENDWHILE
+    int k = i + 1
+    int n = -1
+    found = false
+    WHILE (k < #maxit && !found)
+      IF (|#z-z_values[k]| < 1/@bailout)
+        found = true
+      ELSE
+        k = k + 1
+        n = -n
+      ENDIF
+    ENDWHILE
+    int p = k - i
+    float tween = abs((sqrt(1/@bailout) - cabs(z_values[j]-z_values[i])))/(abs(cabs(z_values[j-p]-z_values[i-p]) - cabs(z_values[j]-z_values[i])))
+    ix = i - tween*p
+  ELSE
+    ix = real(#numiter + il*lp - il*log(log(cabs(#z))))
+  ENDIF
+  IF (ix < 0)
+    ix = 0
+  ENDIF
+  float mn = @fitminit
+  float mx = @fitmaxit
+  IF (@transfer == 1)
+    ix = ix^(1/@transpower)
+    mn = mn^(1/@transpower)
+    mx = mx^(1/@transpower)
+  ELSEIF (@transfer == 2)
+    ix = log(ix)
+    mn = log(mn)
+    mx = log(mx)
+  ENDIF
+  IF (@fit)
+    IF (ix < mn)
+      ix = 0
+    ELSE
+      ix = (ix - mn)/(mx - mn)
+    ENDIF
+    ix = ix * @fittimes
+  ELSE
+    ix = 0.05*ix
+  ENDIF
+  #index = ix
+  
+default:
+  title = "Smooth (Generalized)"
+  param convergent
+    caption = "Convergent"
+    default = false
+    hint = "Check this for convergent attractors, uncheck to color divergent points."
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is 2. \
+            Only needed when coloring divergent points."
+    visible = !@convergent
+  endparam
+  param fit
+    caption = "Fit Gradient to Range"
+    default = true
+    hint = "Check this to spread the gradient out over the range of iteration values."
+  endparam
+  param fittimes
+    caption = "Number of repetitions"
+    default = 1.0
+    min = 1.0
+    hint = "Repeats gradient the specified number of times over the range of iteration values."
+    visible = @fit
+  endparam
+  param fitminit
+    caption = "Start iteration"
+    default = 1
+    min = 1
+    hint = "Gradient begins at this iteration number. It is best if it's approximately the lowest \
+            actual number of iterations in the image. You can find the exact number by looking at \
+            Statistics after generating the image once."
+    visible = @fit
+  endparam
+  param fitmaxit
+    caption = "End iteration"
+    default = 1000
+    min = 1
+    hint = "Gradient fitting is based on this range of iterations. Can be profitably made lower than \
+            maxiter -- try reducing it by factors of 10 until the gradient doesn't fit well, then raise \
+            it by a factor of 10 once."
+    visible = @fit
+  endparam
+  param transfer
+    caption = "Super transfer function"
+    enum = "Linear" "Power" "Log"
+    default = 2
+    hint = "Linear distributes gradient evenly over iterations. \
+            Power weights gradient towards lower iterations for powers > 1. \
+            Log weights gradient towards lower iterations."
+  endparam
+  param transpower
+    caption = "Transfer power"
+    default = 3.0
+    hint = "Larger values weight gradient more towards low iterations. \
+            3.0 with a regular transfer function of Linear and a super transfer \            
+            function of Linear with a regular transfer function of CubeRoot \
+            produce the same results."
+    visible = @transfer == 1
+  endparam
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    min = 1
+  endparam
+}
+
+pgd_Smooth4 {
+;
+; This coloring method provides smooth iteration
+; colors for convergent and divergent fractals and logmap and powermap options.
+;
+; Variant allows maxit and z_values array to have different size.
+; 
+; Formulas may also be designed to assign some pixels solid color when this coloring is used.
+; The formula simply leaves the complex value (501,10) in z when it bails out to do this.
+; (There's a vague resemblance between "50110" and "SOlID". :))
+init:
+  complex il = 1/log(@power); Inverse log (power).
+  float lp = log(log(@bailout)); log(log bailout).
+  complex z_values[@zmax]
+  int i = 0
+  float sum2 = 0.0
+  complex zold = (0,0)
+loop:
+  IF(@convergent)
+    z_values[i] = #z
+    i = i + 1
+    IF (@esm)
+      sum2 = sum2 + exp(-1/cabs(zold-#z))
+      zold = #z
+    ENDIF
+  ENDIF
+final:
+  float ix = 0
+  IF (#z == (501,10))
+    #solid = true
+  ELSEIF (@esm && @convergent)
+    #index = sum2
+  ELSE
+    IF (@convergent)
+      IF (@alt)
+        int j = @zmax - 1
+        IF (i < @zmax)
+          j = i
+        ENDIF
+        i = 0
+        bool found = false
+        WHILE ((i < j) && !found)
+          IF (|z_values[j] - z_values[i]| < (1/@bailout))
+            found = true
+          ELSE
+            i = i + 1
+          ENDIF
+        ENDWHILE
+        int k = i + 1
+        found = false
+        WHILE ((k < j) && !found)
+          IF (|z_values[j] - z_values[k]| < (1/@bailout))
+            found = true
+          ELSE
+            k = k + 1
+          ENDIF
+        ENDWHILE
+        int p = k - i
+        ix = k/p + @perfix*(log(@bailout) + (log(|z_values[i] - z_values[j]|)))/log(|z_values[j] - z_values[i]|/|z_values[j] - z_values[k]|)
+      ELSE
+        int j = @zmax
+        IF (i < @zmax)
+          j = i - 1
+        ENDIF
+        i = 0
+        bool found = false
+        WHILE ((i < j) && !found)
+          IF (|z_values[j]-z_values[i]| < (1/@bailout))
+            found = true
+          ELSE
+            i = i + 1
+          ENDIF
+        ENDWHILE
+        int k = i + 1
+        found = false
+        WHILE ((k < j) && !found)
+          IF (|z_values[j]-z_values[k]| < (1/@bailout))
+            found = true
+          ELSE
+            k = k + 1
+          ENDIF
+        ENDWHILE
+        int p = k - i        
+        float tween = abs((sqrt(1/@bailout) - cabs(z_values[j]-z_values[i])))/(abs(cabs(z_values[j-p]-z_values[i-p]) - cabs(z_values[j]-z_values[i])))
+        tween = sin(tween*#pi/2)
+        tween = tween^(0.73)
+        IF (tween < 0)
+          tween = 0
+        ENDIF
+        IF (tween > 1)
+          tween = 1
+        ENDIF
+        ix = i - tween*p
+      ENDIF
+    ELSE
+      ix = real(#numiter + il*lp - il*log(log(cabs(#z))))
+    ENDIF
+  ENDIF
+  IF (!@esm)
+    IF (ix < 1)
+      ix = 1
+    ENDIF
+    float mn = @fitminit
+    float mx = @fitmaxit
+    IF (@transfer == 1)
+      ix = ix^(1/@transpower)
+      mn = mn^(1/@transpower)
+      mx = mx^(1/@transpower)
+    ELSEIF (@transfer == 2)
+      ix = log(ix)
+      mn = log(mn)
+      mx = log(mx)
+    ENDIF
+    IF (@fit)
+      IF (ix < mn)
+        ix = 0
+      ELSE
+        ix = (ix - mn)/(mx - mn)
+      ENDIF
+      ix = ix * @fittimes
+    ELSE
+      ix = 0.05*ix
+    ENDIF
+    #index = ix
+  ENDIF  
+default:
+  title = "Smooth (Generalized) 2"
+  param convergent
+    caption = "Convergent"
+    default = false
+    hint = "Check this for convergent attractors, uncheck to color divergent points."
+  endparam
+  param esm
+    caption = "Use exp smoothing"
+    default = false
+    hint = "Applies convergent exponential smoothing as the \
+            standard formula of that name, except that fractals \
+            can make some areas solid-color."
+    visible = @convergent
+  endparam
+  param alt
+    caption = "Use alternate method"
+    default = false
+    visible = (@convergent && !@esm)
+  endparam
+  param perfix
+    caption = "Period fix factor"
+    default = 1.0
+    visible = (@convergent && @alt && !@esm)
+  endparam
+  param zmax
+    caption = "Maximum iterations to record"
+    default = 100
+    hint = "Determines how many iterations to look ahead for a convergent attractor. If \
+            a convergent attractor is not found, the solid color is used for the pixel. \
+            Normally you want to use the maximum iterations you selected on the Formula \
+            panel, but if you're getting 'out of memory' errors you'll need to set this \
+            lower. There's generally little to gain by making it greater than 1,000,000."
+    visible = @convergent && !@esm
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+            formula you are using. For Mandelbrot, this is 2. \
+            Only needed when coloring divergent points."
+    visible = !@convergent
+  endparam
+  param fit
+    caption = "Fit Gradient to Range"
+    default = true
+    hint = "Check this to spread the gradient out over the range of iteration values."
+    visible = !@esm || !@convergent
+  endparam
+  param fittimes
+    caption = "Number of repetitions"
+    default = 1.0
+    min = 1.0
+    hint = "Repeats gradient the specified number of times over the range of iteration values."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param fitminit
+    caption = "Start iteration"
+    default = 1
+    min = 1
+    hint = "Gradient begins at this iteration number. It is best if it's approximately the lowest \
+            actual number of iterations in the image. You can find the exact number by looking at \
+            Statistics after generating the image once."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param fitmaxit
+    caption = "End iteration"
+    default = 1000
+    min = 1
+    hint = "Gradient fitting is based on this range of iterations. Can be profitably made lower than \
+            maxiter -- try reducing it by factors of 10 until the gradient doesn't fit well, then raise \
+            it by a factor of 10 once."
+    visible = @fit && (!@esm || !@convergent)
+  endparam
+  param transfer
+    caption = "Super transfer function"
+    enum = "Linear" "Power" "Log"
+    default = 2
+    hint = "Linear distributes gradient evenly over iterations. \
+            Power weights gradient towards lower iterations for powers > 1. \
+            Log weights gradient towards lower iterations."
+    visible = !@esm || !@convergent
+  endparam
+  param transpower
+    caption = "Transfer power"
+    default = 3.0
+    hint = "Larger values weight gradient more towards low iterations. \
+            3.0 with a regular transfer function of Linear and a super transfer \            
+            function of Linear with a regular transfer function of CubeRoot \
+            produce the same results."
+    visible = (@transfer == 1) && (!@esm || !@convergent)
+  endparam
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    hint = "Larger gives smoother coloring for divergent points, and more accurate and smoother for convergent ones."
+    min = 1
+    visible = !@esm || !@convergent
+  endparam
+}
+
+pgd_Decomp(INSIDE) {
+;
+; This coloring method provides decomposition for convergent fractals. The angle of approach to the finite attractor
+; determines the color.
+init:
+  complex z_values[#maxit]
+  int i = 0
+loop:
+  i = i + 1
+  z_values[i] = #z
+final:
+  i = 0
+  bool found = false
+  WHILE (i < #maxit && !found)
+    IF (|#z-z_values[i]| < 1/@bailout)
+      found = true
+    ELSE
+      i = i + 1
+    ENDIF
+  ENDWHILE
+  float d = atan2(#z-z_values[i])   ; get angle of approach to finite attractor
+  IF (d < 0)          ; it's negative
+    d = d + #pi * 2    ; make it positive
+  ENDIF
+  #index = d / (#pi * 2)
+
+default:
+  title = "Decomposition (Convergent)"
+
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    min = 1
+  endparam
+}
+
+
+pgd_Period {
+; Copy of Period from sc.ucl, but can be used OUTSIDE.
+init:
+  int n=0
+  int p=trunc(#maxiter*@start/100)
+  complex t=0
+  bool flag=false
+  bool flag2=false
+  float k=0
+  if @auto==true
+    k=1/(#maxiter/@k)
+  else
+    k=@k
+  endif
+
+loop:
+  if (flag==false)&&(flag2==false)
+    if n==p
+      t=#z
+    elseif n>p
+      if abs(real(t)-real(#z))<k
+        if abs(imag(t)-imag(#z))<k
+          flag=true
+          if (@research==true)&&(n-p<@period)
+            flag=false
+            flag2=true
+          endif
+        endif
+      endif
+    endif
+    n=n+1
+    if (@research==true)&&((n-p)>@period)
+      flag2=true
+    endif
+  endif
+  
+final:
+  if flag==true
+    n=n-p-2
+    IF (@lg)
+      #index=log((n + 1)%@cycle)/log(@cycle)
+    ELSE
+      #index=(n%@cycle)/@cycle
+    ENDIF
+  else
+    #solid=true
+  endif
+  
+default:
+  title = "PGD Period"
+  param research
+    caption="Research"
+    default=false
+    hint="For finding a special periodicity set in Period. The area will be shown in significant color."
+  endparam
+  param period
+    caption="Period"
+    default=2
+    hint="Periodicity. Works only with Research enabled."
+    min=1
+    visible = @research
+  endparam  
+  param cycle
+    caption="Cycle"
+    default=5
+    hint="The amount of times before the cycles starts to repeat. Should be increased at higher magnifications."
+    min=1
+  endparam
+  param auto
+    caption="Autoprecision"
+    default=true
+    hint="Precision is automatic. May be finetuned in Precision."
+  endparam
+  param k
+    caption="Precision"
+    default=1e-6
+    hint="The precision between comparing numbers in a cycle. May be lower at low magnifications and higher at \
+    high magnifications."
+  endparam
+  param start
+    caption="Start"
+    default=90.0
+    hint="The start of count of cycles in % of Maxiterations."
+    max=100.0
+  endparam
+  param lg
+    caption = "Logarithmic scale"
+    default = false
+  endparam
+}
+
+pgd_ClosestApproach {
+  ; Colors by closest approach to a specified point.
+init:
+  float close = 0
+  int i = 1
+  int closeiter = 1
+loop:
+  IF (i == 1)
+    close = |#z - @point|
+  ELSE
+    float d = |#z - @point|
+    IF (d < close)
+      close = d
+      closeiter = i
+    ENDIF
+  ENDIF
+  i = i + 1
+final:
+  IF (@colorby == 1)
+    #index = 0.05*closeiter
+  ELSE
+    #index = close
+  ENDIF
+default:
+  title = "Closest Approach"
+  param colorby
+    caption = "Color by:"
+    enum = "Distance Squared" "Iteration"
+    default = 0
+  endparam
+  param point
+    caption = "Target"
+    default = (0,0)
+  endparam
+}
+
+pgd_ClosestApproach2 {
+  ; Colors by closest approach of orbit to delayed orbit.
+init:
+  float close = 0
+  int i = 0
+  int closeiter = 1
+  complex z_values[@delay]
+  int j = 0
+loop:
+  IF (i < @delay)
+    z_values[i] = #z
+  ELSEIF (i == @delay)
+    close = |#z - z_values[j]|
+    closeiter = i
+    z_values[j] = #z
+    j = 1 % @delay
+  ELSE
+    float d = |#z - z_values[j]|
+    IF (d < close)
+      close = d
+      closeiter = i
+    ENDIF
+    z_values[j] = #z
+    j = (j + 1) % @delay
+  ENDIF
+  i = i + 1
+final:
+  IF (@colorby == 1)
+    #index = 0.05*closeiter
+  ELSE
+    #index = close
+  ENDIF
+default:
+  title = "Closest Approach To Delayed Orbit"
+  param colorby
+    caption = "Color by:"
+    enum = "Distance Squared" "Iteration"
+    default = 0
+  endparam
+  param delay
+    caption = "Delay"
+    default = 5
+    min = 1
+  endparam
+}
+
+pgd_ClosestApproach3 {
+  ; Colors by closest approach of later iterates to first
+  ; point.
+init:
+  float close = 0
+  int i = 0
+  complex target = 0
+loop:
+  IF (i == 0)
+    target = #z
+  ELSEIF (i == trunc(#maxit/2))
+    close = |#z - target|
+  ELSEIF (i > trunc(#maxit/2))
+    float d = |#z - target|
+    IF (d < close)
+      close = d
+    ENDIF
+  ENDIF
+  i = i + 1
+final:
+  #index = close
+default:
+  title = "Closest Approach of Attractor to Point of Origin"
+}
+
+pgd_ClosestApproach4 {
+  ; Colors by closest approach of later iterates to first
+  ; point. User-selectable preiterations.
+init:
+  float close = 0
+  int i = 0
+  complex target = #pixel
+loop:
+  IF ((i == 0) && !@px)
+    target = #z
+  ELSEIF (i == @preit)
+    close = |#z - target|
+  ELSEIF (i > @preit)
+    float d = |#z - target|
+    IF (d < close)
+      close = d
+    ENDIF
+  ENDIF
+  i = i + 1
+final:
+  #index = close^(1/@power)
+default:
+  title = "Closest Approach of Attractor to Point of Origin"
+  param preit
+    caption = "Preiterations"
+    default = 50
+  endparam
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+  param px
+    caption = "Use pixel as target"
+    default = false
+  endparam
+}
+
+pgd_Diameter {
+  ; Colors by "diameter" of orbit -- greatest distance
+  ; between any 2 points. Slow with large maxiter!
+init:
+  float far = 0
+  int i = 0
+  int j = 0
+  complex z_values[#maxit]
+loop:
+  IF (i >= @start)
+    j = @start
+    WHILE (j < i)
+      float d = |#z - z_values[j]|
+      IF (d > far)
+        far = d
+      ENDIF
+      j = j + 1
+    ENDWHILE
+    z_values[i] = #z
+  ENDIF
+  i = i + 1
+final:
+  #index = far
+default:
+  title = "Orbit Diameter"
+  param start
+    caption = "Preiterations"
+    default = 50
+  endparam
+}
+
+pgd_Density {
+  ; Colors by orbit density, by attempting to guess how
+  ; densely the distances between points on the attractor
+  ; fill an interval. Denser orbits get lower color values.
+  ; If the angles are also dense however, the color value
+  ; gets higher. The lowest color values correspond to
+  ; orbits that form a curve rather than fill space or just
+  ; a smattering of points.
+init:
+  complex target = 0
+  float tdist = 0
+  int denom = 2
+  float ddist = 0
+  float tang = 0
+  int aden = 2
+  float dang = 0
+  int i = 0
+loop:
+  IF (i == @preit)
+    target = #z
+  ELSEIF (i == (@preit + 1))
+    ddist = |#z - target|
+    tdist = ddist/2
+    denom = 3
+    dang = abs(#pi + atan2(#z - target))
+    tang = dang/2
+    aden = 3
+  ELSEIF (i > (@preit + 1))
+    float d = |#z - target|
+    IF (abs(d - tdist) < @tgd)
+      ddist = d
+      tdist = tdist/denom
+      denom = denom + 1
+    ENDIF
+    d = abs(#pi + atan2(#z - target))
+    IF (abs(d - tang) < @tgd)
+      dang = d
+      tang = tang/aden
+      aden = aden + 1
+    ENDIF
+  ENDIF
+  i = i + 1
+final:
+  #index = (ddist*(2*#pi - dang))^(1/@power)
+default:
+  title = "Orbit Density"
+  param preit
+    caption = "Preiterations"
+    default = 50
+  endparam
+  param tgd
+    caption = "Tolerance"
+    default = 0.1
+  endparam
+  param power
+    caption = "Power"
+    default = 1.0
+  endparam
+}
+
+pgd_Lyapunov {
+; Lyapunov coloring for use with formulas that pass
+; information in #z when a Lyapunov option is checked.
+; Works best for coloring Mandelbrot-like (parameter-space)
+; images.
+;
+; Based loosely on dmj-Lyapunov. Credits to Damien Jones
+; and Charles Vassallo.
+;
+; Formulas may also be designed to assign some pixels solid color when this coloring is used.
+; The formula simply leaves the complex value (501,10) in z when it bails out to do this.
+; (There's a vague resemblance between "50110" and "SOlID". :))
+final:
+  IF (#z == (501,10))
+    #solid = true
+  ELSE
+    float lya = real(#z)
+    IF (((@negative == 1) && (lya > 0)) || ((@negative == 0) && (lya <= 0)))
+      #solid = true
+    ELSE
+      lya = abs(lya)/1.5
+    ENDIF
+    IF ((lya >= 1.0) && @clamprange)
+      lya = 0.9975
+    ENDIF
+    #index = lya
+  ENDIF
+default:
+  title = "PGD Lyapunov"
+  param negative
+    caption = "What to color"
+    default = 2
+    enum = "Positive" "Negative" "Both"
+    hint = "Positive colors chaotic and divergent points. \
+            Negative colors convergent points with non- \
+            chaotic attractors. Both colors, well, both."
+  endparam
+  param clamprange
+    caption = "Clamp Range"
+    default = true
+  endparam
+}
+
+pgd_Stripes {
+; This coloring method provides iteration stripes
+; for convergent and divergent fractals
+; 
+; Formulas may also be designed to assign some pixels solid color when this coloring is used.
+; The formula simply leaves the complex value (501,10) in z when it bails out to do this.
+; (There's a vague resemblance between "50110" and "SOlID". :))
+init:
+  complex z_values[@zmax]
+  int i = 0
+loop:
+  IF (@convergent)
+    IF (i < @zmax)
+      z_values[i] = #z
+    ENDIF
+  ENDIF
+  i = i + 1
+final:
+  IF (#z == (501,10))
+    #solid = true
+  ELSE
+    i = #numiter
+    IF (@convergent)
+      i = 0
+      int j = #numiter
+      IF (@zmax < #numiter)
+        j = @zmax
+      ENDIF
+      bool found = false
+      WHILE ((i <= j) && !found)
+        IF (|z_values[j]-z_values[i]| < (1/@bailout))
+          found = true
+        ELSE
+          i = i + 1
+        ENDIF
+      ENDWHILE
+    ENDIF
+    IF ((i % @freq) == 1)
+      #solid = true
+    ELSE
+      #index = 0.0
+    ENDIF
+  ENDIF
+default:
+  title = "Stripes"
+  param freq
+    caption = "Frequency"
+    default = 2
+    min = 1
+  endparam
+  param convergent
+    caption = "Convergent"
+    default = false
+    hint = "Check this to stripe convergent basins."
+  endparam
+  param zmax
+    caption = "Max iters to record"
+    default = 100
+    hint = "Determines how many iterations to look ahead for a convergent attractor. If \
+            a convergent attractor is not found, the solid color is used for the pixel. \
+            Normally you want to use the maximum iterations you selected on the Formula \
+            panel, but if you're getting 'out of memory' errors you'll need to set this \
+            lower. There's generally little to gain by making it greater than 1,000,000."
+    visible = @convergent
+  endparam
+  param bailout
+    caption = "Bail-out value"
+    default = 100000.0
+    hint = "Larger gives smoother coloring for divergent points, and more accurate and smoother for convergent ones."
+    min = 1
+    visible = @convergent
+  endparam
+}
+
+pgd_RealZ {
+  final:
+    IF (#z == (501,10))
+      #solid = true
+    ELSE
+      #index = abs(real(#z))
+    ENDIF
+  default:
+    title = "Real (z)"
+}
+
+pgd_MSetBoundary {
+; A superior distance estimator boundary render that colors
+; the boundary using a gradient. Works well with the
+; "lighting" gradient. Points not near the boundary get
+; solid colored; pixels that contain M-set boundary get
+; gradient colored. The gradient can roughly be considered
+; to approximate the fractal dimension of the boundary, with
+; earlier colors indicating D near 1 and later ones
+; indicating D close to 2.
+;
+; It should also work for Julia sets.
+;
+; Non-z^n + c fractals will not generally give accurate
+; results.
+;
+; Tip: Turn off "repeat gradient" when coloring non-convergent
+; points (so, on the Outside tab).
+;
+init:
+  complex der = 1
+  complex dc = 0
+  complex dzz = 0
+  complex dcz = 0
+  int i = 0
+  complex t = 0
+  bool done = false
+  bool edge = false
+  float pixsize = 4*@bwidth/(#magn*#width)  
+loop:
+  IF (@convergent && !done)
+    IF (i == @preit)
+      t = #z
+    ELSEIF (i > @preit)
+      IF (@power != 2)
+        dzz = @power*(sqr(der)*(@power - 1)*(#z)^(@power - 2) + dzz*(#z)^(@power - 1))
+        dcz = @power*(der*dc*(@power - 1)*(#z)^(@power - 2) + dcz*(#z)^(@power - 1))
+        der = @power*der*(#z)^(@power - 1)
+        dc = @power*dc*(#z)^(@power - 1)
+        ; Generalized from below to z^n + c.
+      ELSE
+        dzz = 2*(sqr(der) + #z*dzz)
+        dcz = 2*(der*dc + #z*dcz)
+        der = 2*der*#z
+        dc = 2*dc*#z + 1
+        ; From TSOFI D.2 "Finding Disks in the Interior of M".
+      ENDIF
+      IF (|#z - t| < (1/@bailout))
+        done = true
+        IF (|der| >= 1)
+          edge = true ; Misiurewicz point or component boundary
+        ENDIF
+      ENDIF
+    ENDIF
+    i = i + 1
+  ELSEIF (!done)
+    IF (@power != 2)
+      der = @power*der*(#z)^(@power - 1)
+      ; Generalized from below to z^n + c.
+    ELSE
+      der = 2*der*#z
+      ; From TSOFI D.1 "Bounding the Distance to M"
+    ENDIF
+    IF (@mandel)
+      der = der + 1
+    ENDIF
+  ENDIF
+final:
+  float dist = 0
+  IF (@convergent)
+    complex cc = 1 - der
+    complex dd = dc*conj(cc)/|cc|
+    complex ee = dcz + dzz*dd
+    dist = 0.25*(1.0 - |der|)/cabs(ee)
+  ELSE
+    float d = cabs(#z)
+    dist = real(d*log(d)*0.5/cabs(der))
+  ENDIF
+  IF (edge)
+    done = false
+  ENDIF
+  IF ((dist < pixsize) && (done || (!@convergent)))
+    ; Pixel contains boundary points.
+    IF (dist < (pixsize*@tiny))
+      #index = 1.0
+    ELSE      
+      #index = 1.0 - (log(dist) - log(pixsize*@tiny))/(log(pixsize) - log(pixsize*@tiny))
+    ENDIF
+  ELSEIF (@convergent && (!done))
+    ; Probably right on the edge.
+    #index = 1.0
+  ELSE
+    ; Pixel does not contain boundary points.
+    #solid = true
+  ENDIF
+default:
+  title = "Mandelbrot Boundary"
+  heading
+    caption = "Coloring settings"
+  endheading
+  param bwidth
+    caption = "Border width (pix)"
+    default = 1.0
+    min = 0.0
+    hint = "Border width in pixels. You may want to reduce \
+            this for antialiased renders."
+  endparam
+  param tiny
+    caption = "Tiny distance"
+    default = 0.00001
+    min = 0.0
+    max = 1.0
+    hint = "Larger values make wispy filaments darker. \
+            Smaller values make busy areas less overexposed. \
+            Think of it as an f-stop in photography."
+  endparam
+  heading
+    caption = "Formula settings"
+  endheading
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should match the power used in the Mandelbrot \
+            or Julia formula parameters."
+  endparam
+  param mandel
+    caption = "Mandelbrot"
+    default = true
+    hint = "Uncheck this for Julia fractals."
+  endparam
+  param convergent
+    caption = "Convergent"
+    default = false
+    visible = (@mandel)
+    hint = "Check this to color Mandelbrot interior points \
+            close to the boundary."
+  endparam
+  heading
+    caption = "Cycle-detection tuning"
+    visible = (@mandel && @convergent)
+  endheading
+  param preit
+    caption = "Preiterations"
+    default = 100
+    min = 0
+    visible = (@mandel && @convergent)
+    hint = "Iterations to calculate before looking for a cycle \
+            when estimating interior distances. Larger values \
+            make cycle detection more accurate."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 100000.0
+    min = 0.0
+    hint = "Larger values make cycle detection more accurate, \
+            but more preiterations are needed."
+    visible = (@mandel && @convergent)
+  endparam
+}
+
+pgd_GCBoundary {
+; A superior distance estimator boundary render that colors
+; the boundary using a gradient. Works well with the
+; "lighting" gradient. Points not near the boundary get
+; solid colored; pixels that contain M-set boundary get
+; gradient colored. The gradient can roughly be considered
+; to approximate the fractal dimension of the boundary, with
+; earlier colors indicating D near 1 and later ones
+; indicating D close to 2.
+;
+; It should also work for Julia sets.
+;
+; This version is for the General Cubic formula,
+; z^3 - 3a^2z + c.
+;
+; Tip: Turn off "repeat gradient" when coloring non-convergent
+; points (so, on the Outside tab).
+;
+init:
+  complex der = 1
+  complex dc = 0
+  complex dzz = 0
+  complex dcz = 0
+  int i = 0
+  complex t = 0
+  bool done = false
+  bool edge = false
+  float pixsize = 4*@bwidth/(#magn*#width)
+  complex a = @aa
+  IF (@typ == 0)
+    a = #pixel
+  ENDIF
+  complex a2 = sqr(a)
+loop:
+  IF (@convergent && !done)
+    IF (i == @preit)
+      t = #z
+    ELSEIF (i > @preit)
+      complex ss = sqr(#z) - a2
+      IF (@typ == 0)
+        dzz = 3*(2*#z*sqr(der) + ss*dzz)
+        dcz = 3*(2*(#z*dc - a)*der + ss*dcz)
+        der = 3*der*ss
+        dc = 3*(dc*ss - 2*a*#z)
+      ELSE
+        dzz = 3*(2*#z*sqr(der) + ss*dzz)        
+        dcz = 3*(2*#z*dc*der + ss*dcz)
+        der = 3*der*ss
+        dc = 3*dc*ss + 1
+      ENDIF
+      IF (|#z - t| < (1/@bailout))
+        done = true
+        IF (|der| >= 1)
+          edge = true ; Misiurewicz point or component boundary
+        ENDIF
+      ENDIF
+    ENDIF
+    i = i + 1
+  ELSEIF (!done)
+    IF (@typ == 0)
+      der = 3*(der*(sqr(#z) - a2) - 2*a*#z)
+    ELSEIF (@typ == 1)
+      der = 3*der*(sqr(#z) - a2) + 1
+    ELSE
+      der = 3*der*(sqr(#z) - a2)
+    ENDIF
+  ENDIF
+final:
+  float dist = 0
+  IF (@convergent)
+    complex cc = 1 - der
+    complex dd = dc*conj(cc)/|cc|
+    complex ee = dcz + dzz*dd
+    dist = 0.25*(1.0 - |der|)/cabs(ee)
+  ELSE
+    float d = cabs(#z)
+    dist = real(d*log(d)*0.5/cabs(der))
+  ENDIF
+  IF (edge)
+    done = false
+  ENDIF
+  IF ((dist < pixsize) && (done || (!@convergent)))
+    ; Pixel contains boundary points.
+    IF (dist < (pixsize*@tiny))
+      #index = 1.0
+    ELSE      
+      #index = 1.0 - (log(dist) - log(pixsize*@tiny))/(log(pixsize) - log(pixsize*@tiny))
+    ENDIF
+  ELSEIF (@convergent && (!done))
+    ; Probably right on the edge.
+    #index = 1.0
+  ELSE
+    ; Pixel does not contain boundary points.
+    #solid = true
+  ENDIF
+default:
+  title = "General Cubic Boundary"
+  heading
+    caption = "Coloring settings"
+  endheading
+  param bwidth
+    caption = "Border width (pix)"
+    default = 1.0
+    min = 0.0
+    hint = "Border width in pixels. You may want to reduce \
+            this for antialiased renders."
+  endparam
+  param tiny
+    caption = "Tiny distance"
+    default = 0.00001
+    min = 0.0
+    max = 1.0
+    hint = "Larger values make wispy filaments darker. \
+            Smaller values make busy areas less overexposed. \
+            Think of it as an f-stop in photography."
+  endparam
+  heading
+    caption = "Formula settings"
+  endheading
+  param typ
+    caption = "General Cubic fractal type"
+    enum = "Mandelbrot (a plane)" "Mandelbrot (c plane)" "Julia"
+    default = 0
+  endparam
+  param aa
+    caption = "Value of parameter 'a'"
+    default = (0,0)
+    hint = "This should match the parameter on the fractal \
+            formula tab."
+    visible = (@typ != 0)
+  endparam
+  param convergent
+    caption = "Convergent"
+    default = false
+    visible = (@typ != 2)
+    hint = "Check this to color Mandelbrot interior points \
+            close to the boundary."
+  endparam
+  heading
+    caption = "Cycle-detection tuning"
+    visible = ((@typ != 2) && @convergent)
+  endheading
+  param preit
+    caption = "Preiterations"
+    default = 100
+    min = 0
+    visible = ((@typ != 2) && @convergent)
+    hint = "Iterations to calculate before looking for a cycle \
+            when estimating interior distances. Larger values \
+            make cycle detection more accurate."
+  endparam
+  param bailout
+    caption = "Bailout"
+    default = 100000.0
+    min = 0.0
+    hint = "Larger values make cycle detection more accurate, \
+            but more preiterations are needed."
+    visible = ((@typ != 2) && @convergent)
+  endparam
+}

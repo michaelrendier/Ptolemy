@@ -1,0 +1,414 @@
+
+Inverse {
+;This transormation converts
+;z to 1/z
+
+transform:
+  #pixel = 1/(#pixel - @centro) * @a
+default:
+  title = "Inverse"
+  
+  Param a
+    Caption = "Scale"
+    Hint = "This defines the scale of inverse transormation"
+    Default = (1.0,0.0)
+  Endparam
+  
+  Param centro
+    Caption = "Center"
+    Hint = "This is the center of the inversion"
+    Default = (0.0,0.0)
+  Endparam
+}
+
+Distorsion {
+;With this transormation you
+;can distort the fractal
+;with determinated vaules
+
+transform:
+  a = @para
+  b = @parb
+  
+  parte_reale = a * real(#pixel)
+  parte_immaginaria = b * imag(#pixel)
+  
+  #pixel = parte_reale + parte_immaginaria*1i
+default:
+  title = "Distorsion"
+  
+  Param para
+    Caption = "x distorsion"
+    Default = (2.0,0.0)
+  Endparam
+  
+  Param parb
+    Caption = "y distorsion"
+    Default = (1.0,0.0)
+  Endparam
+}
+
+
+dan--Ray {
+
+; This transformation is like Kaleidoscope
+; of Damien M. Jones, but it does not rotate
+; image in slices...
+;
+; Daniele Lupo
+global:
+
+; Definition of type of center
+  
+  If @sc_cen == True
+    complex center_of_screen = #center
+  Else
+    complex center_of_screen = @cen
+  Endif
+
+  int n_of_slices = @sl
+  float slice_angle = 2*#pi/n_of_slices
+  float half_slice_angle = slice_angle / 2
+  complex base_pixel = (0.0,0.0)
+  
+transform:
+
+  int slice_number = 0
+  
+;Now we'll determine in which slice the current pixel is
+
+  float pixel_angle = atan2(#pixel - center_of_screen)
+  If pixel_angle < 0
+    pixel_angle = pixel_angle + 2 * #pi
+  Endif
+
+   While (pixel_angle > half_slice_angle)
+      pixel_angle = pixel_angle - slice_angle
+      slice_number = slice_number + 1
+    Endwhile
+    
+; Now slice_number contains the right number of slice (from 0)
+; we'll use this value to create transformation.
+
+  
+  complex new_base_pixel = @ray*exp(1i * (slice_number * slice_angle))
+  complex distance = #pixel - new_base_pixel
+  #pixel = base_pixel + distance
+    
+  
+default:
+  title = "Ray"
+  
+  Param sc_cen
+    Caption = "Screen Center?"
+    Default = True
+    Hint = "This allow to use screen center of this window"
+  Endparam
+  
+  Param cen
+    Caption = "Center"
+    Default = (0.0,0.0)
+    Hint = "This is the center of slices."
+    Visible = @sc_cen == False
+  Endparam
+  
+  Param sl
+    Caption = "N° of Slices"
+    Default = 5
+    Hint = "This parameters indicates the number of slices \
+            of transformation."
+  Endparam
+  
+  Param ray
+    Caption = "Ray of transformation"
+    Default = 1.0
+    Hint = "This parameter is the ray of the shape. Using transform, \
+            it's the distance between center of the image and center \
+            of transformation."
+  Endparam
+  
+}
+
+
+dan--clone {
+; This is a transformation that allows you to copy
+; a part of an image in another part.
+; you must choice the type of the shape, where you
+; want to replace the image, and a point containing
+; the centre of the part of the image that you want to
+; clone.
+;
+; Daniele Lupo
+; danwolf80@libero.it
+
+global:
+
+  complex origin = @or        ; center of the cloned image
+  complex destination = @de   ; center of the shape that
+                              ; contains te cloned image
+                              
+  float height = @h           ; height of the shape, if allowed
+  float width = @w            ; width of the shape, if allowed
+  float radius = @r           ; radius of the shape, if allowed
+  float diameter = 2 * radius
+  float aspect_ratio = @a_r   ; aspect ratio of the shape, if allowed
+  float order = @o            ; order of the egg
+  float threshold = @tr       ; threshold of the egg
+  bool solid_inside = @in     ; option to see if inside of the
+                              ; shape is with solid color. Useful
+                              ; to place the shape
+  bool solid_outside = @out   ; option to see if the outside of the
+                              ; shape is with solid color
+                              
+  float shape_rotation = @s_rot*#pi/180  ; rotation of the cloned shape
+  
+  If (@same_rotation == true)            ;choose rotation of the cloned image
+    float clone_rotation = shape_rotation
+  Else
+    float clone_rotation = @c_rot*#pi/180
+  Endif
+  
+  If (@same_zoom == false)    ; zoom factor of the clonation
+    float real_zoom = @r_z
+    float imag_zoom = @i_z
+  Else
+    float real_zoom = @s_z
+    float imag_zoom = @s_z
+  Endif
+  
+  int type_shape = @t_s      ; Type of the shape:
+                             ; 0 - Rectangle
+                             ; 1 - Ellipse
+                             ; 2 - Circle
+                             ; 3 - Egg
+
+
+transform:
+
+  bool inside_shape = false
+
+  complex temp_pixel = cabs(#pixel-destination)*exp((0,1)*(atan2(#pixel-destination)-shape_rotation))
+  float real_distance = abs(real(temp_pixel))/width
+  float imag_distance = abs(imag(temp_pixel))/height
+
+; With this code we verify if the current pixel is
+; in the shape, or not
+
+  If (type_shape == 0)        ;Rectangle
+  
+    If ((real_distance <= 0.5) && \
+        (imag_distance <= 0.5))
+        
+        inside_shape = true
+    Endif
+           
+  Elseif (type_shape == 1)    ;Ellipse
+    
+    complex temp2 = (real_distance + flip(imag_distance))*2
+    
+    If (|temp2| <= 1)
+      
+      inside_shape = true
+    
+    Endif
+    
+  Elseif (type_shape == 2)    ;Circle
+  
+    If (|temp_pixel/radius| <= 1)
+    
+      inside_shape = true
+      
+    Endif
+  
+  Elseif (type_shape == 3)    ; Egg
+  
+    complex rotation_vector = (0,1)^(@s_rot/90.0)
+    complex temp_z = (#pixel - destination) * rotation_vector
+    temp_z = real(temp_z) + flip(imag(temp_z) * aspect_ratio)
+    float distance = (cabs(temp_z-flip(diameter)*2)+cabs(temp_z)*order*0.5)/(order+1)
+                     
+    If (|distance| <= threshold)
+    
+      inside_shape = true
+      
+    Endif
+    
+  Endif
+  
+  
+; Now we clone the image if the pixel is inside the shape
+
+  If ((solid_outside == true) && (inside_shape == false))
+  
+    #solid = true
+    
+  Endif
+  
+  If (inside_shape == true)
+  
+    If (solid_inside == true)
+      #solid = true
+    Else
+      
+      complex clone_distance = #pixel - destination
+      clone_distance = cabs(clone_distance)*exp((0,1)*(atan2(clone_distance) \
+                       -clone_rotation))
+    
+      clone_distance = real(clone_distance)*real_zoom + \
+                       flip(imag(clone_distance)*imag_zoom)
+                     
+      #pixel = clone_distance + origin
+    
+    Endif
+    
+  Endif
+  
+    
+  
+ 
+default:
+
+  title = "Clone"
+  
+ 
+  
+  Heading
+    Caption = "Shape Parameters"
+  Endheading
+  
+  Param de
+    Caption = "Destination"
+    Default = (0.9,0.9)
+    Hint = "This is the center of the shape that will contain the copied \
+            image"
+  Endparam
+  
+  Param t_s
+    Caption = "Type of Shape"
+    Enum = "Rectangle" "Ellipse" "Circle" "Egg"
+    Default = 0
+    Hint = "This is the kind of the shape that will contain the copied \
+            image"
+  Endparam
+  
+  Param w
+    Caption = "Width"
+    Default = 1.0
+    Hint = "Width of the shape"
+    Visible = (@t_s == 0) || (@t_s == 1)
+  Endparam
+  
+  Param h
+    Caption = "Height"
+    Default = 1.0
+    Hint = "Height of the shape"
+    Visible = (@t_s == 1) || (@t_s == 0)
+  Endparam
+  
+  Param r
+    Caption = "Radius"
+    Default = 0.5
+    Hint = "Radius of the shape"
+    Visible = (@t_s == 2) || (@t_s == 3)
+  Endparam
+  
+  Param a_r
+    Caption = "Aspect Ratio"
+    Default = 1.0
+    Hint = "Aspect ratio of the egg"
+    Visible = (@t_s == 3)
+  Endparam
+  
+  Param o
+    Caption = "Order"
+    Default = 3.0
+    Hint = "This is the amout of the egg curvature"
+    Visible = (@t_s == 3)
+  Endparam
+  
+  Param tr
+    Caption = "Threshold"
+    Default = 0.5
+    Hint = "This is the threshold of the egg"
+    Visible = (@t_s == 3)
+  Endparam
+  
+  Param s_rot
+    Caption = "Rotation"
+    Default = 0.0
+    Hint = "This is the rotation of the shape"
+  Endparam
+  
+  Param in
+    Caption = "Solid Inside?"
+    Default = False
+    Hint = "If you click this, the internal part of the shape \
+            will be solid; this allows you to see it more clearly \
+            and it's useful in positioning"
+  Endparam
+  
+  Param out
+    Caption = "Outside Solid"
+    Default = false
+    Hint = "If it's checked, outide part of the shape will be solid"
+  Endparam
+  
+  Heading
+    Caption = "Clonation Parameters"
+  Endheading
+  
+  Param or
+    Caption = "Origin"
+    Default = (0.0,0.0)
+    Hint = "This is the center of the part of the image that will be \
+            copied"
+  Endparam
+  
+  Param same_zoom
+    Caption = "Same zoom for axes"
+    Default = true
+    Hint = "If it's not selected, you can choose separately the zoom \
+            factor for the real or the imaginary part of the plane that \
+            will be cloned"
+  Endparam
+  
+  Param r_z
+    Caption = "Zoom (Real)"
+    Default = 1.0
+    Hint = "Zoom factor for the real part of the cloned plane"
+    Visible = (@same_zoom == false)
+  Endparam
+  
+  Param i_z
+    Caption = "Zoom (Imag)"
+    Default = 1.0
+    Hint = "Zoom factor for the imaginary part of the cloned plane"
+    Visible = (@same_zoom == false)
+  Endparam
+  
+  Param s_z
+    Caption = "Zoom"
+    Default = 1.0
+    Hint = "Zoom factor for the cloned plane"
+    Visible = (@same_zoom == true)
+  Endparam
+  
+  Param same_rotation
+    Caption = "Same Plane Rotation"
+    Default = true
+    Hint = "If it's checked, the cloned plane will have the same angle \
+            rotation of the shape"
+  Endparam
+  
+  Param c_rot
+    Caption = "Rotation"
+    Default = 0.0
+    Hint = "This is the rotation of the cloned plane"
+    Visible = (@same_rotation == false)
+  Endparam
+  
+
+    
+  
+  
+}

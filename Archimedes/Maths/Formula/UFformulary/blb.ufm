@@ -1,0 +1,5298 @@
+comment {
+    blb.ufm
+    Fractal formulas for UltraFractal 3.
+    Unless otherwise noted, all formulas are by Bradley Beacham.
+
+    See blb.txt for comments, and blb.upr for example images.
+
+    Released 18 April 2003
+}
+
+;###############################################################################
+
+ChopShop {
+;
+; Build-your-own formulas with fragments from other "dissected" formulas,
+; plus additional mutations. Use Switch-Mode to explore Julia versions.
+; Here are some settings to recreate some other formulas, where:
+;    "Mode = M" is the Mandelbrot form, and "J" is the Julia
+;    "Styles" = "A,B,C" shows, in order: C-Style, X-Style, Y-Style
+;    "Funcs" = "i,i,sin,i" means "X Function" = sin and all others = ident
+;    "Abs = N,Y" means "Abs(x)?" = No and "Abs(y)?" = Yes.
+;
+; Mode  Styles    Funcs     Abs  Formula    (Other Settings)
+;-------------------------------------------------------------------------------
+;  M    A,A,A   i,i,i,i     N,N  Mandelbrot/Julia
+;  M    A,A,A   i,i,i,sin   N,Y  Electric Swimming Pool
+;  M    A,A,A   i,i,i,sqrt  N,Y  Twinkles
+;  M    A,A,A   i,i,sin,i   Y,N  Shrubbery
+;  M    A,A,A   i,i,tan,i   Y,N  Galaxy
+;  M    A,A,C   i,i,i,i     N,N  Strings
+;  M    A,B,B   i,i,i,i     N,N  Cubic Mandelbrot/Julia
+;  M    A,B,B   i,i,sin,i   Y,N  Kilroy
+;  M    A,D,A   i,i,i,i     N,N  Robin
+;  J    A,F,F   i,i,i,i     N,N  Gopalsamy3 (Seed = 1.099,0)
+;  M    A,G,G   i,zero,i,i  N,N  Liar4      (Bailout = 1)
+;  M    A,H,H   i,i,i,i     N,N  Manowar
+;  M    A,I,I   i,zero,i,i  N,N  Phoenix
+;  M    A,J,J   i,i,i,i     N,N  Mandelbrot/Julia 4th power
+;  M    A,M,M   i,zero,i,i  N,N  Popcorn Julia
+;  M    A,P,P   i,i,i,i     N,N  z^3 + z^2 + c
+;  M    A,Q,Q   i,i,i,i     N,N  z^3 + z + c
+;  M    A,R,R   i,i,i,i     N,N  z*(1-z) + c
+;  M    A,S,S   i,i,i,i     N,N  z^2*c + c
+;  M    A,T,T   i,i,i,i     N,N  z^4 + z^3 + c
+;  M    A,U,U   i,i,i,i     N,N  z^4 + z^2 + c
+;  M    B,A,A   i,i,i,sin   N,Y  Little Boats
+;  M    C,C,A   i,i,i,i     N,N  Batman
+;  M    D,A,A   i,i,i,i     N,N  Snakes
+;  M    E,A,A   i,i,i,i     N,N  Broccoli
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex x = (0,0)
+  complex y = (0,0)
+  complex Temp = (0,0)
+  float zr = 0
+  float zi = 0
+
+  z = @FuncZ(#pixel)
+  complex LastZ = z
+
+  if @ThisMode == "Mandelbrot"
+    complex c = #pixel
+  else ;Julia
+    complex c = @Seed
+  endif
+
+  float cr = real(c)
+  float ci = imag(c)
+
+  if @CStyle == "A"
+    c = @FuncC(c)
+  elseif @CStyle == "B"
+    c = @FuncC(cr - flip(cr))
+  elseif @CStyle == "C"
+    c = @FuncC(cr + ci + flip(cr))
+  elseif @CStyle == "D"
+    c = @FuncC(ci^2 + flip(ci))
+  elseif @CStyle == "E"
+    c = @FuncC(cr + flip(ci^2))
+  endif
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  Temp = z
+
+  if @XStyle == "A"
+    x = zr^2 - zi^2
+  elseif @XStyle == "B"
+    x = zr^3 - 3*zr*zi^2
+  elseif @XStyle == "C"
+    x = zr^2 - zi^2 + 2*zr*zi
+  elseif @XStyle == "D"
+    x = zr^4 - zi^2
+  elseif @XStyle == "E"
+    x = zi^2 - zr^2
+  elseif @XStyle == "F"
+    x = 3*zr*zi^2 - zr^3
+  elseif @XStyle == "G"
+    x = 1-abs(zi-zr)
+  elseif @XStyle == "H"
+    x = zr^2 - zi^2 + real(LastZ)
+  elseif @XStyle == "I"
+    x = zr^2 - zi^2 + cr + real(LastZ)*ci
+  elseif @XStyle == "J"
+    x = zr^4 + zi^4 - 6*zr^2*zi^2
+  elseif @XStyle == "K"
+    x = zr^3 - zi^2 - zi
+  elseif @XStyle == "L"
+    x = zr^2 - zi^2 - 2*zr
+  elseif @XStyle == "M"
+    x = zr - 0.05*sin(zi + tan(3*zi))  
+  elseif @XStyle == "N"
+    x = zr^3 - 3*zr*zi^2 + cr*zr - ci*zi - zr
+  elseif @XStyle == "O"
+    x = cr - cr*zr - cr*zr^2 + cr*zi^2 + ci*zi + 2*ci*zr*zi
+  elseif @XStyle == "P"
+    x = zr^3 - 3*zr*zi^2 + zr^2 - zi^2
+  elseif @XStyle == "Q"
+    x = zr^3 - 3*zr*zi^2 + zr    
+  elseif @XStyle == "R"
+    x = zr - zr^2 + zi^2     
+  elseif @XStyle == "S"
+    x = cr*zr^2 - cr*zi^2 - 2*ci*zr*zi    
+  elseif @XStyle == "T"
+    x = zr^4 + zi^4 - 6*zr^2*zi^2 + zr^3 - 3*zr*zi^2
+  elseif @XStyle == "U"
+    x = zr^4 + zi^4 - 6*zr^2*zi^2 + zr^2 - zi^2
+  endif
+
+  if @AbsX == True
+    x = abs(x)
+  endif
+
+  if @YStyle == "A"
+    y = 2*zr*zi
+  elseif @YStyle == "B"
+    y = 3*zr^2*zi - zi^3
+  elseif @YStyle == "C"
+    y = 2*zr^2*zi
+  elseif @YStyle == "D"
+    y = 2*zr*zi^2
+  elseif @YStyle == "E"
+    y = zr*zi
+  elseif @YStyle == "F"
+    y = zi^3 - 3*zr^2*zi
+  elseif @YStyle == "G"
+    y = 1-abs(1-zr-zi)
+  elseif @YStyle == "H"
+    y = 2*zr*zi + imag(LastZ)
+  elseif @YStyle == "I"
+    y = 2*zr*zi + imag(LastZ)*ci
+  elseif @YStyle == "J"
+    y = 4*zr^3*zi - 4*zr*zi^3
+  elseif @YStyle == "K"
+    y = imag(LastZ)* zr*zi
+  elseif @YStyle == "L"
+    y = 2*zr*zi - 2*zi
+  elseif @YStyle == "M"
+    y = zi - 0.05*sin(zr + tan(3*zr))
+  elseif @YStyle == "N"
+    y = 3*zr^2*zi - zi^3 + cr*zi + ci*zr - zi
+  elseif @YStyle == "O"
+    y = cr*zi - 2*cr*zr*zi + ci - ci*zr - ci*zr^2 + ci*zi^2
+  elseif @YStyle == "P"
+    y = 3*zr^2*zi - zi^3 + 2*zr*zi
+  elseif @YStyle == "Q"
+    y = 3*zr^2*zi - zi^3 + zi    
+  elseif @YStyle == "R"
+    y = zi - 2*zr*zi       
+  elseif @YStyle == "S"
+    y = ci*zr^2 - ci*zi^2 + 2*cr*zr*zi    
+  elseif @YStyle == "T"
+    y = 4*zr^3*zi - 4*zr*zi^3 + 3*zr^2*zi - zi^3
+  elseif @YStyle == "U"
+    y = 4*zr^3*zi - 4*zr*zi^3 + 2*zr*zi
+  endif
+
+  if @AbsY == True
+    y = abs(y)
+  endif
+
+  z = @FuncX(x) + flip(@FuncY(y)) + c
+  LastZ = Temp
+
+bailout:
+  |z| <= (@Bailout)
+
+default:
+  title = "Chop Shop"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param Seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Bailout
+    caption = "Bailout value"
+    default = 4
+    min = 0
+  endparam
+  param CStyle
+    caption = "C-Style"
+    enum = "A" "B" "C" "D" "E" "F"
+    default = 0  ; "A" is the default
+  endparam
+  param XStyle
+    caption = "X-Style"
+    enum = "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" \
+      "N" "O" "P" "Q" "R" "S" "T" "U"
+    default = 0  ; "A" is the default
+  endparam
+  param YStyle
+    caption = "Y-Style"
+    enum = "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" \
+      "N" "O" "P" "Q" "R" "S" "T" "U"
+    default = 0  ; "A" is the default
+  endparam
+  func FuncZ
+    caption = "Z Function (Init)"
+    default = ident()
+  endfunc
+  func FuncC
+    caption = "C Function (Init)"
+    default = ident()
+  endfunc
+  func FuncX
+    caption = "X Function (Loop)"
+    default = ident()
+  endfunc
+  func FuncY
+    caption = "Y Function (Loop)"
+    default = ident()
+  endfunc
+  bool param AbsX
+    caption = "Abs(x)?"
+    default = False
+  endparam
+  bool param AbsY
+    caption = "Abs(y)?"
+    default = False
+  endparam
+
+switch:
+  type = "ChopShop"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  Seed = #pixel
+  Bailout = Bailout
+  CStyle = CStyle
+  XStyle = XStyle
+  YStyle = YStyle
+  FuncZ = FuncZ
+  FuncC = FuncC
+  FuncX = FuncX
+  FuncY = FuncY
+  AbsX = AbsX
+  AbsY = AbsY
+} ;END OF "ChopShop"
+
+;###############################################################################
+
+FnGlynn {
+;
+; Based on GLYNN, a formula by Jon Horner.
+; Mutated Fractint and UF version by Bradley Beacham.
+; See blb.txt for comments.
+; 13 March 2003
+;
+global:
+  power = @p1
+  c = @p2
+  fc = fn1(@p2)
+
+init:
+  z = #pixel
+
+loop:
+  if @FuncAffects == "Z"
+    z = fn1(z^power) + c
+  elseif @FuncAffects == "C"
+    z = z^power + fc
+  elseif @FuncAffects == "Whole"
+    z = fn1(z^power + c)
+  else  ;"Both"
+    z = fn1(z^power) + fc
+  endif
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "FnGlynn"
+  param p1
+    caption = "Power"
+    default = (1.5,0)
+  endparam
+  param p2
+    caption = "Julia Seed"
+    default = (-0.2,0)
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4
+    min = 0
+  endparam
+  func fn1
+    caption = "Function"
+    default = ident()
+  endfunc
+  param FuncAffects
+    caption = "Function Affects"
+    enum = "Z" "C" "Whole" "Both"
+    default = 2  ; "Whole" is the default
+    hint = "What part of iterated function is affected by the user function? \
+    Options are 'Z': [fn(z^power)] + c; 'C': z^power + fn(c); \
+    'Whole': fn(z^power + c); and 'Both': fn(z^power) + fn(c)."
+  endparam
+}  ;END OF "FnGlynn"
+
+;###############################################################################
+
+Fuzz {
+;
+; To see a fuzzy fractal, set Fuzz Mode to "Fuzzy",
+; Target Function to zero(), and make C1 Function
+; different from C2 Function.
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  tgt = @TargetFunc(#pixel)
+  rt=real(tgt), it=imag(tgt)
+
+  if @ThisMode == "Mandelbrot"
+    c1 = @C1Func(#pixel), c2 = @C2Func(#pixel)
+  else ;Julia
+    c1 = @C1Func(@seed), c2 = @C2Func(@seed)
+  endif
+
+loop:
+  x = real(z) - rt
+  y = imag(z) - it
+  DistTarget = x*x + y*y
+
+  if @FuzzMode == "Fuzzy"
+    if real(DistTarget) <= |z| ;Closer to target
+      z = z^@power + c1
+    else ;Closer to origin
+      z = z^@power + c2
+    endif
+  else ;Smooth
+    if real(x*x + y*y) <= |z| ;Closer to target
+      z = z^@power + c1
+    else ;Closer to origin
+      z = z^@power + c2
+    endif
+  endif
+
+bailout:
+  |z| <= @bailout 
+
+default:
+  title = "Fuzz"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param Power
+    caption = "Power of z"
+    default = (2,0)
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  param Seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4
+    min = 0
+  endparam
+  func TargetFunc
+    caption = "Target Function"
+    default = zero()
+  endfunc
+  func C1Func
+    caption = "C1 Function"
+    default = sin()
+  endfunc
+  func C2Func
+    caption = "C2 Function"
+    default = ident()
+  endfunc
+  param FuzzMode
+    caption = "Fuzz Mode"
+    enum = "Fuzzy" "Smooth"
+    default = 0  ; "Fuzzy" is the default
+  endparam
+
+switch:
+  type = "Fuzz"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  power = power
+  seed = #pixel
+  bailout = bailout
+  TargetFunc = TargetFunc
+  C1Func = C1Func
+  C2Func = C2Func
+  FuzzMode = FuzzMode
+}   ;END OF "Fuzz"
+
+;###############################################################################
+
+MSetInTheSkyWithDiamonds {
+;
+; Mandelbrot and Julia sets with strands of diamonds.
+; If 'Diamond Test' parameter is set to 'Divisible',
+; you can also get colored stalks and odd zipper-like
+; lines.
+;
+; Use Switch Mode to select Julias or Mandelbrots.
+;
+; See blb.txt comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  fc = fn1(c)
+  complex zfn = (0,0)
+  complex zTest = (0,0)
+  float rzt = 0
+  float izt = 0
+  bool special = false
+  bool done = false
+
+loop:
+  if (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    if (@FuncAffects == "Z")
+      zfn = fn1(z^@Power) + c
+    elseif (@FuncAffects == "C")
+      zfn = z^@Power + fc
+    elseif (@FuncAffects == "Whole")
+      zfn = fn1(z^@Power + c)
+    else ;"Both"
+      zfn = fn1(z^@Power) + fc
+    endif
+
+    if @BailoutStyle == "Diamonds"
+      zTest = round(abs(zfn * @Factor))
+    else ;Normal
+      zTest = round(abs(z * @Factor))
+    endif
+
+    rzt = real(zTest)
+    izt = imag(zTest)
+
+    if ((@Test == "Equal") && (rzt == izt) && (@Zeros == "Include"))              || \
+       ((@Test == "Equal") && (rzt == izt) && (@Zeros == "Exclude") && (rzt > 0)) || \
+       ((@Test == "Divisible") && (rzt%izt == 0) && (@Zeros == "Include"))        || \
+       ((@Test == "Divisible") && (rzt%izt == 0) && (@Zeros == "Exclude") && (rzt > 0) && (izt > 0))
+      special = true
+    else ;Didn't meet any of the special cases
+      special = false
+    endif
+  else ;Normal styles for looping and bailout
+    special = false
+  endif
+
+  ;Finally, set z
+  if (@LoopStyle == "Diamonds") && (special == true)
+    z = zfn
+  else
+    z = z^@power + c
+  endif
+
+  ;Done yet?
+  if @BailoutStyle == "Normal"
+    if |z| > @NormalBailout
+      done = true
+    endif
+  else ;"Diamonds"
+    if special == true
+      done = True
+    endif
+  endif
+
+bailout:
+  done == false
+
+default:
+  title = "MSet in the Sky with Diamonds"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param Power
+    caption = "Power of z"
+    default = (2,0)
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  param Seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  func fn1
+    caption = "Diamonds Function"
+    default = sqr()
+    visible = (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    hint = "For special conditions, the function applied to z and/or c \
+      (depending on setting of 'Function Affects')"
+  endfunc
+  param FuncAffects
+    caption = "Function Affects"
+    enum = "Z" "C" "Whole" "Both"
+    default = 1  ; "C" is the default
+    visible = (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    hint = "What part of iterated function is affected by the user function? \
+    Options are 'Z': [fn(z^power)] + c; 'C': z^power + fn(c); \
+    'Whole': fn(z^power + c); and 'Both': fn(z^power) + fn(c)."
+  endparam
+  param Test
+    caption = "Diamond Test"
+    enum = "Equal" "Divisible"
+    default = 0  ; "Equal" is the default
+    visible = (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    hint = "What special condition is being looked for? Say x = abs(real(z)) \
+      and y = abs(imag(z)). For 'Equal', x == y. For 'Divisible', \
+      x is evenly divisible by y. Also see hints for 'Zeros in Test' and \
+      'Precision Factor' for important qualifications."
+  endparam
+  param Zeros
+    caption = "Zeros in Test"
+    enum = "Include" "Exclude"
+    default = 0  ; "Include" is the default
+    visible = (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    hint = "When looking for special conditions, does a zero in x or y count?"
+  endparam
+  int param Factor
+    caption = "Precision Factor"
+    default = 100
+    min = 0
+    visible = (@LoopStyle == "Diamonds") || (@BailoutStyle == "Diamonds")
+    hint = "Fudge factor for diamond test. Tested z is multiplied by this \
+      factor before being rounded. Higher numbers tend to produce thinner \
+      strands."
+  endparam
+  param LoopStyle
+    caption = "Loop Style"
+    enum = "Normal" "Diamonds"
+    default = 1  ; "Diamonds" is the default
+    hint = "Chooses the methods used during the iteration process. \
+      'Normal' uses the traditional Mandelbrot loop, ignoring special \
+      conditions. 'Diamonds' looks for special conditions defined \
+      by 'Diamonds Function' and all parameters that follow it, \
+      varying the iterated calculations when special conditions are met."
+  endparam
+  param BailoutStyle
+    caption = "Bailout Style"
+    enum = "Normal" "Diamonds"
+    default = 0  ; "Normal" is the default
+    hint = "Chooses bailout method. 'Normal' uses the \
+      traditional escape-time method, and 'Diamonds' looks \
+      for special conditions defined by 'Diamonds Function' \
+      and all parameters that follow it."
+  endparam
+  param NormalBailout
+    caption = "Bailout value"
+    default = 4
+    min = 0
+    visible = (@BailoutStyle == "Normal")
+    hint = "Sets the size of the bail-out circle."
+  endparam
+
+switch:
+  type = "MSetInTheSkyWithDiamonds"
+  power = power
+  seed = #pixel
+  ThisMode = NextMode
+  NextMode = ThisMode
+  LoopStyle = LoopStyle
+  BailoutStyle = BailoutStyle
+  FuncWhere = FuncWhere
+  Factor = Factor
+  fn1 = fn1
+  NormalBailout = NormalBailout
+  Test = Test
+  Zeros = Zeros
+}  ;END OF "MSetInTheSkyWithDiamonds"
+
+;###############################################################################
+
+PopCornJulCplx {
+;
+; A highly tweakable version of the Popcorn Julia formula.
+; Fractint version Jon Horner & Bradley Beacham, UF version by Bradley Beacham.
+; See blb.txt for comments.
+; 6 March 2003
+;
+init:
+  x = real(#pixel), y = imag(#pixel)
+
+loop:
+  newx = x - @h*fn1((y) + fn2(@k*y))
+  newy = y - @h*fn1((x) + fn2(@k*x))
+  x = newx, y = newy
+  z = fn3(x) + fn4(y)
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "PopCorn Julia Complex"
+  magn = 0.7
+  param h
+    caption = "H"
+    default = 0.05
+  endparam
+  param k
+    caption = "K"
+    default = 3.0
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+  endparam
+  func fn1
+    caption = "1st Function"
+    default = sin()
+  endfunc
+  func fn2
+    caption = "2nd Function"
+    default = tan()
+  endfunc
+  func fn3
+    caption = "3rd Function"
+    default = ident()
+
+  endfunc
+  func fn4
+    caption = "4th Function"
+    default = flip()
+  endfunc
+}  ;END OF "PopCornJulCplx"
+
+;###############################################################################
+
+Quad {
+;
+; Based on an algorithm for Tierazon formula 90 from Stephen Ferguson,
+; via Luc Benard. Very sensitive to changes in bailout value and
+; min. distance. For Bailout-Test "|Z - LastZ|", 15 is a good bailout 
+; value. For Bailout-Test "|Z|", 4 to 6 are good bailout values.
+; See blb.txt for comments.
+; 18 April 2003
+;
+init: 
+  z = @ZInitFunc(#pixel)  
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex LastZ 
+  float zr
+  float zi
+  float dist
+
+loop:
+  LastZ = z
+  
+  z = z*@ZFactor + c
+  zr = real(z)
+  zi = imag(z)
+  
+  if zr >= 0
+    zr = zr - @Offset
+  else
+    zr = zr + @Offset
+  endif
+  
+  if zi >= 0
+    zi = zi - @Offset
+  else
+    zi = zi + @Offset
+  endif
+  
+  z = zr + flip(zi)
+  
+  if @BailTest == "|Z - LastZ|"
+    dist = |z - LastZ|
+  else ; "|Z|"
+    dist = |z|
+  endif
+  
+bailout:
+  dist > @DistMin && dist  < @Bailout
+
+default:
+  title = "Quad"
+  magn = 0.24  
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam    
+  param BailTest
+    caption = "Bailout Test"
+    enum = "|Z - LastZ|" "|Z|"
+    default = 0
+  endparam    
+  float param Bailout
+    caption = "Bailout value"
+    default = 15
+    min = 0 
+  endparam
+  float param DistMin
+    caption = "Minimum Distance"
+    default = .001
+    min = 0 
+  endparam
+  func ZInitFunc
+    caption = "Z Init. Function"
+    default = ident()
+  endfunc    
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc  
+  float param ZFactor
+    caption = "Z Factor"
+    default = 1
+  endparam  
+  float param Offset
+    caption = "Offset"
+    default = 2
+  endparam    
+  
+switch:
+  type = "Quad"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  BailTest = BailTest
+  Bailout = Bailout
+  DistMin = DistMin
+  ZInitFunc = ZInitFunc 
+  CFunc = CFunc
+  ZFactor = ZFactor
+  Offset = Offset   
+} ;END OF "Quad"
+
+;###############################################################################
+
+UF-Chico { 
+;
+; Mutation of 'M-SetInNewton'.
+; Fractint and UF versions by Bradley Beacham
+; Original formula by Jon Horner [100112,1700]
+; For 'M-SetInNewton', use defaults
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = @CFunc(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @CFunc(@seed)
+  endif
+
+  complex c1 =  c - 1
+  complex k = @ConInit
+  complex k1 = k - 1
+  complex LastZ = (0,0)
+  complex nm = (0,0)
+  complex dn = (0,0)
+
+loop:
+  LastZ = z
+  nm = k*c - k1*z*c1
+  dn = k*(k*z*z + c1)
+  z = @LoopFunc(nm/dn) + k1*z/k + @ConLoop
+
+bailout:
+  0.01 <= |(z-LastZ)| 
+
+default:
+  title = "UF-Chico"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param ConInit
+    caption = "Init. Constant"
+    default = (3,0)
+  endparam
+  param ConLoop
+    caption = "Loop Constant"
+    default = (0,0)
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-Chico"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  ConInit = ConInit
+  ConLoop = ConLoop
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-Chico"
+
+;###############################################################################
+
+UF-Groucho { 
+;
+; Mutation of 'Fish2'. 
+; Fractint and UF versions by Bradley Beacham
+; Original formula by Dave Oliver via Tim Wegner 
+; For 'Fish2', use defaults
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex a = (0,0)
+  complex k = @Const
+
+loop:
+  a = c^(@Func1(z)-k)
+  z = @Func2(((c*a)-k)*a)
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-Groucho"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4
+    min = .001  
+  endparam
+  param Const
+    caption = "Constant"
+    default = (1,0)
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func Func1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-Groucho"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Const = Const
+  CFunc = CFunc
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-Groucho"
+
+;###############################################################################
+
+UF-Harpo { 
+;
+; Mutation of 'Gopalsamy3'.
+; Fractint and UF versions by Bradley Beacham
+
+; Original formula by Ron Barnett [70153,1233]
+; For 'Gopalsamy3' with Ron's suggested parameters, use defaults
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  float zr = 0
+  float zi = 0
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @RealFunc(3*zr*zi^2 - zr^3)
+  y = @ImagFunc(zi^3 - 3*zr^2*zi)
+  z = x + flip(y) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-Harpo"
+  param ThisMode ;Current Mode
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (1.099,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func RealFunc
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func ImagFunc
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-Harpo"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  RealFunc = RealFunc
+  ImagFunc = ImagFunc
+} ;END OF "UF-Harpo"
+
+;###############################################################################
+
+UF-LarryCurly { 
+;
+; Fusion of 'Larry' (a mutation of 'Michaelbrot' 
+; and 'Element') and 'Curly' (a mutation of Natura').
+; Fractint and UF versions by Bradley Beacham.
+; 'Michaelbrot', 'Element', and 'Natura' by Michael Theroux [71673,2767].
+; For 'Michaelbrot', use defaults 
+; For 'Element', use defaults but set a Loop Function = SQR 
+; For 'Natura', use defaults but set Power = (3,0)
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc1(@LoopFunc2(z^@power)) + c
+
+bailout:
+  |z| <= @bailout 
+  
+default:
+  title = "UF-LarryCurly"
+  param ThisMode ;Current Mode
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param power
+    caption = "Power of z"
+    default = (2,0)    
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  complex param seed
+    caption = "Julia seed"
+    default = (0.5,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 4
+    min = 1  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFunc1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc
+  func LoopFunc2
+    caption = "2nd Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-LarryCurly"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  power = power
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc1 = LoopFunc1
+  LoopFunc2 = LoopFunc2
+
+} ;END OF "UF-LarryCurly"
+
+;###############################################################################
+
+UF-Moe { 
+;
+; Mutation of 'Zexpe'.
+; Fractint and UF versions by Bradley Beacham
+; 'Zexpe' by Lee Skinner [75450,3631]
+; For 'Zexpe', use defaults
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc(z^@power) + c
+
+bailout:
+  |z| <= @bailout 
+
+default:
+  title = "UF-Moe"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param power
+    caption = "Power of z"
+    default = exp(1)    
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  complex param seed
+    caption = "Julia seed"
+    default = (0.5,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 100
+    min = 1  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-Moe"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-Moe"
+
+;###############################################################################
+
+UF-OK-01 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+loop:
+  z = @LoopFunc((c^z) + c)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-01"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 20
+    min = .001  
+  endparam
+  func LoopFunc
+    caption = "Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-01"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-01"
+
+;###############################################################################
+
+UF-OK-02 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex k = @Fudge + 1
+
+loop:
+  z = @LoopFunc((c^z) + c) * k
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-02"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge
+    caption = "Fudge"
+    default = (0,0)
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func LoopFunc
+    caption = "Function"
+    default = cotan()
+  endfunc
+
+switch:
+  type = "UF-OK-02"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-02"
+
+;###############################################################################
+
+UF-OK-03 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+loop:
+  z = @Func2(@Func1(z)/c)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-03"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = cos()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-03"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-03"
+
+;###############################################################################
+
+UF-OK-04 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = @CFunc(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc(z) + c
+
+bailout:   
+
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-04"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = recip()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-04"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-04"
+
+;###############################################################################
+
+UF-OK-05 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = #pixel
+    c = #pixel + @Fudge
+  else ;Julia
+    z = #pixel
+    c = @seed + @Fudge
+  endif
+
+loop:
+  z = @LoopFunc(z^c + z) / c
+
+bailout:   
+  |z| >= @bailout
+
+default:
+  title = "UF-OK-05"
+  param ThisMode ;Current Mode
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (-0.643,-0.047)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge
+    caption = "Fudge"
+    default = (0,0)
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 1
+    min = .001  
+  endparam
+  func LoopFunc
+    caption = "Function"
+    default = sqrt()
+  endfunc
+
+switch:
+  type = "UF-OK-05"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-05"
+
+;###############################################################################
+
+UF-OK-06 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex d = @InitFunc(c)
+
+loop:
+  z = @LoopFunc(z / d) + c
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-06"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func InitFunc
+    caption = "Init. Function"
+    default = sqr()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-06"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  InitFunc = InitFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-06"
+  
+;###############################################################################
+
+UF-OK-07 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = @CFunc(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc(c * (z + c) + c)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-07"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-07"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-07"
+
+;###############################################################################
+
+UF-OK-08 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = c / (z^z / @LoopFunc(z))
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-08"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = exp()
+  endfunc
+
+switch:
+  type = "UF-OK-08"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-08"
+
+;###############################################################################
+
+UF-OK-09 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex d = @InitFunc(c)
+  complex k = @Fudge + 1
+
+loop:
+  z = @LoopFunc(d / (z^c * k))
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-09"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge
+    caption = "Fudge"
+    default = (0,0)
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func InitFunc
+    caption = "Init. Function"
+    default = sin()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = asin()
+  endfunc
+
+switch:
+  type = "UF-OK-09"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  InitFunc = InitFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-09"
+
+;###############################################################################
+
+UF-OK-10 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = @InitFunc(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @InitFunc(@seed)
+  endif
+
+  complex k1 = @Fudge1 + 1
+  complex k2 = @Fudge2 + 1
+
+loop:
+  z = @LoopFunc((z * k1) + c) / (k2 + c)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-10"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge1
+    caption = "Fudge 1"
+    default = (0,0)
+  endparam
+  complex param Fudge2
+    caption = "Fudge 2"
+    default = (0,0)
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func InitFunc
+    caption = "Init. Function"
+    default = sqr()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = abs()
+  endfunc
+
+switch:
+  type = "UF-OK-10"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge1 = Fudge1
+  Fudge2 = Fudge2
+  bailout = bailout
+  InitFunc = InitFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-10"
+
+;###############################################################################
+
+UF-OK-11 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex v
+
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    v = #pixel
+  else ;Julia
+
+    z = #pixel
+    v = @seed
+  endif
+
+loop:
+  z = z + @Func1(v)
+  v = v + @Func2(z)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-11"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-11"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-11"
+
+;###############################################################################
+
+UF-OK-12 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init: 
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+loop:
+  z = @Func2(@Func1(z) + c) / c
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-12"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading 
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = recip()
+  endfunc
+
+switch:
+  type = "UF-OK-12"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-12"
+
+;###############################################################################
+ 
+UF-OK-13 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init: 
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = @Func1(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @Func1(@seed)
+  endif
+
+loop:
+  z = @Func2(@Func1(z) + c)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-13"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = recip()
+  endfunc
+
+switch:
+  type = "UF-OK-13"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-13"
+
+;###############################################################################
+
+UF-OK-14 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init: 
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+loop:
+  z = @Func1(z+c) + c
+  z = @Func2(z-c) + c
+  z = @Func3(z*c) + c
+  z = @Func4(z/c) + c
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-14"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = sqrt()
+  endfunc
+  func Func3
+    caption = "3rd Loop Function"
+    default = sqr()
+  endfunc
+  func Func4
+    caption = "4th Loop Function"
+    default = sqrt()
+  endfunc
+
+switch:
+  type = "UF-OK-14"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+  Func3 = Func3
+  Func4 = Func4
+} ;END OF "UF-OK-14"
+
+;###############################################################################
+
+UF-OK-15 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex v
+
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    v = #pixel
+  else ;Julia
+    z = #pixel
+    v = @seed
+  endif
+
+loop:
+  z = @Func1(v*z) + v
+  v = @Func2(v/z)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-15"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = cos()
+  endfunc
+
+switch:
+  type = "UF-OK-15"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-15"
+
+;###############################################################################
+
+UF-OK-16 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex v
+
+  if @ThisMode == "Mandelbrot"
+    z = v = #pixel
+  else ;Julia
+    z = #pixel
+    v = @seed
+  endif
+
+loop:
+  z = @LoopFunc(z)^v
+  v = v + z
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-16"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func LoopFunc
+    caption = "Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-16"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-16"
+
+;###############################################################################
+
+UF-OK-17 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  float cr = real(c)
+  float ci = imag(c)
+
+loop:
+  z = z^cr + z^ci + c
+  z = z + real(@Func1(z)) + imag(@Func2(z))
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-17"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sin()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = cos()
+  endfunc
+
+switch:
+  type = "UF-OK-17"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-17"
+
+;###############################################################################
+
+UF-OK-18 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex v
+
+  if @ThisMode == "Mandelbrot"
+    z = v = #pixel
+  else ;Julia
+    z = #pixel
+    v = @seed
+  endif
+
+loop:
+  z = @Func1(v) + real(z)
+  v = @Func2(z) + imag(v)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-18"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = tan()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = cos()
+  endfunc
+  
+switch:
+  type = "UF-OK-18"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-18"
+  
+;###############################################################################
+
+UF-OK-19 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex a
+  complex b
+
+  if @ThisMode == "Mandelbrot"
+    a = b = z = #pixel
+  else ;Julia
+    z = #pixel
+    a = b = @seed
+  endif
+
+loop:
+  a = @Func1(b) + @Func2(z)
+  b = @Func1(z) + @Func2(a)
+  z = @Func1(a) + @Func2(b)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-19"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = tan()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = cotanh()
+  endfunc
+
+switch:
+  type = "UF-OK-19"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-19"
+
+;###############################################################################
+
+UF-OK-20 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex a
+  complex b
+  complex c
+
+  if @ThisMode == "Mandelbrot"
+    a = b = c = z = #pixel
+  else ;Julia
+    z = #pixel
+    a = b = c = @seed
+  endif
+
+loop:
+  a = @Func1(b) + c^z
+  b = @Func2(a+c)
+  z = z + a*b*c
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-20"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = exp()
+  endfunc
+  
+switch:
+  type = "UF-OK-20"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-20"
+
+
+;###############################################################################
+
+UF-OK-21 {
+;
+; See blb.txt for comments.
+
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = #pixel
+    c = @InitFunc(#pixel)
+  else ;Julia
+    z = #pixel
+    c = @InitFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc(z) + c
+
+bailout:   
+  real(@BailFunc(z)) <= @bailout
+
+default:
+  title = "UF-OK-21"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+  endparam
+  func InitFunc
+    caption = "Init. Function"
+    default = sin()
+  endfunc  
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+  func BailFunc
+    caption = "Bailout Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-21"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  InitFunc = InitFunc
+  LoopFunc = LoopFunc
+  BailFunc = BailFunc
+} ;END OF "UF-OK-21"
+
+;###############################################################################
+
+UF-OK-22 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex v
+  
+  if @ThisMode == "Mandelbrot"
+    z = v = #pixel
+  else ;Julia
+    z = #pixel
+    v = @seed
+  endif
+
+loop:
+  v = @Func1(v) * @Func2(z)
+  z = @Func1(z) / @Func2(v)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-22"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = sin()
+  endfunc
+
+switch:
+  type = "UF-OK-22"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-22"
+
+;###############################################################################
+
+UF-OK-23 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex k = @Fudge + 1
+
+loop:
+  z = k * @LoopFunc(z^z + c) + c/z
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-23"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge
+    caption = "Fudge"
+    default = (0,0)
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func LoopFunc
+    caption = "Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-23"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+
+  Fudge = Fudge
+  bailout = bailout
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-23"
+
+;###############################################################################
+
+UF-OK-24 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = (0,0)
+    c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex k = @Fudge + 1
+
+loop:
+  z = @Func2(@Func1(z) + c) +  k*z
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-24"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Fudge
+    caption = "Fudge"
+    default = (0,0)
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = asinh()
+  endfunc
+
+switch:
+  type = "UF-OK-24"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-24"
+
+;###############################################################################
+
+UF-OK-25 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  float k = @Fudge + 1
+
+loop:
+  if abs(real(z)) > k
+    z = @Func1(z) + c
+  else
+    z = @Func2(z) + c
+  endif
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-25"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = asinh()
+  endfunc
+
+switch:
+  type = "UF-OK-25"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-25"
+
+;###############################################################################
+  
+UF-OK-26 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  float k = @Fudge + 2
+  float test = k/(@Nudge + 2)
+
+loop:
+  if |z| > test
+    z = @LoopFunc(z) - c
+  else
+    z = @LoopFunc(z) + c
+  endif
+
+bailout:
+  |z| <= k
+
+default:
+  title = "UF-OK-26"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam      
+  float param Nudge
+    caption = "Nudge"
+    default = 0
+  endparam        
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc  
+
+switch:
+  type = "UF-OK-26"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  Nudge = Nudge  
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-26"
+
+;###############################################################################
+  
+UF-OK-27 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @Func1(#pixel)
+  else ;Julia
+    c = @Func1(@seed)
+  endif
+
+  float k = @Fudge + 1
+
+loop:
+  if |z| >= k
+    z = 2*@Func2(z) - c
+  else
+    z = 2*@Func2(z) + c
+  endif
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-27"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Loop Function"
+    default = sin()
+  endfunc  
+  func Func2
+    caption = "2nd Loop Function"
+    default = sin()
+  endfunc
+
+switch:
+  type = "UF-OK-27"
+
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-27"
+
+;###############################################################################
+
+UF-OK-28 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel  
+  if @ThisMode == "Mandelbrot"
+    c = @Func1(#pixel)
+  else ;Julia
+    c = @Func1(@seed)
+  endif
+
+  float k = @Fudge + 1
+
+loop:
+  if real(z) <= k
+    z = z + @Func2(z) + c + #pixel
+  else
+    z = z + @Func2(z) - c + #pixel
+  endif
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-28"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam      
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func Func1
+    caption = "Init Function"
+    default = cotan()
+  endfunc  
+  func Func2
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-28"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-28"
+
+;###############################################################################
+
+UF-OK-29 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = LastZ = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex ZTemp
+  float k = @Fudge + 1
+
+loop:
+  ZTemp = z
+  z = @LoopFunc(z)^k + LastZ + c
+  LastZ = ZTemp
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-29"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-29"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-29"
+
+
+;###############################################################################
+
+UF-OK-30 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = LastZ = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex ZTemp
+  float k = @Fudge + 0.5
+
+loop:
+  ZTemp = z
+  if real(z) <= k
+    z = @LoopFunc(z) + LastZ + c
+  else
+    z = @LoopFunc(z) - LastZ + c
+  endif
+  LastZ = ZTemp
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-30"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-30"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-30"
+
+;###############################################################################
+
+UF-OK-31 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = LastZ = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex ZTemp
+  complex zf
+  float k = @Fudge + 0.1
+
+loop:
+  ZTemp = z
+  zf = @Func1(z)
+
+  if real(zf) <= k
+    z = zf + LastZ + c
+  else
+    z = @Func2(zf) + c
+  endif
+  LastZ = ZTemp
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-31"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func Func1
+    caption = "1st Loop Function"
+    default = sqr()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = sqr()
+  endfunc  
+
+switch:
+  type = "UF-OK-31"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-31"
+
+;###############################################################################
+
+UF-OK-32 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = LastZ1 = LastZ2 = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex ZTemp1
+  complex ZTemp2
+  complex zf
+  float k = @Fudge + 1
+
+loop:
+  ZTemp1 = z
+  ZTemp2 = LastZ1
+  zf = @LoopFunc(z)
+
+  if real(zf) <= real(LastZ1)
+    z = zf*k + LastZ1 + c
+  else
+    z = zf*k + LastZ2 + c
+  endif
+
+  LastZ1 = ZTemp1
+  LastZ2 = ZTemp2
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-32"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 5
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-32"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-32"
+
+;###############################################################################
+  
+UF-OK-33 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = LastZ1 = LastZ2 = #pixel
+  
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex ZTemp1
+  complex ZTemp2
+  complex a = (0,0)
+  complex b = (0,0)
+  float k = @Fudge + 1
+
+loop:
+  ZTemp1 = z
+  ZTemp2 = LastZ1
+
+  if |LastZ1| <= k
+    a = @Func1(LastZ1)
+  else
+    a = (0,0)
+  endif
+
+  if |LastZ2| <= k
+    b = @Func2(LastZ2)
+  else
+    b = (0,0)
+  endif
+
+  z = @Func3(z) + a + b + c
+
+  LastZ1 = ZTemp1
+  LastZ2 = ZTemp2
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-33"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func Func1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = ident()
+  endfunc
+  func Func3
+    caption = "3rd Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-33"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  Func1 = Func1
+  Func2 = Func2
+  Func3 = Func3
+} ;END OF "UF-OK-33"
+
+;###############################################################################
+
+UF-OK-34 {
+;
+; Set C Factor = 0 to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+   z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel) * @CFactor
+  else ;Julia
+    c = @CFunc(@seed) * @CFactor
+  endif
+
+  float x
+  float y
+
+loop:
+  x = abs(real(z))
+  y = abs(imag(z))
+
+  if x <= y
+    z = @LoopFunc(z) + y + c
+  else
+    z = @LoopFunc(z) + x + c
+  endif
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-34"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param CFactor
+    caption = "C Factor"
+    default = 1
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+    visible = (@CFactor != 0)
+  endfunc  
+  func LoopFunc
+    caption = "Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-34"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  CFactor = CFactor
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-34"
+
+;###############################################################################
+
+UF-OK-35 {
+;
+; Set C Function = Zero to recreate original formula. 
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex x
+  complex y
+  complex v
+  complex a
+  float k = @Fudge + 1
+
+loop:
+  v = @Func1(z)
+  x = z*v
+  y = z/v
+
+  if |x| <= |y|
+    a = (z + y)*k
+  else
+    a = (z + x)*k
+  endif
+
+  z = @Func2(a*v) + v + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-35"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = sqr()
+  endfunc  
+  func Func1
+    caption = "1st Loop Function"
+    default = ident()
+  endfunc
+  func Func2
+    caption = "2nd Loop Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "UF-OK-35"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  Func1 = Func1
+  Func2 = Func2
+} ;END OF "UF-OK-35"
+
+
+;###############################################################################
+
+UF-OK-36 {
+;
+; Dissected Mandelbrot
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  complex cr = @CFuncR(real(c))
+  complex ci = @CFuncI(imag(c))
+  float k = 2 + @Fudge
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @LoopFuncX(zr^2 - zi^2) + cr
+  y = @LoopFuncY(k*zr*zi) + ci
+  z = x + flip(y)
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-36"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFuncR
+    caption = "Real C Function"
+    default = ident()
+  endfunc
+  func CFuncI
+    caption = "Imag C Function"
+    default = ident()
+  endfunc
+  func LoopFuncX
+    caption = "Real Loop Function"
+    default = tanh()
+  endfunc
+  func LoopFuncY
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-36"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFuncR = CFuncR
+  CFuncI = CFuncI
+  LoopFuncX = LoopFuncX
+  LoopFuncY = LoopFuncY
+} ;END OF "UF-OK-36"
+
+;###############################################################################
+
+UF-OK-37 {
+;
+; Another dissected Mandelbrot
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = #pixel
+    c = @Func1(@Func2(#Pixel))
+  else ;Julia
+    z = #pixel
+    c = @Func1(@Func2(@seed))
+  endif
+
+  complex cr = real(c)
+  complex ci = imag(c)
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  complex x = (0,0)
+  complex y = (0,0)
+
+  float k = 2 + @Fudge
+
+loop:
+  zr = @Func3(real(z))
+  zi = @Func4(imag(z))
+  x = zr^2 - zi^2 + cr
+  y = k*zr*zi + ci
+  z = x + flip(y)
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-37"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func Func1
+    caption = "Outer C Function"
+    default = sin()
+  endfunc
+  func Func2
+    caption = "Inner C Function"
+    default = ident()
+  endfunc
+  func Func3
+    caption = "Real Loop Function"
+    default = sin()
+  endfunc
+  func Func4
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-37"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+  Func3 = Func3
+  Func4 = Func4
+} ;END OF "UF-OK-37"
+
+;###############################################################################
+
+UF-OK-38 {
+
+;
+; Dissected Cubic Mandelbrot
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  complex cr = @CFuncR(real(c))
+  complex ci = @CFuncI(imag(c))
+  float k = 3 + @Fudge
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @LoopFuncX(zr^3 - k*zr*zi^2) + cr
+  y = @LoopFuncY(k*zr^2*zi - zi^3) + ci
+  z = x + flip(y)
+
+bailout:   
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-38"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 4
+    min = .001  
+  endparam
+  func CFuncR
+    caption = "Real C Function"
+    default = ident()
+  endfunc
+  func CFuncI
+    caption = "Imag C Function"
+    default = ident()
+  endfunc
+  func LoopFuncX
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func LoopFuncY
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-38"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFuncR = CFuncR
+  CFuncI = CFuncI
+  LoopFuncX = LoopFuncX
+  LoopFuncY = LoopFuncY
+} ;END OF "UF-OK-38"
+
+;###############################################################################
+
+UF-OK-39 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+loop:
+  z = @LoopFunc(z*c + @Fudge) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-39"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 20
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFunc
+    caption = "Loop Function"
+    default = cos()
+  endfunc
+
+switch:
+  type = "UF-OK-39"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  LoopFunc = LoopFunc
+} ;END OF "UF-OK-39"
+
+;###############################################################################
+
+UF-OK-40 {
+;
+; "Dissected" UF-OK-39 (assuming you used functions Ident and Sqr...)
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  complex cr = @CFuncR(real(c))
+  complex ci = @CFuncI(imag(c))
+  float k = 2 + @Fudge
+  complex a = (0,0)
+  complex b = (0,0)
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  a = zr*cr - zi*ci
+  b = cr*zi + zr*ci
+  x = @LoopFuncX(a^2 - b^2) + cr
+  y = @LoopFuncY(k*a*b) + ci
+  z = x + flip(y)
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-40"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFuncR
+    caption = "Real C Function"
+    default = ident()
+  endfunc
+  func CFuncI
+    caption = "Imag C Function"
+    default = ident()
+  endfunc
+  func LoopFuncX
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func LoopFuncY
+    caption = "Imag Loop Function"
+    default = sin()
+  endfunc
+
+switch:
+  type = "UF-OK-40"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFuncR = CFuncR
+  CFuncI = CFuncI
+  LoopFuncX = LoopFuncX
+  LoopFuncY = LoopFuncY
+} ;END OF "UF-OK-40"
+
+;###############################################################################
+
+UF-OK-41 {
+;
+; Dissected MandelLambda.
+; For Julias, C Function must not be zero.
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = 0.5 + @ZFudge
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  complex lr = @LFuncR(real(#pixel))
+  complex li = @LFuncI(imag(#pixel))
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @LoopFuncX(lr*zr + 2*li*zr*zi - li*zi - lr*zr^2 + lr*zi^2)
+  y = @LoopFuncY(li*zr - 2*lr*zr*zi + lr*zi - li*zr^2 + li*zi^2)
+  z = x + flip(y) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-41"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param ZFudge
+    caption = "Z Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = zero()
+  endfunc  
+  func LFuncR
+    caption = "Real Lambda Function"
+    default = ident()
+  endfunc
+  func LFuncI
+    caption = "Imag Lambda Function"
+    default = ident()
+  endfunc
+  func LoopFuncX
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func LoopFuncY
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-41"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  ZFudge = ZFudge
+  bailout = bailout
+  CFunc = CFunc
+  LFuncR = LFuncR
+  LFuncI = LFuncI
+  LoopFuncX = LoopFuncX
+  LoopFuncY = LoopFuncY
+} ;END OF "UF-OK-41"
+
+;###############################################################################
+
+UF-OK-42 {
+;
+; Mutation of FN + FN
+; Set C Function = Zero to recreate original formula
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex zr = (0,0)
+  complex zi = (0,0)
+  float k1r = real(@FudgeLeft) + 1
+
+  float k1i = imag(@FudgeLeft) + 1
+  float k2r = real(@FudgeRight) + 1
+  float k2i = imag(@FudgeRight) + 1
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @Func1(zr*k1r - zi*k1i) + @Func2(zr*k2r - zi*k2i)
+  y = @Func3(zr*k1i + zi*k1r) + @Func4(zr*k2i + zi*k2r)
+  z = x + flip(y) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-42"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param FudgeLeft
+    caption = "Fudge Left"
+    default = 0
+  endparam  
+  float param FudgeRight
+    caption = "Fudge Right"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 20
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func Func1
+    caption = "Left Real Function"
+    default = tan()
+  endfunc
+  func Func2
+    caption = "Right Real Function"
+    default = ident()
+  endfunc
+  func Func3
+    caption = "Left Imag Function"
+    default = tan()
+  endfunc
+  func Func4
+    caption = "Right Imag Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-42"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  FudgeLeft = FudgeLeft
+  FudgeRight = FudgeRight
+  bailout = bailout
+  CFunc = CFunc
+  Func1 = Func1
+  Func2 = Func2
+  Func3 = Func3
+  Func4 = Func4
+} ;END OF "UF-OK-42"
+
+;###############################################################################
+
+UF-OK-43 {
+
+;
+; Dissected Spider
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @seed
+  endif
+
+  float zr = 0
+  float zi = 0
+  complex cr = (0,0)
+  complex ci = (0,0)
+  float k = 2 + @Fudge
+  complex x = (0,0)
+  complex y = (0,0)
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  cr = real(c)
+  ci = imag(c)  
+  x = @LoopFuncX(zr^2 - zi^2) + cr
+  y = @LoopFuncY(k*zr*zi) + ci
+  z = x + flip(y)
+  c = @CFunc((cr + flip(ci))/k) + z
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-43"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam  
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func LoopFuncX
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func LoopFuncY
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-43"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  CFunc = CFunc
+  LoopFuncX = LoopFuncX
+  LoopFuncY = LoopFuncY
+} ;END OF "UF-OK-43"
+
+;###############################################################################
+
+UF-OK-44 {
+;
+; Dissected Manowar
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = #pixel
+
+  else ;Julia
+    c = @seed
+  endif
+
+  float zr = 0
+  float zi = 0
+  float ZRTemp = 0
+  float ZITemp = 0
+  float LastZR = real(z)
+  float LastZI = imag(z)
+  complex x = (0,0)
+  complex y = (0,0)
+  float k = @Fudge + 2
+
+loop:
+  ZRTemp = zr = real(z)
+  ZITemp = zi = imag(z) 
+  x = @Func1(zr^2 - zi^2) + @Func2(LastZR)
+  y = @Func3(k*zr*zi) + @Func4(LastZI)
+  z = x + flip(y) + c
+  LastZR = ZRTemp
+  LastZI = ZITemp
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-44"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param Fudge
+    caption = "Fudge"
+    default = 0
+  endparam        
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func Func1
+    caption = "1st Real Function"
+    default = ident()
+  endfunc
+  func Func2
+    caption = "2nd Real Function"
+    default = ident()
+  endfunc
+  func Func3
+    caption = "1st Imag Function"
+    default = ident()
+  endfunc
+  func Func4
+    caption = "2nd Imag Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-44"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  Fudge = Fudge
+  bailout = bailout
+  Func1 = Func1
+  Func2 = Func2
+  Func3 = Func3
+  Func4 = Func4
+} ;END OF "UF-OK-44"
+
+;###############################################################################
+
+UF-OK-45 {
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+  
+  float ka = @FudgeLeft + 1
+  float kb = @FudgeRight + 1
+  complex a = (0,0)
+  complex b = (0,0)
+
+loop:
+  a = @FuncA(z)
+  b = @FuncB(z)
+  z = ka*a^3 + kb*b^2 + c,
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-OK-45"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  float param FudgeLeft
+    caption = "Left Fudge"
+    default = 0
+  endparam     
+  float param FudgeRight
+    caption = "Right Fudge"
+    default = 0
+  endparam    
+  float param bailout
+    caption = "Bailout value"
+    default = 10
+    min = .001  
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc  
+  func FuncA
+    caption = "Left Loop Function"
+    default = ident()
+  endfunc
+  func FuncB
+    caption = "Right Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-OK-45"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  FudgeLeft = FudgeLeft
+  FudgeRight = FudgeRight
+  bailout = bailout
+  CFunc = CFunc
+  FuncA = FuncA
+  FuncB = FuncB
+} ;END OF "UF-OK-45"
+
+;###############################################################################
+
+UF-Zeppo { 
+;
+; Mutation of 'Liar4'.
+; Fractint and UF versions by Bradley Beacham
+; Original formula by Chuck Ebbert [76306,1226]
+; For 'Liar4', use defaults
+;
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  z = #pixel
+  if @ThisMode == "Mandelbrot"
+    c = @CFunc(#pixel)
+  else ;Julia
+    c = @CFunc(@seed)
+  endif
+
+  complex k = @Const
+  float zr = 0
+  float zi = 0
+  complex x = 0
+  complex y = 0
+
+loop:
+  zr = real(z)
+  zi = imag(z)
+  x = @RealFunc(1 - abs(zi*k - zr))
+  y = @ImagFunc(1 - abs(1 - zr - zi))
+  z = x + flip(y) + c
+
+bailout:
+  |z| <= @bailout
+
+default:
+  title = "UF-Zeppo"
+  param ThisMode ;Current Mode
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading  
+  complex param seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 1
+    min = .001  
+  endparam
+  param Const
+    caption = "Constant"
+    default = (1,0)
+  endparam
+  func CFunc
+    caption = "C Function"
+    default = ident()
+  endfunc
+  func RealFunc
+    caption = "Real Loop Function"
+    default = ident()
+  endfunc
+  func ImagFunc
+    caption = "Imag Loop Function"
+    default = ident()
+  endfunc
+
+switch:
+  type = "UF-Zeppo"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  seed = #pixel
+  bailout = bailout
+  Const = Const
+  CFunc = CFunc
+  RealFunc = RealFunc
+  ImagFunc = ImagFunc
+} ;END OF "UF-Zeppo"
+
+;###############################################################################
+
+YamJam {
+;
+; Yet Another Mandelbrot/Julia All Mangled.
+; Use switch mode to see some very strange Julias.
+; See blb.txt for comments.
+; 18 April 2003
+;
+init:
+  complex c
+  complex TP = (0,0) ;Test Point
+  complex RP = (0,0) ;Reference Point
+  complex LastZ = (0,0)
+  float FracLeft = 0
+  float FracRight = 0
+
+  if @ThisMode == "Mandelbrot"
+    z = c = #pixel
+  else ;Julia
+    z = #pixel
+    c = @Seed
+  endif
+
+  if @TestPoint == "Fn(C)"
+    TP  = @TestFunc(c)
+  elseif @TestPoint == "Fn(Pixel)"
+    TP  = @TestFunc(#pixel)
+  elseif @TestPoint ==  "Fn(Pixel^2)+C"
+    TP = @TestFunc(#pixel^2) + c
+  endif
+
+  if @RefPoint == "Origin"
+    RP = (0,0)
+  elseif @RefPoint == "Pixel"
+    RP  = #pixel
+  endif
+
+  if @TestStyle == "Fixed"
+    FracLeft = @FracLeftFixed
+  endif
+
+loop:
+  if @TestPoint == "Fn(Z)"
+    TP = @TestFunc(z)
+  elseif @TestPoint == "Fn(Z+C)"
+    TP  = @TestFunc(z + c)
+  elseif @TestPoint == "Fn(Z*C)"
+    TP = @TestFunc(z * c)
+  endif
+
+  if @RefPoint == "Last Z"
+    RP = LastZ
+  endif
+
+  ;Find weight for FracLeft and FracRight
+  if @TestStyle == "Angle"
+    FracLeft = abs(atan2(TP - RP))/#pi
+  elseif @TestStyle == "Poles"
+    FracLeft = 1 - abs(abs(atan2(TP - RP))/#pi - 0.5) * 2
+  elseif @TestStyle == "Div"
+    TP = Abs(TP - RP)
+    if Real(TP) > Imag(TP)
+      TP = Flip(TP)
+    endif
+    FracLeft = Real(TP) / Imag(TP)
+  elseif @TestStyle == "Distance"
+    FracLeft = |TP - RP|/@DistLimit
+  elseif @TestStyle == "Dingle"
+    FracLeft = ((|TP - RP|/@DistLimit) + (abs(atan2(TP - RP))/#pi)) / 2
+  elseif @TestStyle == "Dingle Rev"
+    FracLeft = ((|TP - RP|/@DistLimit) + (1 - abs(atan2(TP - RP))/#pi)) / 2
+  elseif @TestStyle == "Pistole"
+    FracLeft = ((|TP - RP|/@DistLimit) + (1 - abs(abs(atan2(TP - RP))/#pi - 0.5) * 2)) / 2
+  endif
+
+  if @TrimWeights == True && @TestStyle > 3
+    if FracLeft > 1
+      FracLeft = 1/FracLeft
+    endif
+  endif
+
+  FracRight = 1 - FracLeft
+  LastZ = z
+
+  if @LoopStyle == "C-Blend"
+    z = z^@Exp + FracLeft*@LeftFunc(c) + FracRight*@RightFunc(c)
+  else ;"Z-Blend"
+    z = FracLeft*@LeftFunc(z^@LeftExp) + FracRight*@RightFunc(z^@RightExp) + c
+  endif
+
+bailout:
+  |z| <= @Bailout
+
+default:
+  title = "Yam Jam"
+  param ThisMode ;Current Mode
+    default = 0
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam
+  param NextMode ;Mode to switch to
+    default = 1
+    enum = "Mandelbrot" "Julia"
+    visible = False 
+  endparam  
+  heading
+    caption = "M-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Mandelbrot")
+  endheading
+  heading
+    caption = "J-Set Mode  (F7 to Switch)"
+    visible = (@ThisMode == "Julia")
+  endheading
+  complex param Seed
+    caption = "Julia seed"
+    default = (0,0)
+    visible = (@ThisMode == "Julia")
+  endparam
+  complex param Exp
+    caption = "Exponent"
+    default = (2,0)
+    visible = (@LoopStyle == "C-Blend")
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  complex param LeftExp
+    caption = "Left Exponent"
+    default = (2,0)
+    visible = (@LoopStyle == "Z-Blend")
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  complex param RightExp
+    caption = "Right Exponent"
+    default = (2,0)
+    visible = (@LoopStyle == "Z-Blend")
+    hint = "Power of the Mandelbrot/Julia set."
+  endparam
+  float param Bailout
+    caption = "Bailout value"
+    default = 4
+    min = 0
+  endparam
+  param LoopStyle
+    caption = "Loop Style"
+    enum = "C-Blend" "Z-Blend"
+    default = 0
+  endparam
+  func LeftFunc
+    caption = "Left Function"
+    default = ident()
+  endfunc
+  func RightFunc
+    caption = "Right Function"
+    default = ident()
+  endfunc
+  param TestStyle
+    caption = "Test Style"
+    enum = "Fixed" "Angle" "Poles" "Div" "Distance"  \
+       "Dingle" "Dingle Rev" "Pistole"
+    default = 0
+  endparam
+  float param FracLeftFixed
+    caption = "Left Weight"
+    default = .5
+    max = 1
+    min = 0
+    visible = (@TestStyle == "Fixed")
+  endparam
+  param TestPoint
+    caption = "Test Point"
+    enum = "Fn(Pixel)" "Fn(Z)" "Fn(C)" "Fn(Z+C)" "Fn(Z*C)" "Fn(Pixel^2)+C"
+    default = 0 
+    visible = (@TestStyle != "Fixed")
+  endparam
+  func TestFunc
+    caption = "Test Function"
+    default = ident()
+    visible = (@TestStyle != "Fixed")
+  endfunc
+  param RefPoint
+    caption = "Reference Point"
+    enum = "Origin" "Pixel" "Last Z"
+    default = 0
+    visible = (@TestStyle != "Fixed")
+  endparam
+  float param DistLimit
+    caption = "Distance Limit"
+    default = 4
+    min = 0.0001
+    visible = (@TestStyle > 3)
+  endparam
+  bool param TrimWeights
+    caption = "Trim Weights?"
+    default = True
+    visible = (@TestStyle > 3)
+  endparam
+
+switch:
+  type = "YamJam"
+  ThisMode = NextMode
+  NextMode = ThisMode
+  Seed = #pixel
+  Exp = Exp
+  LeftExp = LeftExp
+  RightExp = RightExp
+  Bailout = Bailout
+  LoopStyle = LoopStyle
+  LeftFunc = LeftFunc
+  RightFunc = RightFunc
+  TestStyle = TestStyle
+  FracLeftFixed = FracLeftFixed
+  TestPoint= TestPoint
+  TestFunc = TestFunc
+  RefPoint = RefPoint
+  DistLimit = DistLimit
+  TrimWeights = TrimWeights
+}   ;END OF "Yam Jam"

@@ -1,0 +1,167 @@
+comment {
+  by Tim Coe
+}
+
+tvc-Smooth(OUTSIDE) {
+;
+; This is a variation of dmj-Smooth for the Elephant and
+; Julphant fractals
+;
+init:
+  complex il = 1/log(@power); Inverse log (power).
+  float lp = log(log(@bailout)); log(log bailout).
+  bool indeep = @deepness
+  float dives = 1
+  float offstep = 0
+  float itoffset = 0
+  float upexit = 0
+  if indeep
+    offstep = round(real(#z))
+    itoffset = itoffset - offstep - 1
+    w = #z - offstep
+    if abs(imag(w)) < 2.8
+      indeep = false
+      itoffset = itoffset - 12
+      if imag(w) < 0
+        upexit = -1
+      else
+        upexit = 1
+      endif
+    elseif imag(w) > 10
+      if imag(#pixel) < #pi
+        if @bigon
+          float bigleap = ceil((imag(w) - 10)/(#pi - imag(#pixel)))
+          dives = dives + bigleap
+        else
+          dives = dives + 1
+        endif
+      endif
+    elseif imag(w) < -10
+      if imag(#pixel) > -#pi
+        if @bigon
+          float bigleap = ceil((imag(w) + 10)/(-#pi - imag(#pixel)))
+          dives = dives + bigleap
+        else
+          dives = dives + 1
+        endif
+      endif
+    else
+      dives = dives + 1
+    endif
+  elseif |#z - 0.51| < 0.01 && real(#z) < 0.56
+    w = (1 + 2*#z)/(1 - 2*#z)
+    if real(w) > 0 || abs(imag(w)) > 10
+      dives = dives + 1
+    endif
+    itoffset = itoffset - 1
+    indeep = true
+  endif
+loop:
+  if indeep
+    offstep = round(real(#z))
+    itoffset = itoffset - offstep - 1
+    w = #z - offstep
+    if abs(imag(w)) < 2.8
+      indeep = false
+      itoffset = itoffset - 12
+      if imag(w) < 0
+        upexit = -1
+      else
+        upexit = 1
+      endif
+    elseif imag(w) > 10
+      if imag(#pixel) < #pi
+        if @bigon
+          float bigleap = ceil((imag(w) - 10)/(#pi - imag(#pixel)))
+          dives = dives + bigleap
+        else
+          dives = dives + 1
+        endif
+      endif
+    elseif imag(w) < -10
+      if imag(#pixel) > -#pi
+        if @bigon
+          float bigleap = ceil((imag(w) + 10)/(-#pi - imag(#pixel)))
+          dives = dives + bigleap
+        else
+          dives = dives + 1
+        endif
+      endif
+    else
+      dives = dives + 1
+    endif
+  elseif |#z - 0.51| < 0.01 && real(#z) < 0.56
+    w = (1 + 2*#z)/(1 - 2*#z)
+    if real(w) > 0 || abs(imag(w)) > 10
+      dives = dives + 1
+    endif
+    itoffset = itoffset - 1
+    indeep = true
+  endif
+
+final:
+  if @seedives
+    #index = 0.05*(dives + @colpar*upexit)
+  elseif @mbulbsame
+    #index = 0.05 * real(#numiter + itoffset + dives*real(#pixel)\
+                         + il*lp - il*log(log(cabs(#z)))) + 1000
+  elseif @jbulbsame
+    #index = 0.05 * real(#numiter + itoffset + real(#pixel)\
+                         + il*lp - il*log(log(cabs(#z)))) + 1000
+  else
+    #index = 0.05 * real(#numiter + itoffset\
+                         + il*lp - il*log(log(cabs(#z)))) + 1000
+  endif
+
+default:
+  title = "Smoothed Iterations (Elephant)"
+
+  param seedives
+    caption = "Color Dives"
+    default = false
+    hint = "Color based on either number of iterations or number\
+            of dives through the parabolic point"
+  endparam
+  param deepness
+    caption = "Start Deep"
+    default = true
+    hint = "This should be set to match the deepness of start for the\
+            formula you are using.  For Elephant, this is true"
+  endparam
+  param bigon
+    caption = "Big Leaps"
+    default = true
+    hint = "Big leaps have a buggy interaction with Julphant\
+            and coloring dives.  Match this to Julphant Big Leaps"
+  endparam
+  param mbulbsame
+    caption = "Bulbs Same (Ele)"
+    default = false
+    hint = "Make all bulbs look the same for Elephant"
+  endparam
+  param jbulbsame
+    caption = "Bulbs Same (Jul)"
+    default = false
+    hint = "Make all bulbs look the same for Julphant"
+  endparam
+  param power
+    caption = "Exponent"
+    default = (2,0)
+    hint = "This should be set to match the exponent of the \
+
+            formula you are using.  For Mandelbrot, this is 2."
+  endparam
+  param bailout
+    caption = "Bailout value"
+    default = 128.0
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab."
+  endparam
+  param colpar
+    caption = "Color Exit Sign"
+    default = 0.0
+    hint = "This can make for an interesting effect"
+  endparam
+}
+

@@ -1,0 +1,2403 @@
+
+
+Insidedemo {
+; Make sure that Repeat Gradient is enabled.
+final:
+  int test = abs(round(real(#pixel)*0.25*#magn*#width))
+    if test % 7 == 2 || test % 7 == 3
+      #index = 16.5 +  0.25 * real(#pixel)
+    else
+      #solid = true
+    endif
+default:
+  title= "Insidedemo"
+}
+Framing { ; red williams, June, 2000
+; Incorporates shaped clipping
+; Copyright 2000, Robert D. Williams
+;
+; This coloring method is intended to be used as a
+; "frame-making" routine.  A pixel's color index is
+; related to its distance from the nearest window
+; edge; therefore, all pixels a given distance from
+; any edge of the window are the same color.  This
+; feature permits the Gradient Editor to be used to
+; create rectangular bands of color which resemble
+; frames and/or decorative mats.
+; 
+; The area within the frame may be colored using any
+; of several gradient schemes under complete control
+; of the artist and the interior may be clipped to
+; create a transparent zone of any of several shapes.
+;
+; It is also possible to clip the outer perimeter to
+; create "floating" frames.
+;
+; The sizes of the frame, the inner clipped region and
+; the inner gradient-colored area are all independently
+; controllable.
+; 
+init:
+  float dist = 0.0
+  float dist1 = 0.0
+  float dist2 = 0.0
+  float ht = 0.0
+  float wd = 0.0
+  float a = 1.0
+  float b = 1.0
+  float insh = 0.0
+  float insh2 = 0.0
+  float linewt = 0.0
+  float tindex = 0.0
+final:
+    IF #width/#height > 4/3
+      ht = 3.0
+      wd = 3.0*#width/#height
+    ELSE
+      wd = 4.0
+      ht = 4.0*#height/#width
+    ENDIF
+
+  linewt = 0.005  ;thickness of outline as fraction of window width
+
+  dist1 = (#width/2)-(#width*#magn*abs(real(#pixel))/wd)
+  dist2 = (#height/2)-(#height*#magn*abs(imag(#pixel))/ht)
+
+    IF dist1 < dist2   ;is pixel nearer to top, bottom or one side?
+      dist = dist1 
+    ELSE
+      dist = dist2 
+    ENDIF
+  dist = dist/#width   ;convert dist in pixels to fraction
+  IF dist < 0
+    dist = 0
+  ENDIF
+  #index = dist 
+    IF dist < @thresh2 ;is pixel within outside clipped zone?
+      #solid = true
+    ENDIF
+    IF @intype != 0  ;shaped gradient
+        IF dist/(0.5-(@inbnd/2)) > 1
+            IF @intype == 1
+              tindex = abs(real(#pixel))*#magn/8
+            ELSEIF @intype == 2
+              tindex = abs(imag(#pixel))*#magn/8
+            ELSEIF @intype == 3
+              tindex = cabs(#pixel)*#magn/8
+            ELSEIF @intype == 4
+              tindex = abs(real(#pixel))^@pwr + abs(imag(#pixel)/@asprat)^@pwr
+              tindex = abs((tindex^(1/@pwr))*#magn/8)
+            ELSEIF @intype == 5
+              tindex = atan2(#pixel)/(4*#pi) ;normalize range
+            ELSE
+              tindex = abs(imag(#pixel)/cabs(#pixel))
+              tindex = asin(tindex)/#pi ;normalize range
+            ENDIF
+          #index = tindex + @offset
+        ENDIF
+    ENDIF
+    IF @clipsh == 1  ;rectangular inner clipping
+        IF (dist-linewt)/(0.5-(@thresh1/2)) > 1 
+          #solid = true
+        ENDIF
+        IF @outline
+            IF (dist)/(0.5-(@thresh1/2)) > 1
+              #index = 0.95  ;outline is always same index number
+            ENDIF
+        ENDIF
+    ENDIF
+    IF @clipsh == 2  ;general shape inner clipping
+      a = 0.5*@thresh1*wd/#magn
+      b = a*@asprat
+      insh=(abs(real(#pixel))/a)^@pwr + (abs(imag(#pixel))/b)^@pwr
+        IF insh < 1.0
+          #solid = true
+        ENDIF
+        IF @outline
+          insh2=(abs(real(#pixel))/(1.007*a))^(@pwr)+(abs(imag(#pixel))/((0.007*a)+b))^(@pwr)
+            IF insh >= 1.0 && insh < 1.04 || insh2 >= 0.995 && insh2 <1.025
+              #index = 0.95
+            ENDIF
+        ENDIF
+    ENDIF
+    
+default:
+  title = "Framing"
+  param intype
+    caption = "Inner Gradient"
+    enum = "None" "Linear-V" "Linear-H" "Radial" "Shaped" \
+           "Angular 1" "Angular 2"
+    default = 0
+    hint = "This defines the shape of the gradient inside the frame."
+  endparam
+  param inbnd
+    caption = "Inner Grad Boundary"
+    default = 0.0
+    hint = "Width of inner gradient area as fraction of screen width"
+  endparam
+  param offset
+    caption = "Gradient Offset"
+    default = 0.5
+    hint = "Gradient Offset for Inner Gradient"
+  endparam
+  param thresh1
+    caption = "Inner Clip Width"
+    default = 0.0
+    hint = "Width of opening as fraction of screen width"
+  endparam
+  param thresh2
+    caption = "Outer Clip Width"
+    default = 0.0
+    hint = "Width of Solid Color Border as fraction of screen width"
+  endparam
+  param clipsh
+    caption = "Clipping Shape"
+    enum = "None" "Rectangular" "General"
+    default = 0
+  endparam
+  param pwr
+    caption = "Exponent"
+    default = 2.0
+    hint = "Exponent for General Shape; 0.667 is astroid \
+            1.0 a diamond and 2.0 a circle, etc."
+  endparam
+  param asprat
+    caption = "Aspect Ratio"
+    default = 1.0
+    hint = "Aspect Ratio of General Shape; changes circle \
+            to ellipse; elongates astroid, etc."
+  endparam
+  param outline
+    caption = "Outline?"
+    default = false
+    hint = "Outlines central clipped region"
+  endparam
+}
+
+shapedgradient { ; red williams, Jun 10, 2000
+;  
+; ver. 2, June 12, 2000 - added provision for creating 
+; transparent inner and outer areas - useful for making
+; mats/frames.  Removed an awkward kludge in the General
+; Shape logic and replaced it with something a little
+; more elegant.
+;
+; Copyright 2000, Robert D. Williams
+;
+; This coloring method provides a selection of four
+; types of shaped gradient coloring in which the screen
+; color varies smoothly based solely on screen geometry
+; and the Gradient Editor.  The color index increases
+; with distance from the center of and the equal-index
+; contours follow the specified shape; e.g., if the 
+; square shape is selected, a distinctive color band on
+; the Gradient Editor will produce a square on the
+; screen.  The size of the square and the thickness of
+; the line with which it is drawn is controlled by the
+; Gradient Editor and the associated parameters.
+;
+; The gradient is scaled to the window, regardless of
+; fractal magnification.  For example, if the color
+; changes from red to green from one side of the window
+; to the other, it will do so even if you change the
+; magnification.  Use Color Density and the Gradient
+; Slope parameter in conjunction with the Gradient
+; Editor to control the on-screen appearance.
+;
+; The method works very well using the Standard
+; Mandelbrot at Center = (0,0) and Magnification = 10.
+; The shapes may be offset by changing the Center
+; coordinates on the Location Tab or by specifying
+; a Gradient center other than (0,0).
+;
+; Control orientation with the Rotation Angle value. 
+;
+final:
+  float tindex = 0.0
+  float dist = 0.0
+  float dist1 = 0.0
+  float dist2 = 0.0
+  float adj = 1.0
+  float scale = 4.0
+    IF #width/#height > 4/3
+      float scale = 3*#width/#height
+    ENDIF
+  complex tpixel = #pixel - @gradcent
+  tpixel = real(tpixel) + flip(imag(tpixel)/@asprat)
+    IF @type == 0
+      dist = cabs(tpixel)*#magn/scale
+    ELSEIF @type == 1
+        IF imag(tpixel) >= 0
+          adj = imag(tpixel)/1.46
+        ELSE
+          adj = imag(tpixel)/1.17
+        ENDIF
+      tpixel = real(tpixel) + flip(adj)
+      dist = cabs(tpixel)*#magn/scale
+    ELSEIF @type == 2
+      dist1 = abs(real(tpixel))*#magn/scale
+      dist2 = abs(imag(tpixel))*#magn/scale
+        IF dist1 > dist2
+          dist = dist1
+        ELSE
+          dist = dist2
+        ENDIF
+    ELSEIF @type == 3
+      dist = abs(real(tpixel))^@pwr + abs(imag(tpixel))^@pwr
+      dist = abs((dist^(1/@pwr))*#magn/scale)
+    ENDIF 
+    IF @prefunc == 1
+      tindex = sqr(dist)
+    ELSEIF @prefunc == 2
+      tindex = sqrt(abs(dist))
+    ELSEIF @prefunc == 3
+      tindex = abs(sin(dist))
+    ELSEIF @prefunc == 4
+      tindex = abs(cos(dist))
+    ELSE
+      tindex = abs(dist)
+    ENDIF
+    IF tindex < @thresh1/2 || tindex > @thresh2/2
+      #solid = true
+    ENDIF
+  #index = @scale*tindex
+  
+default:
+  title = "Shaped Gradient"
+  param type
+    caption = "Gradient Shape"
+    enum = "Circle" "Egg" "Square" "General"
+    default = 0
+    hint = "This defines the shape of the gradient."
+  endparam
+  param pwr
+    caption = "Exponent"
+    default = 0.667
+    hint = "Exponent in equation used for General Shape. \
+            0.667 for astroid, 1.0 for diamond, 2.0 for \
+            circle,etc."
+  endparam
+  param asprat
+    caption = "Aspect Ratio"
+    default = 1.0
+    hint = "Changes Circle to Ellipse or Square to \
+            Rectangle, etc."
+  endparam
+  param scale
+    caption = "Gradient Slope"
+    hint = "This determines the rapidity of color change"
+    default = 1.0
+  endparam
+  param prefunc
+    caption = "Gradient Modifier"
+    enum = "None" "Square" "Square Root" "Sin" "Cos"
+    default = 0
+    hint = "Controls the shape of gradient ramp"
+  endparam
+  param gradcent
+    caption = "Gradient Center"
+    default = (0,0)
+    hint = "Center of radial gradient"
+  endparam
+  param thresh1
+    caption = "Inner Clip"
+    default = 0.0
+    hint = "Colors central region the solid color.  Useful for \
+            making frames/mats.  1.0 is entire width of screen."
+  endparam
+  param thresh2
+    caption = "Outer Clip"
+    default = 3.0
+    hint = "Colors outer region the solid color.  Useful when \
+            gradient repeats.  1.0 is entire width of screen."
+  endparam
+}
+
+
+
+
+
+
+
+rdw_Gradient { ; red williams, May 2000
+;
+; This coloring method provides a selection of four
+; types of gradient coloring in which the screen color
+; varies smoothly based solely on screen geometry and
+; the Gradient Editor.
+;
+; In the Linear Mode, the color index of zero is on the
+; Imaginary axis and the value increases with distance
+; in both directions.  The window is 1.0 color index units
+; in width.
+;
+; In the Radial Mode, the color index of zero is at the
+; origin and increases with distance outward in all 
+; directions.  The window is 1.0 color index units in
+; width.
+;
+; In Angular 1, the zero index lies on the right-hand 
+; half of the real axis.  The color index increases as
+; you move CCW in such a way that a value of 1.0 is
+; reached as you complete the full circle; therefore,
+; the color gradient is seamless.  
+;
+; Angular 2 is a little more complicated; the color index
+; of zero remains on the real axis, but now it points in
+; both directions.  The index increases as you move away
+; from the axis in any of four directions.  The effect is
+; somewhat like two Japanese fans pointing in opposite
+; directions and opening simultaneously until their upper
+; and lower edges finally meet on a vertical line.  The
+; circumference of the circle is 4.0 color index units.
+; (Each of the four quarters ; will contain the entire
+; gradient.)
+;
+; The gradient is scaled to the window, regardless of
+; fractal magnification.  For example, if the color
+; changes from red to green from one side of the window
+; to the other, it will do so even if you change the
+; magnification.  Use Color Density and the Gradient
+; Slope parameter in conjunction with the Gradient
+; Editor to control the on-screen appearance.
+;
+; Control orientation with the Rotation Angle value. 
+;
+
+final:
+  float tindex = 0.0
+  float dist = 0.0
+  complex tpixel = #pixel - @gradcent
+    IF @type == 0
+      dist = abs(real(tpixel))*#magn/4
+    ELSEIF @type == 1
+      dist = cabs(tpixel)*#magn/4
+    ELSEIF @type == 2
+      dist = atan2(tpixel)/(2*#pi) ;normalize range
+    ELSE
+      dist = abs(imag(tpixel)/cabs(tpixel))
+      dist = 2*asin(dist)/#pi ;normalize range
+    ENDIF 
+    IF @hard == true
+        IF dist <= @ltsize
+          dist = 0.0
+        ENDIF
+    ELSE
+      dist = dist - @ltsize
+    ENDIF
+    IF @prefunc == 1
+      tindex = sqr(dist)
+    ELSEIF @prefunc == 2
+      tindex = sqrt(abs(dist))
+    ELSEIF @prefunc == 3
+      tindex = abs(sin(dist))
+    ELSEIF @prefunc == 4
+      tindex = abs(cos(dist))
+    ELSE
+      tindex = dist
+    ENDIF
+  #index = 1 + (@scale * tindex)
+default:
+  title = "rdw_Gradient"
+  param type
+    caption = "Gradient type"
+    enum = "Linear" "Radial" "Angular 1" "Angular 2"
+    hint = "This defines the shape of the gradient."
+  endparam
+  param scale
+    caption = "Gradient Slope"
+    hint = "This determines the rapidity of color change"
+    default = 1.0
+  endparam
+  param prefunc
+    caption = "Gradient Modifier"
+    enum = "None" "Square" "Square Root" "Sin" "Cos"
+    default = 0
+    hint = "Controls the shape of gradient ramp"
+  endparam
+  param gradcent
+    caption = "Gradient Center"
+    default = (0,0)
+    hint = "Center of radial gradient"
+  endparam
+  param ltsize
+    caption = "Size of Highlight"
+    default = 0.0
+  endparam
+  param hard
+    caption = "Hardlight"
+    default = false
+    hint = "Harder edge to central highlight when enabled"
+  endparam
+
+}
+
+ITrapPatterns{ ;red williams, 2000
+;
+; Revised March 19, 2000 to accommodate Width/Height > 4:3
+; 
+; This coloring method allows the user to define an
+; iteration trap in which the upper and lower limits are
+; expressed as decimal fractions of the Maximum Iterations
+; value.  
+;
+; By choosing appropriate values for these limits, the 
+; artist can divide the image into three zones, one containing
+; all points whose orbits reached bailout before the iteration
+; count reached the lower limit, one containing those which
+; escaped within the specified range and so on.
+;
+; Points within each zone may be colored normally, assigned
+; the solid color or assigned a specific color index value,
+; as desired. Further information on these concepts may be
+; found in the Help file.
+
+init:
+; initialization for patterns section -- the offset of 4 pixels
+; prevents solid lines at edges of image window 
+; the #width/2 and #height/2 prevent discontinuities at the x
+; an y axes caused by the use of modulus arithmetic
+
+  complex tpixel = #pixel - #center
+  complex tpixel2 = cabs(tpixel)*exp(flip(-#angle+atan2(tpixel)))
+    IF #width/#height>1.3333
+      float tmp = 3*#width/#height
+    ELSE
+      float tmp = 4
+    ENDIF
+  int a = round((#magn*#width/tmp)*real(tpixel2)+(#width))+4
+  int b = round((#magn*#width/tmp)*imag(tpixel2)+(#height))+4
+  int itp1x = round(real(@itp1xy))
+  int itp1y = round(imag(@itp1xy))
+  int itp2x = round(real(@itp2xy))
+  int itp2y = round(imag(@itp2xy))
+  int itp3x = round(real(@itp3xy))
+  int itp3y = round(imag(@itp3xy))
+  int btp1x = round(real(@btp1xy))
+  int btp1y = round(imag(@btp1xy))
+  int btp2x = round(real(@btp2xy))
+  int btp2y = round(imag(@btp2xy))
+  int btp3x = round(real(@btp3xy))
+  int btp3y = round(imag(@btp3xy))
+  int atp1x = round(real(@atp1xy))
+  int atp1y = round(imag(@atp1xy))
+  int atp2x = round(real(@atp2xy))
+  int atp2y = round(imag(@atp2xy))
+  int atp3x = round(real(@atp3xy))
+  int atp3y = round(imag(@atp3xy))
+
+; general initialization
+  float tindex=0.0
+  bool itp1f=false
+  bool itp2f=false
+  bool itp3f=false
+  bool btp1f=false
+  bool btp2f=false
+  bool btp3f=false
+  bool atp1f=false
+  bool atp2f=false
+  bool atp3f=false
+  bool pinf=false
+  bool zonef=false
+  int colorf=0
+
+; Iteration Trap init section
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+    IF lowtrap>hightrap
+      res=lowtrap
+      lowtrap=hightrap
+      hightrap=res
+    ENDIF
+
+; Exponential Smoothing init section
+  float iterexp = 0
+  float scale = @colors*#pi/128
+  complex zold = (0,0)
+
+; Distance To Point init section
+  float x=0.0
+  float y=0.0
+  float d1=0.0
+  float d2=0.0
+  float temp=0.0
+  float temp2=0.0
+  float twooverpi=2.0/#pi
+  float pio2=0.5*#pi
+  tempc=(0,0)
+  float d1first=0.0
+  float d1last=0.0
+  float d1min=1e20
+  float d1max=0.0
+  float d1sum=0.0
+  float d1product=1.0
+  float d2first=0.0
+  float d2last=0.0
+  float d2min=1e20
+  float d2max=0.0
+  float d2sum=0.0
+  float d2product=1.0
+  int iter1=0
+  int iter2=0
+
+; reference point for elliptical geometry:
+; x becomes theta, y becomes phi
+  float x0e1=real(@point1)/@r1*#pi
+  temp=imag(@point1)/@r1*pio2
+  float cosy0e1=cos(temp)
+  float siny0e1=sin(temp)
+  float x0e2=real(@point2)/@r2*#pi
+  temp=imag(@point2)/@r2*pio2
+  float cosy0e2=cos(temp)
+  float siny0e2=sin(temp)
+
+; reference point for hyperbolic geometry
+  float x0h1=real(@point1)/@r1
+  float y0h1=imag(@point1)/@r1
+  float r0h1=sqrt(1-sqr(x0h1)-sqr(y0h1))
+  float x0h2=real(@point2)/@r2
+  float y0h2=imag(@point2)/@r2
+  float r0h2=sqrt(1-sqr(x0h2)-sqr(y0h2))
+
+; Triangle Inequality and Lyapunov
+  float tsum = 0.0 
+  float tsum2 = 0.0
+  float ttsum = 0.0
+  float ac = cabs(#pixel)
+  float il = 1/log(2) 
+  float tlp = log(log(@tbailout)/2.0) 
+  float llp1 = log(log(@lbailout1)/2.0)
+  float llp2 = log(log(@lbailout2)/2.0)
+  float az2 = 0.0
+  float lowbound = 0.0
+  float tmp = 0.0
+  bool first = true
+  float oldlsum1 = 0
+  float oldlsum2 = 0
+  float lsum1 = 1
+  float lsum2 = 1
+  float v1 = 0
+  float v2 = 0
+
+loop:
+
+; Exponential Smoothing loop section
+    IF (@converge > 0)
+      iterexp = iterexp + exp(-cabs(#z))
+
+    ELSE
+      iterexp = iterexp + exp(-1/(cabs(zold - #z)))
+    ENDIF
+  zold = #z
+;Distance to Point loop section
+  iter1=iter1+1
+    IF @metric1==1             ; elliptic geometry
+      x=real(#z)/@r1*#pi
+      y=imag(#z)/@r1*pio2
+      temp=cos(y)*cosy0e1*cos(x-x0e1)+sin(y)*siny0e1
+      temp2=sqrt(1.0-temp*temp)
+      IF temp>0.0
+        d1=atan(temp2/temp)
+      ELSEIF temp<0.0
+        d1=atan(temp2/temp)+#pi
+      ELSE
+        d1=pio2
+      ENDIF
+      d1=@r1*d1
+    ELSEIF @metric1==2         ; hyperbolic geometry
+      x=real(#z)/@r1
+      y=imag(#z)/@r1
+      temp=(1.0-x*x0h1-y*y0h1)
+      temp=temp/(r0h1*sqrt(1-sqr(x)-sqr(y)))
+      d1=@r1*acosh(temp)
+    ELSEIF @metric1==3         ; minimum
+      x=abs(real(#z-@point1))
+      y=abs(imag(#z-@point1))
+        IF x<y
+          d1=x
+        ELSE
+          d1=y
+        ENDIF
+    ELSEIF @metric1==4         ; maximum
+      x=abs(real(#z-@point1))
+      y=abs(imag(#z-@point1))
+        IF x>y 
+          d1=x
+        ELSE
+          d1=y
+        ENDIF
+    ELSEIF @metric1==5         ; sum
+      x=abs(real(#z-@point1))
+      y=abs(imag(#z-@point1))
+      d1=x+y
+    ELSEIF @metric1==6         ; product
+      x=abs(real(#z-@point1))
+      y=abs(imag(#z-@point1))
+      d1=sqrt(x*y)
+    ELSE                       ; euclidean
+      x=abs(real(#z-@point1))
+      y=abs(imag(#z-@point1))
+      d1=(x^@power1+y^@power1)^(1/@power1)
+    ENDIF
+    IF iter1==1
+      d1first=d1
+    ENDIF
+    IF d1<d1min
+      d1min=d1
+    ENDIF
+    IF d1>d1max 
+      d1max=d1
+    ENDIF
+  d1sum=d1sum+d1
+  d1product=d1product*d1
+  iter2=iter2+1
+    IF @metric2==1             ; elliptic geometry
+      x=real(#z)/@r2*#pi
+      y=imag(#z)/@r2*pio2
+      temp=cos(y)*cosy0e2*cos(x-x0e2)+sin(y)*siny0e2
+      temp2=sqrt(1.0-temp*temp)
+      IF temp>0.0
+        d2=atan(temp2/temp)
+      ELSEIF temp<0.0
+        d2=atan(temp2/temp)+#pi
+      ELSE
+        d2=pio2
+      ENDIF
+      d2=@r2*d2
+    ELSEIF @metric2==2         ; hyperbolic geometry
+      x=real(#z)/@r2
+      y=imag(#z)/@r2
+      temp=(1.0-x*x0h2-y*y0h2)
+      temp=temp/(r0h2*sqrt(1-sqr(x)-sqr(y)))
+      d2=@r2*acosh(temp)
+    ELSEIF @metric2==3         ; minimum
+      x=abs(real(#z-@point2))
+      y=abs(imag(#z-@point2))
+        IF x<y
+          d2=x
+        ELSE
+          d2=y
+        ENDIF
+    ELSEIF @metric2==4         ; maximum
+      x=abs(real(#z-@point2))
+      y=abs(imag(#z-@point2))
+        IF x>y 
+          d2=x
+        ELSE
+          d2=y
+        ENDIF
+    ELSEIF @metric2==5         ; sum
+      x=abs(real(#z-@point2))
+      y=abs(imag(#z-@point2))
+      d2=x+y
+    ELSEIF @metric2==6         ; product
+      x=abs(real(#z-@point2))
+      y=abs(imag(#z-@point2))
+      d2=sqrt(x*y)
+    ELSE                       ; euclidean
+      x=abs(real(#z-@point2))
+      y=abs(imag(#z-@point2))
+      d2=(x^@power2+y^@power2)^(1/@power2)
+    ENDIF
+    IF iter2==1
+      d2first=d2
+    ENDIF
+    IF d2<d2min
+      d2min=d2
+    ENDIF
+    IF d2>d2max 
+      d2max=d2
+    ENDIF
+  d2sum=d2sum+d2
+  d2product=d2product*d2
+
+; Triangle Inequality loop section
+  tsum2 = tsum
+    IF (!first)
+      az2 = cabs(#z - #pixel)
+      lowbound = abs(az2 - ac)
+      tsum = tsum + ((cabs(#z) - lowbound) / (az2+ac - lowbound))
+    ELSE
+      first = false
+    ENDIF
+
+; Lyapunov Loop section
+    IF (@trackvar1 == 0)
+      v1 = cabs(#z)
+    ELSEIF (@trackvar1 == 1)
+      v1 = real(#z)
+    ELSEIF (@trackvar1 == 2)
+      v1 = imag(#z)
+    ELSEIF (@trackvar1 == 3)
+      v1 = real(#z)/imag(#z)
+    ELSEIF (@trackvar1 == 4)
+      v1 = atan2(#z)
+    ENDIF
+    IF (@trackvar2 == 0)
+      v2 = cabs(#z)
+    ELSEIF (@trackvar2 == 1)
+      v2 = real(#z)
+    ELSEIF (@trackvar2 == 2)
+      v2 = imag(#z)
+    ELSEIF (@trackvar2 == 3)
+      v2 = real(#z)/imag(#z)
+    ELSEIF (@trackvar2 == 4)
+      v2 = atan2(#z)
+    ENDIF
+  oldlsum1 = lsum1
+  oldlsum2 = lsum2
+  lsum1 = lsum1 * (abs(2*v1))
+
+  lsum2 = lsum2 * (abs(2*v2))
+
+final:
+    IF (#numiter>=lowtrap)&&(#numiter<=hightrap) ; Is it in trap?
+; Heirarchy of Color Assignment:  Pattern 3, Pattern 2, Pattern 1, In-Trap Color
+; Test if pixel is in one of the patterns
+      IF @itp1 == 0 
+        IF (((a+itp1y) + (b % itp1y)) % itp1x < @itp1lwt) 
+          itp1f =  true
+        ENDIF
+      ELSEIF @itp1 == 1 
+        IF ((a+itp1y) - (b % itp1y)) % itp1x < @itp1lwt 
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 2 
+        IF  ((a+itp1x) % itp1x) < @itp1lwt
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 3 ; Horizontal Lines
+        IF  ((b+itp1y) % itp1y) < @itp1lwt
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 4 ; Diamond Mesh
+        IF ((a + itp1y - (b % itp1y)) % itp1x < @itp1lwt) || \
+           ((a + itp1y + (b % itp1y)) % itp1x < @itp1lwt)
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 5 ; Rectangular Mesh
+        IF a % itp1x < @itp1lwt || b % itp1y < @itp1lwt
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          itp1f = true
+        ENDIF
+      ELSEIF @itp1 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            itp1f = true
+          ENDIF
+      ELSEIF @itp1 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          itp1f = true
+        ENDIF
+        IF ((a + itp1y - (b % itp1y)) % itp1x < @itp1lwt) || \
+           ((a + itp1y + (b % itp1y)) % itp1x < @itp1lwt)
+          itp1f = true
+        ENDIF
+      ENDIF
+      IF @itp2 == 0 
+        IF (((a+itp2y) + (b % itp2y)) % itp2x < @itp2lwt) 
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 1 
+        IF ((a+itp2y) - (b % itp2y)) % itp2x < @itp2lwt 
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 2 
+        IF  ((a+itp2x) % itp2x) < @itp2lwt
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 3 ; Horizontal Lines
+        IF  ((b+itp2y) % itp2y) < @itp2lwt
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 4 ; Diamond Mesh
+        IF ((a + itp2y - (b % itp2y)) % itp2x < @itp2lwt) || \
+           ((a + itp2y + (b % itp2y)) % itp2x < @itp2lwt)
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 5 ; Rectangular Mesh
+        IF a % itp2x < @itp2lwt || b % itp2y < @itp2lwt
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          itp2f = true
+        ENDIF
+      ELSEIF @itp2 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            itp2f = true
+          ENDIF
+      ELSEIF @itp2 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          itp2f = true
+        ENDIF
+        IF ((a + itp2y - (b % itp2y)) % itp2x < @itp2lwt) || \
+           ((a + itp2y + (b % itp2y)) % itp2x < @itp2lwt)
+          itp2f = true
+        ENDIF
+      ENDIF
+      IF @itp3 == 0 
+        IF (((a+itp3y) + (b % itp3y)) % itp3x < @itp3lwt) 
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 1 
+        IF ((a+itp3y) - (b % itp3y)) % itp3x < @itp3lwt 
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 2 
+        IF  ((a+itp3x) % itp3x) < @itp3lwt
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 3 ; Horizontal Lines
+        IF  ((b+itp3y) % itp3y) < @itp3lwt
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 4 ; Diamond Mesh
+        IF ((a + itp3y - (b % itp3y)) % itp3x < @itp3lwt) || \
+           ((a + itp3y + (b % itp3y)) % itp3x < @itp3lwt)
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 5 ; Rectangular Mesh
+        IF a % itp3x < @itp3lwt || b % itp3y < @itp3lwt
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          itp3f = true
+        ENDIF
+      ELSEIF @itp3 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            itp3f = true
+          ENDIF
+      ELSEIF @itp3 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          itp3f = true
+        ENDIF
+        IF ((a + itp3y - (b % itp3y)) % itp3x < @itp3lwt) || \
+           ((a + itp3y + (b % itp3y)) % itp3x < @itp3lwt)
+          itp3f = true
+        ENDIF
+      ENDIF
+      IF itp3f == true
+        colorf = @itp3col
+      ELSEIF itp2f == true
+        colorf = @itp2col
+      ELSEIF itp1f == true
+        colorf = @itp1col
+      ELSE
+        colorf = @trapcolor ;If pixel isn't in pattern, it takes trap color
+        zonef=true
+      ENDIF
+    ENDIF
+    IF #numiter < lowtrap ; Is pixel below the trap?
+; Heirarchy of Color Assignment:  Pattern 3, Pattern 2, Pattern 1, Below-Trap Color
+; Test if pixel is in one of the patterns
+      IF @btp1 == 0 
+        IF (((a+btp1y) + (b % btp1y)) % btp1x < @btp1lwt) 
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 1 
+        IF ((a+btp1y) - (b % btp1y)) % btp1x < @btp1lwt 
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 2 
+        IF  ((a+btp1x) % btp1x) < @btp1lwt
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 3 ; Horizontal Lines
+        IF  ((b+btp1y) % btp1y) < @btp1lwt
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 4 ; Diamond Mesh
+        IF ((a + btp1y - (b % btp1y)) % btp1x < @btp1lwt) || \
+           ((a + btp1y + (b % btp1y)) % btp1x < @btp1lwt)
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 5 ; Rectangular Mesh
+        IF a % btp1x < @btp1lwt || b % btp1y < @btp1lwt
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          btp1f = true
+        ENDIF
+      ELSEIF @btp1 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            btp1f = true
+          ENDIF
+      ELSEIF @btp1 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          btp1f = true
+        ENDIF
+        IF ((a + btp1y - (b % btp1y)) % btp1x < @btp1lwt) || \
+           ((a + btp1y + (b % btp1y)) % btp1x < @btp1lwt)
+          btp1f = true
+        ENDIF
+      ENDIF
+      IF @btp2 == 0 
+        IF (((a+btp2y) + (b % btp2y)) % btp2x < @btp2lwt) 
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 1 
+        IF ((a+btp2y) - (b % btp2y)) % btp2x < @btp2lwt 
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 2 
+        IF  ((a+btp2x) % btp2x) < @btp2lwt
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 3 ; Horizontal Lines
+        IF  ((b+btp2y) % btp2y) < @btp2lwt
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 4 ; Diamond Mesh
+        IF ((a + btp2y - (b % btp2y)) % btp2x < @btp2lwt) || \
+           ((a + btp2y + (b % btp2y)) % btp2x < @btp2lwt)
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 5 ; Rectangular Mesh
+        IF a % btp2x < @btp2lwt || b % btp2y < @btp2lwt
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          btp2f = true
+        ENDIF
+      ELSEIF @btp2 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            btp2f = true
+          ENDIF
+      ELSEIF @btp2 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          btp2f = true
+        ENDIF
+        IF ((a + btp2y - (b % btp2y)) % btp2x < @btp2lwt) || \
+           ((a + btp2y + (b % btp2y)) % btp2x < @btp2lwt)
+          btp2f = true
+        ENDIF
+      ENDIF
+      IF @btp3 == 0 
+        IF (((a+btp3y) + (b % btp3y)) % btp3x < @btp3lwt) 
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 1 
+        IF ((a+btp3y) - (b % btp3y)) % btp3x < @btp3lwt 
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 2 
+        IF  ((a+btp3x) % btp3x) < @btp3lwt
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 3 ; Horizontal Lines
+        IF  ((b+btp3y) % btp3y) < @btp3lwt
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 4 ; Diamond Mesh
+        IF ((a + btp3y - (b % btp3y)) % btp3x < @btp3lwt) || \
+           ((a + btp3y + (b % btp3y)) % btp3x < @btp3lwt)
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 5 ; Rectangular Mesh
+        IF a % btp3x < @btp3lwt || b % btp3y < @btp3lwt
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          btp3f = true
+        ENDIF
+      ELSEIF @btp3 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            btp3f = true
+          ENDIF
+      ELSEIF @btp3 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          btp3f = true
+        ENDIF
+        IF ((a + btp3y - (b % btp3y)) % btp3x < @btp3lwt) || \
+           ((a + btp3y + (b % btp3y)) % btp3x < @btp3lwt)
+          btp3f = true
+        ENDIF
+      ENDIF
+      IF btp3f == true
+        colorf = @btp3col
+      ELSEIF btp2f == true
+        colorf = @btp2col
+      ELSEIF btp1f == true
+        colorf = @btp1col
+      ELSE
+        colorf = @btrapcolor ;If pixel isn't in pattern, it takes below-trap color
+        zonef=true
+      ENDIF
+    ENDIF
+    IF #numiter > hightrap ; Is pixel above the trap?
+; Heirarchy of Color Assignment:  Pattern 3, Pattern 2, Pattern 1, Above-Trap Color
+; Test if pixel is in one of the patterns
+      IF @atp1 == 0 
+        IF (((a+atp1y) + (b % atp1y)) % atp1x < @atp1lwt) 
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 1 
+        IF ((a+atp1y) - (b % atp1y)) % atp1x < @atp1lwt 
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 2 
+        IF  ((a+atp1x) % atp1x) < @atp1lwt
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 3 ; Horizontal Lines
+        IF  ((b+atp1y) % atp1y) < @atp1lwt
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 4 ; Diamond Mesh
+        IF ((a + atp1y - (b % atp1y)) % atp1x < @atp1lwt) || \
+           ((a + atp1y + (b % atp1y)) % atp1x < @atp1lwt)
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 5 ; Rectangular Mesh
+        IF a % atp1x < @atp1lwt || b % atp1y < @atp1lwt
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          atp1f = true
+        ENDIF
+      ELSEIF @atp1 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            atp1f = true
+          ENDIF
+      ELSEIF @atp1 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          atp1f = true
+        ENDIF
+        IF ((a + atp1y - (b % atp1y)) % atp1x < @atp1lwt) || \
+           ((a + atp1y + (b % atp1y)) % atp1x < @atp1lwt)
+          atp1f = true
+        ENDIF
+      ENDIF
+      IF @atp2 == 0 
+        IF (((a+atp2y) + (b % atp2y)) % atp1x < @atp2lwt) 
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 1 
+        IF ((a+atp2y) - (b % atp2y)) % atp2x < @atp2lwt 
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 2 
+        IF  ((a+atp2x) % atp2x) < @atp2lwt
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 3 ; Horizontal Lines
+        IF  ((b+atp2y) % atp2y) < @atp2lwt
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 4 ; Diamond Mesh
+        IF ((a + atp2y - (b % atp2y)) % atp2x < @atp2lwt) || \
+           ((a + atp2y + (b % atp2y)) % atp2x < @atp2lwt)
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 5 ; Rectangular Mesh
+        IF a % atp2x < @atp2lwt || b % atp2y < @atp2lwt
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          atp2f = true
+        ENDIF
+      ELSEIF @atp2 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            atp2f = true
+          ENDIF
+      ELSEIF @atp2 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          atp2f = true
+        ENDIF
+        IF ((a + atp2y - (b % atp2y)) % atp2x < @atp2lwt) || \
+           ((a + atp2y + (b % atp2y)) % atp2x < @atp2lwt)
+          atp2f = true
+        ENDIF
+      ENDIF
+      IF @atp3 == 0 
+        IF (((a+atp3y) + (b % atp3y)) % atp3x < @atp3lwt) 
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 1 
+        IF ((a+atp3y) - (b % atp3y)) % atp3x < @atp3lwt 
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 2 
+        IF  ((a+atp3x) % atp3x) < @atp3lwt
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 3 ; Horizontal Lines
+        IF  ((b+atp3y) % atp3y) < @atp3lwt
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 4 ; Diamond Mesh
+        IF ((a + atp3y - (b % atp3y)) % atp3x < @atp3lwt) || \
+           ((a + atp3y + (b % atp3y)) % atp3x < @atp3lwt)
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 5 ; Rectangular Mesh
+        IF a % atp3x < @atp3lwt || b % atp3y < @atp3lwt
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 6 ; Tropical Weave
+        IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+            (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 7 ; XXXFine
+        IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+           (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+           (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+          atp3f = true
+        ENDIF
+      ELSEIF @atp3 == 8 ; XXXBold
+        aa = a % 8 
+        bb = b % 8
+          IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+             (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+             ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+            atp3f = true
+          ENDIF
+      ELSEIF @atp3 == 9 ; Combination
+        IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+           (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+           (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+          atp3f = true
+        ENDIF
+        IF ((a + atp3y - (b % atp3y)) % atp3x < @atp3lwt) || \
+           ((a + atp3y + (b % atp3y)) % atp3x < @atp3lwt)
+          atp3f = true
+        ENDIF
+      ENDIF
+      IF atp3f == true
+        colorf = @atp3col
+      ELSEIF atp2f == true
+        colorf = @atp2col
+      ELSEIF atp1f == true
+        colorf = @atp1col
+      ELSE
+        colorf = @atrapcolor
+        zonef=true ;flag to differentiate from pattern coloring for index coloring
+      ENDIF
+    ENDIF
+
+; Now, assign the coloring
+
+      IF colorf == 7
+        #solid = true
+      ELSEIF colorf == 0
+        tindex = 0.01*#numiter ; Default
+      ELSEIF colorf == 1 ;Exponential Smoothing
+        float smooth = iterexp*scale
+        ez = cos(smooth)+flip(sin(smooth))
+        float angle = atan2(ez)
+          IF (angle < 0)
+            angle = angle + #pi * 2
+          ENDIF
+        tindex = angle * @palrange / (#pi * 512)
+      ELSEIF colorf == 2 ;Distance to Point (1)
+        d1last=d1
+          IF @colorby1==0            ; first
+            tindex=d1first
+          ELSEIF @colorby1==1        ; last
+            tindex=d1last
+          ELSEIF @colorby1==2        ; first/last angle
+            tempc=d1first+flip(d1last)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ELSEIF @colorby1==3        ; minimum
+            tindex=d1min
+          ELSEIF @colorby1==4        ; maximum
+            tindex=d1max
+          ELSEIF @colorby1==5        ; min/max angle
+            tempc=d1min+flip(d1max)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ELSEIF @colorby1==6        ; arithmetic mean
+            tindex=d1sum/iter1
+          ELSEIF @colorby1==7        ; geometric mean
+            temp=log(d1product)/iter1
+            tindex=exp(temp)
+          ELSEIF @colorby1==8        ; amean/gmean angle
+            temp=d1sum/iter1
+            temp2=log(d1product)/iter1
+            temp2=exp(temp2)
+            tempc=temp+flip(temp2)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ENDIF
+      ELSEIF colorf == 3 ;Distance to Point (2)
+        d2last=d2
+          IF @colorby2==0            ; first
+            tindex=d2first
+          ELSEIF @colorby2==1        ; last
+            tindex=d2last
+          ELSEIF @colorby2==2        ; first/last angle
+            tempc=d2first+flip(d2last)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ELSEIF @colorby2==3        ; minimum
+            tindex=d2min
+          ELSEIF @colorby2==4        ; maximum
+            tindex=d2max
+          ELSEIF @colorby2==5        ; min/max angle
+            tempc=d2min+flip(d2max)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ELSEIF @colorby2==6        ; arithmetic mean
+            tindex=d2sum/iter2
+          ELSEIF @colorby2==7        ; geometric mean
+            temp=log(d2product)/iter2
+            tindex=exp(temp)
+          ELSEIF @colorby2==8        ; amean/gmean angle
+            temp=d2sum/iter2
+            temp2=log(d2product)/iter2
+            temp2=exp(temp2)
+            tempc=temp+flip(temp2)
+            temp=atan2(tempc)
+            tindex=temp*twooverpi
+          ENDIF
+        tindex=tindex+0.5 ;offset index to force different coloration from DtP(1)
+      ELSEIF colorf == 4 ;Triangle Inequality
+        ttsum = tsum / (#numiter) 
+        tsum2 = tsum2 / (#numiter-1)
+        tmp = il*tlp - il*log(log(cabs(#z)))
+        tindex = tsum2 + (ttsum-tsum2) * (tmp+1)
+      ELSEIF colorf == 5 ;Lyapunov (1)
+        oldlsum1 = log(oldlsum1)
+        lsum1 = log(lsum1)
+        lsum1 = abs(lsum1/#numiter)
+        oldlsum1 = abs(oldlsum1/(#numiter-1))
+          IF (@lsmooth1)
+            tmp = il*llp1 - il*log(log(cabs(#z)))
+            tindex = oldlsum1 + (lsum1-oldlsum1) * (tmp+1)
+          ELSE
+            tindex = lsum1
+          ENDIF
+      ELSEIF colorf == 6 ;Lyapunov (2)
+        oldlsum2 = log(oldlsum2)
+        lsum2 = log(lsum2)
+        lsum2 = abs(lsum2/#numiter)
+        oldlsum2 = abs(oldlsum2/(#numiter-1))
+          IF (@lsmooth2)
+            tmp = il*llp2 - il*log(log(cabs(#z)))
+            tindex = oldlsum2 + (lsum2-oldlsum2) * (tmp+1)
+          ELSE
+            tindex = lsum2
+          ENDIF
+        tindex=tindex+0.5 ;offset index to force different coloration from Lya(1)    
+      ELSEIF colorf == 8
+          IF !(zonef)
+            tindex = @pindex1
+          ELSE
+            tindex = @colindex1
+          ENDIF
+        pinf=true
+      ELSEIF colorf == 9
+          IF !(zonef)
+            tindex = @pindex2
+          ELSE
+            tindex = @colindex2
+          ENDIF
+        pinf=true
+      ELSEIF colorf == 10
+          IF !(zonef)
+            tindex = @pindex3
+          ELSE
+            tindex = @colindex3
+          ENDIF
+        pinf=true
+      ENDIF
+        IF #numiter < lowtrap && !(pinf)
+          tmp=@btrapden*tindex
+            IF @btraptran == 0
+              #index=tmp+@btrapoff
+            ELSEIF @btraptran == 1
+              #index=(2*(tmp^2))+@btrapoff
+            ELSEIF @btraptran == 2
+              #index=(0.5*(tmp^0.5))+@btrapoff
+            ELSEIF @btraptran == 3
+              #index=3*tmp^3+@btrapoff
+            ELSEIF @btraptran == 4
+              #index=(0.33*(tmp^0.33333))+@btrapoff
+            ELSEIF @btraptran == 5
+              #index=log(1+tmp)+@btrapoff
+            ELSEIF @btraptran == 6
+              #index=exp(tmp)+@btrapoff
+            ELSEIF @btraptran == 7
+              #index=abs(sin(tmp))+@btrapoff
+            ELSEIF @btraptran == 8
+              #index=abs(atan(tmp))+@btrapoff
+            ENDIF
+        ELSEIF #numiter > hightrap && !(pinf)
+          tmp=@atrapden*tindex
+            IF @atraptran == 0
+              #index=tmp+@atrapoff
+            ELSEIF @atraptran == 1
+              #index=(2*(tmp^2))+@atrapoff
+            ELSEIF @atraptran == 2
+              #index=(0.5*(tmp^0.5))+@atrapoff
+            ELSEIF @atraptran == 3
+              #index=3*tmp^3+@atrapoff
+            ELSEIF @atraptran == 4
+              #index=(0.33*(tmp^0.33333))+@atrapoff
+            ELSEIF @atraptran == 5
+              #index=log(1+tmp)+@atrapoff
+            ELSEIF @atraptran == 6
+              #index=exp(tmp)+@atrapoff
+            ELSEIF @atraptran == 7
+              #index=abs(sin(tmp))+@atrapoff
+            ELSEIF @atraptran == 8
+              #index=abs(atan(tmp))+@atrapoff
+            ENDIF
+        ELSEIF #numiter >= lowtrap && #numiter <= hightrap && !(pinf)
+          tmp=@trapden*tindex
+            IF @traptran == 0
+              #index=tmp+@trapoff
+            ELSEIF @traptran == 1
+              #index=(2*(tmp^2))+@trapoff
+            ELSEIF @traptran == 2
+              #index=(0.5*(tmp^0.5))+@trapoff
+            ELSEIF @traptran == 3
+              #index=3*tmp^3+@trapoff
+            ELSEIF @traptran == 4
+              #index=(0.33*(tmp^0.33333))+@trapoff
+            ELSEIF @traptran == 5
+              #index=log(1+tmp)+@trapoff
+            ELSEIF @traptran == 6
+              #index=exp(tmp)+@trapoff
+            ELSEIF @traptran == 7
+              #index=abs(sin(tmp))+@trapoff
+            ELSEIF @traptran == 8
+              #index=abs(atan(tmp))+@trapoff
+            ENDIF
+        ELSE
+            #index=tindex
+        ENDIF
+            
+default:
+  title = "ITrap Patterns"
+  param itrap
+    caption="Trap Limits"
+    default=(0.0,1.0)
+    hint="Between 0.0 and 1.0 - Re portion is the lower limit \
+          and Im the upper limit of the trap, expressed as \
+          decimal fractions of Maximum Iterations" 
+  endparam
+  param trapcolor
+    caption="In-Trap Coloring"
+    enum="Default" "Exp Smoothing" "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default = 0  
+    hint="Coloring of Points Within Trap - Index allows you to \
+          specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param traptran
+    caption="In-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan" "Inverse"
+    default=0
+    hint="Transfer Function for In-Trap Coloring"
+  endparam
+  param trapden
+    caption="In-Trap Density"
+    default=1.0
+    hint="Color Density for In-Trap Coloring"
+  endparam
+  param trapoff
+    caption="In-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for In-Trap Coloring - Use \
+          value between zero and one; e.g., 0.45"
+  endparam
+  param itp1
+    caption = "In-Trap Ptn1"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 6
+  endparam
+  param itp1xy
+    caption = "In-Tp Ptn1 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param itp1lwt
+    caption="In-Tp Ptn1 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param itp1col
+    caption="In-Tp Ptn1 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=7
+    hint="In-Trap Pattern 1 Coloring Method"
+  endparam
+  param itp2
+    caption = "In-Trap Ptn2"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param itp2xy
+    caption = "In-Tp Ptn2 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param itp2lwt
+    caption="In-Tp Ptn2 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param itp2col
+    caption="In-Tp Ptn2 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=7
+    hint="In-Trap Pattern 2 Coloring Method"
+  endparam
+  param itp3
+    caption = "In-Trap Ptn3"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param itp3xy
+    caption = "In-Tp Ptn3 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param itp3lwt
+    caption="In-Tp Ptn3 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param itp3col
+    caption="In-Tp Ptn3 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=7
+    hint="In-Trap Pattern 3 Coloring Method"
+  endparam
+  param btrapcolor
+    caption="Below-Trap Coloring"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=7
+    hint = "Coloring of Points Below Trap - Index allows you to \
+            specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param btraptran
+    caption="Below-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan" "Inverse"
+    default=0
+    hint="Transfer Function for Below-Trap Coloring"
+  endparam
+  param btrapden
+    caption="Below-Trap Density"
+    default=1.0
+    hint="Color Density for Below-Trap Coloring"
+  endparam
+  param btrapoff
+    caption="Below-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for Below-Trap Coloring - Use \
+          value between zero and one; e.g., 0.45"
+  endparam
+  param btp1
+    caption = "B-Trap Ptn1"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param btp1xy
+    caption = "B-Tp Ptn1 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param btp1lwt
+    caption="B-Tp Ptn1 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param btp1col
+    caption="B-Tp Ptn1 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Below-Trap Pattern 1 Coloring Method"
+  endparam
+  param btp2
+    caption = "B-Trap Ptn2"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param btp2xy
+    caption = "B-Tp Ptn2 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param btp2lwt
+    caption="B-Tp Ptn1 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param btp2col
+    caption="B-Tp Ptn2 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Below-Trap Pattern 2 Coloring Method"
+  endparam
+  param btp3
+    caption = "B-Trap Ptn3"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param btp3xy
+    caption = "B-Tp Ptn3 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param btp3lwt
+    caption="B-Tp Ptn3 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param btp3col
+    caption="B-Tp Ptn3 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Below-Trap Pattern 3 Coloring Method"
+  endparam
+  param atrapcolor
+    caption="Above Trap Coloring"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=7
+    hint = "Coloring of Points Above Trap - Index allows you to \
+            specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param atraptran 
+    caption="Above-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan" "Inverse"
+    default=0
+    hint="Transfer Function for Above-Trap Coloring"
+  endparam
+  param atrapden
+    caption="Above-Trap Density"
+    default=1.0
+    hint="Color Density for Above-Trap Coloring"
+  endparam
+  param atrapoff
+    caption="Above-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for Above-Trap Coloring - Use \
+          value between zero and one; e.g., 0.45"
+  endparam
+  param atp1
+    caption = "A-Trap Ptn1"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param atp1xy
+    caption = "A-Tp Ptn1 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param atp1lwt
+    caption="A-Tp Ptn1 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param atp1col
+    caption="A-Tp Ptn1 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Above-Trap Pattern 1 Coloring Method"
+  endparam
+  param atp2
+    caption = "A-Trap Ptn2"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param atp2xy
+    caption = "A-Tp Ptn2 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param atp2lwt
+    caption="A-Tp Ptn2 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param atp2col
+    caption="A-Tp Ptn2 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Below-Trap Pattern 2 Coloring Method"
+  endparam
+  param atp3
+    caption = "A-Trap Ptn3"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param atp3xy
+    caption = "A-Tp Ptn3 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param atp3lwt
+    caption="A-Tp Ptn3 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param atp3col
+    caption="A-Tp Ptn3 Color"
+    enum="Default" "Exp Smoothing"  "Dist to Point (1)" "Dist to Point (2)" \
+         "Tri Ineq" "Lyapunov (1)" "Lyapunov (2)" "Solid" "Index (1)" \
+         "Index (2)" "Index (3)"
+    default=0
+    hint="Above-Trap Pattern 3 Coloring Method"
+  endparam
+  param colindex1
+    caption="Zone Index (1)"
+    hint="Color Index of Points Within one of the Trap Zones - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 the right."
+    default=0.0
+  endparam
+  param colindex2
+    caption="Zone Index (2)"
+    default=0.0
+    hint="Color Index of Points Within one of the Trap Zones - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 the right."
+  endparam
+  param colindex3
+    caption="Zone Index (3)"
+    default=0.0
+    hint="Color Index of Points Within one of the Trap Zones - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 the right."
+  endparam
+  param pindex1
+    caption="Pattern Index (1)"
+    default=0.0
+    hint="Allows you to choose one of three Color Index numbers \
+          for the 'stitchery' patterns"
+  endparam
+  param pindex2
+    caption="Pattern Index (2)"
+    default=0.0
+    hint="Allows you to choose one of three Color Index numbers \
+          for the 'stitchery' patterns"
+  endparam
+  param pindex3
+    caption="Pattern Index (3)"
+    default=0.0
+    hint="Allows you to choose one of three Color Index numbers \
+          for the 'stitchery' patterns"
+  endparam
+  param tbailout ;from Triangle Inequality
+    caption = "Triangle Ineq. Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param trackvar1 
+    caption = "Lyap (1) Variable"
+    enum = "magnitude of z" "real part of z" "imaginary part of z" \
+           "real / imag" "angle of z" 
+    default = 0
+    hint = "Indicates which variable to measure the Lyapunov exponent for."
+  endparam
+  param lbailout1
+    caption = "Lyap (1) Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param lsmooth1
+    caption = "Lyap (1) Smoothing"
+    default = false
+    hint = "If set, results will be 'smoothed' to hide iteration bands."
+  endparam
+  param trackvar2 
+    caption = "Lyap (2) Variable"
+    enum = "magnitude of z" "real part of z" "imaginary part of z" \
+           "real / imag" "angle of z" 
+    default = 0
+    hint = "Indicates which variable to measure the Lyapunov exponent for."
+  endparam
+  param lbailout2
+    caption = "Lyap (2) Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param lsmooth2
+    caption = "Lyap (2) Smoothing"
+    default = false
+    hint = "If set, results will be 'smoothed' to hide iteration bands."
+  endparam
+  param colors
+    caption = "Exp Sm Color Spread"
+    default = 2.0
+    hint = "2.0 approximates the iteration count. \
+            Use 10.0 for convergent fractals."
+  endparam
+  param palrange
+    caption = "Exp Sm Palette Range"
+    default = 256.0
+    hint = "256 means use the whole palette."
+  endparam
+  param converge
+    caption = "Exp Sm Fractal Type"
+    enum = "Convergent" "Divergent"
+    default = 1
+    hint = "Mandelbrot is Divergent, Newton is Convergent."
+  endparam
+; Distance to Point parameters
+  param point1
+    caption="Reference Point (1)"
+    default=(0,0)
+    hint="Point from which distance is measured."
+  endparam
+  param metric1
+    caption="Distance Metric (1)"
+    enum="Euclidean" "Elliptic" "Hyperbolic"\
+      "Minimum" "Maximum" "Sum" "Product"
+    default=0
+    hint="Type of formula used to figure distance"
+  endparam
+  param colorby1
+    caption="Color By: (1)"
+    enum="First" "Last" "First-Last Combo"\
+      "Minimum" "Maximum" "Min-Max Combo"\
+      "Arithmetic Mean" "Geometric Mean" "AM-GM Combo"
+    default=3
+    hint="Combinations plot the angle using the first \
+      variable as the x, and the 2nd as the y."
+  endparam
+  param power1
+    caption="Exponent (1)"
+    default=2.0
+    min=1.0
+    hint="Only Effective with Euclidean metric.  Must be at \
+          least 1.  Use 2 for standard Pythagorean distance."
+  endparam
+  param r1
+    caption="Radius (1)"
+    default=4.0
+    hint = "Used with Elliptic and Hyperbolic metrics.  \
+            Should be larger than the bailout."
+  endparam
+  param point2
+    caption="Reference Point (2)"
+    default=(0,0)
+    hint="Point from which distance is measured."
+  endparam
+  param metric2
+    caption="Distance Metric (2)"
+    enum="Euclidean" "Elliptic" "Hyperbolic"\
+      "Minimum" "Maximum" "Sum" "Product"
+    default=0
+    hint="Type of formula used to figure distance"
+  endparam
+  param colorby2
+    caption="Color By: (2)"
+    enum="First" "Last" "First-Last Combo"\
+      "Minimum" "Maximum" "Min-Max Combo"\
+      "Arithmetic Mean" "Geometric Mean" "AM-GM Combo"
+    default=3
+    hint="Combinations plot the angle using the first \
+      variable as the x, and the 2nd as the y."
+  endparam
+  param power2
+    caption="Exponent (2)"
+    default=2.0
+    min=1.0
+    hint="Only Effective with Euclidean metric.  Must be at \
+          least 1.  Use 2 for standard Pythagorean distance."
+  endparam
+  param r2
+    caption="Radius (2)"
+    default=4.0
+    hint = "Used with Elliptic and Hyperbolic metrics.  \
+            Should be larger than the bailout."
+  endparam
+
+}
+
+
+
+iterationtrap{ ; ver 2, red williams, 3 March 2000
+;
+; Portions adapted from the work of Ron Barnett and
+; Damien Jones.
+; 
+; This coloring method allows the user to define an
+; iteration trap in which the upper and lower limits are
+; expressed as decimal fractions of the Maximum Iterations
+; value.  
+;
+; By choosing appropriate values for these limits, the 
+; artist can divide the image into three zones, one containing
+; all points whose orbits reached bailout before the iteration
+; count reached the lower limit, one containing those which
+; escaped within the specified range and so on.
+;
+; Points within each zone may be colored normally, assigned
+; the solid color or assigned a specific color index value,
+; as desired. 
+; 
+; This release differs from the initial version in that three
+; additional coloring methods are included:  Exponential
+; Smoothing, Lyapunov and Triangle Inequality.  These methods
+; were adapted from programs previously published by Ron Barnett
+; and Damien Jones and should produce identical results in all
+; cases not affected by my removal of some of the "knobs".
+;
+; Each zone of the image may be colored differently and the 
+; artist has independent control of Color Density, Transfer
+; Function and Gradient Offset for each zone.  Just set these
+; functions to 1.0, Linear and 0, respectively, on the Inside
+; or Outside Coloring Tab and use the options from the coloring
+; method's drop-down menus. 
+; 
+; Further information on solid color and color index may be
+; found in the Ultrafractal Help file.
+
+init:
+
+; general initialization
+  float tindex=0.0
+   int colorf=0
+
+; Iteration Trap
+  int res=0
+  int lowtrap=abs(round(real(@itrap)*#maxiter))
+  int hightrap=abs(round(imag(@itrap)*#maxiter))
+    IF lowtrap>hightrap
+      res=lowtrap
+      lowtrap=hightrap
+      hightrap=res
+    ENDIF
+
+; Exponential Smoothing
+  float iterexp = 0
+  float scale = @colors*#pi/128
+  complex zold = (0,0)
+
+; Triangle Inequality and Lyapunov
+  float tsum = 0.0 
+  float tsum2 = 0.0
+  float ttsum = 0.0
+  float ac = cabs(#pixel)
+  float il = 1/log(2) 
+  float tlp = log(log(@tbailout)/2.0) 
+  float llp = log(log(@lbailout)/2.0)
+  float az2 = 0.0
+  float lowbound = 0.0
+  float tmp = 0.0
+  bool first = true
+  float oldlsum = 0
+  float lsum = 1
+  float v = 0
+
+loop:
+
+; Exponential Smoothing
+    IF (@converge > 0)
+      iterexp = iterexp + exp(-cabs(#z))
+    ELSE
+      iterexp = iterexp + exp(-1/(cabs(zold - #z)))
+    ENDIF
+  zold = #z
+
+; Triangle Inequality
+  tsum2 = tsum
+    IF (!first)
+      az2 = cabs(#z - #pixel)
+      lowbound = abs(az2 - ac)
+      tsum = tsum + ((cabs(#z) - lowbound) / (az2+ac - lowbound))
+    ELSE
+      first = false
+    ENDIF
+
+; Lyapunov
+    IF (@trackvar == 0)
+      v = cabs(#z)
+    ELSEIF (@trackvar == 1)
+      v = real(#z)
+    ELSEIF (@trackvar == 2)
+      v = imag(#z)
+    ELSEIF (@trackvar == 3)
+      v = real(#z)/imag(#z)
+    ELSEIF (@trackvar == 4)
+      v = atan2(#z)
+    ENDIF
+  oldlsum = lsum
+  lsum = lsum * (abs(2*v))
+  
+final:
+    IF (#numiter>=lowtrap)&&(#numiter<=hightrap) ; Is pixel in trap?
+      IF @trapcolor == 5
+        colorf = 5
+        tindex = @colindex3
+      ELSE
+        colorf = @trapcolor
+      ENDIF 
+    ENDIF
+    IF #numiter < lowtrap ; Is pixel below the trap?
+      IF @btrap == 5
+        colorf = 5
+        tindex = @colindex1
+      ELSE
+        colorf = @btrap
+      ENDIF 
+    ENDIF
+    IF #numiter > hightrap 
+      IF @atrap == 5
+        colorf = 5
+        tindex = @colindex2
+      ELSE
+        colorf = @atrap
+      ENDIF 
+    ENDIF
+
+; Now, assign the coloring
+
+      IF colorf == 4
+        #solid = true
+      ELSEIF colorf == 0                  ; Default
+        tindex = 0.01*#numiter 
+      ELSEIF colorf == 1                  ; Exponential Smoothing
+        float smooth = iterexp*scale
+        ez = cos(smooth)+flip(sin(smooth))
+        float angle = atan2(ez)
+          IF (angle < 0)
+            angle = angle + #pi * 2
+          ENDIF
+        tindex = angle * @palrange / (#pi * 512)
+      ELSEIF colorf == 2                  ; Triangle Inequality
+        ttsum = tsum / (#numiter) 
+        tsum2 = tsum2 / (#numiter-1)
+        tmp = il*tlp - il*log(log(cabs(#z)))
+        tindex = tsum2 + (ttsum-tsum2) * (tmp+1)
+      ELSEIF colorf == 3                  ; Lyapunov 
+        oldlsum = log(oldlsum)
+        lsum = log(lsum)
+        lsum = abs(lsum/#numiter)
+        oldlsum = abs(oldlsum/(#numiter-1))
+          IF (@lsmooth)
+            tmp = il*llp - il*log(log(cabs(#z)))
+            tindex = oldlsum + (lsum-oldlsum) * (tmp+1)
+          ELSE
+            tindex = lsum
+          ENDIF
+      ENDIF
+      IF #numiter < lowtrap
+        tmp=@btrapden*tindex
+          IF @btraptran == 0
+            #index=tmp+@btrapoff
+          ELSEIF @btraptran == 1
+            #index=(2*(tmp^2))+@btrapoff
+          ELSEIF @btraptran == 2
+            #index=(0.5*(tmp^0.5))+@btrapoff
+          ELSEIF @btraptran == 3
+            #index=3*tmp^3+@btrapoff
+          ELSEIF @btraptran == 4
+            #index=(0.33*(tmp^0.33333))+@btrapoff
+          ELSEIF @btraptran == 5
+            #index=log(1+tmp)+@btrapoff
+          ELSEIF @btraptran == 6
+            #index=exp(tmp)+@btrapoff
+          ELSEIF @btraptran == 7
+            #index=abs(sin(tmp))+@btrapoff
+          ELSEIF @btraptran == 8
+            #index=abs(atan(tmp))+@btrapoff
+          ENDIF
+      ELSEIF #numiter > hightrap
+        tmp=@atrapden*tindex
+          IF @atraptran == 0
+            #index=tmp+@atrapoff
+          ELSEIF @atraptran == 1
+            #index=(2*(tmp^2))+@atrapoff
+          ELSEIF @atraptran == 2
+            #index=(0.5*(tmp^0.5))+@atrapoff
+          ELSEIF @atraptran == 3
+            #index=3*tmp^3+@atrapoff
+          ELSEIF @atraptran == 4
+            #index=(0.33*(tmp^0.33333))+@atrapoff
+          ELSEIF @atraptran == 5
+            #index=log(1+tmp)+@atrapoff
+          ELSEIF @atraptran == 6
+            #index=exp(tmp)+@atrapoff
+          ELSEIF @atraptran == 7
+            #index=abs(sin(tmp))+@atrapoff
+          ELSEIF @atraptran == 8
+            #index=abs(atan(tmp))+@atrapoff
+          ENDIF
+      ELSE
+        tmp=@trapden*tindex
+          IF @traptran == 0
+            #index=tmp+@trapoff
+          ELSEIF @traptran == 1
+            #index=(2*(tmp^2))+@trapoff
+          ELSEIF @traptran == 2
+            #index=(0.5*(tmp^0.5))+@trapoff
+          ELSEIF @traptran == 3
+            #index=3*tmp^3+@trapoff
+          ELSEIF @traptran == 4
+            #index=(0.33*(tmp^0.33333))+@trapoff
+          ELSEIF @traptran == 5
+            #index=log(1+tmp)+@trapoff
+          ELSEIF @traptran == 6
+            #index=exp(tmp)+@trapoff
+          ELSEIF @traptran == 7
+            #index=abs(sin(tmp))+@trapoff
+          ELSEIF @traptran == 8
+            #index=abs(atan(tmp))+@trapoff
+          ENDIF
+      ENDIF
+
+default:
+  title = "Iteration Trap"
+  param itrap
+    caption="Trap Limits"
+    default=(0.0,1.0)
+    hint="Between 0.0 and 1.0 - Re part is the lower limit and \
+          the Im part is the upper limit of the trap, expressed \
+          as decimal fractions of Maximum Iterations" 
+  endparam
+  param trapcolor
+    caption="In-Trap Coloring"
+    enum="Default" "Exp Smoothing" "Tri Ineq" "Lyapunov" "Solid" "Index"
+    default = 0  
+    hint="Coloring of Points Within Trap - Index allows you to \
+          specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param colindex3
+    caption="In-Trap Index"
+    default=0.0
+    hint="Index to be Assigned Points Within Trap - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 \
+          the right.  Effective only with Index Coloring Option."
+  endparam
+  param traptran
+    caption="In-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan"
+    default=0
+    hint="Transfer Function for In-Trap Coloring"
+  endparam
+  param trapden
+    caption="In-Trap Density"
+    default=1.0
+    hint="Color Density for In-Trap Coloring"
+  endparam
+  param trapoff
+    caption="In-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for In-Trap Coloring - Ordinarily, you \
+          should use a value between zero and one; e.g., 0.45"
+  endparam
+    param btrap
+    caption="Below-Trap Coloring"
+    enum="Default" "Exp Smoothing" "Tri Ineq" "Lyapunov" "Solid" "Index"
+    default=4
+    hint = "Coloring of Points Below Trap - Index allows you to \
+            specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param colindex1
+    caption="Below-Trap Index"
+    hint="Index to be Assigned Points Below Trap - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 \
+          the right.  Effective only with Index Coloring Option."
+    default=0.0
+  endparam
+  param btraptran
+    caption="Below-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan"
+    default=0
+    hint="Transfer Function for Below-Trap Coloring"
+  endparam
+  param btrapden
+    caption="Below-Trap Density"
+    default=1.0
+    hint="Color Density for Below-Trap Coloring"
+  endparam
+  param btrapoff
+    caption="Below-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for Below-Trap Coloring - Ordinarily you \
+          should use a value between zero and one; e.g., 0.45"
+  endparam
+  param atrap
+    caption="Above Trap Coloring"
+    enum="Default" "Exp Smoothing" "Tri Ineq" "Lyapunov" "Solid" "Index"
+    default=4
+    hint = "Coloring of Points Above Trap - Index allows you to \
+            specify a position (from 0 to 1) on the Gradient Editor" 
+  endparam
+  param colindex2
+    caption="Above-Trap Index"
+    default=0.0
+    hint="Index to be Assigned Points Above Trap - Describes a \
+          position on the Gradient Editor.  0 is the left side, 1 \
+          the right.  Effective only with Index Coloring Option."
+  endparam
+  param atraptran
+    caption="Above-Trap Transfer"
+    enum="Linear" "Square" "Square Root" "Cube" "Cube Root" \
+         "Log" "Exp" "Sin" "Atan"
+    default=0
+    hint="Transfer Function for Above-Trap Coloring"
+  endparam
+  param atrapden
+    caption="Above-Trap Density"
+    default=1.0
+    hint="Color Density for Above-Trap Coloring"
+  endparam
+  param atrapoff
+    caption="Above-Trap Offset"
+    default=0.0
+    hint="Gradient Offset for Above-Trap Coloring - Ordinarily, you \
+          should use a value between zero and one; e.g., 0.45"
+  endparam
+  param colors
+    caption = "Exp Sm Color Spread"
+    default = 4.5
+    hint = "4.5 gives about the same color spread as the Default \
+            coloring.  Use 10.0 for convergent fractals."
+  endparam
+  param palrange
+    caption = "Exp Sm Palette Range"
+    default = 256.0
+    hint = "256 means use the whole palette."
+  endparam
+  param converge
+    caption = "Exp Sm Fractal Type"
+    enum = "Convergent" "Divergent"  
+    default = 1
+    hint = "Newton is Convergent - Mandelbrot is Divergent"
+  endparam
+  param tbailout ;from Triangle Inequality
+    caption = "Triangle Ineq. Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param trackvar 
+    caption = "Lyapunov Variable"
+    enum = "magnitude of z" "real part of z" "imaginary part of z" \
+           "real / imag" "angle of z" 
+    default = 0
+    hint = "Indicates which variable to measure the Lyapunov exponent for."
+  endparam
+  param lbailout
+    caption = "Lyapunov Bailout"
+    default = 1e20
+    min = 1
+    hint = "This should be set to match the bailout value in \
+            the Formula tab.  Use a very high bailout!"
+  endparam
+  param lsmooth
+    caption = "Lyapunov Smoothing"
+    default = false
+    hint = "If set, results will be 'smoothed' to hide iteration bands."
+  endparam
+}
+
+
+
+
+

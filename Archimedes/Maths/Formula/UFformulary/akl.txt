@@ -1,0 +1,453 @@
+How to write formulas.
+Short tutorial for Mikko written by Andreas Lober.
+March 05, 2000
+
+I am not a formula designer like Samuel Monnier.
+I do not know why the Sierpinksi algorithm
+makes the triangle structure or why his
+Koch Curve formula works. This is not my part of
+knowledge. Perhaps I will understand it later.
+I am not experienced as Damien Jones or Sylvie Gallet
+or Mark Townsend or ...
+I am able to structure my little "programs",
+to use and re-use "modules" with certain
+"interfaces". I am always curious to see
+what kind of image results from my formula.
+I like to play with a formula, I like to have
+many knobs and buttons.
+
+For example: I could split up the colouring
+formula "Metrics and Watches" into many
+single and different colourings.
+But if I had a new idea for it, I would have to
+apply it to those many colourings.
+For that I am much too lazy.
+Curiosity and laziness are the two main
+technical impetus of mankind ;-)
+
+Often I just try one fractal image with my
+new formula, post it as an example. If someone
+likes the new toy, then it is okay - then I'm
+happy. Then it is time to create a new formula.
+
+Perhaps writing a formula is THE creative act - for me.
+Others can create many beautiful images that come
+from a very few number of formulas...
+
+In this little text I will describe two things:
+A) How I found Hevia and how it is built.
+B) How is the structure of "Metrics and Watches"
+   and how can you use it.
+C) Something about the toolbox.
+
+I give a quick insight and shorten the examples.
+More details can be found in the formula files.
+All the param blocks belong to the default section.
+
+
+ ___________________________________________
+|                                           |
+| A) How I found Hevia and how it is built. |
+|___________________________________________|
+
+* First idea: Reading about the matrix operations in
+  Gerald's formulas.
+
+* Second idea: Imagine the Five on a die.
+  Let the center point be z and the surrounding four points
+  form the entries of a complex matrix M(z).
+  Matrices "operate" on vectors in different ways.
+  Since every complex number is a two-dimensional real vector,
+  all my ingredients are in the right place.
+
+Now let me begin.
+
+
+1. Calculate the two-dimensional real vector:
+     x = real(z)
+     y = imag(z)
+
+
+2. Find the 4 points in the neighbourhood of z
+   that shall form the matrix:
+
+     a = floor(x) + 1i* ceil(y)
+     b =  ceil(x) + 1i* ceil(y)
+     c = floor(x) + 1i*floor(y)
+     d =  ceil(x) + 1i*floor(y)
+
+
+   Now bring a little more flexibility to it:
+    
+     if (@latticeType == 0)  ; floor/ceil
+   
+       xf = floor(@latticeFac*x)/@latticeFac
+       yf = floor(@latticeFac*y)/@latticeFac
+   
+       xc = ceil(@latticeFac*x)/@latticeFac
+       yc = ceil(@latticeFac*y)/@latticeFac
+   
+     elseif (@latticeType == 1)  ; flow
+   
+       xf = @latticeFac*x
+       yf = @latticeFac*y
+   
+       xc = xf+@latticeFac
+       yc = yf+@latticeFac
+   
+     endif
+
+     ; matrix M(z):
+     a = xf + 1i*yc
+     b = xc + 1i*yc
+     c = xf + 1i*yf
+     d = xc + 1i*yf
+
+
+3. Operations of M(z) on z resp. (x,y):
+
+     zq = conj(z) ; z*zq=|z|
+   
+     if     (@operation == 0) ; linear
+       ; matrix algebra
+       z = a*x + b*y + 1i*(c*x+d*y)
+   
+     elseif (@operation == 4) ; Scalar Product
+       z = a*z^2 + (b+c)*z*zq + d*zq^2
+   
+     endif
+
+
+Now the most things are ready. Let me open my formula toolbox
+to enhance Hevia.
+
+4. Apply a lattice on the complex plane. In short:
+   If you calculate z-floor(z) you get a complex number
+   near the origin (0,0) within a rectangle of width 1.
+   That means: Instead of calculating
+   all the complex numbers in the complex plane
+   you calculate the small rectangle and pave the whole
+   complex plane with little rectangles. This should give
+   a certain kind of periodicity.
+
+     ;
+     ; Start with the lattices
+     ;
+     if     (@lattice == 1)
+       z = round(z) - z
+     elseif (@lattice == 2)
+       z = trunc(z) - z
+     elseif (@lattice == 3)
+       z = floor(z) - z
+     elseif (@lattice == 4)
+       z = ceil(z)  - z
+     endif
+
+     param lattice
+       caption = "Lattice Type"
+       enum = "None" \
+                "round" "trunc" "floor" "ceil"
+       default = 0 ; means "None", i.e. no lattice
+     endparam
+
+   It is your choice, where to place this latice module.
+   I place it in the beginning of the loop section.
+
+   
+5. Now just a few add-ons:
+
+   Include a parameter exponent with default value 1.0
+   and use it:
+
+     if (@exponent != 1)
+       z = z^@exponent
+     endif
+
+   The transformation z -> z + 1/z is called
+   Joukowskij Transformation.
+   It has something to do with airplanes.
+   Include a complex parameter jouk
+   and use it:
+   
+     if (z != 0 && @jouk != 0)
+       z = z + @jouk/z
+     endif
+
+   Remember: Multiplication with 1i means 90 degree rotation
+   to the left. So playing with complex entries for jouk
+   gives interesting effects.
+   
+
+   The Mandelbrot formula has the line z = z^2+#pixel.
+   Include a boolean parameter withPixelAddition (enbled/disabled)
+   and use it:
+
+     if (@withPixelAddition)
+       z = z + #pixel
+     endif
+   
+
+   At last: an additional function may be applied
+   to change all the shapes:
+
+     z = fn1(z)
+
+   Now Hevia is ready.
+
+
+6. In most bailout sections you can read
+     |z| < 4 or |z| < 1e20 -> huge number
+   Why not get more flexibility as to be found
+   in Ron Barnett's file:
+
+
+     bailout:    
+       (@test == 0 &&  |#z| <= @bailout)            || \
+       (@test == 1 &&  sqr(real(#z)) <= @bailout)   || \
+       (@test == 2 &&  sqr(imag(#z)) <= @bailout)   || \
+       (@test == 3 && (sqr(real(#z)) <= @bailout \
+                      && sqr(imag(#z)) < @bailout)) || \
+       (@test == 4 && (sqr(real(#z)) <= @bailout \
+                      || sqr(imag(#z)) < @bailout)) || \
+       (@test == 5 &&  sqr(abs(real(#z)) + abs(imag(#z))) <= @bailout) || \
+       (@test == 6 &&  sqr(real(#z) + imag(#z)) <= @bailout)
+     
+       param test
+         caption = "Bailout Test"
+         default = 0
+         enum = "mod" "real" "imag" "or" "and" "manh" "manr"
+       endparam
+
+7. More flexibilty in the init section:
+   Instead of writing z = 0 or z = #pixel
+   you can write the following:
+
+     if (@initialisation == 0) ; Pixel
+       z = #pixel
+     elseif (@initialisation == 1) ; Init Value
+       z = @initValue
+     endif
+
+     param initialisation
+       caption = "Initialisation"
+       enum = "Pixel" "Init Value"
+       default = 0
+     endparam
+
+     param initValue
+       caption = "Init Value"
+       default = (0.0,0.0)
+     endparam
+
+
+If you look at the Hevia formula in akl.ufm you see a very long
+formula compared to some others. But most parts of it are modules
+from my toolbox. The "idea" inside Hevia is the part with the die.
+
+
+ ___________________________
+|                           |
+| B) The structure of       |
+|    "Metrics and Watches". |
+|___________________________|
+
+Most colouring formulas consist of a transformational part,
+a distance estimation, and a trap algorithm.
+
+0. The Lattice is always usefull.
+     ;
+     ; Start with the lattices
+     ;
+     if     (@lattice == 1)
+       zStart = round(@lattFac1*zStart) - @lattFac2*zStart
+     elseif (@lattice == 2)
+       zStart = trunc(@lattFac1*zStart) - @lattFac2*zStart
+     elseif (@lattice == 3)
+       zStart = floor(@lattFac1*zStart) - @lattFac2*zStart
+     elseif (@lattice == 4)
+       zStart = ceil(@lattFac1*zStart)  - @lattFac2*zStart
+     elseif (@lattice == 5)
+       zStart = abs(@lattFac1*zStart)   - @lattFac2*zStart^2
+
+     ...
+     endif
+
+   If you want to see what these lattices do,
+   then take the normal Mandelbrot set and apply
+   the transformation "Alli None" from akl.uxf on it.
+   Use transformation "None" and choose a lattice.
+
+
+1. The transformational part:
+
+
+
+
+ _________________________________
+|                                 |
+| C) Something about the toolbox. |
+|_________________________________|
+
+I use my toolbox like Wizzle uses her gradients.
+What is in my toolbox? All the nice transformations
+of Mark Townsend, the Sierpinski flavours of KPeterK,
+many ideas from Samuel Monnier. With every formula file
+I read the toolbox grows. My own ideas are in it, too ;-)
+My toolbox is the whole UF library
+except the files from Bob Carr.
+
+
+1. What is AGM (Found in Stephen Wolfram "Mathematica")?
+
+   AGM means Arithmetic Geometric Mean.
+   Look at 4 and 8.
+      AM(4,8) = 0.5*(4+8) = 6.00
+      GM(4,8) = sqrt(4*8) = 5.66 => |AM-GM|=0.34
+
+   Now repeat this with the above new numbers:
+      AM(6.00,5.66) = 5.83
+      GM(6.00,5.66) = 5.82       => |AM-GM|=0.01
+
+   Now repeat this with the above new numbers:
+      AM(5.83,5.82) = 5.825
+      GM(5.83,5.82) = 5.824      => |AM-GM|=0.001
+
+   One can see in this example: Iteration of
+   calculating AM and GM brings their difference
+   near zero.
+
+   In the different AGM modules I calculate the number
+   of iterations needed to bring |AM-GM| under a given
+   limit. Afterwards I do something with this limit...
+
+     ar = |@fn1(z)|
+     ge = |@fn2(w)| ; w is something special in this formula
+                    ; choose something appropriate
+
+     iter = 0
+
+     while (|ar-ge| > @epsilon && iter < @maxIter)
+ 
+       iter = iter +1
+ 
+       ; Calculate new values of arithmetical
+       ; and geometrical mean
+       arit = (ar+ge)/2.0
+       geom = sqrt(ar*ge)
+ 
+       ; give these values back
+       ; for the next loop-run
+       ar = arit
+       ge = geom
+ 
+     endwhile
+
+
+2. Mark Townsend's "Harlequin" in the AKL revision:
+
+     ;
+     ; transformation
+     ;
+     if (@_pseudo)
+       float _x = real(zStart)
+       float _y = imag(zStart)
+   
+       if (@_pseudoMix)
+         if (@_mixMode == 0)
+                ; normal mix
+           a = @m * atan(_x/_y)
+         elseif (@_mixMode == 1)
+                ; diff mix
+           a = @m * atan((_x-_y)/_y)
+         elseif (@_mixMode == 2)
+                ; sum mix
+           a = @m * atan((_x+_y)/_y)
+         elseif (@_mixMode == 3)
+                ; prod mix
+           a = @m * atan(_x^2/_y)
+         elseif (@_mixMode == 4)
+                ; expo mix
+           a = @m * atan(_x^_y/_y)
+         endif
+       else
+         a = @m * atan(_y/_x)
+       endif
+     else
+       a = @m * atan(zStart)
+     endif
+   
+   
+     if     (@variation == 0)
+       a = a * a + @c
+       a = fn1(1 - a) / a
+   
+     elseif (@variation == 1)
+       a = a * a + @c
+       a = fn1(1 - a^2)
+   
+     elseif (@variation == 2)
+       a = @m * fn1(a + @c)^2
+   
+     elseif (@variation  == 3)
+       a = @m * fn1(1i*a + @c)^2 / fn1(a - @c)
+   
+     elseif (@variation  == 4)
+       a = @m * fn1(1i*a + @c)^2 * fn1(a - @c)
+   
+     elseif (@variation  == 5)
+       a = @m * fn1(1i*a + @c)^2 + fn1(a - @c)
+   
+     endif
+   
+     z = a
+
+
+3. Modes for replacement of real/imag calculations:
+
+
+     ;
+     ; Which mode do you like?
+     ;
+     if     (@realImagMode == 0) ; real/imag
+                               ; the normal mode
+       real_z = real(z)
+       imag_z = imag(z)
+   
+   
+     elseif (@realImagMode == 1) ; sin/cos
+   
+       real_z = real(sin(z))
+       imag_z = imag(cos(z))
+   
+   
+     elseif (@realImagMode == 2) ; Arcus
+   
+       real_z = real(asin(z))
+       imag_z = imag(acos(z))
+   
+   
+     elseif (@realImagMode == 3) ; Hyperbolic
+   
+       real_z = real(sinh(z))
+       imag_z = imag(cosh(z))
+   
+   
+     elseif (@realImagMode == 4) ; ArHyp
+   
+       real_z = real(asinh(z))
+       imag_z = imag(acosh(z))
+   
+   
+     elseif (@realImagMode == 5) ; exp/log
+   
+       real_z = real(exp(z))
+       imag_z = imag(log(z))
+   
+   
+     elseif (@realImagMode == 6) ; sqr/sqrt
+   
+       real_z = real(sqr(z))
+       imag_z = imag(sqrt(z))
+   
+   
+     endif

@@ -1,0 +1,326 @@
+comment {
+
+MMF transforms for UF3 V1.0 (8th February 2003)
+
+Dave Makin (Makin' Magic Fractals)
+
+http://www.crosswinds.net/~makinmagic/
+http://website.lineone.net/~dave_makin/
+http://skyscraper.fortunecity.com/terabyte/966/
+
+Please send any comments/suggestions about
+these formulae to:
+dave_makin@lineone.net
+}
+
+MMFa-Shuffle {
+;
+; This transform shuffles around tiles.
+;
+global:
+  int r=@seed
+  int p[100,100,3]
+  int dh
+  int dw
+  int x
+  int y
+  int w
+  int h
+  int dx=@pwidth*floor(100/@pwidth)
+  int dy=@pheight*floor(100/@pheight)
+  if @rept
+    dh=0
+    while dh<dy
+      dw=0
+      while dw<dx
+        h=dh
+        while h<dh+@pheight
+          w=dw
+          while w<dw+@pwidth
+            x=dw+floor(@pwidth*abs(r/#randomrange))
+            r=random(r)
+            y=dh+floor(@pheight*abs(r/#randomrange))
+            r=random(r)
+            if @same||(x!=w)||(y!=h)||((@pwidth==1)&&(@pheight==1))
+              p[w,h,0]=x
+              p[w,h,1]=y
+              w=w+1
+            endif
+          endwhile
+          h=h+1
+        endwhile
+        dw=dw+@pwidth
+        endwhile
+      dh=dh+@pheight
+    endwhile
+  else
+    h=0
+    while h<dy
+      w=0
+      while w<dx
+        p[w,h,2]=0
+        w=w+1
+      endwhile
+      h=h+1
+    endwhile
+    dh=0
+    while dh<dy
+      dw=0
+      while dw<dx
+        int b=@pheight*@pwidth
+        if !@same
+          b=b-1
+        endif
+        h=dh
+        while h<dh+@pheight
+          w=dw
+          while w<dw+@pwidth
+            int t=floor(b*abs(r/#randomrange))
+            r=random(r)
+            y=dh
+            while y<dh+@pheight
+              x=dw
+              while x<dw+@pwidth
+                if (@same || x!=w || y!=h || b==0) && p[x,y,2]==0
+                  if t==0 || b==0
+                    p[w,h,0]=x
+                    p[w,h,1]=y
+                    p[x,y,2]=1
+                    x=dw+@pwidth
+                    y=dh+@pheight
+                  else
+                    t=t-1
+                  endif
+                endif
+                x=x+1
+              endwhile
+              y=y+1
+            endwhile
+            b=b-1
+            w=w+1
+          endwhile
+          h=h+1
+        endwhile
+        dw=dw+@pwidth
+      endwhile
+      dh=dh+@pheight
+    endwhile
+  endif
+  float tw=dx*@twidth
+  float th=dy*@theight
+  float mw=1/(@pwidth*@twidth*@preptx)
+  float mh=1/(@pheight*@theight*@prepty)
+  float g=@grout/2
+  float gx=@twidth-g
+  float gy=@theight-g
+  float s=@angle*#pi/180
+  float c=cos(s)
+  float s=sin(s)
+transform:
+  int tn
+  int nx
+  int ny
+  float xx=0
+  float px = real(#pixel) - real(@offset)
+  float py = imag(#pixel) - imag(@offset)
+  float yy=px
+  px = px*c-py*s
+  py = yy*s+py*c
+  yy=0
+  if px<0
+    float xx=dx*(floor(-px/dx)+1)
+    px=px+xx
+  endif
+  if py<0
+    float yy=dy*(floor(-py/dy)+1)
+    py=py+yy
+  endif
+  if (@preptx==0 || (px>0 && px*mw<1)) && (@prepty==0 || (py>0 && py*mh<1))
+    bool f=true
+    if @cheqpattern>0
+      nx = floor((px/(@pwidth*@twidth))%2)
+      ny = floor((py/(@pheight*@theight))%2)
+      f = (@cheqpattern==0 || ((nx+ny)%2)==(@cheqpattern%2))
+    endif
+    if f
+      float fx=px%tw
+      float fy=py%th
+      float tx=fx%@twidth
+      float ty=fy%@theight
+      nx = round((fx-tx)/@twidth)%dx
+      ny = round((fy-ty)/@theight)%dy
+      if @cheqtile==0 || ((nx+ny)%2)==(@cheqtile%2)
+        f = abs(tx)<g || abs(tx)>=gx || abs(ty)<g || abs(ty)>=gy
+        if (!@invert && f)||(@invert && !f)
+          if @gtype
+            #solid = true
+          endif
+        else
+          px=px-fx
+          py=py-fy
+          if nx<0 && ny<0
+            tn=nx+dx
+            nx=p[tn,dy+ny,0]-dx
+            ny=p[tn,dy+ny,1]-dy
+          elseif nx<0
+            tn=nx+dx
+            nx=p[tn,ny,0]-dx
+            ny=p[tn,ny,1]
+          elseif ny<0
+            tn=ny+dy
+            ny=p[nx,tn,1]-dy
+            nx=p[nx,tn,0]
+          else
+            tn=nx
+            nx=p[nx,ny,0]
+            ny=p[tn,ny,1]
+          endif
+          px = px+nx*@twidth+tx-xx
+          py = py+ny*@theight+ty-yy
+          #pixel = px*c+py*s+real(@offset)+flip(py*c-px*s+imag(@offset))
+        endif
+      elseif @cheqtile>2
+        #solid=true
+      endif
+    elseif @cheqpattern>2
+      #solid=true
+    endif
+  elseif @solidback
+    #solid=true
+  endif
+default:
+  title = "Shuffle"
+  param rept
+    caption = "Allow repeated tiles"
+    default = false
+    hint = "Allowing repeated tiles means some tiles from the \
+            original image will not be used."
+  endparam
+  param same
+    caption = "Allow unmoved tiles"
+    default = true
+  endparam
+  param seed
+    caption = "Random seed"
+    default = 12345
+    hint = "Changing this shuffles the tiles."
+  endparam
+  param twidth
+    caption = "Tile width"
+    default = 0.1
+    min = 1e-200
+  endparam
+  param theight
+    caption = "Tile height"
+    default = 0.1
+    min = 1e-200
+  endparam
+  param pwidth
+    caption = "Pattern width"
+    default = 4
+    min = 1
+    max = 100
+    hint = "The shuffled pattern will be this many tiles wide."
+  endparam
+  param pheight
+    caption = "Pattern height"
+    default = 4
+    min = 1
+    max = 100
+    hint = "The shuffled pattern will be this many tiles high."
+  endparam
+  param offset
+    caption = "Pattern offset"
+    default = (0,0)
+    hint = "Allows you to move the pattern/tiles."
+  endparam
+  param angle
+    caption = "Rotation (degrees)"
+    default = 0.0
+  endparam
+  param preptx
+    caption = "Pattern x repeats"
+    default = 0
+    min = 0
+    hint = "The number of times the pattern repeats in \
+            the x direction. Using zero repeats infinitely."
+  endparam
+  param prepty
+    caption = "Pattern y repeats"
+    default = 0
+    min = 0
+    hint = "The number of times the pattern repeats in \
+            the y direction. Using zero repeats infinitely."
+  endparam
+  param solidback
+    caption = "Solid background"
+    default = false
+    hint = "Allows you to set untiled areas to solid colour."
+  endparam
+  param grout
+    caption = "Grouting width"
+    default = 0.0
+    min = 0.0
+    hint = "The width of the 'grouting' around the tiles. Zero \
+            produces no grouting. If this value is greater than \
+            either of the tile dimensions then the entire image \
+            will be grout !"
+  endparam
+  param gtype
+    caption = "Solid grout"
+    default = true
+    hint = "You may choose to use the solid colour as \
+            the grouting or to use plain default."
+  endparam
+  param invert
+    caption = "Invert"
+    default = false
+    hint = "When enabled the tiles and grouting are swapped."
+  endparam
+  param cheqtile
+    caption = "Chequered tiles"
+    default = 0
+    enum = "off" "even" "odd" "even/solid" "odd/solid"
+    hint = "Tiles in a chequered pattern."
+  endparam
+  param cheqpattern
+    caption = "Chequered patterns"
+    default = 0
+    enum = "off" "even" "odd" "even/solid" "odd/solid"
+    hint = "Chequers the patterns."
+  endparam
+}
+
+MMFb-AltfBm{
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+	MMF_AltfBm m_fbm = new @p_fbm(0)
+	UserTransform m_trans = new @p_transform(0)
+	m_fbm.GlobalInit(0)
+	m_trans.Init(0)
+	float off = m_fbm.GetfBm(0)
+	float scale = 1.0/(sqrt(2.0)*(m_fbm.GetfBm(1.0)-off))
+transform:
+  #pixel = (@p_amount^2)*scale*m_trans.Iterate(m_fbm.GetfBm(#pixel)-off \
+                                     +flip(m_fbm.GetfBm(flip(#pixel))-off)) \
+           + (1.0-(@p_amount^2))*#pixel
+default:
+  title = "Alt.fBm deform"
+  float param p_amount
+    caption = "fBm deform amount 0 to 1"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+  endparam
+  UserTransform param p_transform
+    caption = "Transform fBm"
+    default = MMF_GeneralTransform
+    expanded = false
+    hint = "Use to move and scale the fBm"
+  endparam
+  MMF_AltfBm param p_fbm
+    caption = "fBm settings"
+    default = MMF_AltfBm
+  endparam
+}

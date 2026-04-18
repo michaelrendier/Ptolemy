@@ -1,0 +1,174 @@
+comment {
+Brian's Coloring Formulae
+}
+
+bwp1 {
+
+final:
+  float r = real(#pixel) - real(@center)
+  float i = imag(#pixel) - imag(@center)
+  if @type == 0
+    #index = sqrt(r ^ 2 + i ^ 2)
+  else
+    r = abs(r)
+    i = abs(i)
+    if r < i
+      #index = i
+    else
+      #index = r
+    endif
+  endif
+
+default:
+  title = "BWP 1"
+  param type
+    caption = "Gradient type"
+    enum = "Circle" "Rectangle"
+    hint = "This defines the shape of the gradient."
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+  endparam
+
+}
+
+bwp2 {
+
+init:
+  int tr = 0
+  int br = 0
+  int tl = 0
+  int bl = 0
+
+loop:
+  r = real(#z) - real(#pixel)
+  i = imag(#z) - imag(#pixel)
+  if (i >= 0) && (r >= 0)
+    tr = tr + 1
+  endif
+  if (i >= 0) && (r < 0)
+    tl = tl + 1
+  endif
+  if (i < 0) && (r >= 0)
+    br = br + 1
+  endif
+  if (i < 0) && (r < 0)
+    bl = bl + 1
+  endif
+
+final:
+  float t = tr + tl + br + bl
+  if @type == 0
+    #index = tr / t
+  elseif @type == 1
+    #index = tl / t
+  elseif @type == 2
+    #index = br / t
+  elseif @type == 3
+    #index = bl / t
+  elseif @type == 4
+    #index = (tl + tr) / t
+  elseif @type == 5
+    #index = (bl + br) / t
+  elseif @type == 6
+    #index = (tl + bl) / t
+  elseif @type == 7
+    #index = (tr + br) / t
+  endif
+
+default:
+  title = "BWP 2"
+  param type
+    caption = "Type"
+    default = 0
+    enum = "Top Right" "Top Left" \
+           "Bottom Right" "Bottom Left" \
+           "Top" "Bottom" "Left" "Right"
+  endparam
+}
+
+bwp3 {
+
+init:
+  float tr = 0
+  float br = 0
+  float tl = 0
+  float bl = 0
+
+loop:
+  float r = real(#z) - real(#pixel)
+  float i = imag(#z) - imag(#pixel)
+  float s = sqrt(r ^ 2 + i ^ 2)
+  if (i >= 0) && (r >= 0)
+    tr = tr + s
+  endif
+  if (i >= 0) && (r < 0)
+    tl = tl + s
+  endif
+  if (i < 0) && (r >= 0)
+    br = br + s
+  endif
+  if (i < 0) && (r < 0)
+    bl = bl + s
+  endif
+
+final:
+  float t = tr + tl + br + bl
+  if @type == 0
+    #index = tr / t
+  elseif @type == 1
+    #index = tl / t
+  elseif @type == 2
+    #index = br / t
+  elseif @type == 3
+    #index = bl / t
+  elseif @type == 4
+    #index = (tl + tr) / t
+  elseif @type == 5
+    #index = (bl + br) / t
+  elseif @type == 6
+    #index = (tl + bl) / t
+  elseif @type == 7
+    #index = (tr + br) / t
+  endif
+
+default:
+  title = "BWP 3"
+  param type
+    caption = "Type"
+    default = 0
+    enum = "Top Right" "Top Left" \
+           "Bottom Right" "Bottom Left" \
+           "Top" "Bottom" "Left" "Right"
+  endparam
+}
+
+bwp4 {
+
+init:
+  complex lastorbit = 0
+
+loop:
+  if cabs(#z - #pixel) <= @proximity
+    lastorbit = @fun1(#pixel) + @fun2(#z)
+  endif
+
+final:
+  #index = cabs(lastorbit) / @proximity
+
+default:
+  title = "BWP 4"
+  param proximity
+  caption = "Proximity"
+    default = 0.01
+  endparam
+  func fun1
+    caption = "Function 1"
+    default = ident()
+  endfunc
+  func fun2
+    caption = "Function 2"
+    default = ident()
+  endfunc
+}

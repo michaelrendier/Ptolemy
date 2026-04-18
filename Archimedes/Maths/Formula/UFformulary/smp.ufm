@@ -1,0 +1,290 @@
+comment { 
+
+  Formulas for Ultra Fractal 2 by Sean M. Pratz
+  
+  Last updated October 17, 2000
+  
+  The latest version of this file can always be had at:
+  http://formulas.ultrafractal.com/
+  
+
+  Version History:
+  
+  Oct. 04, 2000
+  Added SMP-001
+  
+  Oct. 18, 2000 
+  Added Bailouts Galore (Man)
+  Added Bailouts Galore (Jul)
+
+Thank you, Frederik Slijkerman, for creating Ultra Fractal.
+
+  Note:
+  By no means am I a mathematician of any discernible skill.
+  I bang numbers and functions together semi-randomly until something
+  interesting shows up on my screen. Sometimes I dip
+  into others' formulas for ideas or inspiration and credit them
+  accordingly. If I have duplicated someone's work without proper credit
+  please let me know so I can rectify the situation.
+  I hope you'll forgive me for labeling my formulas, parameters
+  and functions using non-mathematical terms. I don't really understand
+  what they're doing!
+  Do not use my terminology to impress anyone intelligent. They'll
+  just laugh at you. If instead they laugh *with you, tell them you
+  learned how to be funny by examining my formulas. I can always use the
+  writing credits.
+  
+  - Sean
+  
+  pixelarts@home.com  or  smpratz@home.com
+  http://members.home.com/pixelarts
+}
+
+
+smp-001 {
+;
+;  eq:z = z*z*@fn1(real(z)) + n*z*(imag(z)) + (z*z)*@fn2(real(z)) + n*z*@fn3(imag(z))+n
+;
+;  |Modified Oct 18, 2000 (But only to add this comment block)
+;  |Sean M. Pratz
+;  |pixelarts@home.com or smpratz@home.com
+;  |http://members.home.com/pixelarts
+
+init:
+  z=0
+  n=#pixel
+
+loop:
+  z = z*z*@fn1(real(z)) + n*z*(imag(z)) + (z*z)*@fn2(real(z)) + n*z*@fn3(imag(z))+n
+
+bailout:
+  |z|<@bailout
+
+default:
+  title = "SMP-001"
+  
+  param bailout
+    caption="bailout value"
+    default=1000
+  endparam
+
+  func fn1
+    default = sin()
+  endfunc
+
+  func fn2
+    default = cos()
+  endfunc
+  
+  func fn3
+    default = sin()
+  endfunc
+  
+  center = (0, 0)
+}
+
+
+
+smp-Bailouts-Galore-Man {
+;
+;  eq:z = fn1(z) * fn2(z) + fn3(c)
+;
+;  Simple Mandelbrot with a few added functions
+;  and a selection of bailout conditions.
+;
+;  Differences between bailout conditions are most evident (to begin with)
+;  when using a CubeRoot or Sqrt transfer function
+;  under the "Outside Coloring" tab.
+;
+;  Use the Switch feature to select a "Bailouts Galore" Mandelbrot set
+;
+;
+;  |"Bailout type" routine based on examples found in formulas by
+;  |    F. Slijkerman.
+;  |
+;  |Other bailout conditions (types B & C) are based on routines 
+;  |    suggested by Mark Townsend.
+;  |
+;  |Modified Oct 18, 2000
+;  |Sean M. Pratz
+;  |pixelarts@home.com or smpratz@home.com
+;  |http://members.home.com/pixelarts
+
+init:
+
+  z = @start
+    
+loop:
+
+  z = @fn1(z) * @fn2(z) + @fn3(#pixel)
+  
+bailout:
+
+  (@btype == 0 && |z| <= @bailout) ||                                         \
+  (@btype == 1 && real(sqr(z)) <= @bailout) ||                                \
+  (@btype == 2 && imag(sqr(z)) <= @bailout) ||                                \
+  (@btype == 3 && sqr(real(z)) <= @bailout) ||                                \
+  (@btype == 4 && sqr(imag(z)) <= @bailout) ||                                \
+  (@btype == 5 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@btype == 6 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@btype == 7 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@btype == 8 && (sqr(real(z) + imag(z)) <= @bailout))
+  
+default:
+
+  title = "Bailouts Galore (Man)"
+  center = (-0.5, 0)
+  
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    hint = "Perturbation. Use (0,0) for the standard Mandelbrot set."
+  endparam
+
+  param btype
+    caption = "Bailout type"
+    default = 0
+    enum = "A - Mod" "B - Spiky (Real)" "C - Spiky (Imag)" "D - Real" "E - Imag" "F - Or" "G - And" "H - Manh" "I - Manr"
+    hint = "A selection of various bailout tests."
+  endparam
+
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+  endparam
+  
+  func fn1
+    caption = "z function 1"
+    default = ident()
+    hint = "The 1st function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+
+  func fn2
+    caption = "z function 2"
+    default = ident()
+    hint = "The 2nd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+  
+  func fn3
+    caption = "Pixel function"
+    default = ident()
+    hint = "The 3rd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+    
+switch:
+
+  type = "smp-Bailouts-Galore-Jul"
+  seed = #pixel
+  btype = btype
+  bailout = bailout
+  fn1 = fn1
+  fn2 = fn2
+  fn3 = fn3
+}
+
+
+
+smp-Bailouts-Galore-Jul {
+;
+;  eq:z = fn1(z) * fn2(z) + fn3(c)
+;
+;  Simple Julia with a few added functions
+;  and a selection of bailout conditions.
+;
+;  Differences between bailout conditions are most evident (to begin with)
+;  when using a CubeRoot or Sqrt transfer function
+;  under the "Outside Coloring" tab.
+;
+;  Use the Switch feature to select a "Bailouts Galore" Mandelbrot set
+;
+;
+;  |"Bailout type" routine based on examples found in formulas by
+;  |    F. Slijkerman.
+;  |
+;  |Other bailout conditions (types B & C) are based on routines 
+;  |    suggested by Mark Townsend.
+;  |
+;  |Modified Oct 18, 2000
+;  |Sean M. Pratz
+;  |pixelarts@home.com or smpratz@home.com
+;  |http://members.home.com/pixelarts
+
+init:
+
+  z = #pixel
+    
+loop:
+
+  z = @fn1(z) * @fn2(z) + @seed
+  
+bailout:
+
+  (@btype == 0 && |z| <= @bailout) ||                                         \
+  (@btype == 1 && real(sqr(z)) <= @bailout) ||                                \
+  (@btype == 2 && imag(sqr(z)) <= @bailout) ||                                \
+  (@btype == 3 && sqr(real(z)) <= @bailout) ||                                \
+  (@btype == 4 && sqr(imag(z)) <= @bailout) ||                                \
+  (@btype == 5 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@btype == 6 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@btype == 7 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@btype == 8 && (sqr(real(z) + imag(z)) <= @bailout))
+
+
+default:
+
+  title = "Bailouts Galore (Jul)"
+  center = (0, 0)
+  
+  param seed
+    caption = "Julia seed"
+    default = (0.275, 0)
+    hint = "Use this to create many different Julia sets. You can \
+            also set this value using the Switch feature."
+  endparam
+
+  param btype
+    caption = "Bailout type"
+    default = 0
+    enum = "A - Mod" "B - Spiky (Real)" "C - Spiky (Imag)" "D - Real" "E - Imag" "F - Or" "G - And" "H - Manh" "I - Manr"
+  endparam
+  
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+  endparam
+  
+  func fn1
+    caption = "z function 1"
+    default = ident()
+    hint = "The 1st function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+
+  func fn2
+    caption = "z function 2"
+    default = ident()
+    hint = "The 2nd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+  
+  func fn3
+    caption = "pixel function"
+    default = ident()
+    hint = "The 3rd function in \
+    'fn1(z) * fn2(z) + fn3(c)'"
+  endfunc
+    
+switch:
+
+  type = "smp-Bailouts-Galore-Man"
+  btype = btype
+  bailout = bailout
+  fn1 = fn1
+  fn2 = fn2
+  fn3 = fn3
+}

@@ -1,0 +1,1240 @@
+comment { ; PLEASE READ THIS CAREFULLY
+Date: 17-10-98
+This file contains Ultra Fractal colouring
+methods by Luke Plant, 1998.
+The methods may change as I improve/correct
+them so please check that your parameter
+files work with the new versions before 
+deleting the old file.
+
+
+Smummary of methods:
+lp-smooth  - produces smooth results on a 
+  large number of fractal types
+
+lp-shapes1  - this includes most of my
+  orbit traps and other types, including
+  the fan and ripple effect, 'graph'
+  shape, ellipse, hyperbola, astroid, ring
+
+lp-Shapes2 - as per shapes1, but the trap
+  can be varied in many ways, ie parameters
+  become functions of z
+
+lp-Ring - borrowed from a Kerry Mitchell
+  Fractint formula
+  
+lp-Curv - produce colouring based on radius of
+  curvature
+
+
+EpsilonCross
+Bof60         - as per Fractint's methods
+Bof61
+zmag
+
+Grid          - produces a grid laid over the 
+                fractal, with numbers indicating
+                the size of grid
+            
+
+
+              ~~~~~~~~~~~~~~
+
+If you have parameter files which will not
+work with the new versions of these 
+colouring methods, or the colouring methods
+are missing please email at:
+
+lukeplant@mindless.com
+
+and I'll be happy to find the correct version
+for you.
+
+}
+
+
+fractint_bof60(INSIDE) {
+init:
+  float zmin = 1000
+
+loop:
+  IF cabs(#z) < zmin
+    zmin = cabs(#z)
+  ENDIF
+
+final:
+  #index = zmin
+
+default:
+  title = "Fractint bof60"
+
+}
+
+
+BOF61(INSIDE) {
+init:
+  float zmin = 1000
+  float kmin = 0
+  float iter = 0
+
+loop:
+  iter=iter+1
+  IF iter > 1
+    IF cabs(#z) < zmin
+      zmin = cabs(#z)
+      kmin = iter*0.1
+    ENDIF
+  ENDIF
+
+final:
+  #index = kmin
+
+default:
+  title = "Fractint bof61"
+
+}
+
+lp-Smooth(BOTH) {
+init:
+  complex pt = @center
+  float dec= @decay      ; decay factor
+  float col = 0.0
+  complex temp = (0,0)
+
+loop:
+  temp = fn1(cabs(#z - pt))
+  col = col + exp(-dec*real(temp))
+
+final:
+  #index = col
+  
+default:
+  title = "Smooth colouring"
+  param center
+    caption = "center"
+    default = (0,0)
+    hint = "This should be kept as 0,0 for smooth \
+    colouring, other values gives interesting effects"
+  endparam
+  
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "Controls how quickly the exponential decay \
+    drops off around the central point"
+  endparam
+
+  func fn1
+    caption = "Decay function"
+    default = sqr()
+  endfunc
+  
+}
+
+
+EpsilonCross(BOTH) {
+init:
+  int count = 0
+  int col = 0
+  float col2 = 0
+  complex z2 = 0
+  complex ang = exp(flip(-@angle*pi/180))
+  
+loop:
+  count = count + 1
+  z2 = (#z - @center)*ang
+  
+  IF (@skip==false) || (count > 1)
+    IF (col == 0)
+      IF (real(abs(real(z2))) < @xdis )
+        col = 1
+        col2 = real(z2)
+      ENDIF
+  
+      IF (real(abs(imag(z2))) < @ydis )
+        col = 2
+        col2 = imag(z2)
+      ENDIF   
+    ENDIF
+  ENDIF
+  
+final:
+  IF (col == 0)
+    #solid = true
+  ELSEIF (col == 1)
+    #index = @xcolour + @colourf * col2 / @xdis
+    ; divide by @xdis to make thinner stripes have same gradient
+     
+  ELSEIF (col == 2)
+    #index = @ycolour + @colourf * col2 / @ydis
+  ENDIF
+  
+  
+default:
+  title = "Fractint Epsilon Cross"
+  
+  param xcolour
+    caption = "X-axis colour offset"
+    default = 0.2
+    hint = "determines what index number to colour \
+    an orbit which come near to x-axis"
+  endparam
+  
+  param xdis
+    caption = "X-axis distance"
+    default = 0.01
+    hint = "determines how close to the x-axis \
+    an orbit has to come to be caught"
+  endparam 
+
+  param ycolour
+    caption = "Y-axis colour offset"
+    default = 0.6
+    hint = "determines what index number to colour \
+    an orbit which come near to y-axis"
+  endparam
+  
+  param ydis
+    caption = "Y-axis distance"
+    default = 0.01
+    hint = "determines how close to the y-axis \
+    an orbit has to come to be caught"
+  endparam
+  
+  param colourf
+    caption = "Internal colour factor"
+    default = 0.1
+    hint = "strength of colouring within bands"
+  endparam
+
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+    hint = "0,0 is standard epsilon cross colouring"
+  endparam
+  
+  param angle
+    caption  = "Tilt angle"
+    default = 0.0
+    hint = "Angle in degrees through which \
+    the axes are rotated"
+  endparam
+ 
+  param skip
+    caption = "Skip first iteration?"
+    default = true
+    hint = "Check to ignore the first iteration"
+  endparam
+
+
+}
+
+lp-Shapes1(BOTH) {
+; This colouring method is essentially like an orbit
+; trap and includes ellipses, fans, astroids, 
+; ripple effect (not a trap), hyperbolas, 'graphs'
+; rings. 
+; NB  1/ height and width are not always exact - 
+; but they are proportional to the height and width
+; of the shape.
+;     2/ decay factor is used for types: fan, ripples
+;      ring.  It controls how quickly the colouring
+;      drops off from the center. For type ring, it
+;      controls the width of the band
+
+
+init:
+
+  complex pt = @center
+  complex z2 = (0,0)
+
+  float width1 = @width
+  float height1 = @height
+  float decay1 = @decay
+  float tilt = @angle * pi/180
+  
+  float osc = 10                ; oscilator factor (ripples)
+  float ep = atan(-decay1/osc)
+  float dis = 0.0                ; distance (general)
+
+  
+  float col = 0.0
+  complex rotfac = exp(flip(-tilt))
+  float test = 0.0
+  
+loop:
+  z2 = (#z-pt) * rotfac      ;'move' & 'rotate'
+
+  IF ((@type > 0))
+    z2 = real(z2)/width1 + flip(imag(z2)/height1)
+  ENDIF
+  
+  IF (@type == 0)           ; graph
+    test=real(abs(height1*fn1(real(z2)/width1)) * exp(-decay1*abs(real(z2))) )
+    IF ( abs(imag(z2))< test )
+      col=col+real(test-abs(imag(z2)))*0.5
+    ENDIF
+  
+  ELSEIF (@type == 1)      ; fan, exponential decay
+    test = real(exp( (-1)*|z2|*decay1 ) * cos( @numarms *atan(imag(z2)/real(z2))))
+    col = col + test*0.2
+  
+  ELSEIF (@type == 2)      ; fan2, quadratic decay
+    dis=cabs(z2)
+    test=dis*(width1-dis)*10
+    IF (test>0)
+    col=col+ sqr(width1)*test * cos(@numarms* atan(imag(z2)/real(z2)) )
+    ENDIF
+  
+  ELSEIF (@type == 3)      ; ripple
+    z2 = real(z2)/width1 + flip(imag(z2)/height1)
+    dis = cabs(z2)
+    col = col + exp(-dis*decay1)*abs(cos(dis*osc + ep))*0.2
+
+  ELSEIF (@type == 4)       ; ellipses
+    test = |z2|
+    IF (test<1)
+      col=col+(1-test)*0.3
+    ENDIF    
+
+  ELSEIF (@type == 5)      ; astroid
+    test= abs(real(z2))^(.666666666) + abs(imag(z2))^(.666666666)
+    IF (test<1)
+      col=col+(1-test)
+    ENDIF
+  
+  ELSEIF (@type == 6)      ; hyperbola
+    test = abs(real(z2)*imag(z2))
+    IF (test<1)
+      col = col + (1-test)*0.2
+    ENDIF
+
+  ELSEIF (@type == 7)      ; ring
+    test = cabs(z2)
+    col = col + real(exp(-decay1*abs(1-test) ))*0.1
+  
+  ELSEIF (@type == 8)      ; petals1
+    IF (real(z2)!=0)
+      test = atan(imag(z2)/real(z2))
+    ELSEIF (imag(z2)>0)
+      test = pi/2
+    ELSE
+      test = 3*pi/2
+    ENDIF
+    
+    IF (real(z2)<0)
+      test = test + pi
+    ENDIF
+    test = test * @numarms/2
+    test = cos(test)*(sqr(1.5*(abs(sin(test))-0.5)) + 0.5)
+    test = abs(test)
+    test = real(exp( (-1)*|z2|*decay1 )*test)
+    col = col + test
+  
+  
+  ENDIF
+
+final:
+    #index = 10+ col
+  
+default:
+  title = "Shapes"
+
+  param type
+    caption = "Type of shape"
+    default = 4
+    enum = "Graph" "Fan" "Fan2" "Ripple" "Ellipse" \
+    "Astroid" "Hyperbola" "Ring" "Petals 1"
+  endparam  
+    
+  param center
+    caption = "Center of shape"
+    default = (1.0,0.5)
+    hint = "This is the center of where the shape \
+    placed on the z-plane"
+  endparam
+  
+  param height
+    caption = "Height of shape"
+    default = 1.0
+  endparam
+     
+  param width
+    caption = "Width of shape"
+    default = .6
+  endparam
+  
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "A larger decay factor makes the shape drop off more quickly \
+    (applies to fan, ripples and ring)"
+  endparam
+  
+  param angle
+    caption  = "Tilt angle (in degrees)"
+    default = 0.0
+    hint = "This is the angle through which \
+    the shape is rotated"
+  endparam
+  
+  param numarms
+    caption = "Number of arms (fan)"
+    default = 4.0
+    hint = "Applies only to fan shapes"
+  endparam
+  
+  func fn1
+    caption = "Graph function"
+    default = sin()
+    hint = "Determines the shape of graph"
+  endfunc
+
+}
+
+
+lp-Rings(BOTH) { ; PLEASE READ ME CAREFULLY
+; from a Kerry Mitchell Fractint formula
+; Use a colour map as follows:
+; The first range from index 0 to index 199
+; The second range from index 200 to index 399
+
+
+init:
+  int col = 0    ; records iter num on capture
+  int iter = 1
+  complex ctr = @center
+  float r1 = @rad1
+  float r2 = @rad2
+  float d = 0.0
+
+  IF (@usec)
+    ctr = #pixel
+    r1 = r1 * cabs(#pixel)
+    r2 = r2 * cabs(#pixel)
+  ENDIF
+
+  float r = 0.0
+  float fac =  0.4975 / (r2-r1) ; 0.4975 = 199/400
+
+    
+loop:
+  iter = iter + 1
+  r = cabs(#z - ctr)
+  IF (((r>=r1) && (r <= r2)) && (col==0))
+    col = iter
+    d = (r-r1)*fac
+  ENDIF
+  
+final:
+  IF (col>0)
+    IF (@alt)    ; add 0.5 for odd iter numbers (to give index 200)
+      d = d + 0.5*(col-2*trunc(col/2)) 
+    ENDIF
+    #index = d
+  ELSE
+    #solid = true
+  ENDIF
+
+default:
+  title = "Ring trap"
+ 
+  param center
+    caption = "Center of rings"
+    default = (-0.75,0.0)
+  endparam
+ 
+  param rad1
+    caption = "Inner radius"
+    default = 0.475
+  endparam
+
+  param rad2
+    caption = "Outer radius"
+    default = 0.525
+  endparam
+
+  param usec
+    caption = "Use c for center and radii"
+    default = false
+  endparam
+
+  param alt
+    caption = "Alternate colouring"
+    default = true
+    hint = "If enabled, colours alternate iterations differently"
+  endparam
+
+}
+
+
+zmag(BOTH) {
+
+final:
+#index = |#z|
+
+default:
+  title = "Fractint zmag"
+
+}
+
+
+
+
+lp-Curv { ;
+; This method constructs a 'circle of curvature' on the
+; latest three points of the orbit, and various poroperties
+; of this circle can be used.
+;
+; For Mandelbrot, try : 
+;  trap mode=smallest r, colour mode=radius
+;  trap mode=smallest dis, colour mode=distance
+;
+; For Newton. try
+;  trap mode=largest r, colour mode=radius
+;  Transfer function=Extra Transfer function=log
+;
+init:
+  complex cc = (0,0)    ; cicle center
+  complex pt1 = (0,0)    ; z(n)
+  complex pt2 = (0,0)    ; z(n-1)
+  complex pt3 = (0,0)    ; z(n-2)
+
+  float m1 = 0
+  float k1 = 0
+  float m2 = 0
+  float k2 = 0
+  float xc = 0          ; x of cc
+  float yc = 0          ; y of cc
+  float r = 0           ; radius
+  float ang = 0         ; angle of cc 
+  float dis = 0         ; distance of cc from origin
+  int iter = 1
+  float st = 0          ; stored value - used for selecting point
+  float col1 = 0      
+
+  BOOL flag = false         ; flag: sees if point has been caught
+
+loop:
+
+  pt1 = #z    
+  IF (iter >= 3)         ; need 3 points to do calculation
+    flag = false         ; point not yet caught
+
+    IF (! ((@trapmode==0) && (iter!=3)) )
+      ; if not (trapmode = first and not first time)
+ 
+      m1 = (real(pt1)-real(pt2))/(imag(pt2)-imag(pt1))
+      k1 = (-(real(pt1)+real(pt2))*m1 + imag(pt1)+imag(pt2))/2
+      m2 = (real(pt2)-real(pt3))/(imag(pt3)-imag(pt2))
+      k2 = (-(real(pt2)+real(pt3))*m2 + imag(pt2)+imag(pt3))/2
+
+      xc = (k2-k1)/(m1-m2)
+      yc = m1*xc+k1
+
+      cc = xc+flip(yc)
+      r = cabs(pt1-cc)
+      dis = cabs(cc)
+
+      IF ((@trapmode==0)||(@trapmode==1))
+        flag = true
+        
+      ELSEIF (@trapmode==2)          ; smallest value of r
+        IF ((r<st) || (st==0))
+          st = r
+          flag = true
+        ENDIF
+      ELSEIF (@trapmode==3)          ; largest r
+        IF (r>st)
+          st = r
+          flag = true
+        ENDIF      
+      ELSEIF (@trapmode==4)          ; smallest dis
+        IF ((dis<st) || (st==0))
+          st = dis
+          flag = true
+        ENDIF
+      ELSEIF (@trapmode == 5)        ; largest dis
+        IF (dis>st)
+          st = dis
+          flag=true
+        ENDIF
+      ENDIF
+      
+      IF (flag)      
+        IF (@colourmethod==0)
+          col1 = r
+        ELSEIF (@colourmethod==1)
+          col1 = dis
+        ELSEIF (@colourmethod==2)
+          ang =atan(imag(cc)/real(cc))
+          IF (real(cc)<0)
+            ang=ang+pi
+          ENDIF
+          IF (ang<0)
+            ang=ang+2*pi
+          ENDIF
+          col1 = ang/(2*pi)
+        ENDIF
+      ENDIF
+
+    ENDIF
+  ENDIF
+  pt3 = pt2
+  pt2 = #z
+
+  iter = iter +1
+
+final:
+  #index = real(fn1(abs(col1)))
+
+default:
+  title = "Curvature"
+  param trapmode
+    caption = "Trap mode"
+    default = 2
+    enum = "First" "Last" "Smallest r" "Largest r" \
+    "Smallest dis." "Largest dis."
+    hint = "selects which points should be selected. r refers \
+    to radius, dis. refers to distance of center"
+  endparam
+
+  param colourmethod
+    caption = "Colour Method"
+    default = 0
+    enum = "Radius" "Distance of center" "Angle of center"
+    hint = "what property of the selected 'circle of curvature' to use"
+  endparam
+
+  func fn1
+    caption = "Extra Transfer Function"
+    default = recip()
+    hint = "Try recip for 'radius' colour method"
+  endfunc
+}
+
+
+
+
+
+lp-Shapes2 { ; this is similar to Shapes1 only variation of
+; size (width and height) has been added
+
+
+init:
+
+  complex pt = @center
+  complex z2 = (0,0)
+
+  float width1 = @width
+  float height1 = @height
+  float decay1 = @decay
+  float tilt = @angle * pi/180
+  
+  float osc = 10                ; oscilator factor (ripples)
+  float ep = atan(-decay1/osc)
+  float dis = 0.0                ; distance (general)
+
+  
+  float col = 0.0
+  complex tiltfac = exp(flip(-tilt))
+  float test = 0.0
+  complex v = 0                 ; used for variation
+  float v2 = 0.0
+  
+loop:
+
+  IF (@varymethod==0)
+    v = |#z|
+  ELSEIF (@varymethod==1)
+    v = |#z-@center|
+  ELSEIF (@varymethod==2)
+    v = real(#z)
+  ELSEIF (@varymethod==3)
+    v = real(#z-@center)
+  ELSEIF (@varymethod==4)
+    v = imag(#z)
+  ELSEIF (@varymethod==5)
+    v = imag(#z-@center)
+  ENDIF
+  v2 = real(@vfn1(v))
+
+    
+  IF (@varymode==0)              ; multiply
+    IF (@varytype==1)
+      height1 = @height*  v2
+    ELSEIF (@varytype==2)
+      width1 = @width * v2
+    ELSEIF (@varytype==3)
+      tiltfac = exp(flip(-tilt * v2 ))
+    ELSEIF (@varytype==4)
+      pt = @center * v2
+    ELSEIF (@varytype==5)
+      height1 = @height*  v2
+      width1 = @width * v2
+    ENDIF  
+    
+  ELSEIF (@varymode==1)            ; divide
+    IF (@varytype==1)
+      height1 = @height/  v2
+    ELSEIF (@varytype==2)
+      width1 = @width / v2
+    ELSEIF (@varytype==3)
+      tiltfac = exp(flip(-tilt / v2 ))
+    ELSEIF (@varytype==4)
+      pt = @center / v2
+    ELSEIF (@varytype==5)
+      height1 = @height /  v2
+      width1 = @width / v2
+    ENDIF  
+  
+  ELSEIF (@varymode==2)              ; addition
+    IF (@varytype==1)
+      height1 = @height +  v2*@varyfac
+    ELSEIF (@varytype==2)
+      width1 = @width + v2*@varyfac
+    ELSEIF (@varytype==3)
+      tiltfac = exp(flip(-tilt - v2*@varyfac ))
+    ELSEIF (@varytype==4)
+      pt = @center*(1 + v2*@varyfac)
+    ELSEIF (@varytype==5)
+      height1 = @height +  v2*@varyfac
+      width1 = @width  + v2*@varyfac
+    ENDIF  
+   
+  ELSEIF (@varymode==3)              ; subtraction
+    IF (@varytype==1)
+      height1 = @height -  v2*@varyfac
+    ELSEIF (@varytype==2)
+      width1 = @width - v2*@varyfac
+    ELSEIF (@varytype==3)
+      tiltfac = exp(flip(-tilt + v2*@varyfac ))
+    ELSEIF (@varytype==4)
+      pt = @center*(1 - v2*@varyfac)
+    ELSEIF (@varytype==5)
+      height1 = @height -  v2*@varyfac
+      width1 = @width  - v2*@varyfac
+    ENDIF  
+
+  ENDIF
+  
+  z2 = (#z-pt) * tiltfac      ;'move' & 'rotate'
+
+  IF ((@type > 0))
+    z2 = real(z2)/width1 + flip(imag(z2)/height1)
+  ENDIF
+  
+  IF (@type == 0)           ; graph
+    test=real(abs(height1*fn1(real(z2)/width1)) * exp(-decay1*abs(real(z2))) )
+    IF ( abs(imag(z2))< test )
+      col=col+real(test-abs(imag(z2)))*0.5
+    ENDIF
+  
+  ELSEIF (@type == 1)      ; fan, exponential decay
+    test = real(exp( (-1)*|z2|*decay1 ) * cos( @numarms *atan(imag(z2)/real(z2))))
+    col = col + test*0.2
+  
+  ELSEIF (@type == 2)      ; fan2, quadratic decay
+    dis=cabs(z2)
+    test=dis*(width1-dis)*10
+    IF (test>0)
+    col=col+ sqr(width1)*test * cos(@numarms* atan(imag(z2)/real(z2)) )
+    ENDIF
+  
+  ELSEIF (@type == 3)      ; ripple
+    z2 = real(z2)/width1 + flip(imag(z2)/height1)
+    dis = cabs(z2)
+    col = col + exp(-dis*decay1)*abs(cos(dis*osc + ep))*0.2
+
+  ELSEIF (@type == 4)       ; ellipses
+    test = |z2|
+    IF (test<1)
+      col=col+(1-test)*0.3
+    ENDIF    
+
+  ELSEIF (@type == 5)      ; astroid
+    test= abs(real(z2))^(.666666666) + abs(imag(z2))^(.666666666)
+    IF (test<1)
+      col=col+(1-test)
+    ENDIF
+  
+  ELSEIF (@type == 6)      ; hyperbola
+    test = abs(real(z2)*imag(z2))
+    IF (test<1)
+      col = col + (1-test)*0.2
+    ENDIF
+
+  ELSEIF (@type == 7)      ; ring
+    test = cabs(z2)
+    col = col + real(exp(-decay1*abs(1-test) ))*0.1
+  
+  ENDIF
+
+final:
+    #index = 10+ col
+  
+default:
+  title = "Shapes 2 - variable"
+
+  param type
+    caption = "Type of shape"
+    default = 4
+    enum = "Graph" "Fan" "Fan2" "Ripple" "Ellipse" \
+    "Astroid" "Hyperbola" "Ring"
+  endparam  
+    
+  param center
+    caption = "Center of shape"
+    default = (1.0,0.5)
+    hint = "This is the center of where the shape \
+    placed on the z-plane"
+  endparam
+  
+  param height
+    caption = "Height of shape"
+    default = 1.0
+  endparam
+     
+  param width
+    caption = "Width of shape"
+    default = .6
+  endparam
+  
+  param decay
+    caption = "Decay factor"
+    default = 1.0
+    hint = "A larger decay factor makes the shape drop off more quickly \
+    (applies to fan, ripples and ring)"
+  endparam
+  
+  param angle
+    caption  = "Tilt angle (in degrees)"
+    default = 0.0
+    hint = "This is the angle through which \
+    the shape is rotated"
+  endparam
+  
+  param numarms
+    caption = "Number of arms (fan)"
+    default = 4.0
+    hint = "Applies only to fan shapes"
+  endparam
+  
+  param varytype
+    caption = "Variation type"
+    default = 0
+    enum = "none" "vary height" "vary width" "vary tilt" \
+    "vary distance from origin" "vary size (height and width)"
+    hint = "Select what attribute of the trap is varied"
+  endparam
+  
+  param varymethod
+    caption = "Variation method"
+    default = 0
+    enum = "|z|" "|z-center|" "real(z)" "real(z-center)"\
+     "imag(z)" "imag(z-center)"
+    hint = "Select which variable is used to determine \
+    variation of trap"
+  endparam
+  
+  param varymode
+    caption = "Variation mode"
+    default = 0
+    enum = "Multiply original value" \
+    "Divide original value" "Add to original value" \
+    "Subtract from original value"
+    hint = "Defines how the property eg. radius, \
+    is altered"
+  endparam
+  
+  param varyfac
+    caption = "Variation factor"
+    default = 1.0
+    hint = "Controls amount of variation for 'add' and \
+    'subtract' mode above"
+  endparam
+  
+  func fn1
+    caption = "Graph function"
+    default = sin()
+    hint = "Determines the shape of graph"
+  endfunc
+
+  func vfn1
+    caption = "Variation function 1"
+    default = ident()
+    hint = "Controls how the property to be varied \
+    does change with |z|"
+  endfunc
+
+   
+}
+
+
+Grid { ; formula to produce a grid laid over the fractal
+init:
+float xgrid = 0
+float ygrid = 0
+float pixwidth = 0
+float gridwidth = 0
+float test = 0.0
+
+int power = floor(log(#magn)/log(10))
+float x = 0
+float y = 0
+int i = 0
+int numchars = 0
+int char = 0
+int p =0
+bool ischar = false
+bool isgrid = false
+
+;glyphs:
+bool v1 = false
+bool v2 = false
+bool v3 = false
+bool v4 = false
+bool h1 = false
+bool h2 = false
+bool h3 = false
+
+final:
+IF (@gridoptions != 2)
+  ;Calculate the xgrid/ygrid - line spacing.  It should
+  ;depend on the value of magnification. e.g taken from the power
+  ;of magn (ie the log)
+
+  
+  ; (B) This line needs altering to work with non-standard aspect ratios -
+  ; may involve having different gridwidths for x and y directions
+  pixwidth = 4/(real(#scrnmax)*#magn)
+  
+  xgrid = 10^(-real(power))
+  If (xgrid > @maxsize*pixwidth)
+    power = power + 1
+    xgrid = 10^(-power)
+  EndIf
+
+  ygrid=xgrid
+  gridwidth = pixwidth * @linewidth
+  
+  ; (A) line where bug probably occurs- 
+  test = real(#pixel)-xgrid*trunc(real(#pixel)/xgrid)
+  If (abs(test) < gridwidth)
+    isgrid = true
+  EndIf
+  
+  test = imag(#pixel)-ygrid*trunc(imag(#pixel)/ygrid)
+  If (abs(test) < gridwidth)
+    isgrid = true
+  EndIf
+ENDIF
+  
+      
+IF (@textoptions != 2)
+  ; draw text in corner of screen to indicate power
+  ; indent of text from side = half text width
+  ;  "      " "      "   top =   "    "  height
+  ; gap between chars        = 2* thickness
+  
+  x = real(#screenpixel) - @txtw/2
+  y = imag(#screenpixel) - @txth/2
+  
+
+  IF (abs(power) < 10)
+    numchars = 1
+  ELSE
+  numchars = 2
+  ENDIF
+
+  i = 0
+  WHILE (i <= numchars)
+    ;first loop through -  do minus sign
+    ; then check for characters
+    
+    ; Glyphs -  do only h2 if just checking for minus sign
+    IF (i>0) 
+      v1 = ((x > 0) && (x<= @thick)) && ((y >  @thick) && (y<= @txth/2))
+      v2 = ((x > (@txtw-@thick)) && (x <= @txtw)) && ((y >  @thick) && (y<=@txth/2))
+      v3 = ((x > 0) && (x<= @thick)) && ((y > (@txth/2+@thick)) && (y<=@txth))
+      v4 = ((x > (@txtw-@thick)) && (x <= @txtw)) && ((y > (@txth/2+@thick))&& (y<= @txth))
+      h1 = ((x > @thick) && (x<=(@txtw-@thick))) && ((y > 0) && (y <= @thick))
+      h3 = ((x > @thick) && (x<=(@txtw-@thick))) && ((y > @txth) && (y <=(@txth + @thick)))
+    ENDIF
+    h2 = ((x > @thick) && (x<=(@txtw-@thick))) && ((y > @txth/2) && (y <=(@txth/2 + @thick)))
+        
+    IF (i==0)
+      ;check for minus sign only
+      IF ((power > 0) && h2)
+          ischar = true
+      ENDIF
+      power=abs(power)
+    ELSE
+      ; get 'i'th character of power
+      IF (power==0)
+        char = 0
+      ELSE
+        p = numchars - i
+        char = floor((power)/(10^p)+0.01)
+        power = power - round(char*(10^p))
+      ENDIF      
+      
+
+          
+      IF (char == 1)
+        IF (v2 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 2)
+        IF (h1 || v2 || h2 || v3 || h3)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 3)
+        IF (h1 || h2 || h3 || v2 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 4)
+        IF (h2 || v1 || v2 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 5)
+        IF (h1 || h2 || h3 || v1 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 6)
+        IF (h2 || h3 || v1 || v3 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 7)
+        IF (h1 || v2 || v4)
+          ischar = true
+        ENDIF
+        ELSEIF (char == 8)
+        IF (h1 || h2 || h3 || v1 || v2 || v3 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 9)
+        IF (h1 || h2 || v1 || v2 || v4)
+          ischar = true
+        ENDIF
+      ELSEIF (char == 0)
+        IF (h1 || h3 || v1 || v2 || v3 || v4)
+          ischar = true
+        ENDIF
+      
+      ENDIF
+        
+    ENDIF
+     
+    i = i +1
+    x = x - (2*@thick + @txtw)
+  ENDWHILE
+ENDIF
+  
+If isgrid
+  IF (@gridoptions ==0)
+    #solid = true
+  ELSEIF (@gridoptions == 1)
+    #index = real(@gridcolour)/400
+  ENDIF
+ENDIF
+
+IF ischar
+  IF (@textoptions == 0)
+    #solid = true
+  ELSEIF (@textoptions == 1)
+    #index = real(@textcolour)/400
+  ENDIF
+ENDIF
+
+
+Default:
+  title = "Grid"
+  param gridoptions
+    caption = "Grid options"
+    default = 1
+    enum = "Use solid" "Use index" \
+    "No grid"
+  endparam
+  
+  param gridcolour
+    caption = "Grid colour"
+    default = 200
+    min = 0
+    max = 400
+    hint = "Index colour for grid, 0 - 400"
+  endparam
+
+  param maxsize
+    caption = "Maximum Grid size"
+    default = 50
+    hint = "Maximum grid size in pixels"
+  endparam
+  
+  param linewidth
+    caption = "Line Width"
+    default = 1.0
+    hint = "Width of line used to draw the grid"
+  endparam
+
+  param textoptions
+    caption = "Text options"
+    default = 0
+    enum = "Use solid" "Use index" \
+    "No text"
+  endparam
+    
+  param textcolour
+    caption = "Text color"
+    default = 100
+    min = 0
+    max = 400
+    hint = "Index colour for text, 0 - 400"
+  endparam
+  
+ param txth
+    caption = "Text Height"
+    default = 20.0
+    hint = "Height of character used to indicate \
+    magnification"
+  endparam
+
+  param txtw
+    caption = "Text Width"
+    default = 10.0
+    hint = "Width of character used to indicate \
+    magnification"
+  endparam
+  
+  param thick
+    caption = "Text Thickness"
+    default = 2.0
+    hint = "Line thickness for text"
+  endparam
+
+  
+}
+
+lp-EpCr2(BOTH) { 
+;
+; Epsilon Cross variation
+; The axes can be rotated to follow by rotf*arg(z(n-1))
+; where rotf is a rotation factor, zero for no rotation
+; The colouring can distinguish between which axis
+; caught the orbit, or which iteration caught the orbit
+init:
+  int count = 0
+  int col = 0  
+  float col2 = 0  
+  complex z2 = (0,0)  
+  complex oldz = (0,0)  
+  complex ang = 0.0   
+  float rot = 0.0  
+  float theta = 0.0 
+  float tilt = @angle*pi/180
+  float offset = 0.0
+loop:    
+  IF (count > 1)
+    theta=atan(imag(oldz)/real(oldz))
+      IF (real(oldz)<0)
+        theta=theta+pi
+      ENDIF
+    rot =theta * @rotf +tilt
+    ang = exp(flip(-rot))
+    z2 = (#z - @center)*ang
+    IF (col == 0)
+      IF (real(abs(real(z2))) < @dis )
+        col = 1
+        col2 = real(z2)
+      ENDIF
+      IF (real(abs(imag(z2))) < @dis )
+        col = 2
+        col2 = imag(z2)
+      ENDIF
+      IF ((col > 0) && (@colmode == 1)) ; if orbit is captured and colmode1
+        col2 = count                    ; set col2 to iteration number
+      ENDIF
+    ENDIF
+  ENDIF
+  oldz = #z
+  count = count + 1
+final:
+  offset = 0
+  IF (@xydif)
+    IF (col==1)
+      offset = @xcolour/400
+    ELSEIF (col==2)
+      offset = @ycolour/400
+    ENDIF
+  ENDIF
+  IF (col == 0)
+    #solid = true
+  ELSE
+    IF (@colmode == 0)
+      col2 = col2 / @dis
+    ELSEIF (@colmode == 1)
+      offset = offset+ @INoffset/400
+    ENDIF
+    #index = @colourf * col2 + offset
+  ENDIF
+default:
+  title = "Epsilon Cross variation"
+  param colmode
+    caption = "Colouring mode"
+    default = 0
+    enum = "normal" "iteration number"
+  endparam
+  param dis
+    caption = "Axis distance"
+    default = 0.01
+    hint = "determines how close to an axis \
+      an orbit has to come to be caught"
+  endparam
+  param colourf
+    caption = "Internal colour factor"
+    default = 0.1
+    hint = "strength of colouring within bands or \
+      colour density for colouring by iteration"
+  endparam
+  param center
+    caption = "Center"
+    default = (0.0,0.0)
+    hint = "0,0 is standard epsilon cross colouring"
+  endparam
+  param angle
+    caption  = "Tilt angle"
+    default = 0.0
+    hint = "Angle in degrees through which \
+      the axes are rotated"
+  endparam
+  param rotf
+    caption = "Rotation factor"
+    default = 1.0
+    hint = "Controls what effect the orbit has \
+      on rotation of axes"
+  endparam
+  param xydif
+    caption = "Distinguish x/y"
+    default = false
+    hint = "If enabled, orbits are coloured differently \
+      according to which orbit captured them"
+  endparam
+  param xcolour
+    caption = "X-axis colour offset"
+    default = 40
+    hint = "determines what index number to colour \
+      an orbit which come near to x-axis"
+  endparam
+  param ycolour
+    caption = "Y-axis colour offset"
+    default = 240
+    hint = "determines what index number to colour \
+      an orbit which come near to y-axis"
+  endparam
+  param inoffset
+    caption = "Iteration number offset"
+    default = 200
+    hint = "Offset for colouring by iterations"
+  endparam
+}

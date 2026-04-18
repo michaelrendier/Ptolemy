@@ -1,0 +1,1768 @@
+comment {
+  Formulas for Ultra Fractal v5<br>
+  By David Makin<br>
+  This version 19th March 2009<br>
+  Added the Multi Bailout Switch Formula<br><br>
+  Started May 2008<br>
+
+ <a href="http://www.fractalgallery.co.uk/">Dave's Website</a><br>
+ makinmagic@tiscali.co.uk<br>
+}
+
+GenericSwitchFormula {
+;
+; Generic Switch Formula is a skeleton fractal formula that accepts
+; Formula objects and will switch with MMF Switch Formula objects.
+; The formula is based on the Generic Formula in Standard.ufm but with
+; "standard" switching added.
+;
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+  Formula f = new @formulaClass(0)
+  float scale = 1.0
+  if @formulaClass==MMF_SwitchFormula
+    if @p_mode
+      MMF_SwitchFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchDivergentFormula
+    if @p_mode
+      MMF_SwitchDivergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchDivergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchConvergentFormula
+    if @p_mode
+      MMF_SwitchConvergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchConvergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchConvergentDivergentFormula
+    if @p_mode
+      MMF_SwitchConvergentDivergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchConvergentDivergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  endif
+  int func testit(Formula f,complex p)
+    int c = 0
+    p = f.Init(p)
+    repeat
+      p = f.Iterate(p)
+    until (c=c+1)>=#maxiter || f.IsBailedOut(p)
+    return c
+  endfunc
+  if @p_advanced && @p_search && (!@p_preview || #calculationPurpose==3) \
+     && !@p_manualscale
+    float range = @p_range
+    float step = 0.25*@p_range
+    float coord = -range
+    int c = 0
+    int count = 0
+    bool wasfirst = true
+    repeat
+      count = testit(f, -range + flip(-range))
+      coord = -range+step
+      repeat
+        c = testit(f, coord + flip(-range))
+      until (coord=coord+step)>range || abs(c-count)>1
+      if c==count
+        coord = -range
+        repeat
+          c = testit(f,coord + flip(range))
+        until (coord=coord+step)>range || abs(c-count)>1
+        if c==count
+          coord = -range + step
+          repeat
+            c = testit(f, -range + flip(coord))
+          until (coord=coord+step)>=range || abs(c-count)>1
+          if c==count
+            coord = -range + step
+            repeat
+              c = testit(f, range + flip(coord))
+            until (coord=coord+step)>=range || abs(c-count)>1
+          endif
+        endif
+      endif
+      if abs(c-count)<=1
+        if wasfirst
+          range = 0.875*range
+          step = 0.875*step
+          c = -20
+        endif
+      else
+        wasfirst = false
+        range = (8.0/7.0)*range
+        step = (8.0/7.0)*step
+      endif
+    until abs(c-count)<=1
+    scale = 0.5*range
+  endif
+
+init:
+  if @p_mode1 && @p_advanced && @p_manualscale
+    #z = f.Init(#pixel/@p_scale + @p_centre)
+  elseif @p_advanced && @p_search && (!@p_preview || #calculationPurpose==3) \
+         && !@p_manualscale
+    #z = f.Init(#pixel*scale)
+  else
+    #z = f.Init(#pixel)
+  endif
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "Generic Switch Formula"
+  rating = recommended
+  periodicity = 0
+  method = multipass
+  heading
+    caption = "Information"
+    text = "This formula accepts any formula objects but is specifically \
+            designed to work with compatible formula objects to allow \
+            standard UF switching. Compatible formula objects will \
+            generally have 'Switch' in the title such as formula objects \
+            in mmf.ulb."
+  endheading
+  heading
+    caption = "Switch Parameters"
+  endheading
+  param p_mode
+    default = true
+    visible = false
+  endparam
+  param p_mode1
+    default = false
+    visible = false
+  endparam
+  heading
+    text = "Currently in Mandelbrot mode."
+    visible = @p_mode
+  endheading
+  heading
+    text = "Currently in Julia mode."
+    visible = @p_mode1
+  endheading
+  param p_start
+    caption = "Mandelbrot Start value"
+    default = (0,0)
+    hint = "Ideally should be set to a critical value for the formula \
+            in use, e.g. (0,0) for z^n+c."
+    visible = @p_mode
+  endparam
+  param p_seed
+    caption = "Julia Constant"
+    default = (-1.25,0)
+    hint = "The constant for the Julia."
+    visible = @p_mode1
+  endparam
+  param p_advanced
+    caption = "Advanced Options"
+    default = false
+    hint = "The advanced options are useful if your Julias are very large, \
+            very small, off centre or vary in size considerably."
+  endparam
+  param p_manualscale
+    caption = "Manual Julia location/scale ?"
+    default = false
+    hint = "This option is for when your Julia Sets are consistently large \
+            or consistently small and/or not centred on the origin. If the \
+            Julias vary in size considerably then it's better to use the \
+            'Switch-scaling ?' option."
+    visible = @p_advanced
+  endparam
+  param p_centre
+    caption = "Manual Centre"
+    default = (0,0)
+    hint = "The centre coords. Modify to position switch Julias."
+    visible = @p_advanced && @p_manualscale
+  endparam
+  param p_scale
+    caption = "Manual Scale"
+    default = 1.0
+    hint = "The scale adjust. Modify to scale switch Julias."
+    visible = @p_advanced && @p_manualscale
+  endparam
+  param p_usesearch
+    caption = "Switch-scaling ?"
+    default = false
+    hint = "When enabled the auto-scaling is enabled for switching. \
+            This is necessary for the switch preview in cases where \
+            the new fractal varies greatly in scale depending on the \
+            switch location. After switching if not using 'Auto-scale \
+            previews only' you should really disable 'Auto-scale' and \
+            position the new image using UFs normal location controls."
+    visible = @p_advanced && !@p_manualscale
+  endparam
+  param p_search
+    caption = "Auto-scale ?"
+    default = false
+    hint = "When enabled the eyedropper and explore previews are \
+            auto-scaled. The current view is also auto-scaled if \
+            'Auto-scale previews only' is disabled. If viewing in \
+            Mandelbrot mode you should disable this parameter or \
+            enable 'Auto-scale previews only' and relocate using \
+            UFs normal location controls before attempting to switch."
+    visible = @p_advanced && !@p_manualscale
+  endparam
+  param p_preview
+    caption = "Auto-scale previews only"
+    default = true
+    hint = "When enabled it's only the previews that are scaled, \
+            when you actually go to the new image UFs normal scale \
+            is used so you'll need to relocate to reproduce the \
+            preview image."
+    visible = @p_advanced && (@p_usesearch || @p_search) && !@p_manualscale
+  endparam
+  param p_range
+    caption = "Initial Range"
+    default = 2.0
+    min = 1e-200
+    hint = "This is the initial search range for the auto-scaling, you may \
+            find in some cases that using a large value is better e.g. \
+            >100.0 - this will be the case for example if a Julia is \
+            particularly large and has a large 'inside' area (lake) near \
+            the origin. An indication that you need to increase the value \
+            is a solid 'inside' image, normally all black. In other cases \
+            you may find reducing the value may help, in particular if \
+            the switched fractal is small but has disconnected areas \
+            around the main 'lake'."
+    visible = @p_advanced && (@p_usesearch || @p_search) && !@p_manualscale
+  endparam
+  heading
+    caption = "The Formula"
+  endheading
+  heading
+    text = "Switching is not currently available, you need to use \
+            compatible formulas such as those in mmf.ulb if you want \
+            switching, generally formulas with 'Switch' in the name."
+    visible = @formulaClass!=MMF_SwitchFormula \
+              && @formulaClass!=MMF_SwitchDivergentFormula \
+              && @formulaClass!=MMF_SwitchConvergentFormula \
+              && @formulaClass!=MMF_SwitchConvergentDivergentFormula
+  endheading
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = MMF_SwitchStandard
+  endparam
+switch:
+  type = "GenericSwitchFormula"
+  p_mode = p_mode1
+  p_mode1 = p_mode
+  p_start = #pixel
+  p_seed = #pixel
+  p_advanced = p_advanced
+  p_manualscale = p_manualscale
+  p_centre = p_centre
+  p_scale = p_scale
+;  p_usesearch = p_usesearch is remmed so it defaults to false
+  p_search = p_usesearch
+  p_preview = p_preview
+  p_range = p_range
+  formulaClass = formulaClass
+}
+
+MultiBailoutSwitchFormula {
+;
+; Multi Bailout Switch Formula is a skeleton fractal formula that accepts
+; Formula objects and will switch with MMF Switch Formula objects.
+; The formula is based on the Generic Formula in Standard.ufm but with
+; "standard" switching and bailout testing to detect divergent bailout
+; and/or convergent bailout and/or periodic bailout i.e. convergence to
+; periodic attractors.
+; Note that the bailout parameters in the class formula are ignored and
+; the settings from the Multi Bailout parent formula used instead.
+;
+; David Makin March 2009
+;
+global:
+  import "common.ulb"
+  import "mmf.ulb"
+  Formula f = new @formulaClass(0)
+  float scale = 1.0
+  int period[199] ; the period values for each active period to check
+                 ; if set negative then abs(period) is tested for
+                 ; but does not produce bailout (in order to avoid errors
+                 ; that detect periods that are multiples of the said period
+                 ; when the orbit concerned is of the said period
+                 ; e.g. detecting period 4 attractors for orbits that are
+                 ; actually period 2)
+  complex attractor[10]
+  int p = 0
+  int numperiods = 0
+  int numpoints = 0
+  int lastperiod = 0
+  if @periodictype==1
+    if @maxperiod<@minperiod
+      lastperiod = @minperiod - 2
+    else
+      lastperiod = @maxperiod - 2
+    endif
+    repeat
+      if p+2>=@minperiod
+        period[p] = 1
+      else
+        period[p] = 0
+      endif
+      p = p + 1
+    until p>lastperiod
+  elseif @periodictype==2
+    repeat
+      period[p] = 0
+    until (p=p+1)>=199
+    lastperiod = @period1
+    period[@period1-2] = 1
+    if @numperiods>0
+      if @period2>lastperiod
+        lastperiod = @period2
+      endif
+      period[@period2-2] = 1
+      if @numperiods>1
+        if @period3>lastperiod
+          lastperiod = @period3
+        endif
+        period[@period3-2] = 1
+        if @numperiods>2
+          if @period4>lastperiod
+            lastperiod = @period4
+          endif
+          period[@period4-2] = 1
+          if @numperiods>3
+            if @period5>lastperiod
+              lastperiod = @period5
+            endif
+            period[@period5-2] = 1
+            if @numperiods>4
+              if @period6>lastperiod
+                lastperiod = @period6
+              endif
+              period[@period6-2] = 1
+              if @numperiods>5
+                if @period7>lastperiod
+                  lastperiod = @period7
+                endif
+                period[@period7-2] = 1
+                if @numperiods>6
+                  if @period8>lastperiod
+                    lastperiod = @period8
+                  endif
+                  period[@period8-2] = 1
+                  if @numperiods>7
+                    if @period9>lastperiod
+                      lastperiod = @period9
+                    endif
+                    period[@period9-2] = 1
+                    if @numperiods>8
+                      if @period10>lastperiod
+                        lastperiod = @period10
+                      endif
+                      period[@period10-2] = 1
+                    endif
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+    lastperiod = lastperiod - 2
+  endif
+  if @periodictype==1 || @periodictype==2
+    int minp = 0
+    if !@checkall
+      while period[minp]==0
+        minp = minp + 1
+      endwhile
+    endif
+    p = 2 ; no need to check 0 (period 2) or 1 (period 3)
+    while p<=lastperiod
+      if period[p]==1
+        int ee = minp
+        numperiods = floor(0.5*(p+2)) - 2
+        while ee<=numperiods
+          if period[ee]==0
+            if (p+2)%(ee+2)==0
+              period[ee] = 2
+            endif
+          endif
+          ee = ee + 1
+        endwhile
+      endif
+      p = p + 1
+    endwhile
+    p = 0
+    numperiods = 0
+    repeat
+      if period[p]>0
+        if period[p]==2
+          period[numperiods] = -(p + 2)
+        else
+          period[numperiods] = p + 2
+        endif
+        numperiods = numperiods + 1
+      endif
+      p = p + 1
+    until p>lastperiod
+  endif
+  if @formulaClass==MMF_SwitchFormula
+    if @p_mode
+      MMF_SwitchFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchDivergentFormula
+    if @p_mode
+      MMF_SwitchDivergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchDivergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchConvergentFormula
+    if @p_mode
+      MMF_SwitchConvergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchConvergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  elseif @formulaClass==MMF_SwitchConvergentDivergentFormula
+    if @p_mode
+      MMF_SwitchConvergentDivergentFormula(f).SetParams(@p_mode,@p_start)
+    else
+      MMF_SwitchConvergentDivergentFormula(f).SetParams(@p_mode,@p_seed)
+    endif
+  endif
+  int func testit(complex p)
+    int c = 0
+    p = f.Init(p)
+    repeat
+      p = f.Iterate(p)
+    until (c=c+1)>=#maxiter || f.IsBailedOut(p)
+    return c
+  endfunc
+  if @p_advanced && @p_search && (!@p_preview || #calculationPurpose==3) \
+     && !@p_manualscale
+    float range = @p_range
+    float step = 0.25*@p_range
+    float coord = -range
+    int c = 0
+    int count = 0
+    bool wasfirst = true
+    repeat
+      count = testit(-range + flip(-range))
+      coord = -range+step
+      repeat
+        c = testit(coord + flip(-range))
+      until (coord=coord+step)>range || abs(c-count)>1
+      if c==count
+        coord = -range
+        repeat
+          c = testit(coord + flip(range))
+        until (coord=coord+step)>range || abs(c-count)>1
+        if c==count
+          coord = -range + step
+          repeat
+            c = testit(-range + flip(coord))
+          until (coord=coord+step)>=range || abs(c-count)>1
+          if c==count
+            coord = -range + step
+            repeat
+              c = testit(range + flip(coord))
+            until (coord=coord+step)>=range || abs(c-count)>1
+          endif
+        endif
+      endif
+      if abs(c-count)<=1
+        if wasfirst
+          range = 0.875*range
+          step = 0.875*step
+          c = -20
+        endif
+      else
+        wasfirst = false
+        range = (8.0/7.0)*range
+        step = (8.0/7.0)*step
+      endif
+    until abs(c-count)<=1
+    scale = 0.5*range
+  endif
+  int func testit1(complex p,ComplexArray &vals,bool testpoint)
+    complex pv[201]
+    complex pold
+    float m = 0
+    int type = -1
+    int i = 0
+    int pc = 1
+    if @p_mode1 && @p_advanced && @p_manualscale
+      p = f.Init(p/@p_scale + @p_centre)
+    elseif @p_advanced && @p_search && (!@p_preview || #calculationPurpose==3) \
+           && !@p_manualscale
+      p = f.Init(p*scale)
+    else
+      p = f.Init(p)
+    endif
+    pv[0] = pold = p
+    repeat
+      pold = p
+      p = pv[pc] = f.Iterate(p)
+      if (pc=pc+1)>200
+        pc = 0
+      endif
+    until (i=i+1)>=#maxiter*@overiter || (m=|p|)>65536.0
+    if !isNaN(m)
+    if m>65536.0 || isInf(m)
+      type = 0
+    elseif (!testpoint && |p-pold|<@periodbailout) \
+            || (testpoint && |p-pold|<@pointbailout)
+      type = 1
+      vals.setArrayLength(1)
+      vals.m_Elements[0] = p
+    elseif !testpoint
+      if (pc=pc-1)<0
+        pc = 200
+      endif
+      if (i=pc-2)<0
+        i = i + 201
+      endif
+      repeat
+        if |p - pv[i]|<@periodbailout
+          if (type=pc-i)<0
+            type = type + 201
+          endif
+          vals.SetArrayLength(type)
+          int j = 0
+          repeat
+            vals.m_Elements[j] = pv[i]
+            if (i=i+1)>200
+              i = 0
+            endif
+          until (j=j+1)>=type
+        elseif (i=i-1)<0
+          i = 200
+        endif
+      until i==pc || type>0
+    endif
+    endif
+    return type
+  endfunc
+  ComplexArray pvals = new ComplexArray(0)
+  if !@convergence && @absconvergence>0 && @convset==1
+    if (c = testit1(@attractor1,pvals,true))==1
+      attractor[0] = pvals.m_Elements[0]
+      numpoints = numpoints + 1
+    endif
+    if @absconvergence>1
+      if (c = testit1(@attractor2,pvals,true))==1
+        attractor[numpoints] = pvals.m_Elements[0]
+        numpoints = numpoints + 1
+      endif
+      if @absconvergence>2
+        if (c = testit1(@attractor3,pvals,true))==1
+          attractor[numpoints] = pvals.m_Elements[0]
+          numpoints = numpoints + 1
+        endif
+        if @absconvergence>3
+          if (c = testit1(@attractor4,pvals,true))==1
+            attractor[numpoints] = pvals.m_Elements[0]
+            numpoints = numpoints + 1
+          endif
+          if @absconvergence>4
+            if (c = testit1(@attractor5,pvals,true))==1
+              attractor[numpoints] = pvals.m_Elements[0]
+              numpoints = numpoints + 1
+            endif
+            if @absconvergence>5
+              if (c = testit1(@attractor6,pvals,true))==1
+                attractor[numpoints] = pvals.m_Elements[0]
+                numpoints = numpoints + 1
+              endif
+              if @absconvergence>6
+                if (c = testit1(@attractor7,pvals,true))==1
+                  attractor[numpoints] = pvals.m_Elements[0]
+                  numpoints = numpoints + 1
+                endif
+                if @absconvergence>7
+                  if (c = testit1(@attractor8,pvals,true))==1
+                    attractor[numpoints] = pvals.m_Elements[0]
+                    numpoints = numpoints + 1
+                  endif
+                  if @absconvergence>8
+                    if (c = testit1(@attractor9,pvals,true))==1
+                      attractor[numpoints] = pvals.m_Elements[0]
+                      numpoints = numpoints + 1
+                    endif
+                    if @absconvergence>9
+                      if (c = testit1(@attractor10,pvals,true))==1
+                        attractor[numpoints] = pvals.m_Elements[0]
+                        numpoints = numpoints + 1
+                      endif
+                    endif
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+    if @showpoints
+      $define DEBUG
+      print(numpoints," Point Attractors Found")
+      print("")
+      c = 0
+      while c<numpoints
+        print("Attractor ",c+1,": ",attractor[c])
+        c = c + 1
+      endwhile
+      print("")
+    endif
+  endif
+  if @periodictype==3
+    complex periodvals[20,200]
+    if (c = testit1(@location1,pvals,false))>1
+      period[0] = c
+      while (c=c-1)>=0
+        periodvals[0,c] = pvals.m_Elements[c]
+      endwhile
+      numperiods = 1
+    endif
+    if @numpoints>0
+      if (c = testit1(@location2,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>1
+      if (c = testit1(@location3,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>2
+      if (c = testit1(@location4,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>3
+      if (c = testit1(@location5,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>4
+      if (c = testit1(@location6,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>5
+      if (c = testit1(@location7,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>6
+      if (c = testit1(@location8,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>7
+      if (c = testit1(@location9,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @numpoints>8
+      if (c = testit1(@location10,pvals,false))>1
+        period[numperiods] = c
+        while (c=c-1)>=0
+          periodvals[numperiods,c] = pvals.m_Elements[c]
+        endwhile
+        numperiods = numperiods + 1
+      endif
+    endif
+    if @showattractors
+      $define DEBUG
+      print(numperiods," Periodic Attractors Found")
+      c = 0
+      while c<numperiods
+        print("")
+        print("Attractor ",c+1,":")
+        print("Period ",period[c])
+        print("Values:")
+        p = 0
+        repeat
+          print("Point ",p+1,":",periodvals[c,p])
+        until (p=p+1)>=period[c]
+        c = c + 1
+      endwhile
+      print("")
+    endif
+  endif
+
+init:
+  complex zz[@extra*#maxiter + 2]
+  int periods[199]
+  int confirm[199]
+  complex zold = (0,0)
+  float m = 0.0
+  int bailout = -1
+  int found = 0
+  int i = 0
+  int j = 0
+  int k = numperiods
+  int l = 0
+  int enditer = #maxiter
+  repeat
+    periods[i] = abs(period[i])
+    confirm[i] = -1
+  until (i=i+1)>=numperiods
+  if @p_mode1 && @p_advanced && @p_manualscale
+    #z = f.Init(#pixel/@p_scale + @p_centre)
+  elseif @p_advanced && @p_search && (!@p_preview || #calculationPurpose==3) \
+         && !@p_manualscale
+    #z = f.Init(#pixel*scale)
+  else
+    #z = f.Init(#pixel)
+  endif
+  zz[0] = zold = #z
+  i = 0
+  repeat
+    zz[(i=i+1)] = #z = f.Iterate(#z)
+    if @convergence || @absconvergence>0 || (@periodictype>0 && @checkone) \
+       || @periodictype==3
+      m = |#z - zold|
+    endif
+    if @divergence && (@miniterations==1 || i>=@miniterations) && |#z|>@bailout
+      bailout = 0
+    elseif (@miniterations==1 || i>=@miniterations) && \
+           ((@convergence && m<@smallbailout) \
+           || (!@convergence && @convset==0 && m<@pointbailout \
+               && ((@absconvergence>0 && |#z - @attractor1|<@pointbailout) \
+                || (@absconvergence>1 && |#z - @attractor2|<@pointbailout) \
+                || (@absconvergence>2 && |#z - @attractor3|<@pointbailout) \
+                || (@absconvergence>3 && |#z - @attractor4|<@pointbailout) \
+                || (@absconvergence>4 && |#z - @attractor5|<@pointbailout) \
+                || (@absconvergence>5 && |#z - @attractor6|<@pointbailout) \
+                || (@absconvergence>6 && |#z - @attractor7|<@pointbailout) \
+                || (@absconvergence>7 && |#z - @attractor8|<@pointbailout) \
+                || (@absconvergence>8 && |#z - @attractor9|<@pointbailout) \
+                || (@absconvergence>9 && |#z - @attractor10|<@pointbailout))) \
+           || (!@convergence && @convset==1 && m<@pointbailout \
+               && ((numpoints>0 && |#z - attractor[0]|<@pointbailout) \
+                || (numpoints>1 && |#z - attractor[1]|<@pointbailout) \
+                || (numpoints>2 && |#z - attractor[2]|<@pointbailout) \
+                || (numpoints>3 && |#z - attractor[3]|<@pointbailout) \
+                || (numpoints>4 && |#z - attractor[4]|<@pointbailout) \
+                || (numpoints>5 && |#z - attractor[5]|<@pointbailout) \
+                || (numpoints>6 && |#z - attractor[6]|<@pointbailout) \
+                || (numpoints>7 && |#z - attractor[7]|<@pointbailout) \
+                || (numpoints>8 && |#z - attractor[8]|<@pointbailout) \
+                || (numpoints>9 && |#z - attractor[9]|<@pointbailout))))
+      bailout = 1
+      if !@convergence && @passpoint && @passtype
+        if @convset==0 && m<@pointbailout
+          if @absconvergence>0 && |#z - @attractor1|<@pointbailout
+            found = 1
+          elseif @absconvergence>1 && |#z - @attractor2|<@pointbailout
+            found = 2
+          elseif @absconvergence>2 && |#z - @attractor3|<@pointbailout
+            found = 3
+          elseif @absconvergence>3 && |#z - @attractor4|<@pointbailout
+            found = 4
+          elseif @absconvergence>4 && |#z - @attractor5|<@pointbailout
+            found = 5
+          elseif @absconvergence>5 && |#z - @attractor6|<@pointbailout
+            found = 6
+          elseif @absconvergence>6 && |#z - @attractor7|<@pointbailout
+            found = 7
+          elseif @absconvergence>7 && |#z - @attractor8|<@pointbailout
+            found = 8
+          elseif @absconvergence>8 && |#z - @attractor9|<@pointbailout
+            found = 9
+          elseif @absconvergence>9 && |#z - @attractor10|<@pointbailout
+            found = 10
+          endif
+        elseif @convset==1 && numpoints>0
+          j = 0
+          repeat
+            if m<@pointbailout && |#z - attractor[j]|<@pointbailout
+              found = j + 1
+              j = numpoints
+            endif
+          until (j=j+1)>=numpoints
+        endif
+      endif
+    elseif @periodictype>0 && @periodictype<3 && k>=0
+      if @checkone && m<@periodbailout
+        k = -1
+      elseif k>0
+        j = 0
+        while j<k
+          if periods[j]==i
+            if @miniterations>1 && i<@miniterations*abs(period[j])
+              periods[j] = i + abs(period[j])
+            elseif |#z - zz[i-(l=abs(period[j]))]|>=@periodbailout
+              periods[j] = i + l
+            elseif period[j]>0
+              if @extra==1
+                bailout = period[j]
+                k = 0
+              else
+                k = i*@extra
+                if k<i+l+1
+                  k = i + l + 1
+                endif
+                confirm[j] = k
+                if k>enditer
+                  if k>@extra*#maxiter
+                    enditer = @extra*#maxiter
+                  else
+                    enditer = k
+                  endif
+                endif
+                k = j + 1
+              endif
+            else
+              k = j
+              while k>0 && period[k-1]<0
+                k = k - 1
+              endwhile
+            endif
+          elseif i==confirm[j]
+            bailout = period[j]
+            i = periods[j]
+            k = 0
+          endif
+          j = j + 1
+        endwhile
+      endif
+    elseif @periodictype==3 && m>=@periodbailout && numperiods>0
+      j = 0
+      repeat
+        l = period[j]
+        if (@allbailout && (@usealliterations || @passtype) && i>=l) \
+           || periods[j]==i
+          if !@allbailout
+            periods[j] = periods[j] + l
+          endif
+          if (@miniterations==1 || i>=@miniterations*l) \
+             && |#z - zz[i - l]|<@periodbailout
+            k = 0
+            repeat
+              if |#z - periodvals[j,k]|<@periodbailout
+                if @passpositions && @passtype
+                  found = k + 1
+                endif
+                k = bailout = l
+                j = numperiods
+              endif
+            until (k=k+1)>=l
+          endif
+        endif
+      until (j=j+1)>=numperiods
+    endif
+    zold = #z
+  until bailout>=0 || i>enditer
+  if @periodictype>0
+    if i>=#maxiter + 1
+      i = #maxiter + 1
+    elseif bailout>1
+      if !@usealliterations && !@passtype
+        k = l = 0
+        repeat
+          zz[(k=k+1)] = zz[(l=l+bailout)]
+        until l>=i
+        i = k
+      endif
+    endif
+  endif
+  j = 0
+  if @passtype && bailout>=0
+; store the bailout type in #z
+;    print(bailout)
+;    print(zz[0])
+    m = abs(real(zz[0]))/512.0
+    if m<1e-200
+      m = 1e-200
+    endif
+    m = m + (bailout+256)*2.0^ceil(log(m)/log(2.0))
+    if real(zz[0])<0.0
+      m = -m
+    endif
+    #z = m + flip(imag(zz[0]))
+    if ((!@convergence && @passpoint && bailout==1) \
+        || (@passpositions && @periodictype==3 && bailout>1))
+      m = abs(imag(zz[0]))/512.0
+      if m<1e-200
+        m = 1e-200
+      endif
+      m = m + (found+256)*2.0^ceil(log(m)/log(2.0))
+      if imag(zz[0])<0.0
+        m = -m
+      endif
+      #z = real(#z) + flip(m)
+    endif
+;; recover the bailout type and original value of #z
+;    m = abs(real(#z))
+;    float n = 2.0^ceil(log(m)/log(2.0)-9.0)
+;    k = floor(m/n)
+;    m = 512.0*(m - n*k)
+;    bailout = k - 256
+;    if real(#z)<0.0
+;      m = -m
+;    endif
+;    #z = m + flip(imag(#z))
+;;    print(bailout)
+;;    print(#z)
+  else
+    #z = zz[0]
+  endif
+  if @divcol==1 && bailout==0
+    k = i
+    i = 2147483647
+    l = 0
+  endif
+loop:
+  if bailout>=0
+    #z = zz[(j=j+1)]
+    if @divcol==1 && bailout==0
+      if @divinside==0 && j==k
+        j = j - 1
+      elseif @divinside==1 && j==k
+        j = 0
+      elseif @divinside==2
+        j = j + l
+        if j==-1
+          l = 0
+          j = 1
+        elseif j==k
+          l = -2
+          j = j - 2
+        endif
+      endif
+    endif
+  endif
+bailout:
+  j<i
+default:
+  title = "Multi Bailout Switch Formula"
+  rating = recommended
+  periodicity = 0
+  method = multipass
+  heading
+    caption = "Information"
+    text = "This formula accepts any formula objects but is specifically \
+            designed to work with compatible formula objects to allow \
+            standard UF switching. Compatible formula objects will \
+            generally have 'Switch' in the title such as formula objects \
+            in mmf.ulb. It was specifically written to allow bailout based \
+            on the detection of any periodic attractor (up to period 200). \
+            Note that the bailout parameters specified in this parent formula \
+            will override those of the chosen formula to iterate. This \
+            formula's primary use is for investigating periodic attractors \
+            in Julia Sets by switching from the Mandelbrot version of a \
+            formula. If your final work is a Julia (or other fractal type) \
+            involving a limited number of periodic attractors then it's best \
+            to use the 'Periodic Method' set to 'Specified Areas' and use the \
+            eyedropper to set the 'Attractor Location' value/s. Most of the \
+            time it's best to use this formula with mmf5.ucl:Multi Bailout \
+            Colouring as the 'Outside' colouring."
+  endheading
+  heading
+    enabled = false
+  endheading
+  int param version
+    caption = "Version"
+    enum = "1.0"
+    default = 0
+    hint = "Provided to ensure backward compatibility."
+    visible = false
+  endparam
+  heading
+    caption = "Switch Parameters"
+  endheading
+  param p_mode
+    default = true
+    visible = false
+  endparam
+  param p_mode1
+    default = false
+    visible = false
+  endparam
+  heading
+    text = "Currently in Mandelbrot mode."
+    visible = @p_mode
+  endheading
+  heading
+    text = "Currently in Julia mode."
+    visible = @p_mode1
+  endheading
+  param p_start
+    caption = "Mandelbrot Start value"
+    default = (0,0)
+    hint = "Ideally should be set to a critical value for the formula \
+            in use, e.g. (0,0) for z^n+c."
+    visible = @p_mode
+  endparam
+  param p_seed
+    caption = "Julia Constant"
+    default = (-1.25,0)
+    hint = "The constant for the Julia."
+    visible = @p_mode1
+  endparam
+  param p_advanced
+    caption = "Advanced Options"
+    default = false
+    hint = "The advanced options are useful if your Julias are very large, \
+            very small, off centre or vary in size considerably."
+  endparam
+  param p_manualscale
+    caption = "Manual Julia location/scale ?"
+    default = false
+    hint = "This option is for when your Julia Sets are consistently large \
+            or consistently small and/or not centred on the origin. If the \
+            Julias vary in size considerably then it's better to use the \
+            'Switch-scaling ?' option."
+    visible = @p_advanced
+  endparam
+  param p_centre
+    caption = "Manual Centre"
+    default = (0,0)
+    hint = "The centre coords. Modify to position switch Julias."
+    visible = @p_advanced && @p_manualscale
+  endparam
+  param p_scale
+    caption = "Manual Scale"
+    default = 1.0
+    hint = "The scale adjust. Modify to scale switch Julias."
+    visible = @p_advanced && @p_manualscale
+  endparam
+  param p_usesearch
+    caption = "Switch-scaling ?"
+    default = false
+    hint = "When enabled the auto-scaling is enabled for switching. \
+            This is necessary for the switch preview in cases where \
+            the new fractal varies greatly in scale depending on the \
+            switch location. After switching if not using 'Auto-scale \
+            previews only' you should really disable 'Auto-scale' and \
+            position the new image using UFs normal location controls."
+    visible = @p_advanced && !@p_manualscale
+  endparam
+  param p_search
+    caption = "Auto-scale ?"
+    default = false
+    hint = "When enabled the eyedropper and explore previews are \
+            auto-scaled. The current view is also auto-scaled if \
+            'Auto-scale previews only' is disabled. If viewing in \
+            Mandelbrot mode you should disable this parameter or \
+            enable 'Auto-scale previews only' and relocate using \
+            UFs normal location controls before attempting to switch."
+    visible = @p_advanced && !@p_manualscale
+  endparam
+  param p_preview
+    caption = "Auto-scale previews only"
+    default = true
+    hint = "When enabled it's only the previews that are scaled, \
+            when you actually go to the new image UFs normal scale \
+            is used so you'll need to relocate to reproduce the \
+            preview image."
+    visible = @p_advanced && (@p_usesearch || @p_search) && !@p_manualscale
+  endparam
+  param p_range
+    caption = "Initial Range"
+    default = 2.0
+    min = 1e-200
+    hint = "This is the initial search range for the auto-scaling, you may \
+            find in some cases that using a large value is better e.g. \
+            >100.0 - this will be the case for example if a Julia is \
+            particularly large and has a large 'inside' area (lake) near \
+            the origin. An indication that you need to increase the value \
+            is a solid 'inside' image, normally all black. In other cases \
+            you may find reducing the value may help, in particular if \
+            the switched fractal is small but has disconnected areas \
+            around the main 'lake'."
+    visible = @p_advanced && (@p_usesearch || @p_search) && !@p_manualscale
+  endparam
+  heading
+    caption = "The Bailout Settings"
+    text = "Note that these settings will over-ride the bailout settings \
+            in the chosen formula."
+  endheading
+  int param miniterations
+    caption = "Minimum Iterations"
+    default = 1
+    min = 1
+    hint = "Using values greater than 1 can fill holes and areas of black \
+            space or solid colour when using some colouring formulas such as \
+            mmf3.ucl:Centre of Curvature, typically use values up to 5."
+  endparam
+  bool param passtype
+    caption = "Pass Bailout Type"
+    default = false
+    hint = "When enabled the bailout type is passed to the outside colouring \
+            formula as part of start z. This should only be used when using \
+            the mmf5.ucl:Multi Bailout Colouring formula (or future compatible \
+            formulas) as the 'Outside' colouring in which case you should \
+            enable 'Bailout type is passed' in that colouring to indicate that \
+            the bailout type has been passed from the main formula. Note that \
+            when enabled the entire orbit is always passed to the colouring \
+            (i.e. the fix to make standard point convergent smoothing \
+            formulas work for areas with periodic bailout is disabled, that \
+            option is provided in the mmf5.ucl:Multi Bailout Colouring \
+            instead). When this option is in use and you're colouring \
+            using periodic bailout you have the option in mmf5.ucl:Multi \
+            Bailout Colouring to include the period found as part of the \
+            colouring."
+  endparam
+  heading
+    caption = "Divergent Bailout"
+    text = "Here you can set the bailout for testing for the infinite \
+            attractor using iterate until |z|>bailout value."
+  endheading
+  bool param divergence
+    caption = "Divergence testing"
+    default = true
+    hint = "Enable for divergent bailout testing i.e. to test for orbits \
+            that tend to infinity. Note that disabling this on fractals with \
+            divergent areas causes very slow rendering, it \
+            should only really be disabled on fractals without divergent \
+            areas such as Newtons. If you wish divergent areas to be coloured \
+            as 'Inside' then use the 'Divergent Colouring' parameter - doing \
+            so will still slow down rendering in such cases but not as much as \
+            disabling 'Divergent testing'."
+  endparam
+  float param bailout
+    caption = "Divergent Bailout"
+    default = 65536.0
+    hint = "The bailout for testing for divergence. Typically use values \
+            >=4, the larger the value the closer to the true fractal the \
+            result will be. The chosen value is likely to make the most \
+            difference to orbit-trap style colourings."
+    visible = @divergence
+  endparam
+  int param divcol
+    caption = "Divergent Colouring"
+    enum = "Outside" "Inside"
+    default = 0
+    hint = "Use this if a fractal has divergent areas but you wish them to be \
+            coloured as being 'Inside' rather than 'Outside'. If choosing \
+            'Inside' then you can use the 'Divergent Inside' parameter to set \
+            what values of z should be passsed to the inside colouring \
+            beyond the iteration when bailout is detected. Note that colouring \
+            divergent areas as 'Inside' instead of 'Outside' will slow down \
+            rendering."
+    visible = @divergence
+  endparam
+  int param divinside
+    caption = "Divergent Inside"
+    enum = "Bailout value" "Repeat orbit" "Ping Pong"
+    default = 1
+    hint = "When choosing to colour divergent areas as 'Inside' this \
+            parameter lets you decide what values of z are passed to the \
+            inside colouring formula after the iteration when divergent \
+            bailout is detected. 'Bailout value' simply sends the bailout \
+            value of z for each of the extra iterations. 'Repeat orbit' \
+            repeats the z values starting with z from the first iteration \
+            to the bailout value for as many times as necessary to reach \
+            maximum iterations. 'Ping Pong' does the same as 'Repeat orbit' \
+            except that each time through the sequence the order is revered. \
+            Changing the option will often produce different results, \
+            especially when using orbit-based inside colurings."
+    visible = @divergence && @divcol==1
+  endparam
+  heading
+    caption = "Convergent Bailout (standard)"
+    text = "Here you can set the bailout for testing for any point attractor, \
+            i.e. standard convergent bailout testing using iterate until \
+            |z - zold|<small bailout value."
+  endheading
+  bool param convergence
+    caption = "Convergence testing"
+    default = false
+    hint = "Enable for standard convergent bailout testing i.e. to test \
+            for all orbits that tend to fixed finite point attractors. \
+            Note that if you wish to test for convergence to specific \
+            point attractors rather than point attractors generally then \
+            you need to disable this option. Disable this parameter if you \
+            want areas of point convergence coloured as 'Inside' or if you \
+            wish to use absolute convergence testing instead."
+  endparam
+  float param smallbailout
+    caption = "Convergent Bailout"
+    default = 1e-8
+    hint = "The bailout for testing for standard convergence. Typically \
+            use values <=1e-5, the smaller the value the closer to the true \
+            fractal the result will be. The chosen value is likely to make \
+            the most difference to orbit-trap style colourings."
+    visible = @convergence
+  endparam
+  heading
+    caption = "Absolute Convergent Bailout"
+    text = "Here you can set bailouts for testing for convergence to specific \
+            point attractors by specifying value/s to test for i.e. testing \
+            for convergence to (a) specific point attractor/s using \
+            |z - zold|<small bailout value and |z - value|<small bailout value."
+    visible = !@convergence
+  endheading
+  int param absconvergence
+    caption = "Absolute Convergence testing"
+    enum = "Off" "One Attractor" "Two Attractors" "Three Attractors" \
+           "Four Attractors" "Five Attractors" "Six Attractors" \
+           "Seven Attractors" "Eight Attractors" "Nine Attractors" \
+           "Ten Attractors"
+    default = 0
+    hint = "If you wish to test for convergence to specific point attractors \
+            rather than point attractors in general then here you can specify \
+            that you want up to 10 specific attractors testing for. Note that \
+            the point attractors are tested for by checking that both \
+            |z-zold| and |z-point| are less than the specified bailout - this \
+            means that colourings that assume bailout using only |z-zold| \
+            will still colour correctly. Leave this option 'Off' if you wish \
+            all areas of point attraction to be colured as 'Inside'."
+    visible = !@convergence
+  endparam
+  float param pointbailout
+    caption = "Point Bailout"
+    default = 1e-8
+    hint = "The bailout for testing for absolute convergence. Typically \
+            use values <=1e-5, the smaller the value the closer to the true \
+            fractal the result will be. The chosen value is likely to make \
+            the most difference to orbit-trap style colourings."
+    visible = !@convergence && @absconvergence>0
+  endparam
+  int param convset
+    caption = "Detection method"
+    enum = "Specify Attractors" "Specify Locations"
+    default = 0
+    hint = "When using 'Specify Attractors' the values you set for the \
+            Point Attractor parameters are used directly as values to test \
+            for bailout. When using 'Specify Locations' then the Point \
+            Attractor parameters are used as locations to check for point \
+            convergence and any point attractors found at those locations \
+            are then used in testing for bailout."
+    visible = !@convergence && @absconvergence>0
+  endparam
+  complex param attractor1
+    caption = "1st Point Attractor"
+    default = (1,0)
+    hint = "This is the first point attractor value to test for."
+    visible = !@convergence && @absconvergence>0
+  endparam
+  complex param attractor2
+    caption = "2nd Point Attractor"
+    default = (0,0)
+    hint = "This is the second point attractor value to test for."
+    visible = !@convergence && @absconvergence>1
+  endparam
+  complex param attractor3
+    caption = "3rd Point Attractor"
+    default = (0,0)
+    hint = "This is the third point attractor value to test for."
+    visible = !@convergence && @absconvergence>2
+  endparam
+  complex param attractor4
+    caption = "4th Point Attractor"
+    default = (0,0)
+    hint = "This is the fourth point attractor value to test for."
+    visible = !@convergence && @absconvergence>3
+  endparam
+  complex param attractor5
+    caption = "5th Point Attractor"
+    default = (0,0)
+    hint = "This is the fifth point attractor value to test for."
+    visible = !@convergence && @absconvergence>4
+  endparam
+  complex param attractor6
+    caption = "6th Point Attractor"
+    default = (0,0)
+    hint = "This is the sixth point attractor value to test for."
+    visible = !@convergence && @absconvergence>5
+  endparam
+  complex param attractor7
+    caption = "7th Point Attractor"
+    default = (0,0)
+    hint = "This is the seventh point attractor value to test for."
+    visible = !@convergence && @absconvergence>6
+  endparam
+  complex param attractor8
+    caption = "8th Point Attractor"
+    default = (0,0)
+    hint = "This is the eighth point attractor value to test for."
+    visible = !@convergence && @absconvergence>7
+  endparam
+  complex param attractor9
+    caption = "9th Point Attractor"
+    default = (0,0)
+    hint = "This is the ninth point attractor value to test for."
+    visible = !@convergence && @absconvergence>8
+  endparam
+  complex param attractor10
+    caption = "10th Point Attractor"
+    default = (0,0)
+    hint = "This is the tenth point attractor value to test for."
+    visible = !@convergence && @absconvergence>9
+  endparam
+  bool param passpoint
+    caption = "Pass which point"
+    default = false
+    hint = "When enabled an identifier is passed to the colouring formula as \
+            part of the start z value that differentiates the different \
+            point attractors that may be found and can be used as an extra \
+            piece of data to use in colouring. Currently only compatible with \
+            mmf5.ucl:Multi Bailout Colouring as the 'Outside' colouring in \
+            which you should enable 'Convergent point is passed' if you enable \
+            this option and 'Use point value' if you want the value to be \
+            used in the colouring."
+    visible = @passtype && !@convergence && @absconvergence>0
+  endparam
+  bool param showpoints
+    caption = "Show Point Attractors"
+    default = false
+    hint = "When enabled any point attractors found at your specified \
+            locations will be output as compiler messages. Note that if \
+            using this option it's best to set 'Minimum Threads' to 1 \
+            in the UF options otherwise the output will be very confused. \
+            If no messages appear when you enable this then click on the \
+            reload formula icon."
+    visible = !@convergence && @absconvergence>0 && @convset==1
+  endparam
+  heading
+    caption = "Periodic Bailout"
+    text = "Here you can set bailout testing for periodic attractors i.e. \
+            testing for iterate until |z[iter] - z[iter-period]|<small \
+            bailout value."
+  endheading
+  int param periodictype
+    caption = "Periodic Method"
+    enum = "None" "Range of Periods" "Specific Periods" "Specified Locations"
+    default = 0
+    hint = "You can choose to have periodicity checking enabled for a given \
+            range of periods or for specified periods or specified locations."
+  endparam
+  bool param checkone
+    caption = "Correct point attractors ?"
+    default = true
+    hint = "When enabled potential errors that cause areas of standard \
+            convergent attractors (i.e. point attractors) to be treated as \
+            periodic attractors can be avoided. If the visible area of the \
+            fractal does not contain any point attractors then you can disable \
+            this parameter to reduce rendering times. If unsure whether it's \
+            OK to disable this or not then just try it, errors thus produced \
+            will normally be fairly obvious. Use in conjunction with 'Correct \
+            all periods>1 ?' and 'Extra Iteration Factor'."
+    visible = @periodictype>0 && @periodictype<3
+  endparam
+  bool param checkall
+    caption = "Correct all periods>1 ?"
+    default = true
+    hint = "When enabled periods under the minimum period you specify will \
+            still be checked for if your specified periods are integer \
+            multiples of them, this is done to avoid areas of such periods \
+            being coloured incorrectly as areas of higher period. However when \
+            viewing some areas there may be no areas of such smaller periods \
+            e.g. when zoomed into a minibrot and you have specified checking \
+            for the period of the minibrot's main cardoid - in such cases you \
+            can disable this option. If in doubt try disabling this to see if \
+            it produces errors or not - renders will normally be noticeably \
+            faster when it's disabled. Use in conjunction with 'Correct point \
+            attractors' and 'Extra Iteration factor'."
+    visible = @periodictype>0 && @periodictype<3
+  endparam
+  int param extra
+    caption = "Extra Iteration factor"
+    default = 5
+    min = 1
+    max = 50
+    hint = "This factor allows you to adjust the correctness of the periodic \
+            attractor detection. You can specify a value between 1 and 50. \
+            Using 1 effectively disables the extra accuracy checking. \
+            If the value is too low then incorrect periodicity may be \
+            detected e.g. treating a period 3 attractor as a period 6 \
+            attractor (or another multiple of 3). The larger the \
+            value you use the less likely such errors will become but the \
+            longer the render will take - in the worst cases some pixels may \
+            actually use 'Maximum Iterations'*'Extra Iteration factor' \
+            iterations. Note that often for fractals with a limited number \
+            of attractors disabling this by using 1 will be OK provided the \
+            period or periods you check for are not integer multiples of \
+            actual periods in the fractal area that you are rendering."
+    visible = @periodictype>0 && @periodictype<3
+  endparam
+  float param periodbailout
+    caption = "Periodic Bailout"
+    default = 1e-8
+    hint = "The small bailout limit for testing for periodic attractors."
+    visible = @periodictype>0
+  endparam
+  int param minperiod
+    caption = "Minimum Period"
+    default = 2
+    min = 2
+    hint = "The minimum period to check for. Should be less or equal to \
+            'Maximum Period'. The absolute minimum is 2 and the maximum is \
+            200. Note that detection of larger periods will require much \
+            larger 'Maximum Iterations' values."
+    visible = @periodictype==1
+  endparam
+  int param maxperiod
+    caption = "Maximum Period"
+    default = 20
+    min = 2
+    hint = "The maximum period to check for. Should be greater than or equal \
+            to 'Minimum Period'. The absolute maximum is 200. Note that \
+            detection of larger periods will require much larger 'Maximum \
+            Iterations' values."
+    visible = @periodictype==1
+  endparam
+  int param numperiods
+    caption = "Number of Periods"
+    enum = "One" "Two" "Three" "Four" "Five" "Six" "Seven" "Eight" "Nine" "Ten"
+    default = 2
+    hint = "The number of specific periods to test for."
+    visible = @periodictype==2
+  endparam
+  int param period1
+    caption = "1st Period"
+    default = 2
+    min = 2
+    max = 200
+    hint = "The first period to test for, min 2, max 200."
+    visible = @periodictype==2
+  endparam
+  int param period2
+    caption = "2nd Period"
+    default = 3
+    min = 2
+    max = 200
+    hint = "The second period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>0
+  endparam
+  int param period3
+    caption = "3rd Period"
+    default = 5
+    min = 2
+    max = 200
+    hint = "The third period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>1
+  endparam
+  int param period4
+    caption = "4th Period"
+    default = 7
+    min = 2
+    max = 200
+    hint = "The fourth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>2
+  endparam
+  int param period5
+    caption = "5th Period"
+    default = 11
+    min = 2
+    max = 200
+    hint = "The fifth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>3
+  endparam
+  int param period6
+    caption = "6th Period"
+    default = 13
+    min = 2
+    max = 200
+    hint = "The sixth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>4
+  endparam
+  int param period7
+    caption = "7th Period"
+    default = 17
+    min = 2
+    max = 200
+    hint = "The seventh period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>5
+  endparam
+  int param period8
+    caption = "8th Period"
+    default = 19
+    min = 2
+    max = 200
+    hint = "The eighth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>6
+  endparam
+  int param period9
+    caption = "9th Period"
+    default = 23
+    min = 2
+    max = 200
+    hint = "The ninth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>7
+  endparam
+  int param period10
+    caption = "10th Period"
+    default = 29
+    min = 2
+    max = 200
+    hint = "The tenth period to test for, min 2, max 200."
+    visible = @periodictype==2 && @numperiods>8
+  endparam
+  int param overiter
+    caption = "Extra Iterations"
+    default = 5
+    min = 2
+    max = 100
+    hint = "When testing the specified locations for the bailout type the \
+            number of iterations performed in the test will be the usual \
+            maximum iterations value multiplied by this parameter (min 2). \
+            The more iterations performed then the more accurate the \
+            resulting render. Each location specified is just tested as a \
+            single orbit so using high iteration counts is only a very minor \
+            overhead."
+    visible = @periodictype==3
+  endparam
+  int param numpoints
+    caption = "Number of Areas"
+    enum = "One" "Two" "Three" "Four" "Five" "Six" "Seven" "Eight" "Nine" "Ten"
+    default = 0
+    hint = "Here you can specify the number of different periodic attractors \
+            that are to be tested for. You can choose the areas to test by \
+            using the eyedropper tool for the 'Attractor Location' \
+            parameters. In general this method is meant for colouring Julias \
+            and will only result in colouring small points on Mandelbrots."
+    visible = @periodictype==3
+  endparam
+  complex param location1
+    caption = "Attractor Location 1"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3
+  endparam
+  complex param location2
+    caption = "Attractor Location 2"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>0
+  endparam
+  complex param location3
+    caption = "Attractor Location 3"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>1
+  endparam
+  complex param location4
+    caption = "Attractor Location 4"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>2
+  endparam
+  complex param location5
+    caption = "Attractor Location 5"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>3
+  endparam
+  complex param location6
+    caption = "Attractor Location 6"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>4
+  endparam
+  complex param location7
+    caption = "Attractor Location 7"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>5
+  endparam
+  complex param location8
+    caption = "Attractor Location 8"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>6
+  endparam
+  complex param location9
+    caption = "Attractor Location 9"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>7
+  endparam
+  complex param location10
+    caption = "Attractor Location 10"
+    default = (0,0)
+    hint = "Use the eyedropper to select a point in an area to be tested for \
+            and coloured based on periodic bailout."
+    visible = @periodictype==3 && @numpoints>8
+  endparam
+  bool param showattractors
+    caption = "Show Periodic Attractors"
+    default = false
+    hint = "When enabled any periodic attractors found at your specified \
+            locations will be output as compiler messages. Note that if \
+            using this option it's best to set 'Minimum Threads' to 1 \
+            in the UF options otherwise the output will be very confused. \
+            If no messages appear when you enable this then click on the \
+            reload formula icon."
+    visible = @periodictype==3
+  endparam
+  bool param passpositions
+    caption = "Pass period position"
+    default = false
+    hint = "When enabled an identifier is passed to the colouring formula as \
+            part of the start z value that differentiates between the \
+            different positions of the bailout within a period and can be \
+            used as extra data for colouring. Currently only compatible \
+            with using mmf5.ucl:Multi Bailout Colouring as the 'Outside' \
+            colouring in which case you should enable 'Position is passed' \
+            if this option is enabled and enable 'Use position value' if \
+            you wish the position to be used in the colouring."
+    visible = @passtype && @periodictype==3
+  endparam
+  bool param usealliterations
+    caption = "Colour using entire orbit ?"
+    default = false
+    hint = "When enabled the entire orbit is passed on to the outside \
+            colouring when periodic bailout is discovered, if you require \
+            smoothing then only colouring formulas with specific parameters \
+            for handling periodic bailout will smooth correctly in this case. \
+            When disabled only every nth value of z is passed to the \
+            outside colouring where n is the period of the attractor found \
+            which is useful as it means many colourings designed for \
+            colouring point attractors (i.e. standard convergence) will \
+            smooth correctly."
+    visible = @periodictype>0 && !@passtype
+  endparam
+  bool param allbailout
+    caption = "Bailout anywhere ?"
+    default = false
+    hint = "When enabled periodic bailout can occur on any iteration, when \
+            disabled bailout is restricted to iterations that are multiples \
+            of the period/s of the attractor/s being tested for. Bailing out \
+            anywhere will be slower to render but provides more information \
+            to the colourings possibly producing better results and can be \
+            used with mmf5.ucl:Multi Bailout Colouring as the 'Outside' \
+            colouring - in which case you should enable the 'Pass Bailout \
+            Type' parameter above and 'Bailout type is passed' in the \
+            mmf5.ucl:Multi Bailout Colouring."
+    visible = @periodictype==3 && (@usealliterations || @passtype)
+  endparam
+  heading
+    caption = "The Formula"
+  endheading
+  heading
+    text = "Switching is not currently available, you need to use \
+            compatible formulas such as those in mmf.ulb if you want \
+            switching, generally formulas with 'Switch' in the name."
+    visible = @formulaClass!=MMF_SwitchFormula \
+              && @formulaClass!=MMF_SwitchDivergentFormula \
+              && @formulaClass!=MMF_SwitchConvergentFormula \
+              && @formulaClass!=MMF_SwitchConvergentDivergentFormula
+  endheading
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = MMF_SwitchStandard
+  endparam
+switch:
+  type = "MultiBailoutSwitchFormula"
+  p_mode = p_mode1
+  p_mode1 = p_mode
+  p_start = #pixel
+  p_seed = #pixel
+  p_advanced = p_advanced
+  p_manualscale = p_manualscale
+  p_centre = p_centre
+  p_scale = p_scale
+;  p_usesearch = p_usesearch is remmed so it defaults to false
+  p_search = p_usesearch
+  p_preview = p_preview
+  p_range = p_range
+  miniterations = miniterations
+  passtype = passtype
+  divergence = divergence
+  bailout = bailout
+  divcol = divcol
+  divinside = divinside
+  convergence = convergence
+  smallbailout = smallbailout
+  absconvergence = absconvergence
+  pointbailout = pointbailout
+  convset = convset
+  attractor1 = attractor1
+  attractor2 = attractor2
+  attractor3 = attractor3
+  attractor4 = attractor4
+  attractor5 = attractor5
+  attractor6 = attractor6
+  attractor7 = attractor7
+  attractor8 = attractor8
+  attractor9 = attractor9
+  attractor10 = attractor10
+  passpoint = passpoint
+  showpoints = showpoints
+  periodictype = periodictype
+  checkone = checkone
+  checkall = checkall
+  extra = extra
+  periodbailout = periodbailout
+  minperiod = minperiod
+  maxperiod = maxperiod
+  numperiods = numperiods
+  period1 = period1
+  period2 = period2
+  period3 = period3
+  period4 = period4
+  period5 = period5
+  period6 = period6
+  period7 = period7
+  period8 = period8
+  period9 = period9
+  period10 = period10
+  overiter = overiter
+  numpoints = numpoints
+  location1 = location1
+  location2 = location2
+  location3 = location3
+  location4 = location4
+  location5 = location5
+  location6 = location6
+  location7 = location7
+  location8 = location8
+  location9 = location9
+  location10 = location10
+  showattractors = showattractors
+  passpositions = passpositions
+  usealliterations = usealliterations
+  allbailout = allbailout
+  formulaClass = formulaClass
+}
+

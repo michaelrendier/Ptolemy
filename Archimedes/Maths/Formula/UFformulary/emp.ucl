@@ -1,0 +1,478 @@
+emp-evenodd {
+; Edward M. Perry 2000-03-17
+; (c) 2000 Edward M. Perry 
+; http://www.crosswinds.net/~yafp
+init:
+    int     i  = 0
+    complex y  = (0,0)
+    complex z  = (0,0)
+    float   ry = 0.0
+    float   rz = 0.0
+    float   iy = 0.0
+    float   iz = 0.0
+    float   id = 0.0
+    float   rd = 0.0
+    float    d = 0.0
+    float   d0 = 0.0
+    float   d1 = 0.0
+
+loop:
+   z = #z
+
+   if (@prec == true)
+      y = @that(recip(y))
+      z = @this(recip(z))
+   endif
+
+   if (@pabs == true)
+      y = cabs(@that(y))
+      z = cabs(@this(z))
+   else
+      y = @that(y)
+      z = @this(z)
+   endif
+
+   ry = real(y)
+   iy = imag(y)
+   rz = real(z)
+   iz = imag(z)
+
+   if (@calc == 0)
+      id = abs(iy - iz)
+      rd = abs(ry - rz)
+      d  = id * id + rd * rd
+
+   elseif (@calc == 1)
+      d  = abs(ry - rz)
+
+   elseif (@calc == 2)
+      d  = abs(iy - iz)
+
+   elseif (@calc == 3)
+      id = abs(iy - iz)
+      rd = abs(ry - rz)
+      if (id > rd) 
+         d = id
+      else
+         d = rd
+      endif
+
+   else
+      id = abs(iy - iz)
+      rd = abs(ry - rz)
+      if (id < rd) 
+         d = id
+      else
+         d = rd
+      endif
+   endif
+
+   if (i % @odd == 0)
+      if (@keep == 0)
+         if (d > d0)
+            d0 = d
+         endif
+      else
+         if (d < d0)
+            d0 = d
+         endif
+      endif
+   else
+      if (@keep == 0)
+         if (d > d1)
+            d1 = d
+         endif
+      else
+         if (d < d1)
+            d1 = d
+         endif
+      endif
+   endif
+
+   y = #z
+   i = i + 1
+
+final:
+   if     (d0 == 0.0)
+      #index = d1 + (@fuzz * real(#random)) 
+   elseif (d1 == 0.0)
+      #index = d0 + (@fuzz * real(#random)) 
+   else
+      if (d0 < d1)
+         #index = (d0 / d1) + (@fuzz * real(#random)) 
+      else
+         #index = (d1 / d0) + (@fuzz * real(#random)) 
+      endif
+   endif
+
+default:
+
+   title = "Even Odd"
+
+   param pabs
+      caption = "Pre Abs"
+      hint = "Apply Abs First?"
+      default = false
+   endparam
+
+   param prec
+      caption = "Pre Recip"
+      hint = "Apply Recip First?"
+      default = true
+   endparam
+
+   param odd
+      caption = "Modulus"
+      hint = "Modulus"
+      default = 2
+      hint = "2, 3, 4,..."
+   endparam
+
+   param calc
+      caption = "Calculate"
+      enum = "Complex" "Real" "Imag" "Max" "Min"
+      hint = "What To Calculate"
+      default = 0
+   endparam
+
+   param keep
+      caption = "Keep"
+      enum = "Max" "Min"
+      hint = "What To Keep"
+      default = 0
+   endparam
+
+   param fuzz
+      caption = "Randomness"
+      default = 0.0
+      hint = "0 to 1"
+   endparam
+
+   func this
+     caption = "This Function" 
+     hint = "This Iteration "
+     default = zero()
+   endfunc 
+
+   func that
+     caption = "That Function" 
+     hint = "Previous Iteration"
+     default = ident()
+   endfunc 
+}
+
+emp-nudge {
+; Edward M. Perry 2000-04-04
+; (c) 2000 Edward M. Perry 
+; http://www.crosswinds.net/~yafp
+init:
+
+    float   PID2 = #pi / 2.0
+    float   PID4 = #pi / 4.0
+
+    int     i  = 0
+
+    complex z  = (0,0)
+    complex y  = (0,0)
+
+    float   rp = 0.0
+    float   ip = 0.0
+
+    float   rq = 0.0
+    float   iq = 0.0
+
+    float   rz = 0.0
+    float   iz = 0.0
+
+    float   ry = 0.0
+    float   iy = 0.0
+
+    float   rd = 0.0
+    float   id = 0.0
+
+    float   ra = @rate
+    float   ia = 1.0
+
+    float   th = 0.0
+    float   mt = 0.0
+    float   of = 0.0
+
+loop:
+   z = #z
+
+   ra = ra * @rdec
+
+   if (@ldec) 
+      ia = ia * @rdec
+   else
+      ia = ia * @idec
+   endif
+
+   if (@prec == true)
+      z = @this(recip(z))
+      y = @that(recip(y))
+   else
+      z = @this(z)
+      y = @that(y)
+   endif
+
+   rz = real(z)
+   iz = imag(z)
+   ry = real(y)
+   iy = imag(y)
+
+   rd = abs(ry - rz)
+   id = abs(iy - iz)
+
+   if (@edge == true)
+      th = atan(id / rd)
+      if (th > PID4)
+         th = PID2 - th
+      endif
+
+      th = (th / PID4)
+
+      if (th < mt || i == 0)
+         mt = th
+      endif
+   endif
+
+   if (i % @odd == 0)
+      if (iy < iz)
+         ip = ip - ia
+      else
+         ip = ip + ia
+      endif
+
+      if (ry < iz)
+         rp = rp - ra
+      else
+         rp = rp + ra
+      endif
+   else
+      if (iy < iz)
+         iq = iq - ia
+      else
+         iq = iq + ia
+      endif
+
+      if (rz < iz)
+         rq = rq - ra
+      else
+         rq = rq + ra
+      endif
+   endif
+
+   y = #z
+   i = i + 1
+
+final:
+
+   rd = abs(rp - rq)
+   id = abs(ip - iq)
+
+   if (@edge == false)
+      mt = 1.0
+      of = 0.0
+   else
+      if (mt < @ethr)
+         mt = 0.0
+         of = @ecol
+      else
+         mt = 1.0
+         of = 0.0
+      endif
+   endif
+
+   if (id > rd)
+      #index = mt * (rd / id) + (@fuzz * real(#random)) + of
+   else
+      #index = mt * (id / rd) + (@fuzz * real(#random)) + of
+   endif
+
+default:
+
+   title = "Nudge"
+
+   param prec
+      caption = "Pre Recip"
+      hint    = "Apply Recip First?"
+      default = false
+   endparam
+
+   param odd
+      caption = "Modulus"
+      default = 2
+      hint    = "2, 3, 4,..."
+   endparam
+
+   param rate
+      caption = "Ratio"
+      default = 1.0
+      hint    = "Real/Imag Ratio"
+   endparam
+
+   param ldec
+      caption = "Lock Decay"
+      hint    = "Use Same Decay?"
+      default = false
+   endparam
+
+   param rdec
+      caption = "Real Decay"
+      default = 2.0 
+      hint    = "Real Decay"
+   endparam
+
+   param idec
+      caption = "Imag Decay"
+      default = 2.0 
+      hint    = "Imag Decay"
+   endparam
+
+   param edge
+      caption = "Edge"
+      hint    = "Use Edges?"
+      default = false
+   endparam
+
+   param ethr
+      caption = "Edge Threshold"
+      default = .01 
+      hint    = "Edge Threshold"
+   endparam
+
+   param ecol
+      caption = "Edge Color"
+      default =  0.0
+      hint    = "0 to 1"
+   endparam
+
+   param fuzz
+      caption = "Randomness"
+      default = 0.0
+      hint    = "0 to 1"
+   endparam
+
+   func this
+     caption = "This Function" 
+     hint    = "This Iteration "
+     default = ident()
+   endfunc 
+
+   func that
+     caption = "That Function" 
+     hint    = "Previous Iteration"
+     default = ident()
+   endfunc 
+}
+
+emp-onedge {
+; Edward M. Perry 2000-04-05
+; (c) 2000 Edward M. Perry
+; http://www.crosswinds.net/~yafp
+init:
+    float   PID2 = #pi / 2.0
+    float   PID4 = #pi / 4.0
+
+    int     i  = 0
+
+    complex y  = (0,0)
+    complex z  = (0,0)
+
+    float   rz  = 0.0
+    float   iz  = 0.0
+    float   trz = 0.0
+
+    float   ry  = 0.0
+    float   iy  = 0.0
+    float   try = 0.0
+
+    float   ang = 0.0
+    float   mi0 = 0.0
+    float   mi1 = 0.0
+
+    float   ar = 0.0
+    float   ac = 0.0
+    float   as = 0.0
+
+    if (@rota != 0.0)
+      ar = @rota / (180 / #pi)
+      ac = cos(ar)
+      as = sin(ar)
+    endif
+
+loop:
+   z = #z
+
+   if (@prec == true)
+      z = @this(recip(z))
+      y = @that(recip(y))
+   else
+      z = @this(z)
+      y = @that(y)
+   endif
+
+   rz = real(z)
+   iz = imag(z)
+   ry = real(y)
+   iy = imag(y)
+
+   if (@rota != 0.0)
+
+      trz =  rz * ac + iz * as
+      iz  = -rz * as + iz * ac
+      rz  = trz
+
+      try =  ry * ac + iy * as
+      iy  = -ry * as + iy * ac
+      ry  = try
+
+   endif
+
+   ang = atan(abs(iy - iz) / abs(ry - rz))
+   if (ang > PID4)
+      ang = PID2 - ang
+   endif
+
+   if (ang < mi0 || i == 0)
+      mi1 = mi0
+      mi0 = ang
+   elseif (ang < mi1 || i == 1)
+      mi1 = ang
+   endif
+
+   y = #z
+   i = i + 1
+
+final:
+   #index = ((mi0 / mi1) / PID4)
+
+default:
+
+   title = "On Edge"
+
+   param prec
+      caption = "Pre Recip"
+      hint    = "Apply Recip First?"
+      default = false
+   endparam
+
+   param rota
+      caption = "Rotation"
+      hint    = "Degrees (0 to 90) "
+      default = 0.0
+   endparam
+
+   func this
+     caption = "This Function"
+     hint    = "This Iteration "
+     default = ident()
+   endfunc
+
+   func that
+     caption = "That Function"
+     hint    = "Previous Iteration"
+     default = ident()
+   endfunc
+}

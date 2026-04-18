@@ -1,0 +1,933 @@
+comment {
+  dmj3.ufm 3.0
+  Fractal types for Ultra Fractal 3
+  by Damien M. Jones
+  October 31, 2002
+
+  For more information about this formula collection,
+  please visit its home page:
+  
+      http://www.fractalus.com/ultrafractal/dmj3-pub-uf.htm
+
+  Of course that documentation may not be fully complete
+  when you look at it.
+
+  Many of these are based on traditional fractal types.
+  They have been included here with my own peculiar
+  "twists".
+}
+
+dmj3-SimurghMandel {
+;
+; Simurgh/Phoenix/Double Mandelbrot Family
+;
+; This fractal type encompasses many variants in the
+; Mandelbrot family of fractals. The basic Mandelbrot
+; equation is:
+;
+;     z[n+1] = z[n]^a + c
+;
+; where z[0]=0, a=2 and c varies with pixel location. The
+; Phoenix fractal discovered by Shigehiro Ushiki in 1988
+; is avariation of this, where the input of two iterations
+; is used:
+;
+;     z[n+1] = z[n]^a + c*z[n]^d + p*z[n-1]
+;
+; The classical Phoenix fractal is the julia form, where
+; z[0] varies with pixel, d=0, c=0.56667, and p=-0.5. Note
+; that if d=0 and p=0, the classical Mandelbrot equation
+; is still there. So Phoenix fractals are a superset of
+; the Mandelbrot fractals.
+;
+; The Simurgh fractal is a fairly straightforward extension
+; of the idea I wrote in November 1999; it uses three
+; iterations as input:
+;
+;     z[n+1] = z[n]^a + c*z[n]^d + p*z[n-1] + q*z[n-2]
+;
+; If q=0, the Phoenix equation emerges, so again Simurgh
+; fractals are a superset of Phoenix fractals.
+;
+; A different direction of extension to the classical
+; Mandelbrot extension is DoubleMandel, which uses two
+; separately-scaled z[n] terms:
+;
+;     z[n+1] = s*z[n]^a + t*z[n]^b + c
+;
+; We can include this extension into the Simurgh equation:
+;
+;     z[n+1] = s*z[n]^a + t*z[n]^b + c*z[n]^d + p*z[n-1] + q*z[n-2]
+;
+; This becomes the Simurgh equation when s=1 and t=0, so
+; again it is a superset. The above equation is the one used
+; in this formula.
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+
+  IF (@s_start == (0,0))   ; bug in beta 5, preserved for image compatibility
+    z = #pixel
+  ELSE
+    z = @s_start
+  ENDIF
+  
+loop:
+  newz = @s_coeff1*z^@s_power1 + @s_coeff2*z^@s_power2 + #pixel*z^@s_power3 + @s_induct1 * y + @s_induct2 * w
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z| < @s_bailout
+  
+default:
+  title = "Mandelbrot/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-simurgh.htm"
+  maxiter = 1000
+  center = (-0.5,0)
+  
+  param s_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param s_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param s_start
+    caption = "Start Value"
+    default = (0,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param s_power1
+    caption = "1st Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal. Use 2.0 \
+        for classical Mandelbrot and Phoenix."
+  endparam
+  param s_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical Mandelbrot \
+            and Phoenix."
+    visible = (@s_double || @s_coeff1 != 1.0)
+  endparam
+  param s_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@s_double || @s_coeff2 != 0.0)
+  endparam
+  param s_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical Mandelbrot \
+            and Phoenix."
+    visible = (@s_double || @s_coeff2 != 0.0)
+  endparam
+  param s_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical Mandelbrot and Phoenix."
+    visible = (@s_mode == "Phoenix" || @s_mode =="Simurgh" || @s_power3 != 0.0)
+  endparam
+  param s_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use -0.5 for classical Phoenix; use 0 for \
+            classical Mandelbrot."
+    visible = (@s_mode == "Phoenix" || @s_mode =="Simurgh" || @s_induct1 != 0.0)
+  endparam
+  param s_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical Mandelbrot and Phoenix."
+    visible = (@s_mode =="Simurgh" || @s_induct2 != 0.0)
+  endparam
+  param s_bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: larger values result in \
+            more iterations being calculated."
+  endparam
+
+switch:
+  type = "dmj3-SimurghJulia"
+  s_mode = @s_mode
+  s_double = @s_double
+  s_seed = #pixel
+  s_power1 = @s_power1
+  s_power2 = @s_power2
+  s_power3 = @s_power3
+  s_coeff1 = @s_coeff1
+  s_coeff2 = @s_coeff2
+  s_induct1 = @s_induct1
+  s_induct2 = @s_induct2
+  s_bailout = @s_bailout
+}
+
+dmj3-SimurghJulia {
+;
+; Simurgh/Phoenix/Double Julia Family
+;
+; See comments on Mandelbrot/Phoenix/Simurgh for a full
+; description of this fractal type.
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+
+  z = #pixel
+  
+loop:
+  newz = @s_coeff1*z^@s_power1 + @s_coeff2*z^@s_power2 + @s_seed*z^@s_power3 + @s_induct1 * y + @s_induct2 * w
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z| < @s_bailout
+  
+default:
+  title = "Julia/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-simurgh.htm"
+  maxiter = 1000
+  center = (0,0)
+  
+  param s_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param s_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param s_seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal. Use 0.56667 for \
+            classical Phoenix."
+  endparam
+  param s_power1
+    caption = "1st Exponent"
+    default = (2,0)
+    hint = "Defines the primary exponent for the fractal. Use 2.0 \
+        for classical Mandelbrot and Phoenix."
+  endparam
+  param s_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical Mandelbrot \
+            and Phoenix."
+    visible = (@s_double || @s_coeff1 != 1.0)
+  endparam
+  param s_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@s_double || @s_coeff2 != 0.0)
+  endparam
+  param s_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical Mandelbrot \
+            and Phoenix."
+    visible = (@s_double || @s_coeff2 != 0.0)
+  endparam
+  param s_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical Mandelbrot and Phoenix."
+    visible = (@s_mode == "Phoenix" || @s_mode =="Simurgh" || @s_power3 != 0.0)
+  endparam
+  param s_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use -0.5 for classical Phoenix; use 0 for \
+            classical Mandelbrot."
+    visible = (@s_mode == "Phoenix" || @s_mode =="Simurgh" || @s_induct1 != 0.0)
+  endparam
+  param s_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical Mandelbrot and Phoenix."
+    visible = (@s_mode =="Simurgh" || @s_induct2 != 0.0)
+  endparam
+  param s_bailout
+    caption = "Bailout"
+    default = 1.0e20
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: larger values result in \
+            more iterations being calculated."
+  endparam
+
+switch:
+  type = "dmj3-SimurghMandel"
+  s_mode = @s_mode
+  s_double = @s_double
+  s_power1 = @s_power1
+  s_power2 = @s_power2
+  s_power3 = @s_power3
+  s_coeff1 = @s_coeff1
+  s_coeff2 = @s_coeff2
+  s_induct1 = @s_induct1
+  s_induct2 = @s_induct2
+  s_bailout = @s_bailout
+}
+
+dmj3-NovaMandel {
+;
+; Simurgh/Phoenix/Double Nova Family
+;
+; This fractal type encompasses many variants in the Nova
+; family of fractals. This family has been discovered by
+; several different people; Paul Derbyshire named it Nova.
+; The Nova type itself is a variant of a Newton fractal.
+;
+; Consider the function:
+;
+;     f(z) = z^a - 1
+;
+; To find the z where f(z) = 0, we can use Newton's method,
+; which is an iterative method for solving equations. The
+; general form of Newton's method is:
+;
+;                     f(z[n])
+;     z[n+1] = z[n] - --------
+;                     f'(z[n])
+;
+; f'(z) here denotes the first derivative of f(z). By
+; inspection, we can see that f(z) = 0 whenever z is one of
+; the complex roots of 1; for example, when a=3, there are
+; three complex roots of 1. Any complex number selected as
+; the initial z will converge on one of these roots, but the
+; boundary of the areas leading to each root is fractal, and
+; the closer the initial z is to the boundary, the more
+; iterations are required for convergence.
+;
+; The Nova extension to the classical Newton fractal equation
+; above is to add a fixed value c at each iteration. We also
+; introduce a "relaxation constant" which can be used to slow
+; down or accelerate the convergence:
+;
+;                     f(z[n])
+;     z[n+1] = z[n] - -------- * r + c
+;                     f'(z[n])
+;
+; For the Mandelbrot flavor, we fix z[0] at 1 and vary c with
+; pixel location.
+;
+; To further extend this formula, we incorporate the Phoenix
+; and Simurgh additions from the Mandelbrot/Phoenix/Simurgh
+; family:
+;
+;                     f(z[n])
+;     z[n+1] = z[n] - -------- * r + c*z[n]^d + p*z[n-1] + q*z[n-2]
+;                     f'(z[n])
+;
+; We also incorporate the Double variants, by defining f(z)
+; a little differently:
+;
+;     f(z) = s*z^a + t*z^b - 1
+;
+; This gives the following for f'(z):
+;
+;     f'(z) = a*s*z^(a-1) + b*t*z^(b-1)
+;
+; Thus the final Simurgh/Phoenix/Double Nova formula is:
+;
+;                         s*z[n]^a + t*z[n]^b - 1
+;     z[n+1] = z[n] - ------------------------------- * r +
+;                     a*s*z[n]^(a-1) + b*t*z[n]^(b-1)
+;
+;              c*z[n]^d + p*z[n-1] + q*z[n-2]
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+  complex f = (0,0)
+  complex fp = (0,0)
+  complex zp1 = (0,0)
+  complex zp2 = (0,0)
+
+  z = @n_start
+  
+  IF (@n_usecritical)
+    z = ( -((@n_power2-1)*@n_power2*@n_coeff2) / \
+           ((@n_power1-1)*@n_power1*@n_coeff1) ) ^ (1/(@n_power1-@n_power2))
+  ENDIF
+
+loop:
+  zp1 = z^(@n_power1 - 1)
+  IF (@n_power2 != 0.0)
+    zp2 = z^(@n_power2 - 1)
+  ENDIF
+  f = @n_coeff1 * z*zp1 + @n_coeff2 * z*zp2 - 1
+  fp = @n_power1 * @n_coeff1 * zp1 + @n_power2 * @n_coeff2 * zp2
+  newz = z - f/fp * @n_relax + #pixel*z^@n_power3 + @n_induct1 * y + @n_induct2 * w
+
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z - y| > @n_bailout
+  
+default:
+  title = "Nova Mandelbrot/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-nova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param n_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param n_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param n_start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param n_usecritical
+    caption = "Use Critical Point"
+    default = false
+    hint = "If set, a critical point for the function will \
+            be used in place of the Start Value."
+  endparam
+  param n_power1
+    caption = "1st Exponent"
+    default = (3,0)
+    hint = "Defines the primary exponent for the fractal. Use 3.0 \
+        for classical Nova."
+  endparam
+  param n_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical Nova."
+    visible = (@n_double || @n_coeff1 != 1.0)
+  endparam
+  param n_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@n_double || @n_coeff2 != 0.0)
+  endparam
+  param n_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical Nova."
+    visible = (@n_double || @n_coeff2 != 0.0)
+  endparam
+  param n_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical Nova."
+    visible = (@n_mode == "Phoenix" || @n_mode =="Simurgh" || @n_power3 != 0.0)
+  endparam
+  param n_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use 0 for classical Nova."
+    visible = (@n_mode == "Phoenix" || @n_mode =="Simurgh" || @n_induct1 != 0.0)
+  endparam
+  param n_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical Nova."
+    visible = (@n_mode =="Simurgh" || @n_induct2 != 0.0)
+  endparam
+  param n_bailout
+    caption = "Bailout"
+    default = 1.0e-15
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: smaller values result in \
+            more iterations being calculated."
+  endparam
+  param n_relax
+    caption = "Relaxation"
+    default = (1,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+
+switch:
+  type = "dmj3-NovaJulia"
+  n_mode = @n_mode
+  n_double = @n_double
+  n_seed = #pixel
+  n_power1 = @n_power1
+  n_power2 = @n_power2
+  n_power3 = @n_power3
+  n_coeff1 = @n_coeff1
+  n_coeff2 = @n_coeff2
+  n_induct1 = @n_induct1
+  n_induct2 = @n_induct2
+  n_bailout = @n_bailout
+  n_relax = @n_relax
+}
+
+dmj3-NovaJulia {
+;
+; Simurgh/Phoenix/Double Nova Family
+;
+; See comments on Nova Mandelbrot/Phoenix/Simurgh for a
+; full description of this fractal type.
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+  complex f = (0,0)
+  complex fp = (0,0)
+  complex zp1 = (0,0)
+  complex zp2 = (0,0)
+
+  z = #pixel
+  
+loop:
+  zp1 = z^(@n_power1 - 1)
+  IF (@n_power2 != 0.0)
+    zp2 = z^(@n_power2 - 1)
+  ENDIF
+  f = @n_coeff1 * z*zp1 + @n_coeff2 * z*zp2 - 1
+  fp = @n_power1 * @n_coeff1 * zp1 + @n_power2 * @n_coeff2 * zp2
+  newz = z - f/fp * @n_relax + @n_seed*z^@n_power3 + @n_induct1 * y + @n_induct2 * w
+
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z - y| > @n_bailout
+  
+default:
+  title = "Nova Julia/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-nova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (0,0)
+  magn = 1.5
+
+  param n_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param n_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param n_seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal. Use 0 for \
+            classical Newton."
+  endparam
+  param n_start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param n_power1
+    caption = "1st Exponent"
+    default = (3,0)
+    hint = "Defines the primary exponent for the fractal. Use 3.0 \
+        for classical Nova."
+  endparam
+  param n_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical Nova."
+    visible = (@n_double || @n_coeff1 != 1.0)
+  endparam
+  param n_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@n_double || @n_coeff2 != 0.0)
+  endparam
+  param n_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical Nova."
+    visible = (@n_double || @n_coeff2 != 0.0)
+  endparam
+  param n_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical Nova."
+    visible = (@n_mode == "Phoenix" || @n_mode =="Simurgh" || @n_power3 != 0.0)
+  endparam
+  param n_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use 0 for classical Nova."
+    visible = (@n_mode == "Phoenix" || @n_mode =="Simurgh" || @n_induct1 != 0.0)
+  endparam
+  param n_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical Nova."
+    visible = (@n_mode =="Simurgh" || @n_induct2 != 0.0)
+  endparam
+  param n_bailout
+    caption = "Bailout"
+    default = 1.0e-15
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: smaller values result in \
+            more iterations being calculated."
+  endparam
+  param n_relax
+    caption = "Relaxation"
+    default = (1,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+
+switch:
+  type = "dmj3-NovaMandel"
+  n_mode = @n_mode
+  n_double = @n_double
+  n_power1 = @n_power1
+  n_power2 = @n_power2
+  n_power3 = @n_power3
+  n_coeff1 = @n_coeff1
+  n_coeff2 = @n_coeff2
+  n_induct1 = @n_induct1
+  n_induct2 = @n_induct2
+  n_bailout = @n_bailout
+  n_relax = @n_relax
+}
+
+dmj3-HalleyNovaMandel {
+;
+; Simurgh/Phoenix/Double HalleyNova Family
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+  complex f = (0,0)
+  complex fp = (0,0)
+  complex fpp = (0,0)
+
+  z = @h_start
+  
+;  IF (@h_usecritical)
+;    z = ( -((@h_power2-1)*@h_power2*@h_coeff2) / \
+;           ((@h_power1-1)*@h_power1*@h_coeff1) ) ^ (1/(@h_power1-@h_power2))
+;  ENDIF
+
+loop:
+  f   = @h_coeff1*z^@h_power1 + @h_coeff2*z^@h_power2 - 1
+  fp  = @h_coeff1*@h_power1*z^(@h_power1-1) + @h_coeff2*@h_power2*z^(@h_power2-1)
+  fpp = @h_coeff1*@h_power1*(@h_power1-1)*z^(@h_power1-2) + @h_coeff2*@h_power2*(@h_power2-1)*z^(@h_power2-2)
+  newz = z - (2*f*fp) / (2*fp^2 - f*fpp) * @h_relax + #pixel*z^@h_power3 + @h_induct1 * y + @h_induct2 * w
+
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z - y| > @h_bailout
+  
+default:
+  title = "HalleyNova Mandelbrot/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-halleynova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (-0.5,0)
+  magn = 1.5
+
+  param h_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param h_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param h_start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+;  param h_usecritical
+;    caption = "Use Critical Point"
+;    default = false
+;    hint = "If set, a critical point for the function will \
+;            be used in place of the Start Value."
+;  endparam
+  param h_power1
+    caption = "1st Exponent"
+    default = (3,0)
+    hint = "Defines the primary exponent for the fractal. Use 3.0 \
+        for classical HalleyNova."
+  endparam
+  param h_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical HalleyNova."
+    visible = (@h_double || @h_coeff1 != 1.0)
+  endparam
+  param h_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@h_double || @h_coeff2 != 0.0)
+  endparam
+  param h_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical HalleyNova."
+    visible = (@h_double || @h_coeff2 != 0.0)
+  endparam
+  param h_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical HalleyNova."
+    visible = (@h_mode == "Phoenix" || @h_mode =="Simurgh" || @h_power3 != 0.0)
+  endparam
+  param h_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use 0 for classical HalleyNova."
+    visible = (@h_mode == "Phoenix" || @h_mode =="Simurgh" || @h_induct1 != 0.0)
+  endparam
+  param h_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical HalleyNova."
+    visible = (@h_mode =="Simurgh" || @h_induct2 != 0.0)
+  endparam
+  param h_bailout
+    caption = "Bailout"
+    default = 1.0e-15
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: smaller values result in \
+            more iterations being calculated."
+  endparam
+  param h_relax
+    caption = "Relaxation"
+    default = (1,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+
+switch:
+  type = "dmj3-HalleyNovaJulia"
+  h_mode = @h_mode
+  h_double = @h_double
+  h_seed = #pixel
+  h_power1 = @h_power1
+  h_power2 = @h_power2
+  h_power3 = @h_power3
+  h_coeff1 = @h_coeff1
+  h_coeff2 = @h_coeff2
+  h_induct1 = @h_induct1
+  h_induct2 = @h_induct2
+  h_bailout = @h_bailout
+  h_relax = @h_relax
+}
+
+dmj3-HalleyNovaJulia {
+;
+; Simurgh/Phoenix/Double HalleyNova Family
+;
+; See comments on Nova Mandelbrot/Phoenix/Simurgh for a
+; full description of this fractal type.
+;
+init:
+  complex w = (0,0)
+  complex y = (0,0)
+  complex newz = (0,0)
+  complex f = (0,0)
+  complex fp = (0,0)
+  complex fpp = (0,0)
+
+  z = #pixel
+  
+loop:
+  f   = @h_coeff1*z^@h_power1 + @h_coeff2*z^@h_power2 - 1
+  fp  = @h_coeff1*@h_power1*z^(@h_power1-1) + @h_coeff2*@h_power2*z^(@h_power2-1)
+  fpp = @h_coeff1*@h_power1*(@h_power1-1)*z^(@h_power1-2) + @h_coeff2*@h_power2*(@h_power2-1)*z^(@h_power2-2)
+  newz = z - (2*f*fp) / (2*fp^2 - f*fpp) * @h_relax + @h_seed*z^@h_power3 + @h_induct1 * y + @h_induct2 * w
+
+  w = y
+  y = z
+  z = newz
+  
+bailout:
+  |z - y| > @h_bailout
+  
+default:
+  title = "HalleyNova Julia/Phoenix/Simurgh"
+  helpfile = "dmj3\dmj3-pub-uf-halleynova.htm"
+  maxiter = 1000
+  periodicity = 0
+  center = (0,0)
+  magn = 1.5
+
+  param h_mode
+    caption = "Formula Type"
+    default = 0
+    enum = "Mandelbrot" "Phoenix" "Simurgh"
+    hint = "Sets the fractal type."
+  endparam
+  param h_double
+    caption = "Double variant"
+    default = false
+    hint = "If checked, enables the Double variant."
+  endparam
+  
+  param h_seed
+    caption = "Julia Seed"
+    default = (0,0)
+    hint = "This is the Julia seed, a constant parameter which \
+            defines the shape of the fractal. Use 0 for \
+            classical Halley."
+  endparam
+  param h_start
+    caption = "Start Value"
+    default = (1,0)
+    hint = "Starting value for each point.  You can use this to \
+            'perturb' the fractal."
+  endparam
+  param h_power1
+    caption = "1st Exponent"
+    default = (3,0)
+    hint = "Defines the primary exponent for the fractal. Use 3.0 \
+        for classical HalleyNova."
+  endparam
+  param h_coeff1
+    caption = "1st Scale"
+    default = (1,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            primary exponent term. Use 1.0 for classical HalleyNova."
+    visible = (@h_double || @h_coeff1 != 1.0)
+  endparam
+  param h_power2
+    caption = "2nd Exponent"
+    default = (0,0)
+    hint = "Defines the secondary exponent for the fractal."
+    visible = (@h_double || @h_coeff2 != 0.0)
+  endparam
+  param h_coeff2
+    caption = "2nd Scale"
+    default = (0,0)
+    hint = "Defines the coefficient (multiplier) for the \
+            secondary exponent term. Use 0 for classical HalleyNova."
+    visible = (@h_double || @h_coeff2 != 0.0)
+  endparam
+  param h_power3
+    caption = "Phoenix Exp."
+    default = (0,0)
+    hint = "Defines the exponent for constant term's multiplier. \
+        Use 0 for classical HalleyNova."
+    visible = (@h_mode == "Phoenix" || @h_mode =="Simurgh" || @h_power3 != 0.0)
+  endparam
+  param h_induct1
+    caption = "Phoenix Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the previous iteration's effect should be \
+            on the fractal. Use 0 for classical HalleyNova."
+    visible = (@h_mode == "Phoenix" || @h_mode =="Simurgh" || @h_induct1 != 0.0)
+  endparam
+  param h_induct2
+    caption = "Simurgh Dist."
+    default = (0,0)
+    hint = "Sets how 'strong' the next previous iteration's effect should be \
+            on the fractal. Use 0 for classical HalleyNova."
+    visible = (@h_mode =="Simurgh" || @h_induct2 != 0.0)
+  endparam
+  param h_bailout
+    caption = "Bailout"
+    default = 1.0e-15
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the fractal set anymore. Note: smaller values result in \
+            more iterations being calculated."
+  endparam
+  param h_relax
+    caption = "Relaxation"
+    default = (1,0)
+    hint = "This can be used to slow down the convergence of \
+            the formula."
+  endparam
+
+switch:
+  type = "dmj3-HalleyNovaMandel"
+  h_mode = @h_mode
+  h_double = @h_double
+  h_power1 = @h_power1
+  h_power2 = @h_power2
+  h_power3 = @h_power3
+  h_coeff1 = @h_coeff1
+  h_coeff2 = @h_coeff2
+  h_induct1 = @h_induct1
+  h_induct2 = @h_induct2
+  h_bailout = @h_bailout
+  h_relax = @h_relax
+}
+

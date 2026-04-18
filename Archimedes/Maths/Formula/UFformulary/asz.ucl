@@ -1,0 +1,220 @@
+comment { 
+
+All colorings (c) by Andras Szolek
+
+FractallicA at
+http://www.crosswinds.net/~fractallica
+
+}
+
+blakifreki{ ;(c) by Andras Szolek
+
+init:
+  z = #pixel
+  c = tan(z)
+  x = @var1/c
+  y = @var1*x-(cos(z))/2
+
+loop:
+ if x-y < 0
+  y = #pixel/3*@var2
+ endif
+ if #pixel > 100
+  z = 500
+ endif
+  c = x-y*z^2
+ if imag(z)<imag(x/y)
+  z = z*3
+ endif
+final:
+  #index = imag(c)/imag(#z)/imag(x/y)
+ if y > real(x/y)
+  y = y^2
+ endif
+
+default:
+ title = "Blakifreki"
+
+ param var1
+  caption = "Density"
+  default = 0.5
+ endparam
+}
+
+andreskaya { ;(c) by Andras Szolek
+
+init:
+  z = #pixel
+  c = z - #pixel^2/2
+  x = (z+c)/2
+  b = 0
+  complex s = #pixel
+
+loop:
+  z = @function(z^c/(@base/10))/@power-c^(@arms/2)
+  z = (z-x+1)
+  c = (c-x+1)
+  x = x/1.0001
+
+ if @mandelbrot == true
+  z = @mandelbrot_start+(z/5)
+  z = #pixel^z/#pixel
+ endif
+
+ if @julia == true
+  z = #pixel+(z/5) 
+  z = z^@julia_power+@julia_seed
+ endif
+
+ if @sierpinsky == true
+  s = @sierpinsky_strength*s
+  s = s/@sierpinsky_strength
+
+ if (imag(s)>0.5)
+  s = (@sierpinsky_s2/10)*real(s)+\
+  @sf2((@sierpinsky_s2/10)*imag(s)-1)
+ elseif (real(s)>0.5)
+  s = (@sierpinsky_s2/10)*real(s)-\
+  1+@sf2((@sierpinsky_s2/10)*imag(s))
+ else
+  s = (@sierpinsky_s2/10)*real(s)+\
+  @sf2((@sierpinsky_s2/10)*imag(s))
+ endif
+ endif
+
+ if @bailout_mode == 1
+  b = z*c
+ elseif @bailout_mode == 2
+  b = |z*c|
+ elseif @bailout_mode == 3
+  b = z/c
+ elseif @bailout_mode == 4
+  b = |z/c|
+ elseif @bailout_mode == 5
+  b = z+c
+ elseif @bailout_mode == 6
+  b = |z*c|
+ elseif @bailout_mode == 7
+  b = z-c
+ elseif @bailout_mode == 8
+  b = |z-c|
+ elseif @bailout_mode == 9
+  b = z
+ elseif @bailout_mode == 10
+  b = |z|
+ elseif @bailout_mode == 11
+  b = c
+ elseif @bailout_mode == 12
+  b = |c|
+ else
+  b = z*c
+ endif
+
+ if @sierpinsky == true
+  z = #pixel-z
+  b = @sf(((|@sierpinsky_strength*s|+z)/\
+  @sierpinsky_strength)-@bailout)+(b/3)
+ endif
+
+final:
+  #index = imag(b)+real(@bailout)-imag(@bailout)
+
+default:
+ title = "Andreskaya"
+
+ param base
+  caption = "Base, ''Seed''"
+  default = (2,0)
+ endparam
+ 
+ param power
+  caption = "Size of small plates"
+  default = (5,2)
+ endparam
+ 
+ param bailout
+  caption = "''Bailout'' for ''#index'' "
+  default = 100
+ endparam
+ 
+ param bailout_mode
+  caption = "Bailout Mode"
+  hint = "The bailout-process : ''this value'' < \
+  ''bailout parameter /variant/''"
+  enum = "z*c" "|z*c|" "z/c" "|z/c|" "z+c" "|z+c|"\
+  "z-c" "|z-c|" "z" "|z|" "c" "|c|"
+ endparam
+
+ param arms
+  caption = "Number of arms"
+  default = 1
+ endparam
+
+ param mandelbrot
+  caption = "Mandelbrot Import"
+  default = true
+ endparam
+
+ param mandelbrot_start
+  caption = "Mandelbrot Starting Point"
+  hint = "This function is working when the ''Mandelbrot \
+  import'' parameter is ticked"
+  default = (2,0)
+ endparam
+
+ param julia
+  caption = "Julia Import"
+  default = false 
+ endparam
+
+ param julia_seed
+  caption = "Julia Seed"
+  hint = "This function is working when the ''Julia import''\
+  parameter is ticked"
+  default = (-1.25,0)
+ endparam
+
+ param julia_power
+  caption = "Julia Power"
+  hint = "This function is working when the ''Julia import''\
+  parameter is ticked"
+  default = 2.0
+ endparam
+
+ param sierpinsky
+  caption = "Sierpinsky Import"
+  default = false 
+ endparam
+
+ param sierpinsky_strength
+  caption = "Sierpinsky Strength"
+  hint = "This function is working when ''Sierpinsky \
+  Import is ticked"
+  default = 20.0
+ endparam
+
+ param sierpinsky_s2
+  caption = "Sierpinsky Factor"
+  hint = "This function is working when ''Sierpinsky \
+  Import is ticked"
+  default = 20.0
+ endparam
+
+ func function
+  caption = "New ''z'' function"
+  default = floor()
+ endfunc
+
+ func sf
+  caption = "Sierpinksy function #1"
+  hint = "Sierpinsky ''bailout'' in the ''bailout'' section"
+  default = conj()
+ endfunc
+
+ func sf2
+  caption = "Sierpinksy function #2"
+  hint = "Sierpinsky ''shape'' in the ''loop'' section"
+  default = flip()
+ endfunc
+}
+

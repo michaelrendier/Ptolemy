@@ -1,0 +1,4325 @@
+comment {
+
+Coloring schemes developed by Kerry Mitchell
+
+Compilation dated 15jul2001
+
+Includes:
+  Basic
+  Basic Plus
+  Emboss
+  Gaussian Integer
+  Statistics
+  Polar Curves
+  Astroid
+  5 Point Star
+  Conic Sections
+  Conic Lite
+  2 Sections
+  Conic Lite Old
+  Bubbles
+  Range
+  Passthru
+  Distance to a Point
+  Pythagorean Triple
+  Spiral
+  Grid
+  Single Truchet
+  Double Truchet
+  Rose Curve String Art
+  Astroid String Art
+  Crosshatch
+}
+
+basic { ; Kerry Mitchell 20sep98
+;
+; The standard coloring parameters:
+; polar angle (includes all 4 quadrants
+; instead of only 2 from atan),
+; magnitude of z, real(z), imag(z),
+; and iteration number.
+;
+init:
+loop:
+final:
+  float x=real(#z)
+  float y=imag(#z)
+  if(@colorby==1)       ; polar angle
+    float t=atan2(#z)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==2)      ; magnitude
+    #index=cabs(#z)
+  elseif(@colorby==3)      ; real(z)
+    #index=x
+  elseif(@colorby==4)      ; imag(z)
+    #index=y
+  else                     ; iteration
+    #index=0.01*#numiter
+  endif
+default:
+  title="Basic"
+  param colorby
+    caption = "color by"
+    default = 0
+    enum = \
+      "iteration" \
+      "polar angle" \
+      "magnitude" \
+      "real(z)" \
+      "imag(z)"
+  endparam
+}
+
+basic-plus { ; Kerry Mitchell 26feb99
+;
+; The standard coloring parameters:
+; polar angle, magnitude, real, imag
+; for z, pixel, z-pixel, & z/pixel
+; and iteration number.
+;
+; Replaces the "Basic" coloring formula
+;
+init:
+  var=(0.0,0.0)
+  float t=0.0
+loop:
+final:
+;
+; establish variable used for coloring
+;
+  if(@vartype==1)         ; pixel
+    var=#pixel
+  elseif(@vartype==2)     ; z-pixel
+    var=#z-#pixel
+  elseif(@vartype==3)     ; z/pixel
+    var=#z/#pixel
+  else                    ; z
+    var=#z
+  endif
+;
+; pick coloring characteristic
+;
+  if(@colorby==1)         ; polar angle
+    t=atan2(var)
+    t=t/#pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==2)      ; magnitude
+    #index=cabs(var)
+  elseif(@colorby==3)      ; real
+    #index=real(var)
+  elseif(@colorby==4)      ; imag
+    #index=imag(var)
+  else                     ; iteration
+    #index=0.01*#numiter
+  endif
+default:
+  title="Basic Plus"
+  param vartype
+    caption="variable"
+    default=0
+    enum="z" "pixel" "z-pixel" "z/pixel"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="iteration" "polar angle" "magnitude" "real part" "imag part"
+  endparam
+}
+
+emboss { ; Kerry Mitchell 13sep98
+;
+; For use with "Emboss" formulas and
+; gradient.  Uses 3 colors:
+; #index values of 0.2, 0.5, and 0.8, which correspond
+; to gradient positions 40, 200, and 320.
+;
+; Updated 20 July 2003
+;   Added @threshmin and @threshmax parameters
+;   both default to 0.0, which gives the same result
+;   as the old Emboss coloring.  Now, #index 0.2 applies
+;   to real(#z) - imag(#z) < @threshmin, 0.8 applies to 
+;   the difference > @threshmax, and 0.5 applies to
+;   a difference between the 2 boundaries.
+;
+; Updated 26 February 2007
+;   Added "solid background" flag.
+;
+init:
+  float r=0.0
+final:
+  r=real(#z)-imag(#z)
+  if(r<@threshmin)
+    #index=0.2
+  elseif(r>@threshmax)
+    #index=0.8
+  else
+    #index=0.5
+  endif
+  if(@solidbg==true)
+    if(|#z|==0)
+      #solid=true
+    endif
+  endif
+default:
+  title="Emboss"
+  float param threshmin
+    caption="threshold minimum"
+    default=0.0
+    hint="If real(z)-imag(z) < this value, use #index 0.2."
+  endparam
+  float param threshmax
+    caption="threshold maximum"
+    default=0.0
+    hint="If real(z)-imag(z) > this value, use #index 0.8."
+  endparam
+  bool param solidbg
+    caption="solid background"
+    default=false
+  endparam
+}
+
+comment { ; narrative copyright Kerry Mitchell 20sep98
+
+Gaussian Integer Coloring
+
+Gaussian integers are complex numbers such that both the real and
+imaginary parts are integers.  Examples are:  (0,0), (-2,3), (17,-5),
+and (1000000,123456789).  The gaussian scheme is concerned with how
+the orbit behaves relative to a Gaussian integer.
+
+To find the Gaussian integer which the orbit most closely approaches,
+the built-in function round() is used.  Round(z) returns a complex
+number whose components are the rounded components of z.  This is a
+Gaussian integer.  The distance from z to round(z) is simply the
+magnitude of z - round(z).  The "minimum distance" method tracks this
+distance and records its smallest value.  The "iteration @ min" colors
+by the iteration number when this minimum is reached, and the "angle @
+min" methods colors by the polar angle of z when the minimum was reached.
+The corresponding "maximum" methods ("maximum distance", "iteration @
+max", and "angle @ max") work in a similar fashion for the maximum value
+of z - round(z).  The final method, "average distance", simply colors by
+the mean of the distance over the course of the orbit.  Note that the
+angle used here is the actual polar angle, with a range of 360 degrees,
+instead of the angle returned by the built-in "atan" function, which
+only has a range of 180 degrees.
+
+These methods essentially overlay a 1x1 square grid onto the complex
+plane and ask how close (or far) the orbit comes to a node in the grid.
+Two options allow varying the size of the grid; these are called the
+"normalization" methods.  The first is to normalize z by the #pixel.
+This has the effect of asking how close the orbit comes to Gaussian
+integer multiples of the #pixel value (or, z/#pixel = has integer real
+and imaginary parts).  The other normalization method employs a user-
+specified complex factor.  Then, the coloring is performed according to
+how close the orbit comes to Gaussian integer multiples of this factor.
+For example, if the factor was set to (1.2,5.1), then the methods would be
+coloring by the orbits approach to nodes of a rectangular grid that was
+1.2 units long by 5.1 units high.  This might be useful with Julia set
+images, as the factor can be set to the Julia parameter.  The default,
+"none" normalization, uses a factor of 1.
+}
+
+gauss { ; Kerry Mitchell 20sep1998, last updated 28apr2001
+;
+; Colors by orbit's relationship
+; to Gaussian Integers. See comment
+; block for more information.
+;
+; Updated 02apr99 to include options for finding
+; the integer:  added trunc, floor, and ceil.
+; Thanks to Marcelo Anelli for the idea.
+;
+; Updated 28apr2001 to include normalizing by some function of z.
+; Added to new 'color by' choices:  max/min ratio and
+; min/mean/max angle.  Added "randomize" feature to randomly 
+; change z before finding the Gaussian integer.  This will
+; change the regular grid-like distribution of points.
+;
+init:
+  float r=0.0
+  float rmin=1.0e12
+  float rmax=0.0
+  float rave=0.0
+  float total=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  int itermax=0
+  zmin=(0.0,0.0)
+  zmax=(0.0,0.0)
+  if(@norm==1)                       ; pixel normalization
+    normfac=#pixel
+  elseif(@norm==2)                   ; factor normalization
+    normfac=@fac
+  elseif(@norm==3)                   ; f(z) normalization
+    normfac=@normfunc(#z)
+  else                               ; no normalization
+    normfac=(1.0,0.0)
+  endif
+  float logfac=@logseed
+loop:
+  iter=iter+1
+  temp2=#z
+  if(@randomize==true)
+    logfac=4*logfac*(1-logfac)
+    temp2=temp2*(1-@randomsize*logfac)
+  endif
+  if(@inttype==1)                    ; trunc
+    temp=trunc(temp2/normfac)
+  elseif(@inttype==2)                ; floor
+    temp=floor(temp2/normfac)
+  elseif(@inttype==3)                ; ceil
+    temp=ceil(temp2/normfac)
+  else                               ; round
+    temp=round(temp2/normfac)
+  endif
+  remain=temp2-temp*normfac
+  r=cabs(remain)
+  total=total+r
+  rave=total/iter
+  if(r<rmin)
+    rmin=r
+    zmin=temp2
+    itermin=iter
+  endif
+  if(r>rmax)
+    rmax=r
+    zmax=temp2
+    itermax=iter
+  endif
+final:
+  if(@colorby==1)            ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)        ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)        ; maximum distance
+    #index=rmax
+  elseif(@colorby==4)        ; iteration @ max
+    #index=0.01*itermax
+  elseif(@colorby==5)        ; angle @ max
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==6)        ; average distance
+    #index=rave
+  elseif(@colorby==7)        ; min/mean/max angle
+    zmax=(rave-rmin)+flip(rmax-rave)
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==8)        ; max/min ratio
+    #index=rmax/(rmin+1.e-12)
+  else                       ; minimum distance
+    #index=rmin
+  endif
+default:
+  title="Gaussian Integer"
+  param inttype
+    caption="integer type"
+    default=0
+    enum="round(z)" "trunc(z)" "floor(z)" "ceil(z)"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "maximum distance" "iteration @ max" "angle @ max" "average distance"\
+      "min/mean/max angle" "max/min ratio"
+  endparam
+  param norm
+    caption="normalization"
+    default=0
+    enum="none" "pixel" "factor" "f(z)"
+  endparam
+  param fac
+    caption="normalizing factor"
+    default=(2.0,1.0)
+  endparam
+  param randomize
+    caption="randomize?"
+    default=false
+    hint="Applies a random factor to z every iteration before \
+      finding the Gaussian integer."
+  endparam
+  param randomsize
+    caption="random size"
+    default=(0.1,0)
+    hint="Size of random factor, if 'randomize?' is checked."
+  endparam
+  param logseed
+    caption="random seed"
+    default=0.1
+    min=0.0
+    max=1.0
+    hint="Randomize seed, between 0 and 1."
+  endparam
+  func normfunc
+    caption="normalizing function"
+    default=ident()
+    hint="For 'f(z)' normalization."
+  endfunc
+}
+
+comment { ; copyright Kerry Mitchell 04nov98
+
+Statistics
+
+This started out with an article written by Stephen Ferguson on an
+analysis of fractal dimension, which he based on an algorithm by Holger
+Jaenisch.  The formulas here modify Stephen's analysis and add other
+standard statistical measures.  Since the measures are typically used
+with bounded datasets, this coloring method may be more applicable as
+an "inside" scheme, but there's nothing stopping a user from employing
+it as an "outside" scheme as well.
+
+The statistical measures implemented are:  minimum, maximum, range,
+mean, standard deviation, coefficient of variation, and fractal
+dimension.  All are defined only for real variables, so there are
+4 choices for reducing the complex #z to a real number:  real(#z),
+imag(#z), the magnitude of #z, and imag(#z)/real(#z).  The last
+method is an attempt to capture the polar angle of #z, without the
+discontinuities involved in actually using the angle arg(#z).
+
+Once the choice of variable has been made, the first 3 measures are
+simple enough to compute.  Simply monitor the orbit, updating the
+minimum and maximum as they change.  Once the iteration has ceased,
+the range is just (maximum - minimum).  The mean is computed by keeping
+a running sum of the variable, then dividing it by the number of
+iterations.
+
+The standard deviation is a measure of the spread of the data, and is
+defined in terms of the sum of the squared differences between each
+datum and the mean.  This can also be computed by keeping a running
+sum of the square of the variable.  This sum is used with the sum for
+the mean to determine the standard deviation.  The coefficient of
+variation is a normalized standard deviation:  it's the ratio of the
+standard deviation to the mean.  Finally, the "fractal dimension"
+computed here is not the true fractal dimension, but an approximation
+to it.  It's the standard deviation normalized by the range.
+
+}
+
+statistics { ; Kerry Mitchell 03nov98
+;
+; Colors according to various
+; statistical properties of the
+; iterate.  Primarily an "inside"
+; coloring method.
+;
+init:
+  int iter=0
+  float r=0.0
+  float rmin=1e12
+  float rmax=-rmin
+  float sumsum=0.0
+  float sum=0.0
+loop:
+  iter=iter+1
+  if(@vartype==0)               ; real(z)
+    r=real(#z)
+  elseif(@vartype==1)           ; imag(z)
+    r=imag(#z)
+  elseif(@vartype==2)           ; magnitude(z)
+    r=cabs(#z)
+  else                          ; imag(z)/real(z)
+    r=imag(#z)/real(#z)
+  endif
+  sum=sum+r
+  sumsum=sumsum+r*r
+  if(r<rmin)
+    rmin=r
+  endif
+  if(r>rmax)
+    rmax=r
+  endif
+final:
+  if(@stattype==0)              ; minimum
+    #index=rmin
+  elseif(@stattype==1)          ; maximum
+    #index=rmax
+  elseif(@stattype==2)          ; range
+    #index=rmax-rmin
+  elseif(@stattype==3)          ; mean
+    #index=sum/iter
+  elseif(@stattype==4)          ; standard deviation
+    #index=sqrt(sumsum-sum*sum/iter)
+  elseif(@stattype==5)          ; coefficient of variation
+    #index=sqrt(sumsum-sum*sum/iter)/sum*iter
+  else                          ; fractal dimension
+    #index=sqrt(sumsum-sum*sum/iter)/(rmax-rmin)
+  endif
+default:
+  title="Statistics"
+  param vartype
+    caption="variable"
+    default=2
+    enum="real(z)" "imag(z)" "magnitude" "imag/real"
+    hint="variable for which statistics will be calculated"
+  endparam
+  param stattype
+    caption="statistic"
+    default=6
+    enum="minimum" "maximum" "range" "mean" \
+      "std. deviation" "variation" "fractal dimension"
+    hint="statistic that will be calculated"
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 15nov98
+
+Polar Curves
+
+Typically, points in a plane are thought of in terms of their x- and
+y-coordinates, that is, how far away (and on which side) the point is
+from the horizontal x-axis and the vertical y-axis.  Another way of
+looking at the point is with polar coordinates, which specify the
+distance of the point from the origin (r) and its direction (t).  The
+two methods are equivalent:
+
+x = r*cos(t), y=r*sin(t), or
+r^2 = x^2 + y^2, tan(t) = y/x.
+
+Polar curves are curves that specify r as a function of t, instead of
+y as a function of x.  The curve used in this coloring method is:
+
+r = [a * f(b*t)]^n + r0,
+
+where f is one of UltraFractal's builtin functions (e.g., sin, cos, exp,
+etc.), a is an amplitude scaling factor, and b is a frequency factor.
+The exponent n is useful for making the curve wider or thinner, and r0
+is a expansion or contraction constant.
+
+Some special curves can be generated using this function.  Spirals can
+be made by using the "ident" function.  Here, the exponent n controls
+how tightly wound the spiral is.  However, only one revolution of the
+spiral will be drawn, as t is limited to the range 0 to 2*pi.
+
+"Rose" curves are made by using either sin or cos functions.  The
+parameter a controls the size of the curve.  The number of "petals"
+is b, so long as b is a positive integer.  Increasing n from 1 will
+make the petals thinner; decreasing it toward 0 will make them thicker.
+Leave r0=0 for the standard rose curve, where the petals all join at
+the origin.
+
+Since the sin and cos functions generate negative values, the "rose"
+curves will have some regions of negative r.  How this is handled
+depends on r0 and "negrflag", the negative r flag.  Setting negrflag to
+1 will make the routine ignore negative r values.  This, with r0 is set
+to 0, will cause the rose curve to have "b" number of petals, all of
+them the same size.  Setting negrflag=2 will make the routine consider
+negative r's the same as positive r's.  Thus, the rose curve will have
+2*b petals.  Increasing r0 from 0 will make r positive more often than
+negative.  This will also increase the number of petals from b to 2*b,
+but half of the petals will be small and half will be large.
+
+The best way to see the effects of the parameter choices is to use the
+"draw curves" setting of the "color by" parameter.  Here, the image
+isn't a fractal, but rather the polar curve determined by a, b, n, r0,
+the chosen function, and the negative r flag.
+
+The other "color by" settings use polar curves to color fractals.  There
+are 2 basic rendering methods:  how close the orbit comes to the polar
+curve, and how often the orbit is inside the polar curve.  The minimum
+approach method also has a few variants:  iteration number when the
+minimum was reached, and angle of #z when the minimum was reached.
+
+}
+
+polar-curves { ; Kerry Mitchell 15nov98
+;
+; colors by the relationship between
+; the orbit and a user-specified polar
+; curve (such as a spiral or a rose curve)
+;
+init:
+  float err=0.0
+  float errmin=1.0e12
+  float r=0.0
+  float twopi=2.0*pi
+  float t=0.0
+  int iter=0
+  int itermin=0
+  int incount=0
+  zmin=(0.0,0.0)
+loop:
+  iter=iter+1
+  t=imag(log(#z))
+  if(t<0.0)
+    t=t+twopi
+  endif
+  r=@a*real(fn1(@b*t))
+  if(r>=0.0)
+    r=r^@n
+  else
+    r=-((-r)^@n)
+  endif
+  r=r+@r0
+  if(@rneg==0)
+    err=r-cabs(#z)
+  else
+    err=|r|-|#z|
+  endif
+  if(err<0.0)
+    incount=incount+1
+    err=-err
+  endif
+  if(err<errmin)
+    errmin=err
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=cabs(log(errmin))
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)           ; in fraction
+    #index=incount/iter
+  else                          ; draw curves
+    t=imag(log(#pixel))
+    if(t<0.0)
+      t=t+twopi
+    endif
+    r=@a*real(fn1(@b*t))
+    if(r>=0.0)
+      r=r^@n
+    else
+      r=-((-r)^@n)
+    endif
+    r=r+@r0
+    if(@rneg==0)
+      err=r-cabs(#pixel)
+    else
+      err=|r|-|#pixel|
+    endif
+    #index=cabs(log(cabs(err)))
+  endif
+default:
+  title="Polar Curves"
+  param a
+    caption="amplitude"
+    default=1.0
+  endparam
+  param b
+    caption="frequency"
+    default=1.0
+  endparam
+  param n
+    caption="exponent"
+    default=1.0
+  endparam
+  param r0
+    caption="baseline r"
+    default=0.0
+  endparam
+  param rneg
+    caption="r<0 flag"
+    default=0
+    enum="ignore r<0" "treat as r>0"
+    hint="1 to ignore negative r values, 2 to treat as positive"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "in fraction" "draw curves"
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 15nov98
+
+Astroid
+
+The astroid is a figure from analytic geometry, resembling a four-
+pointed star with concave sides.  Its defining equation is:
+
+x^(2/3) + y^(2/3) = a^(2/3)
+
+where a determines the size of the figure, similar to the radius of
+a circle.  This equation can be generalized by changing the exponent
+of 2/3 to any value n.  If n is between 0 and 1, the figure resembles
+the standard astroid.  The sides go from being straight lines for n=1
+to lying atop of the coordinates axes as n approaches 0.  For n>1, the
+figure becomes convex, and is a circle for n=2.  As n approaches
+infinity, the figure approaches a square.  The astroid is further
+generalized by allowing it to be placed somewhere other than at the
+center of the complex plane.  The figure's orientation and location
+in the plane are determined by a "center" and "rotation angle" parameters.
+
+This generalized astroid is the basis of this coloring scheme.  As with
+other plane figures, the astroid can be compared to the Mandelbrot and
+Julia orbits.  The image can be colored by how close the orbit comes
+to the astroid or how often the orbit lands inside the astroid.  A final
+choice of the "colorby" parameter draws the astroid only, so the effects
+of the parameter choices can be seen.
+
+}
+
+astroid { ; Kerry Mitchell 15nov98
+;
+; colors according to the relationship
+; between the orbit and an astroid
+; (4-pointed star figure)
+;
+init:
+  float err=0.0
+  float errmin=1.0e12
+  float x=0.0
+  float y=0.0
+  float t=0.0
+  float aton=@a^@n
+  int iter=0
+  int itermin=0
+  int incount=0
+  zmin=(0.0,0.0)
+  t=@rotangle/180.0*pi
+  rot=exp(flip(t))
+loop:
+  iter=iter+1
+  temp=rot*(#z-@center)
+  x=cabs(real(temp))
+  y=cabs(imag(temp))
+  err=x^@n+y^@n-aton
+  if(err<0.0)
+    incount=incount+1
+    err=-err
+  endif
+  if(err<errmin)
+    errmin=err
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=cabs(log(errmin))
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)           ; in fraction
+    #index=incount/iter
+  else                          ; draw curve
+    temp=rot*(#pixel-@center)
+    x=cabs(real(temp))
+    y=cabs(imag(temp))
+    err=x^@n+y^@n-aton
+    #index=cabs(log(cabs(err)))
+  endif
+default:
+  title="Astroid"
+  param a
+    caption="size"
+    default=1.0
+  endparam
+  param n
+    caption="exponent"
+    default=0.67
+  endparam
+  param rotangle
+    caption="rotation, degrees"
+    default=0.0
+  endparam
+  param center
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "in fraction" "draw curve"
+  endparam
+}
+
+comment { ; narrative copyright Kerry Mitchell 25nov98
+
+Seeing Stars
+
+Most fractal images involve circles in some respect:  either stopping
+the iteration when the orbit moves outside of a given circle, or
+coloring by how close the orbit comes to a certain circle, or some
+variation.  This formula uses a 5 point star instead of a circle.
+The fractal can be colored by how close the orbit comes to a star, or
+how often the orbit lands inside the star.
+
+The star is represented by the 5 outer points.  These are equally spaced
+on a circle.  The center and size of the circle are user-specified, as
+is the rotation angle of the star.
+
+How z at any iteration relates to the star (inside, outside, how close)
+is determined by looking at each of the 10 sides, one at a time.  Each
+side can be represented by a line A*x + B*y + C = 0, where A, B, and C
+come from the coordinates of the 2 outer points that are joined to make
+the side.  Given the numbers A, B, and C, the quantity
+
+        q = A*real(z) + B*imag(z) + C
+
+is computed.  If q is positive, then z is on one side of the line, and
+if q is negative, then z is on the other side of the line.  If |q| is
+very small, that means that z is very close to that side of the star.
+Taking the signs of q for all 10 sides will determine if z is inside or
+outside of the star.  Using the smallest value of |q| gives the distance
+from z to the star.
+
+To see this in action, use the "draw star" setting of the "color by"
+parameter.  The outline of a star will be drawn, with the position,
+orientation and size that you choose.  This setting along with the
+"minimum distance" setting, uses a logarithmic transfer function from
+distance to #index.  This helps highlight the star without needing to
+find out if the point is exactly on the star or not.  The "in fraction"
+will count how many times the orbit lands inside the star, then set
+#index to the ratio of inside hits to total iterations for that pixel.
+
+}
+
+5star { ; Kerry Mitchell 25nov98
+;
+; colors by relationship to
+; 5-point star
+;
+init:
+  float err=0.0
+  float errmin=1.0e20
+  float x=0.0
+  float y=0.0
+  float xcen=real(@center)
+  float ycen=imag(@center)
+  float phi=@phiangle/180.0*#pi
+  float twopi=2.0*#pi
+  float temp=0.1*twopi
+  float t=0.0
+  float t0=phi
+  float t1=t0+temp
+  float t2=t1+temp
+  float t3=t2+temp
+  float t4=t3+temp
+  float t5=t4+temp
+  float t6=t5+temp
+  float t7=t6+temp
+  float t8=t7+temp
+  float t9=t8+temp
+  float x0=@r*cos(t0)+xcen
+  float y0=@r*sin(t0)+ycen
+  float x1=@r*cos(t2)+xcen
+  float y1=@r*sin(t2)+ycen
+  float x2=@r*cos(t4)+xcen
+  float y2=@r*sin(t4)+ycen
+  float x3=@r*cos(t6)+xcen
+  float y3=@r*sin(t6)+ycen
+  float x4=@r*cos(t8)+xcen
+  float y4=@r*sin(t8)+ycen
+  int flag=0
+  int incount=0
+  int iter=0
+  int itermin=0
+  zmin=(0.0,0.0)
+loop:
+  iter=iter+1
+  x=real(#z)
+  y=imag(#z)
+  t=imag(log(#z-@center))
+  if(t<0)
+    t=t+twopi
+  endif
+  ;
+  ;  compute how close iterate is to each side of star
+  ;  and on which side
+  ;
+  if((t>t0)&&(t<=t1))
+    err=x*(y0-y2)+y*(x2-x0)-x2*y0+x0*y2
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t1)&&(t<=t2))
+    err=x*(y1-y4)+y*(x4-x1)-x4*y1+x1*y4
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t2)&&(t<=t3))
+    err=x*(y1-y3)+y*(x3-x1)-x3*y1+x1*y3
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t3)&&(t<=t4))
+    err=x*(y2-y0)+y*(x0-x2)-x0*y2+x2*y0
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t4)&&(t<=t5))
+    err=x*(y2-y4)+y*(x4-x2)-x4*y2+x2*y4
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t5)&&(t<=t6))
+    err=x*(y3-y1)+y*(x1-x3)-x1*y3+x3*y1
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t6)&&(t<=t7))
+    err=x*(y3-y0)+y*(x0-x3)-x0*y3+x3*y0
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t7)&&(t<=t8))
+    err=x*(y4-y2)+y*(x2-x4)-x2*y4+x4*y2
+    if(err<0)
+      flag=1
+    endif
+  elseif((t>t8)&&(t<=t9))
+    err=x*(y4-y1)+y*(x1-x4)-x1*y4+x4*y1
+    if(err<0)
+      flag=1
+    endif
+  else
+    err=x*(y3-y0)+y*(x0-x3)-x0*y3+x3*y0
+    if(err<0)
+      flag=1
+    endif
+  endif
+  err=cabs(err)
+  if(err<errmin)
+    errmin=err
+    itermin=iter
+    zmin=#z
+  endif
+  if(flag==1)
+    incount=incount+1
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=cabs(log(errmin))
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)           ; in fraction
+    #index=incount/iter
+  else                          ; draw star
+    x=real(#pixel)
+    y=imag(#pixel)
+    t=imag(log(#pixel-@center))
+    if(t<0)
+      t=t+twopi
+    endif
+    if((t>t0)&&(t<=t1))
+      err=x*(y0-y2)+y*(x2-x0)-x2*y0+x0*y2
+    elseif((t>t1)&&(t<=t2))
+      err=x*(y1-y4)+y*(x4-x1)-x4*y1+x1*y4
+    elseif((t>t2)&&(t<=t3))
+      err=x*(y1-y3)+y*(x3-x1)-x3*y1+x1*y3
+    elseif((t>t3)&&(t<=t4))
+      err=x*(y2-y0)+y*(x0-x2)-x0*y2+x2*y0
+    elseif((t>t4)&&(t<=t5))
+      err=x*(y2-y4)+y*(x4-x2)-x4*y2+x2*y4
+    elseif((t>t5)&&(t<=t6))
+      err=x*(y3-y1)+y*(x1-x3)-x1*y3+x3*y1
+    elseif((t>t6)&&(t<=t7))
+      err=x*(y3-y0)+y*(x0-x3)-x0*y3+x3*y0
+    elseif((t>t7)&&(t<=t8))
+      err=x*(y4-y2)+y*(x2-x4)-x2*y4+x4*y2
+    elseif((t>t8)&&(t<=t9))
+      err=x*(y4-y1)+y*(x1-x4)-x1*y4+x4*y1
+    else
+      err=x*(y3-y0)+y*(x0-x3)-x0*y3+x3*y0
+    endif
+    err=cabs(err)
+    #index=cabs(log(cabs(err)))
+  endif    
+default:
+  title="5 Point Star"
+  param center
+    caption="center of star"
+    default=(0.0,0.0)
+  endparam
+  param r
+    caption="size of star"
+    default=0.25
+    min=0.0
+  endparam
+  param phiangle
+    caption="rotation, degrees"
+    default=0.0
+    min=0.0
+    max=36.0
+    hint="only use angles between 0 and 36 degrees"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "in fraction" "draw star"
+  endparam
+}
+
+comment { ; copyright Kerry Mitchell 20dec98 
+
+Conic Sections
+
+Conic sections are sections of cones. Specifically, take a double-ended
+cone, like 2 funnels placed tip-to-tip. Then, form the intersection of
+the (double) cone with a plane. The intersection, usually one or two
+curves, is a conic section. Conic sections can be a point, one line,
+two lines, a parabola, an ellipse, a circle, or a hyperbola, depending
+on the orientation of the plane relative to the cone. Analytically, they
+can all be expressed by the same formula:
+
+        Ax^2 + Bx + Cy^2 + Dy + Exy + F = 0,
+
+where the parameters A through F determine the shape of the section, and
+x and y are the 2 spatial coordinates. For example, the line y=x can be
+represented as
+
+        x - y = 0, or
+        A = 0, B = 1, C = 0, D = -1, E = 0, F = 0. 
+
+A circle centered at (1,0) with a radius of 2 would have the equation 
+
+        (x - 1)^2 + y^2 = 4, or
+        x^2 - 2x + y^2 - 3 = 0, giving
+        A = 1, B = -2, C = 1, D = 0, E = 0, F = -3. 
+
+How can these shapes be used to render fractals?  Firstly, the "draw
+section" setting simply draws the section determined by the six parameters
+A - F, to give the user an idea of how the parameter choices affect the
+section generated.
+
+These coloring formulas record how the orbit interacts with the given
+section.  In "Conic Sections", all six section parameters are input to
+determine the curve.  Then, the image can be colored according to the
+distance of the orbit's approach to the section or how often the orbit
+landed inside the section.  Here's how the "colorby" parameters work in
+"Conic Sections":
+
+        "minimum distance":  closest approach to section
+        "iteration @ min":  iteration number at minimum approach
+        "angle @ min":  polar angle of z at minimum approach
+        "maximum distance":  furthest approach from section
+        "iteration @ max":  iteration number at maximum approach
+        "angle @ max":  polar angle of z at maximum approach
+        "in fraction":  how many times orbit was inside section, as a
+fraction of the total number of iterations
+        "in/out ratio": ration of number of times orbit was inside the
+section to the number of times the orbit was outside of the section
+        "lsb binary":  builds up a binary index, adding a bit to the
+right for each iteration, "1" if the orbit was inside the section
+and "0" if it was outside
+        "msb binary":  builds up a binary index, adding a bit to the
+left for each iteration, "1" if the orbit was inside the section
+and "0" if it was outside
+        "draw section":  simply draws the chosen conic section
+
+While using all six section parameters is very powerful, it is less
+than user-friendly.  Hence "Conic Lite".  Here, the user chooses the
+type of section, and only enters the relevant geometric characteristics.
+The choices are:
+
+        "line":  enter angle of line to horizontal, and point through
+which line passes
+        "circle":  enter center and radius
+        "ellipse"  enter semi-major and semi-minor axes and center
+        "horiz. hyperbola":  enter semi-major and semi-minor axes and
+center
+        "vert. hyperbola":  enter semi-major and semi-minor axes and
+center
+
+The coloring options have also been reduced, to:
+
+        "minimum distance":  closest approach to section
+        "iteration @ min":  iteration number at minimum approach
+        "angle @ min":  polar angle of z at minimum approach
+        "draw section":  simply draws the chosen conic section
+
+The "2 Sections" coloring method combines the results from 2 conic
+sections into one.  The choices of sections are the same as in "Conic
+Lite".  At each iteration, the distance from the first curve (call it
+x) and the distance from the second curve (call it y) are computed.
+From these, an overall distance metric is determined:
+
+        "x^2 + y^2":  standard magnitude
+        "|x| + |y|":  manhattan metric
+        "|x*y|":  hyperbolic
+        "|x-y|":  umm, call it "|x-y|"
+
+When the chosen metric is at its smallest value, the x and y values
+are combined into a complex number, zerrmin.  Also, the iterate z is
+stored as zmin.
+
+The coloring options ("color by" parameter) are:
+
+        "2 curve min":  magnitude of zerrmin
+        "2 curve angle":  polar angle of zerrmin
+        "z angle @ min":  polar angle of zmin
+        "z mag @ min":  magnitude of zmin
+        "iteration # @ min":  iteration number at metric minimum
+        "draw section":  simply draws the 2 sections
+
+The standard forms of the conic sections are given below. With a bit of
+algebraic twiddling, they can be transformed into the general form, for
+use in the coloring formulas.
+
+point (h,k) x=h, y=k; or (x-h)^2 + (y-k)^2 = 0 [circle of radius 0
+centered at (h,k)].
+
+vertical line through (h,k): x=h
+
+non-vertical line with slope m, through (h,k): y-k = m*(x-h) 
+
+parabola, opening up or down, with vertex at (h,k): y-k = 4*p*(x-h)^2
+[p determines width; +/up, -/down]
+
+parabola, opening left or right, with vertex at (h,k): x-h = 4*p*(y-k)^2
+[p determines width; +/right, -/left]
+
+ellipse centered at (h,k), semimajor axis alpha, semiminor axis beta:
+(x-h)^2/alpha^2 + (y-k)^2/beta^2 = 1
+
+circle centered at (h,k), with radius r: (x-h)^2 + (y-k)^2 = r^2
+
+hyperbola centered at (h,k), semimajor axis alpha, semiminor axis beta,
+opening left/right: (x-h)^2/alpha^2 - (y-k)^2/beta^2 = 1
+
+hyperbola centered at (h,k), semimajor axis alpha, semiminor axis beta,
+opening up/down: (y-k)^2/beta^2 - (x-h)^2/alpha^2 = 1
+
+coordinate rotation, from (u,v) to (x,y), through an angle theta:
+u = x*cos(theta) + y*sin(theta)
+v = -x*sin(theta) + y*cos(theta)
+[rotating sections is how to generate non-zero E parameters]
+
+}
+
+conic-sections { ; Kerry Mitchell 20dec98
+;
+; colors by relationship between orbit
+; and fully-specified conic section
+;
+init:
+  float cerr=0.0
+  float cerrmin=1.0e12
+  float cerrmax=0.0
+  float x=0.0
+  float y=0.0
+  float err=0.0
+  float t=0.0
+  float total=0.0
+  float lilbit=0.0
+  float lilbase=0.5
+  float bigbit=0.0
+  float bigbase=1.0
+  float bit=0.0
+  int iter=0
+  int incount=0
+  int itermin=0
+  int itermax=0
+  zmin=(0.0,0.0)
+  zmax=(0.0,0.0)
+loop:
+  iter=iter+1
+  x=real(#z)
+  y=imag(#z)
+  err=(@aa*x+@bb)*x+(@cc*y+@dd)*y+@ee*x*y+@ff
+  bit=0.0
+  if(err<0.0)
+    incount=incount+1
+    bit=1.0
+  endif
+  lilbit=lilbit+bit*lilbase
+  lilbase=lilbase*0.5
+  bigbit=bigbit+bit*bigbase
+  bigbase=bigbase*2.0
+  cerr=cabs(err)
+  if(cerr<cerrmin)
+    cerrmin=cerr
+    zmin=#z
+    itermin=iter
+  endif
+  if(cerr>cerrmax)
+    cerrmax=cerr
+    zmax=#z
+    itermax=iter
+  endif
+  total=total+cerr
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=0.5*cabs(log(cerrmin))
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)           ; maximum distance
+    #index=cerrmax
+  elseif(@colorby==4)           ; iteration @ max
+    #index=0.01*itermax
+  elseif(@colorby==5)           ; angle @ max
+    t=atan2(zmax)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==6)           ; in fraction
+    #index=incount/iter
+  elseif(@colorby==7)           ; in/out ratio
+    #index=incount/(iter-incount)
+  elseif(@colorby==8)           ; lsb binary
+    #index=lilbit
+  elseif(@colorby==9)           ; msb binary
+    #index=0.5*bigbit/bigbase
+  else                          ; draw section
+    x=real(#pixel)
+    y=imag(#pixel)
+    err=(@aa*x+@bb)*x+(@cc*y+@dd)*y+@ee*x*y+@ff
+    #index=0.5*cabs(log(cabs(err)))
+  endif
+default:
+  title="Conic Sections"
+  param aa
+    caption="a"
+    default=0.0
+    hint="coefficient of x^2 in conic section equation"
+  endparam
+  param bb
+    caption="b"
+    default=1.0
+    hint="coefficient of x in conic section equation"
+  endparam
+  param cc
+    caption="c"
+    default=0.0
+    hint="coefficient of y^2 in conic section equation"
+  endparam
+  param dd
+    caption="d"
+    default=-1.0
+    hint="coefficient of y in conic section equation"
+  endparam
+  param ee
+    caption="e"
+    default=0.0
+    hint="coefficient of x*y in conic section equation"
+  endparam
+  param ff
+    caption="f"
+    default=0.0
+    hint="constant term in conic section equation"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum=\
+      "minimum distance" "iteration @ min" "angle @ min" \
+      "maximum distance" "iteration @ max" "angle @ max" \
+      "in fraction" "in/out ratio" \
+      "lsb binary" "msb binary" \
+      "draw section"
+    hint="see lkm-pub.ucl for explanations"
+  endparam
+}
+
+conic-lite { ; Kerry Mitchell 20dec98
+;
+; colors by relationship between orbit
+; and conic section.  tastes great, less
+; choices, less filling, easier to use.
+;
+init:
+  float cerr=0.0
+  float cerrmin=1.0e12
+  float x=0.0
+  float y=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  float h=real(@center)
+  float k=imag(@center)
+  float aa=0.0
+  float bb=0.0
+  float cc=0.0
+  float dd=0.0
+  float ff=0.0
+  float a2=0.0
+  float b2=0.0
+  zmin=(0.0,0.0)
+;
+; set up constants depending on chosen type of section
+;
+  if(@type==1)                  ; circle
+    aa=1.0
+    bb=-2.0*h
+    cc=1.0
+    dd=-2.0*k
+    ff=sqr(h)+sqr(k)-sqr(@radius)
+  elseif(@type==2)              ; ellipse
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=b2
+    bb=-2.0*h*b2
+    cc=a2
+    dd=-2.0*k*a2
+    ff=b2*sqr(h)+a2*sqr(k)-a2*b2
+  elseif(@type==3)              ; horizontal hyperbola
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=b2
+    bb=-2.0*h*b2
+    cc=-a2
+    dd=2.0*k*a2
+    ff=b2*sqr(h)-a2*sqr(k)-a2*b2
+  elseif(@type==4)              ; vertical hyperbola
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=-b2
+    bb=2.0*h*b2
+    cc=a2
+    dd=-2.0*k*a2
+    ff=-b2*sqr(h)+a2*sqr(k)-a2*b2
+  else                          ; line
+    t=@theta/180*#pi
+    aa=0.0
+    bb=sin(t)
+    cc=0.0
+    dd=-cos(t)
+    ff=-(bb*h+dd*k)
+  endif
+loop:
+  iter=iter+1
+  x=real(#z)
+  y=imag(#z)
+  cerr=cabs((aa*x+bb)*x+(cc*y+dd)*y+ff)
+  if(cerr<cerrmin)
+    cerrmin=cerr
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=0.5*cabs(log(cerrmin))
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  else                          ; draw section
+    x=real(#pixel)
+    y=imag(#pixel)
+    err=(aa*x+bb)*x+(cc*y+dd)*y+ff
+    #index=0.5*cabs(log(cabs(err)))
+  endif
+default:
+  title="Conic Lite"
+  param type
+    caption="section type"
+    default=1
+    enum=\
+      "line" "circle" "ellipse" \
+      "horiz. hyperbola" "vert. hyperbola"
+  endparam
+  param center
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param theta
+    caption="angle of line"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param radius
+    caption="radius"
+    default=1.0
+    min=0.0
+  endparam
+  param xaxis
+    caption="x axis"
+    default=1.5
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param yaxis
+    caption="y axis"
+    default=0.75
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum=\
+      "minimum distance" "iteration @ min" \
+      "angle @ min" "draw section"
+  endparam
+}
+
+2-sections { ; Kerry Mitchell 20dec98
+;
+; colors by the relationship between
+; the orbit and 2 conic sections
+;
+init:
+  float x=0.0
+  float y=0.0
+  float t=0.0
+  float err1=0.0
+  float err2=0.0
+  float cerr=0.0
+  float cerrmin=1.0e12
+  int iter=0
+  int itermin=0
+  float h1=real(@center1)
+  float k1=imag(@center1)
+  float a1=0.0
+  float b1=0.0
+  float c1=0.0
+  float d1=0.0
+  float f1=0.0
+  float h2=real(@center2)
+  float k2=imag(@center2)
+  float a2=0.0
+  float b2=0.0
+  float c2=0.0
+  float d2=0.0
+  float f2=0.0
+  float tempa=0.0
+  float tempb=0.0
+  zmin=(0.0,0.0)
+  zerrmin=(0.0,0.0)
+  temperr=(0.0,0.0)
+;
+; conic section parameters for first curve
+;
+  if(@type1==1)                  ; circle
+    a1=1.0
+    b1=-2.0*h1
+    c1=1.0
+    d1=-2.0*k1
+    f1=sqr(h1)+sqr(k1)-sqr(@radius1)
+  elseif(@type1==2)              ; ellipse
+    tempa=sqr(@xaxis1)
+    tempb=sqr(@yaxis1)
+    a1=tempb
+    b1=-2.0*h1*tempb
+    c1=tempa
+    d1=-2.0*k1*tempa
+    f1=tempb*sqr(h1)+tempa*sqr(k1)-tempa*tempb
+  elseif(@type1==3)              ; horizontal hyperbola
+    tempa=sqr(@xaxis1)
+    tempb=sqr(@yaxis1)
+    a1=tempb
+    b1=-2.0*h1*tempb
+    c1=-tempa
+    d1=2.0*k1*tempa
+    f1=tempb*sqr(h1)-tempa*sqr(k1)-tempa*tempb
+  elseif(@type1==4)              ; vertical hyperbola
+    tempa=sqr(@xaxis1)
+    tempb=sqr(@yaxis1)
+    a1=-tempb
+    b1=2.0*h1*tempb
+    c1=tempa
+    d1=-2.0*k1*tempa
+    f1=-tempb*sqr(h1)+tempa*sqr(k1)-tempa*tempb
+  else                           ; line
+    t=@theta1/180*pi
+    a1=0.0
+    b1=sin(t)
+    c1=0.0
+    d1=-cos(t)
+    f1=-(b1*h1+d1*k1)
+  endif
+;
+; conic section parameters for second curve
+;
+  if(@type2==1)                  ; circle
+    a2=1.0
+    b2=-2.0*h2
+    c2=1.0
+    d2=-2.0*k2
+    f2=sqr(h2)+sqr(k2)-sqr(@radius2)
+  elseif(@type2==2)              ; ellipse
+    tempa=sqr(@xaxis2)
+    tempb=sqr(@yaxis2)
+    a2=tempb
+    b2=-2.0*h2*tempb
+    c2=tempa
+    d2=-2.0*k2*tempa
+    f2=tempb*sqr(h2)+tempa*sqr(k2)-tempa*tempb
+  elseif(@type2==3)              ; horizontal hyperbola
+    tempa=sqr(@xaxis2)
+    tempb=sqr(@yaxis2)
+    a2=tempb
+    b2=-2.0*h2*tempb
+    c2=-tempa
+    d2=2.0*k2*tempa
+    f2=tempb*sqr(h2)-tempa*sqr(k2)-tempa*tempb
+  elseif(@type2==4)              ; vertical hyperbola
+    tempa=sqr(@xaxis2)
+    tempb=sqr(@yaxis2)
+    a2=-tempb
+    b2=2.0*h2*tempb
+    c2=tempa
+    d2=-2.0*k2*tempa
+    f2=-tempb*sqr(h2)+tempa*sqr(k2)-tempa*tempb
+  else                           ; line
+    t=@theta2/180*pi
+    a2=0.0
+    b2=sin(t)
+    c2=0.0
+    d2=-cos(t)
+    f2=-(b2*h2+d2*k2)
+  endif
+loop:
+  iter=iter+1
+;
+; see how far iterate is from curves
+;
+  x=real(#z)
+  y=imag(#z)
+  err1=(a1*x+b1)*x+(c1*y+d1)*y+f1
+  err2=(a2*x+b2)*x+(c2*y+d2)*y+f2
+  temperr=err1+flip(err2)
+;
+; create distance metric and compare to current minimum
+;
+  if(@metrictype==0)            ; magnitude
+    cerr=cabs(temperr)
+  elseif(@metrictype==1)        ; manhattan metric
+    cerr=cabs(err1)+cabs(err2)
+  elseif(@metrictype==2)        ; hyperbolic
+    cerr=cabs(err1*err2)
+  else                          ; |x-y|
+    cerr=cabs(err1-err2)
+  endif  
+  if(cerr<cerrmin)
+    cerrmin=cerr
+    itermin=iter
+    zmin=#z
+    zerrmin=temperr
+  endif
+final:
+;
+; set index according to colorby parameter
+;
+  if(@colorby==0)                ; minimum magnitude
+    #index=0.5*cabs(log(cerrmin))
+  elseif(@colorby==1)            ; angle @ min
+    t=atan2(zerrmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==2)            ; z angle @ min
+    t=atan2(zmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)            ; z mag @ min
+    #index=cabs(zmin)
+  elseif(@colorby==4)            ; iteration # @ min
+    #index=0.01*itermin
+  else                           ; draw sections
+    x=real(#pixel)
+    y=imag(#pixel)
+    err1=cabs((a1*x+b1)*x+(c1*y+d1)*y+f1)
+    err2=cabs((a2*x+b2)*x+(c2*y+d2)*y+f2)
+    if(err1<err2)
+      cerr=err1
+    else
+      cerr=err2
+    endif
+    #index=0.5*cabs(log(cerr))
+  endif
+default:
+  title="2 Sections"
+  param type1
+    caption="section 1 type"
+    default=0
+    enum=\
+      "line" "circle" "ellipse" \
+      "horiz. hyperbola" "vert. hyperbola"
+  endparam
+  param center1
+    caption="section 1 center"
+    default=(0.0,0.0)
+  endparam
+  param theta1
+    caption="section 1 angle"
+    default=45.0
+    hint="angle of line to horizontal, degrees"
+  endparam
+  param radius1
+    caption="section 1 radius"
+    default=1.0
+    min=0.0
+  endparam
+  param xaxis1
+    caption="section 1 x axis"
+    default=1.0
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param yaxis1
+    caption="section 1 y axis"
+    default=1.0
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param type2
+    caption="section 2 type"
+    default=1
+    enum=\
+      "line" "circle" "ellipse" \
+      "horiz. hyperbola" "vert. hyperbola"
+  endparam
+  param center2
+    caption="section 2 center"
+    default=(0.0,0.0)
+  endparam
+  param theta2
+    caption="section 2 angle"
+    default=0.0
+    hint="angle of line to horizontal, degrees"
+  endparam
+  param radius2
+    caption="section 2 radius"
+    default=1.0
+    min=0.0
+  endparam
+  param xaxis2
+    caption="section 2 x axis"
+    default=1.0
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param yaxis2
+    caption="section 2 y axis"
+    default=1.0
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param metrictype
+    caption="metric"
+    default=0
+    enum="x^2 + y^2" "|x| + |y|" "|x*y|" "|x-y|"
+    hint="how the minimum iterate is determined"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum=\
+      "2 curve min" "2 curve angle" \
+      "z angle @ min" "z mag @ min" \
+      "iteration # @ min" "draw section"
+    hint="see lkm-pub.ucl file for explanations"
+  endparam
+}
+
+conic-lite-old { ; Kerry Mitchell
+;
+; *** this has been superceded by "conic lite",
+; *** but is offered for compatibility
+;
+; colors by relationship between orbit
+; and conic section.  tastes great, less
+; choices, less filling, easier to use.
+;
+init:
+  float cerr=0.0
+  float cerrmin=1.0e12
+  float x=0.0
+  float y=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  float h=real(@center)
+  float k=imag(@center)
+  float aa=0.0
+  float bb=0.0
+  float cc=0.0
+  float dd=0.0
+  float ff=0.0
+  float a2=0.0
+  float b2=0.0
+  zmin=(0.0,0.0)
+;
+; set up constants depending on chosen type of section
+;
+  if(@type==1)                  ; circle
+    aa=1.0
+    bb=-2.0*h
+    cc=1.0
+    dd=-2.0*k
+    ff=sqr(h)+sqr(k)-sqr(@radius)
+  elseif(@type==2)              ; ellipse
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=b2
+    bb=-2.0*h*b2
+    cc=a2
+    dd=-2.0*k*a2
+    ff=b2*sqr(h)+a2*sqr(k)-a2*b2
+  elseif(@type==3)              ; horizontal hyperbola
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=b2
+    bb=-2.0*h*b2
+    cc=-a2
+    dd=2.0*k*a2
+    ff=b2*sqr(h)-a2*sqr(k)-a2*b2
+  elseif(@type==4)              ; vertical hyperbola
+    a2=sqr(@xaxis)
+    b2=sqr(@yaxis)
+    aa=-b2
+    bb=2.0*h*b2
+    cc=a2
+    dd=-2.0*k*a2
+    ff=-b2*sqr(h)+a2*sqr(k)-a2*b2
+  else                          ; line
+    t=@theta/180*#pi
+    aa=0.0
+    bb=sin(t)
+    cc=0.0
+    dd=-cos(t)
+    ff=-(bb*h+dd*k)
+  endif
+loop:
+  iter=iter+1
+  x=real(#z)
+  y=imag(#z)
+  cerr=cabs((aa*x+bb)*x+(cc*y+dd)*y+ff)
+  if(cerr<cerrmin)
+    cerrmin=cerr
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=cerrmin
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  else                          ; draw section
+    x=real(#pixel)
+    y=imag(#pixel)
+    err=(aa*x+bb)*x+(cc*y+dd)*y+ff
+    #index=0.5*cabs(log(cabs(err)))
+  endif
+default:
+  title="Old Conic Lite"
+  param type
+    caption="section type"
+    default=1
+    enum=\
+      "line" "circle" "ellipse" \
+      "horiz. hyperbola" "vert. hyperbola"
+  endparam
+  param center
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param theta
+    caption="angle of line"
+    default=45.0
+    hint="angle to horizontal, degrees"
+  endparam
+  param radius
+    caption="radius"
+    default=1.0
+    min=0.0
+  endparam
+  param xaxis
+    caption="x axis"
+    default=1.5
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param yaxis
+    caption="y axis"
+    default=0.75
+    min=0.0
+    hint="for ellipses and hyperbolas"
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum=\
+      "minimum distance" "iteration @ min" \
+      "angle @ min" "draw section"
+  endparam
+}
+
+comment { ; narrative copyright Kerry Mitchell 06feb99
+
+The Bubble Method
+
+The bubble method is an extension of Fractint's bof60 scheme.  In
+bof60, the interior of the fractal is colored by how close the iterate
+comes to the origin.  In the bubble method, a specific value is set as
+the threshold.  At each duration, the magnitude of the iterate is compared
+to the threshold.  If the current magnitude is smaller, it becomes the new
+threshold level.  The effect is to cover the fractal with "bubbles",
+circles the radius of the threshold.  Below a certain threshold value,
+the image is a dust of small, disconnected bubbles.  At a particular
+theshold value, which varies with the parameter c, the circles all
+touch.  Beyond this, the circles squish into each other, like mounds
+of soap bubbles.
+
+When a new threshold level is set, the iterate and the iteration number
+are stored.  At bailout, the final new values are available for use in
+the coloring.  The index value is a weighted average of the final threshold,
+the iteration number when the last threshold was set, and the polar angle
+of the last threshold's iterate.  The weights of each contribution can be
+individually set using the "mag. weight", "iteration weight", and "angle
+weight" parameters.  Using only the magnitude to color results in a series
+of concentric circles, and using only the angle results in a radial color
+pattern.  Combining equal amounts of magnitude and angle gives a swirl
+effect.  Changing the angle weight to a negative value will reverse the
+direction of the swirl.  A judicious choice of color density will eliminate
+the branch cuts that can be seen with the swirls.
+
+}
+
+bubbles { ; Kerry Mitchell 06feb98
+;
+; colors by the "bubbles" variation of
+; Fractint's bof60 and bof61 methods
+;
+init:
+  float weighttotal=@weightr+cabs(@weightt)+@weighti
+  if(weighttotal==0.0)
+    weighttotal=1.0
+  endif
+  float wr=@weightr/weighttotal
+  float wt=cabs(@weightt)/weighttotal
+  float wi=@weighti/weighttotal
+  float twopi=2.0*#pi
+  float rz=0.0
+  float rmin=@threshold
+  float tmin=0.0
+  zmin=(0.0,0.0)
+  bool minset=false
+  float iter=0.0
+  float itermin=0.0
+loop:
+  iter=iter+1
+  rz=cabs(#z)
+  if(rz<rmin)
+    minset=true
+    rmin=rz
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(minset==true)
+    rmin=rmin/@threshold
+    tmin=atan2(zmin)
+    if(tmin<0.0)
+      tmin=tmin+twopi
+    endif
+    tmin=tmin/twopi
+    if(@weightt<0.0)
+      tmin=1.0-tmin
+    endif
+    iter=itermin/iter
+    #index=cabs(wr*rmin+wt*tmin+wi*iter)
+  else
+    #index=0.0
+    #solid=true
+  endif
+default:
+  title="Bubbles"
+  param threshold
+    caption="bubble radius"
+    default=1.0
+    min=0.0
+  endparam
+  param weightr
+    caption="mag. weight"
+    default=1.0
+    hint="relative weight of magnitude component"
+  endparam
+  param weightt
+    caption="angle weight"
+    default=1.0
+    hint="relative weight of polar angle"
+  endparam
+  param weighti
+    caption="iteration weight"
+    default=1.0
+    hint="relative weight of iteration count"
+  endparam
+}
+
+comment { ; narrative copyright Kerry Mitchell 21feb99
+
+Range
+
+In the range coloring schemes, the pixels are only colored when the
+iterate (or a component of it) falls within a specified range.
+(Otherwise, the #solid flag is set to true.)  The range is given in
+terms of the center and width.  For example, setting the center to
+1.0 and the range to 0.1 would yield a range of 0.95 to 1.05.
+
+The simplest case is shown in the "Range Lite" formula.  Here, the
+orbit is monitored until the magnitude of the iterate falls within
+a specified range.  When this occurs, that iterate is saved.  Upon
+bailout (either escape or maximum iterations), the point can be colored
+according to either the magnitude or the polar angle of the iterate.
+Either the first iterate to fall into the range or the last iterate
+can be used.  The difference is in the overlapping of the rings of
+color.  Using the first iterate gives the appearance of the "earlier"
+rings (from lower iteration numbers) stacked on top of the "later"
+rings.  Using the laster iterate reverses the order of the stacking.
+Depending on the range chosen, the results can be circular rings,
+pinched loops (figure "8"), or open loops.  The shapes are definitely
+non-fractal, but are assembled in such a way to recover the underlying
+fractal structure.
+
+This method opens itself up to many variations, which can be explored
+using the full "Range" coloring.  In essence, some variable is monitored
+to see when it falls in the specified range.  When it does, another
+variable is used for coloring.  There are several options for the
+"range variable", the variable that is checked against the range:
+the magnitude of z, its real or imaginary part, and its polar angle.
+Plus, any of the standard functions can be used on z, and the real
+or imaginary parts used.  A final choice, "heart", is a combination
+of the magnitude and polar angle, that covers the image with heart
+shapes.  The same choices are available for the "coloring variable",
+the variable used to set #index.
+
+Since #index takes on values from 0.0 to 1.0, the coloring variable
+may need adjusting before being used as the #index.  If the coloring
+variable is the same as the range variable, then the range parameters
+are used to scale the variable into #index.  Otherwise, the coloring
+variable can be easily scaled into the #index variable.  Specifically,
+
+#index = slope * scale_function(coloring_variable) + offset.
+
+For example, if real(z) is used as the coloring variable, then the
+tanh() function can scale real(z) to -1.0 to 1.0.  Then, using slope
+of 0.5 and an offset of 0.5 will give the final range of 0.0 to 1.0
+for the #index.
+
+Finally, the "color by" parameter determines which iterate or iterates
+are used in the coloring.  Using the "first" or "last" settings will
+vary the apparant stacking of the color rings.  The "average" setting
+will cause all the coloring variables for which the range variables
+fall into the range to be averaged together, and that mean used for
+the coloring.  If the range width is set fairly small, then there won't
+be much difference between "average" and "first" or "last".  But there
+can be a quite significant change if the range width is large.  The
+last choice, "fraction in range", simply uses the ratio of number of
+times the range variable falls within the range, to the total number of
+iterations for that pixel.
+
+}
+
+range-lite { ; Kerry Mitchell 21feb99
+;
+; Simplified version of "Range" coloring.
+; Colors by magnitude or angle when magnitude
+; of z falls in prescribed range.
+;
+init:
+  int rangeiter=0
+  float rangemin=@rangecenter-0.5*@rangewidth
+  float rangemax=rangemin+@rangewidth
+  float rz=0.0
+  float twopi=2.0*#pi
+  float r1=0.0
+  float rn=0.0
+  float t1=0.0
+  float tn=0.0
+loop:
+  rz=cabs(#z)
+  if((rz>=rangemin)&&(rz<=rangemax))
+    rangeiter=rangeiter+1
+    rn=rz
+    tn=atan2(#z)
+    if(rangeiter==1)
+      r1=rn
+      t1=tn
+    endif
+  endif
+final:
+  if(rangeiter==0)
+    #solid=true
+  else
+    if(@colorby==0)                      ; first mag
+      r1=(r1-rangemin)/(rangemax-rangemin)
+      #index=r1
+    elseif(@colorby==1)                  ; last mag
+      rn=(rn-rangemin)/(rangemax-rangemin)
+      #index=rn
+    elseif(@colorby==2)                  ; first angle
+      if(t1<0.0)
+        t1=t1+twopi
+      endif
+      t1=t1/twopi
+      #index=t1
+    elseif(@colorby==3)                  ; last angle
+      if(tn<0.0)
+        tn=tn+twopi
+      endif
+      tn=tn/twopi
+      #index=tn
+    endif
+  endif
+default:
+  title="Range Lite"
+  param rangecenter
+    caption="range center"
+    default=1.0
+  endparam
+  param rangewidth
+    caption="range width"
+    default=0.1
+  endparam
+  param colorby
+    caption="color by"
+    default=3
+    enum="first mag" "last mag" "first angle" "last angle"
+  endparam
+}
+
+range { ; Kerry Mitchell 21feb99
+;
+; Colors by 2nd number when 1st
+; number falls in prescribed range.
+; Entirely too many choices for 1st
+; and 2nd numbers.  :-)
+;
+init:
+  int rangeiter=0
+  float rangemin=@rangecenter-0.5*@rangewidth
+  float rangemax=rangemin+@rangewidth
+  float rvar=0.0
+  float cvar=0.0
+  float cvar1=0.0
+  float cvarn=0.0
+  float cvarave=0.0
+  float twopi=2.0*#pi
+loop:
+  if(@rangevar==0)
+    rvar=cabs(#z)
+  elseif(@rangevar==1)
+    rvar=real(#z)
+  elseif(@rangevar==2)
+    rvar=imag(#z)
+  elseif(@rangevar==3)
+    rvar=atan2(#z)
+  elseif(@rangevar==4)
+    rvar=real(@rangefunc(#z))
+  elseif(@rangevar==5)
+    rvar=imag(@rangefunc(#z))
+  elseif(@rangevar==6)
+    rvar=cabs(atan2(#z))/#pi-cabs(#z)
+  endif
+  if((rvar>=rangemin)&&(rvar<=rangemax))
+    rangeiter=rangeiter+1
+    if(@colorvar==0)
+      cvar=cabs(#z)
+    elseif(@colorvar==1)
+      cvar=real(#z)
+    elseif(@colorvar==2)
+      cvar=imag(#z)
+    elseif(@colorvar==3)
+      cvar=atan2(#z)
+      if(cvar<0.0)
+        cvar=cvar+twopi
+      endif
+      cvar=cvar/twopi
+    elseif(@colorvar==4)
+      cvar=real(@colorfunc(#z))
+    elseif(@colorvar==5)
+      cvar=imag(@colorfunc(#z))
+    elseif(@colorvar==6)
+      cvar=cabs(atan2(#z))/#pi-cabs(#z)
+    endif
+    if(@colorvar==@rangevar)
+      cvarn=(cvar-rangemin)/(rangemax-rangemin)
+    else
+      cvarn=@slope*real(@scalefunc(cvar))+@offset
+    endif
+    if(rangeiter==1)
+      cvar1=cvarn
+    endif
+    cvarave=cvarave+cvarn
+  endif
+final:
+  if(rangeiter==0)
+    #solid=true
+  else
+    if(@colorby==0)                      ; first
+      #index=cvar1
+    elseif(@colorby==1)                  ; average
+      #index=cvarave/rangeiter
+    elseif(@colorby==2)                  ; last
+      #index=cvarn
+    elseif(@colorby==3)                  ; % in range
+      #index=rangeiter/#numiter
+    endif
+  endif
+default:
+  title="Range"
+  param rangecenter
+    caption="range center"
+    default=1.0
+  endparam
+  param rangewidth
+    caption="range width"
+    default=0.1
+  endparam
+  param rangevar
+    caption="range variable"
+    default=0
+    enum="magnitude" "real(z)" "imag(z)" "polar angle" \
+      "real f(z)" "imag f(z)" "heart"
+  endparam
+  param colorvar
+    caption="coloring variable"
+    default=0
+    enum="magnitude" "real(z)" "imag(z)" "polar angle" \
+      "real f(z)" "imag f(z)" "heart"
+  endparam
+  param slope
+    caption="slope"
+    default=1.0
+    hint="for adjusting coloring variable into 0.0 - 1.0 range for #index; \
+      index=slope*fn(var))+offset"
+  endparam
+  param offset
+    caption="offset"
+    default=0.0
+    hint="for adjusting coloring variable into 0.0 - 1.0 range for #index; \
+      index=slope*fn(var))+offset"
+  endparam
+  param colorby
+    caption="color by"
+    default=2
+    enum="first" "average" "last" "fraction in range"
+  endparam
+  func scalefunc
+    caption="scaling function"
+    default=ident()
+    hint="for adjusting coloring variable into 0.0 - 1.0 range for #index; \
+      index=slope*fn(var))+offset"
+  endfunc
+  func rangefunc
+    caption="range function"
+    default=sqr()
+    hint="for creating new range variables"
+  endfunc
+  func colorfunc
+    caption="coloring function"
+    default=sqr()
+    hint="for creating new coloring variables"
+  endfunc
+}
+
+passthru { ; Kerry Mitchell 02jul99
+;
+; Special purpose coloring, designed to be used with the 
+; "Quadrilateral Color" transform.
+;
+; Reads the x and y pixel flags, and determines an #index
+; value from them.
+;
+init:
+  int xflag=round(real(#pixel)/20)
+  int yflag=round(imag(#pixel)/20)
+loop:
+final:
+  if(@xytype==1)
+    #index=yflag/@n
+  elseif(@xytype==2)
+    #index=(@m*xflag+yflag)/@n
+  elseif(@xytype==3)
+    #index=(@m*yflag+xflag)/@n
+  else
+    #index=xflag/@n
+  endif
+default:
+  title="Passthru"
+  param xytype
+    caption="flag type"
+    enum="x" "y" "m*x+y" "m*y+x"
+    default=0
+  endparam
+  param m
+    caption="m: flag factor"
+    default=1.0
+    hint="use with 'm*x+y' and 'm*y+x' flag types"
+  endparam
+  param n
+    caption="flag scale"
+    default=1.0
+    hint="#index = flag/scale"
+  endparam
+}
+
+distance-point { ; Kerry Mitchell 06feb00
+;
+; Colors by the distance from the orbit to a specified
+; point.  Offers 7 different ways to determine the distance,
+; and colors by the closest approach, the furthest approach,
+; or combinations thereof.
+;
+; See the helpfile for more information.
+;
+init:
+  float x=0.0
+  float y=0.0
+  float d=0.0
+  float dfirst=0.0
+  float dlast=0.0
+  float dmin=1e20
+  float dmax=0.0
+  float dsum=0.0
+  float dproduct=1.0
+  float temp=0.0
+  float temp2=0.0
+  float twooverpi=2.0/#pi
+  float pio2=0.5*#pi
+  tempc=(0,0)
+  int iter=0
+;
+; reference point for elliptical geometry:
+;   x becomes theta (longitude)
+;   y becomes phi (latitude)
+;   (spherical coordinates)
+;
+  float x0e=real(@point)/@r*#pi
+  temp=imag(@point)/@r*pio2
+  float cosy0e=cos(temp)
+  float siny0e=sin(temp)
+;
+; reference point for hyperbolic geometry
+;
+  float x0h=real(@point)/@r
+  float y0h=imag(@point)/@r
+  float r0h=sqrt(1-sqr(x0h)-sqr(y0h))
+
+loop:
+  iter=iter+1
+;
+; determine distance based on metric choice
+;
+  if(@metric==1)             ; elliptic geometry
+;
+; spherical coordinates:
+;   x becomes longitude, y becomes latitude
+;
+    x=real(#z)/@r*#pi
+    y=imag(#z)/@r*pio2
+    temp=cos(y)*cosy0e*cos(x-x0e)+sin(y)*siny0e
+;
+; use atan to find angle between reference and field points
+;
+    temp2=sqrt(1.0-temp*temp)
+    if(temp>0.0)
+      d=atan(temp2/temp)
+    elseif(temp<0.0)
+      d=atan(temp2/temp)+#pi
+    else
+      d=pio2
+    endif
+;
+; distance = radius * angle
+;
+    d=@r*d
+  elseif(@metric==2)         ; hyperbolic geometry
+    x=real(#z)/@r
+    y=imag(#z)/@r
+    temp=(1.0-x*x0h-y*y0h)
+    temp=temp/(r0h*sqrt(1-sqr(x)-sqr(y)))
+;
+;  distance = radius * angle
+;
+    d=@r*acosh(temp)
+  elseif(@metric==3)         ; minimum
+;
+; uses minimum of delta-x and delta-y
+;   not a true distance, but included anyway
+;
+    x=abs(real(#z-@point))
+    y=abs(imag(#z-@point))
+    if(x<y)
+      d=x
+    else
+      d=y
+    endif
+  elseif(@metric==4)         ; maximum
+;
+; uses maximum of delta-x and delta-y
+;
+    x=abs(real(#z-@point))
+    y=abs(imag(#z-@point))
+    if(x>y)
+      d=x
+    else
+      d=y
+    endif
+  elseif(@metric==5)         ; sum
+;
+; uses sum of delta-x and delta-y
+;
+    x=abs(real(#z-@point))
+    y=abs(imag(#z-@point))
+    d=x+y
+  elseif(@metric==6)         ; product
+;
+; uses product of delta-x and delta-y
+;   not a true distance, but included anyway
+;
+    x=abs(real(#z-@point))
+    y=abs(imag(#z-@point))
+    d=sqrt(x*y)
+  else                       ; euclidean
+;
+; generalized pythagorean theorem
+;
+    x=abs(real(#z-@point))
+    y=abs(imag(#z-@point))
+    d=(x^@power+y^@power)^(1/@power)
+  endif
+;
+; fill variables for different coloring types
+;
+  if(iter==1)
+    dfirst=d
+  endif
+  if(d<dmin)
+    dmin=d
+  endif
+  if(d>dmax)
+    dmax=d
+  endif
+  dsum=dsum+d
+  dproduct=dproduct*d
+
+final:
+  dlast=d
+  if(@colorby==0)            ; first
+    #index=dfirst
+  elseif(@colorby==1)        ; last
+    #index=dlast
+  elseif(@colorby==2)        ; first/last angle
+    tempc=dfirst+flip(dlast)
+    temp=atan2(tempc)
+    #index=temp*twooverpi
+  elseif(@colorby==3)        ; minimum
+    #index=dmin
+  elseif(@colorby==4)        ; maximum
+    #index=dmax
+  elseif(@colorby==5)        ; min/max angle
+    tempc=dmin+flip(dmax)
+    temp=atan2(tempc)
+    #index=temp*twooverpi
+  elseif(@colorby==6)        ; arithmetic mean
+    #index=dsum/iter
+  elseif(@colorby==7)        ; geometric mean
+    temp=log(dproduct)/iter
+    #index=exp(temp)
+  elseif(@colorby==8)        ; amean/gmean angle
+    temp=dsum/iter
+    temp2=log(dproduct)/iter
+    temp2=exp(temp2)
+    tempc=temp+flip(temp2)
+    temp=atan2(tempc)
+    #index=temp*twooverpi
+  endif      
+
+default:
+  title="Distance to a Point"
+  helpfile="lkm-help\lkm-distance.html"
+  param point
+    caption="reference point"
+    default=(0,0)
+    hint="Point from which distance is measured."
+  endparam
+  param metric
+    caption="distance metric"
+    default=0
+    enum="Euclidean" "elliptic" "hyperbolic"\
+      "minimum" "maximum" "sum" "product"
+    hint="What type of formula is used to figure \
+      the distance."
+  endparam
+  param colorby
+    caption="color by:"
+    default=3
+    enum="1st distance" "last distance" "1st/last combo"\
+      "minimum" "maximum" "min/max combo"\
+      "arithmetic mean" "geometric mean" "a/g combo"
+    hint="Combinations plot the angle using the first \
+      variable as the x, and the 2nd as the y."
+  endparam
+  param power
+    caption="power"
+    default=2.0
+    min=1.0
+    hint="Exponent used with 'power' metric.  Must be \
+      at least 1.  Use 2 for standard Pythagorean distance."
+  endparam
+  param r
+    caption="radius"
+    default=4.0
+    hint="Used with 'elliptic' & 'hyperbolic' metrics.  \
+      Should be larger than the bailout."
+  endparam
+}
+
+pythagorean-triple { ; Kerry Mitchell 06feb00
+;
+; Colors by the approach of the orbit to a Pythagorean
+; triple:  when x, y, and r are all integers.  Uses
+; several different ways to find the closest integer
+; to determine the distance.  Colors according to 
+; the closest approach, the furthest approach, or 
+; combinations thereof.
+;
+; See the helpfile for more information.
+;
+init:
+  float rx=0.0
+  float ry=0.0
+  float rr=0.0
+  float r=0.0
+  float rmin=1.0e12
+  float rmax=0.0
+  float rsum=0.0
+  float rproduct=1.0
+  float temp=0.0
+  float temp2=0.0
+  int iter=0
+  int itermin=0
+  int itermax=0
+  zmin=(0.0,0.0)
+  zmax=(0.0,0.0)
+
+loop:
+  iter=iter+1
+;
+; generate closest integer
+;
+  if(@inttype==0)            ; round
+    temp=cabs(#z)
+    rr=abs(temp-round(temp))
+    temp=real(#z)
+    rx=abs(temp-round(temp))
+    temp=imag(#z)
+    ry=abs(temp-round(temp))
+  elseif(@inttype==1)        ; trunc
+    temp=cabs(#z)
+    rr=abs(temp-trunc(temp))
+    temp=real(#z)
+    rx=abs(temp-trunc(temp))
+    temp=imag(#z)
+    ry=abs(temp-trunc(temp))
+  elseif(@inttype==2)        ; ceiling
+    temp=cabs(#z)
+    rr=abs(temp-ceil(temp))
+    temp=real(#z)
+    rx=abs(temp-ceil(temp))
+    temp=imag(#z)
+    ry=abs(temp-ceil(temp))
+  elseif(@inttype==3)        ; floor
+    temp=cabs(#z)
+    rr=abs(temp-floor(temp))
+    temp=real(#z)
+    rx=abs(temp-floor(temp))
+    temp=imag(#z)
+    ry=abs(temp-floor(temp))
+  endif
+;
+; find distance to integer
+;
+  if(@rtype==1)              ; minimum
+    r=rr
+    if(rx<r)
+      r=rx
+    endif
+    if(ry<r)
+      r=ry
+    endif
+  elseif(@rtype==2)          ; maximum
+    r=rr
+    if(rx>r)
+      r=rx
+    endif
+    if(ry>r)
+      r=ry
+    endif
+  elseif(@rtype==3)          ; sum
+    r=rr+rx+ry
+  elseif(@rtype==4)          ; product
+    r=(rr*rx*ry)^(1/3)
+  else                       ; euclidean
+    r=(rx^@power+ry^@power+rr^@power)^(1/@power)
+  endif
+;
+; find min, max & build tallies for means
+;
+  rsum=rsum+r
+  rproduct=rproduct*r
+  if(r<rmin)
+    rmin=r
+    zmin=#z
+    itermin=iter
+  endif
+  if(r>rmax)
+    rmax=r
+    zmax=#z
+    itermax=iter
+  endif
+
+final:
+  if(@colorby==0)            ; minimum distance
+    #index=rmin
+  elseif(@colorby==1)        ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)        ; angle @ min
+    temp=atan2(zmin)/#pi
+    if(temp<0.0)
+      temp=temp+2.0
+    endif
+    #index=0.5*temp
+  elseif(@colorby==3)        ; maximum distance
+    #index=rmax
+  elseif(@colorby==4)        ; iteration @ max
+    #index=0.01*itermax
+  elseif(@colorby==5)        ; angle @ max
+    temp=atan2(zmax)/#pi
+    if(temp<0.0)
+      temp=temp+2.0
+    endif
+    #index=0.5*temp
+  elseif(@colorby==6)        ; min/max distance angle
+    zmin=rmin+flip(rmax)
+    temp=atan2(zmin)/#pi
+    if(temp<0.0)
+      temp=temp+2.0
+    endif
+    #index=0.5*temp
+  elseif(@colorby==7)        ; arithmetic mean
+    #index=rsum/iter
+  elseif(@colorby==8)        ; geometric mean
+    temp=log(rproduct)/iter
+    #index=exp(temp)
+  elseif(@colorby==9)        ; amean/gmean angle
+    temp=rsum/iter
+    temp2=log(rproduct)/iter
+    temp2=exp(temp2)
+    zmax=temp+flip(temp2)
+    temp=atan2(zmax)/#pi
+    if(temp<0.0)
+      temp=temp+2.0
+    endif
+    #index=0.5*temp
+  endif
+
+default:
+  title="Pythagorean Triple"
+  helpfile="lkm-help\lkm-pythagorean.html"
+  param inttype
+    caption="integer type"
+    default=0
+    enum="round" "trunc" "ceil" "floor"
+  endparam
+  param rtype
+    caption="distance type"
+    default=0
+    enum="Euclidean" "minimum" "maximum" "sum" "product"
+    hint="How the distance to the integer is calculated:  \
+      'Euclidean' is like the regular Pythagorean distance, \
+      'minimum' takes the smallest of the 3 components, \
+      'maximum' takes the largest, 'sum' adds them, and \
+      'product' multiplies them."
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "maximum distance" "iteration @ max" "angle @ max" \
+      "min/max combo" "arithmetic mean" \
+      "geometric mean" "amean/gmean combo"
+    hint="How the color is set; the combos use the 1st quantity \
+      for the x and the 2nd for the y, and color by the angle."
+  endparam
+  param power
+    caption="power"
+    default=2.0
+    hint="Exponent for the 'Euclidean' type. Use 2 for \
+      standard Pythagorean distance."
+  endparam
+}
+
+bezier-curve { ; Kerry Mitchell 08apr00
+;
+; Colors by the orbit's closest approach to a user-defined Bezier curve.
+; The curve is determined by specifying beginning and ending anchor points,
+; through which the curve passes, and 2 control points, which influence the
+; shape of the curve.
+;
+init:
+  float x0=real(@z0)
+  float y0=imag(@z0)
+  float x1=real(@z1)
+  float y1=imag(@z1)
+  float x2=real(@z2)
+  float y2=imag(@z2)
+  float x3=real(@z3)
+  float y3=imag(@z3)
+  float cx=3*(x1-x0)
+  float bx=3*(x2-x1)-cx
+  float ax=x3-x0-cx-bx
+  float cy=3*(y1-y0)
+  float by=3*(y2-y1)-cy
+  float ay=y3-y0-cy-by
+  float t=0.0
+  float r=0.0
+  float x=0.0
+  float y=0.0
+  float u=0.0
+  float v=0.0
+  int iter=0
+  float rmin=1.0e20
+  int itermin=0
+  zmin=(0.0,0.0)
+loop:
+  iter=iter+1
+  u=real(#z)
+  v=imag(#z)
+;
+; The curve is parameterized with x(t) and y(t).  Step through several t
+; values to find the nearest approach of the orbit to the curve.
+;
+  t=0.0
+  while(t<=1.0)
+    x=((ax*t+bx)*t+cx)*t+x0
+    y=((ay*t+by)*t+cy)*t+y0
+    r=(x-u)*(x-u)+(y-v)*(y-v)
+    if(r<rmin)
+      rmin=r
+      itermin=iter
+      zmin=#z
+    endif
+    t=t+@dt
+  endwhile
+final:
+  if(@colorby==1)            ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)        ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)        ; draw section
+    u=real(#pixel)
+    v=imag(#pixel)
+    t=0.0
+    rmin=1e20
+    while(t<=1.0)
+      x=((ax*t+bx)*t+cx)*t+x0
+      y=((ay*t+by)*t+cy)*t+y0
+      r=(x-u)*(x-u)+(y-v)*(y-v)
+      if(r<rmin)
+        rmin=r
+      endif
+      t=t+@dt
+    endwhile
+    #index=rmin^@nexp
+  else                       ; minimum distance
+    #index=rmin^@nexp
+  endif
+default:
+  title="Bezier Curve"
+  helpfile="lkm-help\lkm-bezier.html"
+  param z0
+    caption="1st anchor point"
+    default=(1.0,0.0)
+    hint="Curve starts at this point."
+  endparam
+  param z1
+    caption="1st control point"
+    default=(1.0,1.0)
+    hint="Influences the shape of the curve."
+  endparam
+  param z2
+    caption="2nd control point"
+    default=(0.0,0.0)
+    hint="Influences the shape of the curve."
+  endparam
+  param z3
+    caption="2nd anchor point"
+    default=(0.0,1.0)
+    hint="Curve ends at this point."
+  endparam
+  param dt
+    caption="step size"
+    default=0.1
+    hint="Decrease for smoother line, increase \
+      to see dots.  Should be between 0 & 1."
+    min=0.0
+    max=1.0
+  endparam
+  param nexp
+    caption="power"
+    default=0.1
+    min=0.0
+    hint="Decrease to make thinner lines. Use \
+      with 'minimum distance' coloring."
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" \
+      "angle @ min" "show curve"
+  endparam
+}
+
+rose-range-lite {
+init:
+  int rangeiter=0
+  float rminfac=@scale*(1.0-0.5*@rangewidth)
+  float rmaxfac=@scale*(1.0+0.5*@rangewidth)
+  float rz=0.0
+  float tz=0.0
+  float twopi=2.0*#pi
+  float rmin=0.0
+  float rmax=0.0
+  float r1=0.0
+  float rn=0.0
+  float t1=0.0
+  float tn=0.0
+  float rotangle=-@rot/180.0*#pi
+loop:
+  tz=atan2(#z)+rotangle
+  rz=@ac*cos(@bc*tz)+@as*sin(@bs*tz)
+  rmin=rz*rminfac
+  rmax=rz*rmaxfac
+  rz=cabs(#z-@curvecenter)
+  if((rz>=rmin)&&(rz<=rmax))
+    rangeiter=rangeiter+1
+    rn=(rz-rmin)/(rmax-rmin)
+    tn=tz
+    if(rangeiter==1)
+      r1=rn
+      t1=tn
+    endif
+  endif
+final:
+  if(rangeiter==0)
+    #solid=true
+  else
+    if(@colorby==0)                      ; first mag
+      #index=r1
+    elseif(@colorby==1)                  ; last mag
+      #index=rn
+    elseif(@colorby==2)                  ; first angle
+      if(t1<0.0)
+        t1=t1+twopi
+      endif
+      t1=t1/twopi
+      #index=t1
+    elseif(@colorby==3)                  ; last angle
+      if(tn<0.0)
+        tn=tn+twopi
+      endif
+      tn=tn/twopi
+      #index=tn
+    endif
+  endif
+default:
+  title="Rose Range Lite"
+  helpfile="lkm-help\lkm-roserange.html"
+  param scale
+    caption="range scale"
+    default=1.0
+  endparam
+  param rangewidth
+    caption="range width"
+    default=0.1
+  endparam
+  param colorby
+    caption="color by"
+    default=3
+    enum="first magnitude" "last magnitude" \
+      "first angle" "last angle"
+  endparam
+  param ac
+    caption="cos amplitude"
+    default=1.0
+  endparam
+  param bc
+    caption="cos frequency"
+    default=3.0
+  endparam
+  param as
+    caption="sin amplitude"
+    default=0.0
+  endparam
+  param bs
+    caption="sin frequency"
+    default=0.0
+  endparam
+  param curvecenter
+    caption="curve center"
+    default=(0.0,0.0)
+  endparam
+  param rot
+    caption="rotation angle"
+    default=0.0
+    hint="degrees"
+  endparam
+}
+
+spiral { ; Kerry Mitchell 13may00
+;
+; Colors by the orbit's closest approach to a user-defined spiral
+;
+; The spiral is given as theta = f(r), where r is the distance from the
+; center of the spiral.
+;
+init:
+  float r=0.0
+  float rmin=1e20
+  float tspiral=0.0
+  zspiral=(0,0)
+  float rotangle=@rot/180.0*#pi
+  int iter=0
+  int itermin=0
+  zmin=(0,0)
+loop:
+  iter=iter+1
+;
+; find r, the distance from the center of the spiral
+;   then determine the angle as a function of r
+;
+  r=cabs(#z-@spiralcenter)
+  if((r>=@rmin)&&(r<=@rmax))
+    tspiral=real(@rfunc(r))^@rpower
+    tspiral=@spiralfactor*tspiral+rotangle
+;
+; find the x- and y-coordinates of the point on the spiral
+;   with the same r value as the current iterate
+;
+    zspiral=r*(cos(tspiral)+flip(sin(tspiral)))+@spiralcenter
+;
+; check the difference between the spiral and the current point
+;   update the minimum values
+;
+    r=cabs(#z-zspiral)
+    if(r<rmin)
+      rmin=r
+      itermin=iter
+      zmin=#z
+    endif
+  endif
+final:
+  if(@colorby==1)            ; iteration number at minimum
+    #index=itermin/#maxiter
+  elseif(@colorby==2)        ; angle at minimum
+    tspiral=atan2(zmin)/#pi
+    if(tspiral<0.0)
+      tspiral=tspiral+2.0
+    endif
+    #index=0.5*tspiral
+  elseif(@colorby==3)        ; magnitude at minimum
+    #index=cabs(zmin)
+  elseif(@colorby==4)        ; draw spiral
+    r=cabs(#pixel-@spiralcenter)
+    if((r>=@rmin)&&(r<=@rmax))
+      tspiral=real(@rfunc(r))^@rpower
+      tspiral=@spiralfactor*tspiral+rotangle
+      zspiral=r*(cos(tspiral)+flip(sin(tspiral)))+@spiralcenter
+      r=cabs(#pixel-zspiral)
+    endif
+    #index=r
+  else                       ; minimum distance
+    #index=rmin
+  endif
+default:
+  title="Spiral"
+  helpfile="lkm-help\lkm-spiral.html"
+  param spiralfactor
+    caption="spiral factor"
+    default=8.0
+    hint="Increase to make the spiral tighter; use negative \
+      values to reverse the direction."
+  endparam
+  param rpower
+    caption="spiral power"
+    default=1.0
+    hint="Increase in magnitude to make the spiral tighter; try negative \
+      values, too."
+  endparam
+  param spiralcenter
+    caption="spiral center"
+    default=(0,0)
+  endparam
+  param rot
+    caption="rotation angle"
+    default=0.0
+    hint="degrees"
+  endparam
+  param rmin
+    caption="minimum r"
+    default=0.0
+    hint="To keep the spiral from going too far in."
+  endparam
+  param rmax
+    caption="maximum r"
+    default=1e20
+    hint="To keep the spiral from going too far out."
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="min. distance" "iteration @ min" "angle @ min" \
+      "magnitude @ min" "draw spiral"
+  endparam
+  func rfunc
+    caption="r function"
+    default=ident()
+    hint="theta = size * [f(r)]^power"
+  endfunc
+}
+
+grid { ; Kerry Mitchell 30aug2000
+;
+; Colors by the orbit's closest approach to a rectangular grid
+;
+init:
+  float cerr=0.0
+  float cerrmin=1.0e12
+  float x=0.0
+  float y=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  zmin=(0.0,0.0)
+  t=@tdeg*#pi/180
+  rot=cos(t)-flip(sin(t))
+loop:
+  iter=iter+1
+  temp=(#z-@gridcenter)*rot
+  x=(real(temp)%@width)/@width
+  x=(x+2)%1
+  x=2*abs(0.5-x)
+  y=(imag(temp)%@height)/@height
+  y=(y+2)%1
+  y=2*abs(0.5-y)
+  if(x<y)
+    cerr=y
+  else
+    cerr=x
+  endif
+  if(cerr<cerrmin)
+    cerrmin=cerr
+    zmin=#z
+    itermin=iter
+  endif
+final:
+  if(@colorby==0)               ; minimum distance
+    #index=cerrmin
+  elseif(@colorby==1)           ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)           ; angle @ min
+    t=atan2(zmin)/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  endif
+default:
+  title="Grid"
+  param gridcenter
+    caption="center"
+    default=(0.0,0.0)
+  endparam
+  param height
+    caption="height"
+    default=1.0
+    hint="height of each cell"
+  endparam
+  param width
+    caption="width"
+    default=1.0
+    hint="width of each cell"
+  endparam
+  param tdeg
+    caption="rotation, deg"
+    default=0.0
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min"
+  endparam
+}
+
+single-truchet { ; Kerry Mitchell 08nov00
+;
+; Colors the fractal randomly with truchet tiles
+;
+init:
+  float x=0.0
+  float y=0.0
+  int intx=0
+  int inty=0
+  float r=0.0
+  float r0=0.0
+  float r1=0.0
+  float rmax=0.5*(2^(1/@n)-1)*@width
+  int tiletype=0
+  int randint=0
+  int modbase=2147483647
+  int multiplier=1103515245
+  int offset=12345
+  int niter=0
+  int randiter=0
+  r=-@tdeg*#pi/180
+  scale=(cos(r)+flip(sin(r)))/@scalefac
+loop:
+final:
+;
+; find fractional x and y from final z
+;
+  temp=#z*scale-@shift
+  x=real(temp)+0.5
+  y=imag(temp)+0.5
+  intx=round(x)
+  inty=round(y)
+  r=x-intx
+  if(r<0.0)
+    x=1+r
+  else
+    x=r
+  endif
+  r=y-inty
+  if(r<0.0)
+    y=1+r
+  else
+    y=r
+  endif
+;
+; pick tile type
+;
+  if(@seed==0)               ; force type 0
+    tiletype=0
+  elseif(@seed==1)           ; force type 1
+    tiletype=1
+  else                       ; choose randomly
+    intx=round(real(temp))
+    inty=round(imag(temp))
+    niter=abs(intx+inty+intx*inty)
+    randint=@seed+niter
+    randiter=0
+    while(randiter<niter)
+      randiter=randiter+1
+      randint=(randint*multiplier+offset)%modbase
+    endwhile
+    tiletype=randint%2
+  endif
+;
+; determine radial distances based on tile type
+;
+  if(tiletype==1)
+    r0=(abs(x)^@n+abs(y)^@n)^(1/@n)
+    r1=(abs(x-1)^@n+abs(y-1)^@n)^(1/@n)
+  else
+    r0=(abs(x-1)^@n+abs(y)^@n)^(1/@n)
+    r1=(abs(x)^@n+abs(y-1)^@n)^(1/@n)
+  endif
+;
+; find radial distance and set index color
+;
+;   solid background
+;
+  #solid=true
+;
+;   gradation inside arc 0
+;
+  r=abs(r0-0.5)/rmax
+  if(r<1)
+    #solid=false
+    #index=r
+  endif
+;
+;   gradation inside arc 1
+;
+  r=abs(r1-0.5)/rmax
+  if(r<1)
+    #solid=false
+    #index=r
+  endif
+default:
+  title="Single Truchet"
+  param shift
+    caption="shift"
+    default=(0,0)
+    hint="Use to shift the center of the tiling pattern."
+  endparam
+  param scalefac
+    caption="size"
+    default=1.0
+    hint="Increase or decrease the size of the pattern."
+  endparam
+  param tdeg
+    caption="rotation"
+    default=0.0
+    hint="Rotate the pattern, +ccw, -cw, in degrees."
+  endparam
+  param width
+    caption="arc width"
+    default=0.5
+    min=0.0
+    max=1.0
+    hint="a fraction from 0 to 1"
+  endparam
+  param n
+    caption="exponent"
+    default=2.0
+    min=0.0
+    hint="Use 2 for circular arcs, 1 for straight lines, and \
+      less than 1 for astroid arcs."
+  endparam
+  param seed
+    caption="random seed"
+    default=12345
+    min=0
+    hint="Use 0 or 1 to force either tile; otherwise, use a large, \
+      odd integer."
+  endparam
+}
+
+double-truchet { ; Kerry Mitchell 12nov2000
+;
+; Colors the fractal randomly with truchet tiles using 4 arcs
+;
+init:
+  float x=0.0
+  float y=0.0
+  int intx=0
+  int inty=0
+  float r=0.0
+  float r0=0.0
+  float r1=0.0
+  float r2=0.0
+  float r3=0.0
+  float ra=0.0
+  float rb=0.0
+  float rc=0.0
+  float rd=0.0
+  float rmax=@width
+  float rcutoff=0.0
+  int tiletype=0
+  int randint=0
+  int modbase=32768
+  int multiplier=13821
+  int offset=0
+  int niter=0
+  int randiter=0
+  int seedy=0
+  r=-@tdeg*#pi/180
+  scale=(cos(r)+flip(sin(r)))/@scalefac
+  float recipn=1/@n
+  float r2o2=0.5*sqrt(2)
+  float omr2o2=1-0.5*sqrt(2)
+  int overtype=0
+loop:
+final:
+;
+; find fractional x and y from final z
+;
+  temp=#z*scale-@shift
+  x=real(temp)+0.5
+  y=imag(temp)+0.5
+  intx=round(x)
+  inty=round(y)
+  r=x-intx
+  if(r<0.0)
+    x=1+r
+  else
+    x=r
+  endif
+  r=y-inty
+  if(r<0.0)
+    y=1+r
+  else
+    y=r
+  endif
+;
+; pick tile type
+;
+  if(@seed==0)               ; force type 0
+    tiletype=0
+  elseif(@seed==1)           ; force type 1
+    tiletype=1
+  elseif(@seed==2)           ; force type 2
+    tiletype=2
+  elseif(@seed==3)           ; force type 3
+    tiletype=3
+  else                       ; choose randomly
+    niter=0
+    seedy=2*@seed+1
+    intx=round(real(temp))*2
+    if(intx<=0)
+      intx=1-intx
+      niter=niter+1
+    endif
+    inty=round(imag(temp))*2
+    if(inty<=0)
+      inty=1-inty
+      niter=niter+2
+    endif
+    niter=niter+intx+inty+intx*inty
+    randint=seedy+niter
+    randiter=0
+    while(randiter<niter)
+      randiter=randiter+1
+      randint=(randint*multiplier+offset)%modbase
+    endwhile
+    tiletype=(randint%seedy)%4
+    if(@nozero==true)
+      tiletype=((randint%seedy)%3)+1
+    endif
+    randint=(randint*multiplier+offset)%modbase
+    overtype=(randint%seedy)%4
+  endif
+;
+; determine radial distances based on tile type
+;
+  if(tiletype==1)
+    ra=((abs(x-0.5))^@n+(abs(y))^@n)^recipn
+    rb=((abs(x-1))^@n+(abs(y-0.5))^@n)^recipn
+    rc=((abs(x-0.5))^@n+(abs(y-1))^@n)^recipn
+    rd=((abs(x))^@n+(abs(y-0.5))^@n)^recipn
+    rcutoff=r2o2-0.5
+  elseif(tiletype==2)
+    ra=((abs(x))^@n+(abs(y))^@n)^recipn
+    rb=((abs(x-1))^@n+(abs(y))^@n)^recipn
+    rc=((abs(x-1))^@n+(abs(y-1))^@n)^recipn
+    rd=((abs(x))^@n+(abs(y-1))^@n)^recipn
+    rcutoff=omr2o2
+  elseif(tiletype==3)
+    ra=((abs(x))^@n+(abs(y))^@n)^recipn
+    rb=((abs(x-1))^@n+(abs(y-1))^@n)^recipn
+    rc=((abs(x-1))^@n+(abs(y))^@n)^recipn
+    rd=((abs(x))^@n+(abs(y-1))^@n)^recipn
+    rcutoff=r2o2
+  else
+    ra=abs(x-omr2o2)
+    rb=abs(y-omr2o2)
+    rc=abs(x-r2o2)
+    rd=abs(y-r2o2)
+    rcutoff=0
+  endif
+;
+; determine which arc is over which
+;
+  if(overtype==1)
+    r1=ra
+    r2=rb
+    r3=rc
+    r0=rd
+  elseif(overtype==2)
+    r2=ra
+    r3=rb
+    r0=rc
+    r1=rd
+  elseif(overtype==2)
+    r3=ra
+    r0=rb
+    r1=rc
+    r2=rd
+  else
+    r0=ra
+    r1=rb
+    r2=rc
+    r3=rd
+  endif
+;
+; find radial distance and set index color
+;
+;   solid background
+;
+  #solid=true
+;
+;   gradation inside arc 0
+;
+  r=abs(r0-rcutoff)/rmax
+  if(r<=1)
+    #solid=false
+    #index=r
+  endif
+;
+;   gradation inside arc 1
+;
+  r=abs(r1-rcutoff)/rmax
+  if(r<=1)
+    #solid=false
+    #index=r
+  endif
+;
+;   gradation inside arc 2
+;
+  r=abs(r2-rcutoff)/rmax
+  if(r<=1)
+    #solid=false
+    #index=r
+  endif
+;
+;   gradation inside arc 3
+;
+  r=abs(r3-rcutoff)/rmax
+  if(r<=1)
+    #solid=false
+    #index=r
+  endif
+default:
+  title="Double Truchet"
+  param shift
+    caption="shift"
+    default=(0,0)
+    hint="Use to shift the center of the tiling pattern."
+  endparam
+  param scalefac
+    caption="size"
+    default=1.0
+    hint="Increase or decrease the size of the pattern."
+  endparam
+  param tdeg
+    caption="rotation"
+    default=0.0
+    hint="Rotate the pattern, +ccw, -cw, in degrees."
+  endparam
+  param width
+    caption="arc width"
+    default=0.15
+    min=0.0
+    max=1.0
+    hint="From 0 to 1."
+  endparam
+  param n
+    caption="exponent"
+    default=2.0
+    min=0.0
+    hint="Use 2 for circular arcs, 1 for straight lines, and \
+      less than 1 for astroid arcs."
+  endparam
+  param seed
+    caption="random seed"
+    default=123
+    min=0
+    hint="Use 0, 1, 2, or 3 to force either tile; otherwise, use a large integer."
+  endparam
+  param nozero
+    caption="exclude tile 0?"
+    default=false
+    hint="Check to exclude the straight arc tile."
+  endparam
+}
+
+string-art-rose { ; Kerry Mitchell 21mar01
+;
+; "Sting Art" coloring, in which the "nails" are placed around
+; a rose curve.
+;
+init:
+  float x=0.0
+  float y=0.0
+  float theta=0.0
+  float theta0=@t0deg*#pi/180
+  float dtheta=@m/@n*2*#pi
+  float r=0.0
+  float rmin=1e20
+  float rlast=0.0
+  float rfirst=0.0
+  t=(0,0)
+  z1=(0,0)
+  z2=(0,0)
+  zfirst=(0,0)
+  zlast=(0,0)
+  theta=@trdeg*#pi/180
+  rot=cos(theta)-flip(sin(theta))
+  zrot=(0,0)
+  int itheta=0
+  int nin=0
+loop:
+  zrot=#z*rot                ; rotate z instead of the curve
+;
+; set up 1st line endpoint
+;
+  theta=theta0
+  r=@ac*cos(@bc*theta)+@as*sin(@bs*theta)
+  z1=r*(cos(theta)+flip(sin(theta)))+@curvecenter
+;
+; loop through the rest of the points on the curve:
+; next point in the loop becomes the new 2nd line endpoint
+;
+  itheta=0
+  while(itheta<@n)
+    itheta=itheta+1
+    theta=itheta*dtheta+theta0
+    r=@ac*cos(@bc*theta)+@as*sin(@bs*theta)
+    z2=r*(cos(theta)+flip(sin(theta)))+@curvecenter
+;
+; find distance from z to the line
+;
+    t=(zrot-z1)/(z2-z1)
+    x=real(t)
+    y=sqr(imag(t))
+    if(x<0.0)
+      r=sqr(x)+y
+    elseif(x>1.0)
+      r=sqr(x-1.0)+y
+    else
+      r=y
+    endif
+    r=sqrt(r)*cabs(z2-z1)    ; scale lines to have same width
+;
+; check to see if this point is closer to line, or falls in range
+;
+    if(r<rmin)
+      rmin=r
+    endif
+    if(r<=@rangewidth)
+      nin=nin+1
+      rlast=r
+      zlast=#z
+      if(nin==1)
+        rfirst=r
+        zfirst=#z
+      endif
+    endif
+    z1=z2                    ; update 1st endpoint
+  endwhile
+final:
+  if(@colorby==1)            ; first mag
+    if(nin==0)
+      #solid=true
+    else
+      #index=rfirst/@rangewidth
+    endif
+  elseif(@colorby==2)        ; first angle
+    if(nin==0)
+      #solid=true
+    else
+      theta=atan2(zfirst)/#pi
+      if(theta<0.0)
+        theta=theta+2
+      endif
+      #index=theta/2
+    endif
+  elseif(@colorby==3)        ; last mag
+    if(nin==0)
+      #solid=true
+    else
+      #index=rlast/@rangewidth
+    endif
+  elseif(@colorby==4)        ; last angle
+    if(nin==0)
+      #solid=true
+    else
+      theta=atan2(zlast)/#pi
+      if(theta<0.0)
+        theta=theta+2
+      endif
+      #index=theta/2
+    endif
+  else                       ; minimum dist.
+    #index=rmin^@power
+  endif
+default:
+  title="Rose Curve String Art"
+  param n
+    caption="# of points"
+    default=7
+    hint="Both #'s should be coprime, like 7 & 3 or 16 & 9."
+  endparam
+  param m
+    caption="# skipped"
+    default=3
+    hint="Both #'s should be coprime, like 7 & 3 or 16 & 9."
+  endparam
+  param curvecenter
+    caption="curve center"
+    default=(0,0)
+  endparam
+  param t0deg
+    caption="line rotation"
+    default=0.0
+    hint="Rotates the start of the lines, in degrees, +ccw."
+  endparam
+  param trdeg
+    caption="curve rotation"
+    default=0.0
+    hint="Rotates the curve, in degrees, +ccw."
+  endparam
+  param ac
+    caption="cosine amplitude"
+    default=1.0
+  endparam
+  param bc
+    caption="cosine frequency"
+    default=2.0
+  endparam
+  param as
+    caption="sine amplitude"
+    default=0.0
+  endparam
+  param bs
+    caption="sine frequency"
+    default=0.0
+  endparam
+  param colorby
+    caption="color by:"
+    default=0
+    enum="minimum dist." "first mag" "first angle" "last mag" "last angle"
+  endparam
+  param rangewidth
+    caption="range width"
+    default=0.1
+    hint="Use with all but 'minimum dist.' 'color by:' choices."
+  endparam
+  param power
+    caption="power"
+    default=1.0
+    hint="Use with color density to control line thickness.  Use with \
+      'minimum dist.' 'color by:' choice."
+  endparam
+}
+
+string-art-astroid { ; Kerry Mitchell 21mar2001
+;
+; "Sting Art" coloring, in which the "nails" are placed around
+; an astroid curve.
+;
+init:
+  float x=0.0
+  float y=0.0
+  float theta=0.0
+  float theta0=@t0deg*#pi/180
+  float dtheta=@m/@n*2*#pi
+  float r=0.0
+  float rmin=1e20
+  float rlast=0.0
+  float rfirst=0.0
+  float fac=0.0
+  float recipn=-1/@astroidn
+  t=(0,0)
+  z1=(0,0)
+  z2=(0,0)
+  zfirst=(0,0)
+  zlast=(0,0)
+  theta=@trdeg*#pi/180
+  rot=cos(theta)-flip(sin(theta))
+  zrot=(0,0)
+  int itheta=0
+  int nin=0
+loop:
+  zrot=#z*rot                ; rotate z instead of the curve
+;
+; set up 1st line endpoint
+;
+  theta=theta0
+  x=abs(cos(theta))^@astroidn
+  y=abs(sin(theta))^@astroidn
+  fac=(x+y)^recipn
+  r=fac*@astroida
+  z1=r*(cos(theta)+flip(sin(theta)))+@curvecenter
+;
+; loop through the rest of the points on the curve:
+; next point in the loop becomes the new 2nd line endpoint
+;
+  itheta=0
+  while(itheta<@n)
+    itheta=itheta+1
+    theta=itheta*dtheta+theta0
+    x=abs(cos(theta))^@astroidn
+    y=abs(sin(theta))^@astroidn
+    fac=(x+y)^recipn
+    r=fac*@astroida
+    z2=r*(cos(theta)+flip(sin(theta)))+@curvecenter
+;
+; find distance from z to the line
+;
+    t=(zrot-z1)/(z2-z1)
+    x=real(t)
+    y=sqr(imag(t))
+    if(x<0.0)
+      r=sqr(x)+y
+    elseif(x>1.0)
+      r=sqr(x-1.0)+y
+    else
+      r=y
+    endif
+    r=sqrt(r)*cabs(z2-z1)    ; scale lines to have same width
+;
+; check to see if this point is closer to line, or falls in range
+;
+    if(r<rmin)
+      rmin=r
+    endif
+    if(r<=@rangewidth)
+      nin=nin+1
+      rlast=r
+      zlast=#z
+      if(nin==1)
+        rfirst=r
+        zfirst=#z
+      endif
+    endif
+    z1=z2                    ; update 1st endpoint
+  endwhile
+final:
+  if(@colorby==1)            ; first mag
+    if(nin==0)
+      #solid=true
+    else
+      #index=rfirst/@rangewidth
+    endif
+  elseif(@colorby==2)        ; first angle
+    if(nin==0)
+      #solid=true
+    else
+      theta=atan2(zfirst)/#pi
+      if(theta<0.0)
+        theta=theta+2
+      endif
+      #index=theta/2
+    endif
+  elseif(@colorby==3)        ; last mag
+    if(nin==0)
+      #solid=true
+    else
+      #index=rlast/@rangewidth
+    endif
+  elseif(@colorby==4)        ; last angle
+    if(nin==0)
+      #solid=true
+    else
+      theta=atan2(zlast)/#pi
+      if(theta<0.0)
+        theta=theta+2
+      endif
+      #index=theta/2
+    endif
+  else                       ; nearest
+    #index=rmin^@power
+  endif
+default:
+  title="Astroid String Art"
+  param n
+    caption="# of points"
+    default=8
+    hint="Both #'s should be coprime, like 8 & 3 or 16 & 9."
+  endparam
+  param m
+    caption="# skipped"
+    default=3
+    hint="Both #'s should be coprime, like 8 & 3 or 16 & 9."
+  endparam
+  param curvecenter
+    caption="curve center"
+    default=(0,0)
+  endparam
+  param t0deg
+    caption="line rotation"
+    default=0.0
+    hint="Rotates the start of the lines, in degrees, +ccw."
+  endparam
+  param trdeg
+    caption="curve rotation"
+    default=0.0
+    hint="Rotates the curve, in degrees, +ccw."
+  endparam
+  param astroidn
+    caption="astroid power"
+    default=0.5
+    min=0.0
+    max=256.0
+    hint="< 1 for a true astroid, 1 for a diamond, 2 for a circle, 256 for \
+      a near square."
+  endparam
+  param astroida
+    caption="astroid scale"
+    default=1.0
+    min=0.0
+    hint="Increase to make the curve larger."
+  endparam
+  param colorby
+    caption="color by:"
+    default=0
+    enum="minimum dist." "first mag" "first angle" "last mag" "last angle"
+  endparam
+  param rangewidth
+    caption="range width"
+    default=0.1
+    hint="Use with all but 'minimum dist.' 'color by:' choices."
+  endparam
+  param power
+    caption="power"
+    default=1.0
+    hint="Use with color density to control line thickness.  Use with \
+      'minimum dist.' 'color by:' choice."
+  endparam
+}
+
+crosshatch { ; Kerry Mitchell 23may2001
+;
+; "Colors" the fractal by drawing lines, grids, squares or triangles
+; with the variation in spacing relaying the "color" information.
+;
+init:
+  float space=0.0
+  float size=0.01*@sizefac/#magn
+  float x=real(#pixel)
+  float y=imag(#pixel)
+  float t=0.0
+  float r1=0.0
+  float r2=0.0
+  float r3=0.0
+  float cost=0.0
+  float sint=0.0
+  float p=@randseed
+  float colorz=0.0
+  float count=0.0
+  int iter=0
+  zvalue=(0,0)
+  zfirst=(0,0)
+  zmean=(0,0)
+loop:
+  iter=iter+1
+  if(iter==1)
+    zfirst=#z
+  endif
+  zmean=zmean+#z
+  p=4*p*(1-p)
+final:
+;
+; determine count
+;
+  if(@ztype==1)              ; first z
+    zvalue=zfirst
+  elseif(@ztype==2)          ; last z
+    zvalue=#z
+  elseif(@ztype==3)          ; average
+    zvalue=zmean/iter
+  else                       ; pixel
+    zvalue=#pixel
+  endif
+;
+; set up lines
+;
+  x=real(zvalue)
+  y=imag(zvalue)
+  t=@tdeg*#pi/180
+  cost=cos(t)
+  sint=sin(t)
+  r1=cost*y-sint*x
+  r2=sint*y+cost*x
+  if((@shape==2)||(@shape==4))    ; triangular grid
+    t=(@tdeg+120)*#pi/180
+    cost=cos(t)
+    sint=sin(t)
+    r2=cost*y-sint*x
+    t=(@tdeg+240)*#pi/180
+    cost=cos(t)
+    sint=sin(t)
+    r3=cost*y-sint*x
+  endif
+  if(@colorby==1)            ; log(last magnitude)
+    count=log(cabs(#z))
+    if(@numsect>0)
+      count=trunc(count*@numsect)/@numsect
+    endif
+  elseif(@colorby==2)        ; last angle
+    count=atan2(#z)
+    if(@numsect>0)
+      count=trunc(count*@numsect)/@numsect
+    endif
+  else                       ; iterations
+    count=iter
+  endif
+;
+; determine index (colorz)
+;
+  t=count*@density+@offset
+  if(@transfertype==1)       ; sawtooth
+    if(t<0.0)
+      t=t+round(2-t)
+    endif
+    colorz=t%1.0
+  else                       ; sinusoidal
+    colorz=(1-cos(t))/2
+  endif
+;
+; build lines
+;
+  if(colorz>0.0)
+    if(@shape==1)            ; square grid
+      space=size/colorz
+      space=(space-size)*2+size
+      if(r1<0.0)
+        t=round(2-r1/space)+p
+      else
+        t=p
+      endif
+      r1=(r1+t*space)%space
+      if(r2<0.0)
+        t=round(2-r2/space)+p
+      else
+        t=p
+      endif
+      r2=(r2+t*space)%space
+      if((r1<=size)||(r2<=size))
+        r1=r1/size
+        r2=r2/size
+        if(r2>r1)
+          #index=r2
+        else
+          #index=r1
+        endif
+      else
+        #solid=true
+      endif
+    elseif(@shape==2)        ; triangular grid
+      space=size/colorz
+      space=(space-size)*3+size
+      if(r1<0.0)
+        t=round(2-r1/space)+p
+      else
+        t=p
+      endif
+      r1=(r1+t*space)%space
+      if(r2<0.0)
+        t=round(2-r2/space)+p
+      else
+        t=p
+      endif
+      r2=(r2+t*space)%space
+      if(r3<0.0)
+        t=round(2-r3/space)+p
+      else
+        t=p
+      endif
+      r3=(r3+t*space)%space
+      if((r1<=size)||(r2<=size)||(r3<=size))
+        r1=r1/size
+        r2=r2/size
+        r3=r3/size
+        if((r1>=r2)&&(r1>=r3))
+          #index=r1
+        endif
+        if((r2>=r1)&&(r2>=r3))
+          #index=r2
+        endif
+        if((r3>=r1)&&(r3>=r2))
+          #index=r3
+        endif
+      else
+        #solid=true
+      endif
+    elseif(@shape==3)        ; squares
+      space=size/colorz
+      space=(space-size)/3+size
+      if(r1<0.0)
+        t=round(2-r1/space)+p
+      else
+        t=p
+      endif
+      r1=(r1+t*space)%space
+      if(r2<0.0)
+        t=round(2-r2/space)+p
+      else
+        t=p
+      endif
+      r2=(r2+t*space)%space
+      if((r1<=size)&&(r2<=size))
+        r1=r1/size
+        r2=r2/size
+        if(r2>r1)
+          #index=r2
+        else
+          #index=r1
+        endif
+      else
+        #solid=true
+      endif
+    elseif(@shape==4)        ; triangles
+      space=size/colorz
+      space=(space-size)/5+size
+      if(r1<0.0)
+        t=round(2-r1/space)+p
+      else
+        t=p
+      endif
+      r1=(r1+t*space)%space
+      if(r2<0.0)
+        t=round(2-r2/space)+p
+      else
+        t=p
+      endif
+      r2=(r2+t*space)%space
+      if(r3<0.0)
+        t=round(2-r3/space)+p
+      else
+        t=p
+      endif
+      r3=(r3+t*space)%space
+      if((r1<=size)&&(r2<=size)&&(r3<=size))
+        r1=r1/size
+        r2=r2/size
+        r3=r3/size
+        if((r1>=r2)&&(r1>=r3))
+          #index=r1
+        endif
+        if((r2>=r1)&&(r2>=r3))
+          #index=r2
+        endif
+        if((r3>=r1)&&(r3>=r2))
+          #index=r3
+        endif
+      else
+        #solid=true
+      endif
+    else                     ; line
+      space=size/colorz
+      if(r1<0.0)
+        t=round(2-r1/space)+p
+      else
+        t=p
+      endif
+      r1=(r1+t*space)%space
+      if(r1<=size)
+        r1=r1/size
+        #index=r1
+      else
+        #solid=true
+      endif
+    endif
+  else
+    #solid=true
+  endif
+default:
+  title="Crosshatch"
+  helpfile="lkm-help\lkm-crosshatch.html"
+  param ztype
+    caption="variable"
+    default=0
+    enum="pixel" "first z" "last z" "average"
+    hint="The plane in which the crosshatching is done."
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="iterations" "log(last mag)" "last angle"
+    hint="What to use to determine color."
+  endparam
+  param numsect
+    caption="# sections"
+    default=0
+    min=0
+    hint="Use to discretize magnitude or angle; use '0' to turn off."
+  endparam
+  param shape
+    caption="shape"
+    default=0
+    enum="line" "square grid" "triangular grid" "square" "triangle"
+    hint="What shape to use to color the regions."
+  endparam
+  param sizefac
+    caption="size"
+    default=1.0
+    min=0.0
+    hint="The relative size of the lines."
+  endparam
+  param tdeg
+    caption="rotation, deg"
+    default=45.0
+    hint="Rotation of the shape, + ccw."
+  endparam
+  param density
+    caption="density"
+    default=0.25
+    hint="How quickly the 'colors' change; like the 'color \
+      density' parameter."
+  endparam
+  param offset
+    caption="offset"
+    default=0.0
+    hint="Use to rotate the 'color' distribution; like the \
+      'gradient offset' parameter."
+  endparam
+  param transfertype
+    caption="transfer function"
+    default=0
+    enum="sinusoidal" "sawtooth"
+    hint="How the count gets reduced to a value between 0 & 1."
+  endparam
+  param randseed
+    caption="random seed"
+    default=0.1
+    min=0.0
+    hint="Use to offset the lines randomly in each band; \
+      use '0' to turn off."
+  endparam
+}
+
+hilbert-curve { ; Kerry Mitchell 15jul2001
+;
+; Draws a Hilbert curve in the #z plane and colors by the
+; orbit's relationship to the curve.  Only uses the last
+; iterate.  Allows you to change the locations of the 4
+; sub-square centers, and the point where the curve enters
+; and exits the block of 4 squares.
+;
+init:
+  float x=0.0
+  float y=0.0
+  float r=0.0
+  float rmin=1e20
+  float u=0.0
+  float v=0.0
+  float msb=0.0
+  t=(0,0)
+  int iter=0
+  int nlast=0
+  int n=0
+  int fac3=0
+  int fac4=0
+  int power4=0
+  zh=(0,0)
+  zh0=(0,0)
+;
+; set up endpoints for the lines
+;
+  float h=@fourcorners
+  float ooh=1/h
+  float ooomh=1/(1-h)
+  float hoomh=h/(1-h)
+  z0a=@enterexit*h
+  z0b=flip(@enterexit*h)
+  x=real(@centerll)*h
+  y=imag(@centerll)*h
+  z1=x+flip(y)
+  x=real(@centerul)*h
+  y=imag(@centerul)*(1-h)+h
+  z2=x+flip(y)
+  x=real(@centerur)*(1-h)+h
+  y=imag(@centerur)*(1-h)+h
+  z3=x+flip(y)
+  x=real(@centerlr)*(1-h)+h
+  y=imag(@centerlr)*h
+  z4=x+flip(y)
+  z5=1+flip(@enterexit*h)
+loop:
+final:
+  iter=0
+  zh0=#z*0.25+(0.5,0.5)
+  zh=zh0
+  while(iter<@niter)
+    iter=iter+1
+    x=real(zh)
+    y=imag(zh)
+;
+; lower left sub-square:  shrink, flip horizontally, rotate by -90 degrees
+;
+    if((x<h)&&(y<h))
+      nlast=3
+      u=ooh*y
+      v=ooh*x
+;
+; upper left sub-square:  just shrink
+;
+    elseif((x<h)&&(y>=h))
+      nlast=2
+      u=ooh*x
+      v=ooomh*y-hoomh
+;
+; upper right sub-square:  shrink & flip horizontally
+;
+    elseif((x>=h)&&(y>=h))
+      nlast=1
+      u=ooomh-ooomh*x
+      v=ooomh*y-hoomh
+;
+; lower right sub-square:  shrink, rotate by 90 degrees
+;
+    elseif((x>=h)&&(y<h))
+      nlast=4
+      u=ooh*y
+      v=ooomh-ooomh*x
+    else
+      nlast=-1
+      u=x
+      v=y
+    endif
+    zh=u+flip(v)
+    msb=(msb+nlast-1)/4
+    n=n*4+nlast-1
+  endwhile
+  if(n<0)
+    #solid=true
+  else
+    if(@colorby==1)          ; least significant bit
+      #index=n/(4^@niter)
+    elseif(@colorby==2)      ; most significat bit
+      #index=msb
+    elseif(@colorby==3)      ; distance from initial z
+      #index=cabs(zh-zh0)
+    elseif(@colorby==4)      ; angle from initial z
+      r=atan2(zh-zh0)/#pi
+      if(r<0.0)
+        r=r+2
+      endif
+      #index=r/2
+    else                     ; distance to curve
+;
+; determine how to start line 0-1
+;
+    z0=z0a
+    iter=0
+    fac3=2
+    fac4=1
+    power4=4
+    while(iter<@niter)
+      iter=iter+1
+      if(iter%2==1)
+        if(n%power4==fac3)
+          z0=z0b
+        endif
+      else
+        if(n%power4==fac3)
+          z0=z0a
+        endif
+      endif
+      power4=4*power4
+      fac4=4*fac4
+      fac3=fac3+2*fac4
+    endwhile
+;
+; line from enter to lower left sub-square
+;
+    t=(zh-z0)/(z1-z0)
+    x=real(t)
+    y=imag(t)
+    if(x<0.0)
+      r=sqr(x)+sqr(y)
+    elseif(x>1.0)
+      r=sqr(x-1.0)+sqr(y)
+    else
+      r=sqr(y)
+    endif
+    r=sqrt(r)*cabs(z1-z0)
+    if(r<rmin)
+      rmin=r
+    endif
+;
+; line from lower left to upper left sub-squares
+;
+    t=(zh-z1)/(z2-z1)
+    x=real(t)
+    y=imag(t)
+    if(x<0.0)
+      r=sqr(x)+sqr(y)
+    elseif(x>1.0)
+      r=sqr(x-1.0)+sqr(y)
+    else
+      r=sqr(y)
+    endif
+    r=sqrt(r)*cabs(z2-z1)
+    if(r<rmin)
+      rmin=r
+    endif
+;
+; line from upper left to upper right sub-squares
+;
+    t=(zh-z2)/(z3-z2)
+    x=real(t)
+    y=imag(t)
+    if(x<0.0)
+      r=sqr(x)+sqr(y)
+    elseif(x>1.0)
+      r=sqr(x-1.0)+sqr(y)
+    else
+      r=sqr(y)
+    endif
+    r=sqrt(r)*cabs(z3-z2)
+    if(r<rmin)
+      rmin=r
+    endif
+;
+; line from upper right to lower right sub-squares
+;
+    t=(zh-z3)/(z4-z3)
+    x=real(t)
+    y=imag(t)
+    if(x<0.0)
+      r=sqr(x)+sqr(y)
+    elseif(x>1.0)
+      r=sqr(x-1.0)+sqr(y)
+    else
+      r=sqr(y)
+    endif
+    r=sqrt(r)*cabs(z4-z3)
+    if(r<rmin)
+      rmin=r
+    endif
+;
+; line from lower right sub-square to exit
+;
+    t=(zh-z4)/(z5-z4)
+    x=real(t)
+    y=imag(t)
+    if(x<0.0)
+      r=sqr(x)+sqr(y)
+    elseif(x>1.0)
+      r=sqr(x-1.0)+sqr(y)
+    else
+      r=sqr(y)
+    endif
+    r=sqrt(r)*cabs(z5-z4)
+    if(r<rmin)
+      rmin=r
+    endif
+;
+      #index=rmin
+    endif
+  endif
+default:
+  title="Hilbert curve"
+  param centerll
+    caption="lower left center"
+    default=(0.5,0.5)
+    hint="Center of the lower left sub-square. Make both coordinates \
+    between 0 & 1; use (0.5,0.5) for standard Hilbert curve."
+  endparam
+  param centerul
+    caption="upper left center"
+    default=(0.5,0.5)
+    hint="Center of the upper left sub-square. Make both coordinates \
+    between 0 & 1; use (0.5,0.5) for standard Hilbert curve."
+  endparam
+  param centerur
+    caption="upper right center"
+    default=(0.5,0.5)
+    hint="Center of the upper right sub-square. Make both coordinates \
+    between 0 & 1; use (0.5,0.5) for standard Hilbert curve."
+  endparam
+  param centerlr
+    caption="lower right center"
+    default=(0.5,0.5)
+    hint="Center of the lower right sub-square. Make both coordinates \
+    between 0 & 1; use (0.5,0.5) for standard Hilbert curve."
+  endparam
+  param enterexit
+    caption="enter/exit"
+    default=0.5
+    min=0.0
+    max=1.0
+    hint="Where the curve enters and exits the block of 4 sub-squares. \
+      Between 0 & 1; use 0.5 for standard Hilbert curve."
+  endparam
+  param fourcorners
+    caption="4 corners"
+    default=0.5
+    hint="Where the 4 corners meet.  Between 0 & 1; use 0.5 for standard \
+      Hilbert curve."
+  endparam
+  param niter
+    caption="iterations"
+    default=0
+    min=0
+  endparam
+  param colorby
+    caption="color by"
+    default=0
+    enum="distance" "last = lsb" "last = msb" "distance from z" "angle from z"
+  endparam
+}
+
+line { ; Kerry Mitchell 15jul2001
+;
+; Just draws a line between 2 points
+;
+init:
+  float x=0.0
+  float y=0.0
+  float r=0.0
+  t=(0,0)
+loop:
+final:
+  t=(#z-@z1)/(@z2-@z1)
+  x=real(t)
+  y=imag(t)
+  if(x<0.0)
+    r=sqr(x)+sqr(y)
+  elseif(x>1.0)
+    r=sqr(x-1.0)+sqr(y)
+  else
+    r=sqr(y)
+  endif
+  r=sqrt(r)*cabs(@z2-@z1)
+  #index=r
+default:
+  title="Line"
+  param z1
+    caption="1st endpoint"
+    default=(0,0)
+  endparam
+  param z2
+    caption="2nd endpoint"
+    default=(1,1)
+  endparam
+}

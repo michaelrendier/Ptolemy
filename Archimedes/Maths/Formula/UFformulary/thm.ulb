@@ -1,0 +1,4203 @@
+comment {
+  Update 10.31.2010
+  Note: If you used formulas from mmf.ulb within my classes
+  some changes in your parameters may appear. Then try to set
+  the option "Manual Over-ride". That should set your parameter
+  to the previous state.
+  
+  (c) Thomas Michels
+  thommichels@web.de
+  stimpykatz.deviantart.com
+  10.14.2010
+	To use this formula classes please open the
+	ThmGenericSwitch formula in thm.ufm.
+	To get a quick start look into thm.upr.
+	
+	Purpose for writing this classes was my wish to have the Switch
+	feature in classe available. What is a Mandelbrot without his Julia?
+	
+	I'm not the only one who write switchable class formulas.
+	There are already 2 authors who provide switchable classes
+	too. In reb.ucl and mmf.ucl are such classes.
+	To be able to use this classes from within my ThmGenericSwitch
+	formula i wrote 2 plug-ins that can support the switch feature
+  for reb.ucl and mmf.ucl.
+  For class writers it means they have 3 authors to descent their
+  switchable classes from. All those classes can now run from within
+  my ThmGenericSwitch formula.
+  For mmf.ucl switchable classes use THMSwitchPlug_MMF
+  For reb.ucl switchable classes use THMSwitchPlug_REB
+		
+	And not enough: This library contains the
+	class THMSwitchBlend (Thanks to Stig Petterson)
+  that can mix 3 fractal formulas
+	smoothly together. To mix more than 3 fractals together
+	simply plug in the THMSwitchBlend into the THMSwitchBlend.
+	Believe me you will enter new universes.
+	
+	There is also a class THMSwitchFuncInterlace for combining
+	formulas. E.g. z=mandelfn(novafn(z))
+	
+	To make live easier i wrote also some Plug-ins for bailout
+	functions.
+	
+	And last not least i migrated some formulas to classes all with
+	the switch feature of course;-)
+	
+	
+}
+
+
+class THMSwitchBase(common.ulb:Formula) {
+; Base Class for making switchable class formulas
+; To write an switchable fractal you may use this class as the ancestor
+; To plugin use ThmGenericSwitch formula in thm.ufm
+;
+public:
+  import "common.ulb"
+
+	func THMSwitchBase(Generic pparent)
+		Formula.Formula(pparent)
+		thmPixel=(0,0)
+		isJulia=false		
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+		;Is called before Init
+    thmPixel=value  ; wether #pixel or @seed depending on mode
+		isJulia=mode
+	endfunc
+
+  complex func Init(complex pz)	
+    return Formula.Init(pz)
+  endfunc
+  
+  func setPixel(complex c)
+    thmPixel=c
+  endfunc
+
+protected:
+  complex thmPixel
+  bool isJulia
+default:
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+    visible=false
+  endparam
+  float param p_bailout ; Overrides p_bailout from Formula
+    caption = "Bailout value"
+    default = 1E20
+    visible=false
+  endparam
+
+}
+
+class THMSwitchPlug(THMSwitchBase) {
+;Wrapper class that has a fractal class
+;of type Formula plugged in and act as a base
+;class for the classes THMSwitchPlug_MMF and
+;THMSwitchPlug_REB
+public:
+import "common.ulb"
+
+	func THMSwitchPlug(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		plugin = new @formulaClass(this)
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+    THMSwitchBase(plugin).SetSwitchmode(mode, value)
+  endfunc
+	
+	func setPixel(complex c)
+  ; Setting the constant without switching the Julia mode
+  ; e.g. used in class TswTransform
+    SetSwitchmode (isJulia,c)
+  endfunc
+
+  complex func Init(complex pz)
+    return plugin.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    return plugin.Iterate(pz)
+  endfunc
+
+  bool func isBailedOut(complex pz)
+    return plugin.isBailedOut(pz)
+  endfunc
+
+
+protected:
+	Formula plugin
+default:
+  ;title="PlugBase"
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = THMSwitchMandelbrot
+  endparam
+}
+
+class THMSwitchPlug_MMF(THMSwitchPlug) {
+; To make the formulas in mmf.ulb switchable all
+; i've done was override the func SetSwitchmode
+public:
+  import "mmf.ulb"
+
+  complex func Init(complex pz)
+    ;setPixel(pz)
+    pz=plugin.Init(pz)
+    return pz
+  endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+	; a little bit ugly typecasting ;-)
+	; and voila
+    if @formulaClass==MMF_SwitchFormula
+      MMF_SwitchFormula(plugin).SetParams(!mode,value)
+    elseif @formulaClass==MMF_SwitchDivergentFormula
+      MMF_SwitchDivergentFormula(plugin).SetParams(!mode,value)
+    elseif @formulaClass==MMF_SwitchConvergentFormula
+      MMF_SwitchConvergentFormula(plugin).SetParams(!mode,value)
+    elseif @formulaClass==MMF_SwitchConvergentDivergentFormula
+      if mode==false ;This type of formulas need start value=0
+        MMF_SwitchConvergentDivergentFormula(plugin).SetParams(!mode,0)
+      else
+        MMF_SwitchConvergentDivergentFormula(plugin).SetParams(!mode,value)
+      endif
+    elseif @formulaClass==THMSwitchBase ; and not to forget my classes:-) 
+      THMSwitchPlug.SetSwitchmode(mode, value)
+    ;elseif no switch will happen but formula will still function
+    endif
+  endfunc
+
+	func setPixel(complex c)
+    SetSwitchmode(!isJulia,c)
+  endfunc
+
+default:
+  title="THMSwitchPlug_MMF"
+	rating = recommended
+  heading
+    caption="Information"
+    text="This plug-in provides the ability to switch the \
+        class formulas in the mmf.ulb file. The formulas \
+        has switch in it's names.\
+        And it can switch the class formulas in the \
+        thm.ulb file"
+    extended=false
+  endheading
+  heading
+    enabled=false
+  endheading
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = THMSwitchMandelbrot
+  endparam
+}
+
+class THMSwitchPlug_REB(THMSwitchPlug) {
+; To make the formulas in reb.ulb switchable all
+; i've done was override the func SetSwitchmode
+public:
+  import "reb.ulb"
+
+	func SetSwitchmode(bool mode, complex value)
+	; a little bit ugly typecasting ;-)
+	; and voila
+    if @formulaClass==Switch
+      Switch(plugin).SetParams(!mode, mode, value)
+    elseif @formulaClass==THMSwitchBase ; and not to forget my classes:-)
+      THMSwitchPlug.SetSwitchmode(mode, value)
+    ;elseif no switch will happen but formula will still function
+    endif
+  endfunc
+  
+default:
+  title="THMSwitchPlug_REB"
+	rating = recommended
+  heading
+    caption="Information"
+    text="This plug-in provides the ability to switch the \
+        class formulas in the reb.ulb file. The formulas \
+        has switch in it's names.\
+        And it can switch the class formulas in the \
+        thm.ulb file"
+    extended=false
+  endheading
+  heading
+    enabled=false
+  endheading
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    ;default = THMSwitchMandelbrot
+    default = REB_MandelbrotJulia_Switch
+  endparam
+}
+
+class THMJuliaManual(THMSwitchBase) {
+; Wrapper class that allows render a plugged in
+; fractal formula as it's julia type.
+; The seed can be set manual by the constant parameter
+; To use fractals from the mmf or reb folder the classes
+; THMSwitchPlug_MMF or THMSwitchPlug_REB can plugged in here too
+public:
+import "common.ulb"
+
+	func THMJuliaManual(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		plugin = new @formulaClass(this)
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+    if @formulaClass==THMSwitchBase
+      THMSwitchBase(plugin).SetSwitchmode(mode, value)
+    endif
+  endfunc
+	
+  complex func Init(complex pz)
+    THMSwitchBase.Init(pz)
+    pz=plugin.Init(pz)
+    SetSwitchmode (false,@constant)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    return plugin.Iterate(pz)
+  endfunc
+
+  bool func isBailedOut(complex pz)
+    return plugin.isBailedOut(pz)
+  endfunc
+
+protected:
+  complex plane
+	Formula plugin
+default:
+  title="THMJuliaManual"
+  rating = recommended
+  param constant
+    caption="Seed:"
+    default=(0.5,0.0)
+    hint="The Seed is the complex constant that determines \
+          the Julia set of the plugged in formula"
+  endparam
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = THMSwitchMandelbrot
+    hint="This formula is be rendered as it's Julia set. \
+          Note: Only compatible formulas will rendered \
+          as Julia set. That are formulas in the mmf.ulb \
+          (use THMSwitchPlug_MMF) and reb.ulb(use THMSwitchPlug_REB) \
+          files with switch in their names and \
+          formulas in thm.ulb(no switchPlug required)."
+  endparam
+}
+
+class THMSwitchFuncMerge(THMSwitchBase) {
+; Two formula plugins are mixed together by using a third
+; plugin formula that takes the return values from the first two iterate functions
+; Non Class version in thmorigin1.ufm
+public:
+
+	func THMSwitchFuncMerge(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		if @switchexch==false
+      plugin1 = new @classplugin1(this)
+		  plugin2 = new @classplugin2(this)
+		else
+      plugin2 = new @classplugin1(this)
+		  plugin1 = new @classplugin2(this)
+    endif
+    plugin3 = new @classplugin3(this)
+		thmbailout = new @bailoutbase(this)
+	endfunc
+	
+	func SetSwitchmode(bool mode, complex value)
+		THMSwitchBase.SetSwitchmode(mode,value)
+    if @classplugin1==THMSwitchBase
+      THMSwitchBase(plugin1).SetSwitchmode(mode, value)
+    endif
+    if @classplugin2==THMSwitchBase
+      THMSwitchBase(plugin2).SetSwitchmode(mode, value)
+    endif
+    if @classplugin3==THMSwitchBase
+      THMSwitchBase(plugin3).SetSwitchmode(mode, value)
+    endif
+	endfunc
+
+	complex func Init(complex pz)	
+		THMSwitchBase.Init(pz)
+    za=plugin1.Init(pz)
+		zb=plugin2.Init(za)
+		pz=plugin3.Init(zb)
+    thmbailout.Init(pz)
+		;za=zb=pz
+	  return pz
+	endfunc
+	
+	complex func Iterate(complex pz)
+    pz=thmbailout.Iterate(pz)
+		za=plugin1.Iterate (za)
+		zb=plugin2.Iterate (zb)
+    if @classplugin3==THMSwitchBase
+      THMSwitchBase(plugin3).setPixel( zb)
+    endif
+		return plugin3.Iterate (za)
+	endfunc
+	
+  bool func IsBailedOut(complex pz)
+    return thmbailout.IsBailedOut(pz)
+  endfunc
+
+protected:
+  Formula plugin1
+  Formula plugin2
+  Formula plugin3
+  THMBailoutBase thmbailout
+	complex za
+	complex zb
+default:
+	title="THMSwitchFuncMerge"
+  THMBailoutBase param bailoutbase
+    caption="Divergent Bailout"
+    default=THMBailoutDivergent
+  endparam
+
+  bool param switchexch
+    ;switching works only for classes
+    ;based on THMSwitchBase. Changing the
+    ;plugin types at runtime is impossible for now
+    visible=false
+    caption="Exchange pixel- and merge formula"
+    default=false
+  endparam
+
+  heading
+    visible = @switchexch==false
+    caption = "z-Formula"
+  endheading
+  heading
+    visible = @switchexch==true
+    caption = "pixel-Formula"
+  endheading
+  Formula param classplugin1
+    caption="plugin1"
+    default = THMSwitchMandelbrot
+  endparam
+
+  heading
+    visible = @switchexch==true
+    caption = "z-Formula"
+  endheading
+  heading
+    visible = @switchexch==false
+    caption = "pixel-Formula"
+  endheading
+  Formula param classplugin2
+    caption = "plugin2"
+    default = THMSwitchMandelbrot
+  endparam
+
+  Formula param classplugin3
+    caption = "Merge-Formula"
+    default = THMSwitchMandelbrot
+  endparam
+}
+
+
+class THMSwitchBlend(THMSwitchBase) {
+; This class is the base class for THMSwitchBlend101
+; and make sure parameters based on this class before
+; 10.19.2010 will still work.
+
+; Not recommended for direct use.
+
+; Generic switchable mixer for two formulas .<br>
+; Taken from the formula blend(sp.ufm) by Stig Pettersson
+; with his kindly permission
+
+;    weight1*fnFormula1(z)+weight2*fnFormula2(z)+weight3*fnFormula3(z)
+; z= ----------------------------------------------------------------
+;                      weight1+weight2+weight3
+; I extended that formula a bit so the weights can have a bigger range
+; instead of 0...1.
+; The bigger a weight relativ to the others is the more the fractal
+; of this weight dominate
+public:
+
+	func THMSwitchBlend(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		plugin1 = new @classplugin1(this)
+		plugin2 = new @classplugin2(this)
+		plugin3 = new @classplugin3(this)
+		thmbailout = new @bailoutbase(this)
+	endfunc
+	
+	func SetSwitchmode(bool mode, complex value)
+    if @classplugin1==THMSwitchBase
+      THMSwitchBase(plugin1).SetSwitchmode(mode, value)
+    endif
+    if @classplugin2==THMSwitchBase
+      THMSwitchBase(plugin2).SetSwitchmode(mode, value)
+    endif
+    if @classplugin3==THMSwitchBase
+      THMSwitchBase(plugin3).SetSwitchmode(mode, value)
+    endif
+	endfunc
+
+	complex func Init(complex pz)	
+		THMSwitchBase.Init(pz)
+    f1=plugin1.Init(pz)
+		f2=plugin2.Init(pz)
+		f3=plugin3.Init(pz)
+    thmbailout.Init(pz)
+		x1=@w1
+		x2=@w2
+		x3=@w3
+		if @switcha==false
+	   x1=0
+    endif
+		if @switchb==false
+	   x2=0
+    endif
+ 		if @switchc==false
+ 	   x3=0
+    endif
+    w = 1/(x1+x2+x3)
+	  return w*(f1+f2+f3)
+	endfunc
+	
+	complex func Iterate(complex pz)
+    pz=thmbailout.Iterate(pz)
+		f1=x1*plugin1.Iterate(pz)
+		f2=x2*plugin2.Iterate(pz)
+		f3=x3*plugin3.Iterate(pz)
+		return w * (f1+f2+f3)
+	endfunc
+	
+  bool func IsBailedOut(complex pz)
+    return thmbailout.IsBailedOut(pz)
+  endfunc
+
+protected:
+  Formula plugin1
+  Formula plugin2
+  Formula plugin3
+  THMBailoutBase thmbailout
+	complex x1
+	complex x2
+	complex x3
+	complex w
+	complex f1
+	complex f2
+	complex f3
+default:
+  rating=notRecommended
+  int param version
+    default=100
+    visible=@version<101
+    enabled=false
+    hint=" This Version of THMSwitchBlend serves only as a \
+           guarantee that your parameters created before \
+           10.19.2010 will still function. \
+           For new fractals please use THMSwitchBlend101 instead"
+  endparam
+
+  THMBailoutBase param bailoutbase
+    caption="Divergent Bailout"
+    default=THMBailoutDivergent
+  endparam
+
+  heading
+	caption="FormulaWeightings"
+  endheading
+  bool param switcha
+    caption="Formula On"
+    default=true
+  endparam
+  float param w1
+    caption="Weight plug-in1"
+    default=1
+	  enabled=(@switcha==true)
+  endparam
+  bool param switchb
+    caption="Formula On"
+    default=true
+  endparam
+  float  param w2
+    caption="Weight plug-in2"
+    default=1
+	  enabled=(@switchb==true)
+  endparam
+   bool param switchc
+     caption="Formula On"
+     default=false
+   endparam
+   float param w3
+     caption="Weight plug-in3"
+     default=1
+ 	  enabled=(@switchc==true)
+   endparam
+
+  heading
+		caption="Plug-In Formulas"
+  endheading
+  Formula param classplugin1
+    caption = "Formula plug-in1"
+    default = THMSwitchMandelbrot
+  endparam
+
+  Formula param classplugin2
+    caption = "Formula plug-in2"
+    default = THMSwitchMandelbrot
+  endparam
+
+   Formula param classplugin3
+     caption = "Formula plug-in3"
+     default = THMSwitchMandelbrot
+ 	  visible = (@switchc==true)
+   endparam
+
+}
+
+class THMSwitchBlend101(THMSwitchBlend) {
+public:
+	func THMSwitchBlend101(Generic pparent)
+		THMSwitchBlend.THMSwitchBlend(pparent)
+  endfunc
+
+	complex func Init(complex pz)	
+		THMSwitchBase.Init(pz)
+    f1=plugin1.Init(pz)
+		f2=plugin2.Init(pz)
+		f3=plugin3.Init(pz)
+    thmbailout.Init(pz)
+		x1=@w1
+		x2=@w2
+		x3=@w3
+		if @switcha==false
+	   x1=0
+    endif
+		if @switchb==false
+	   x2=0
+    endif
+ 		if @switchc==false
+ 	   x3=0
+    endif
+    if f1==0     ;to avoid blank fractals
+      f1=pz
+    endif
+    if f2==0
+      f2=pz
+    endif
+    if f3==0
+      f3=pz
+    endif
+    w = 1/(x1+x2+x3) ;weight
+    f1=x1*f1         ;init factors
+    f2=x2*f2
+    f3=x3*f3
+    ;return pz only works for constant init values wrong
+		return w * (f1+f2+f3) ;weighted middle of all init values
+	endfunc
+
+default:
+  title = "THMSwitchBlend101"
+  rating = recommended
+  int param version
+    default=101
+    visible=false
+  endparam
+}
+
+class THMSwitchFuncInterlace(THMSwitchBase) {
+; class for interlacing functions or better said
+; for fractal formulas e.g. z=fnMandelbrot(fnNova(z))
+; To extend the interlacing "chain" this class can be
+; plugged into itself
+public:
+import "Standard.ulb"
+
+	func THMSwitchFuncInterlace(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		plugin1 = new @classplugin1(this)
+		plugin2 = new @classinterplugin(this)
+		plugin3 = new @classplugin3(this)
+		thmbailout = new @bailoutbase(this)
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+	  THMSwitchBase.SetSwitchmode(mode,value)
+    if @classplugin1==THMSwitchBase
+      THMSwitchBase(plugin1).SetSwitchmode(mode, value)
+    endif
+    if @classinterplugin==THMSwitchBase
+      THMSwitchBase(plugin2).SetSwitchmode(mode, value)
+    endif
+    if @classplugin3==THMSwitchBase
+      THMSwitchBase(plugin3).SetSwitchmode(mode, value)
+    endif
+	endfunc
+	
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+    pz=thmbailout.Init(pz)
+    if @switch1==true
+      pz=plugin1.Init(pz)
+    endif
+    if @switch2==true
+      pz=plugin2.Init(pz)
+    endif
+    if @switch3==true
+      pz=plugin3.Init(pz)
+    endif
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=thmbailout.Iterate(pz)
+    if @switch3==true
+      i=0
+      repeat
+        pz=plugin3.Iterate(pz)
+        i=i+1
+      until i==@iter3
+      if isJulia  && @adjustjulia
+        pz=pz-thmPixel
+      endif
+    endif
+    if @switch2==true
+      i=0
+      repeat
+        pz=plugin2.Iterate(pz)
+        i=i+1
+      until i==@iter2
+      if isJulia && @adjustjulia && !@switch3
+        pz=pz-thmPixel
+      endif
+    endif
+    if @switch1==true
+      i=0
+      repeat
+        pz=plugin1.Iterate(pz)
+        i=i+1
+      until i==@iter1
+      if isJulia && @adjustjulia && !@switch2
+        pz=pz-thmPixel
+      endif
+    endif
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return thmbailout.IsBailedOut(pz)
+  endfunc
+
+private:
+  Formula plugin1
+  Formula plugin2
+  Formula plugin3
+  THMBailoutBase thmbailout
+  int i
+default:
+  title = "THMSwitchFuncInterlace"
+	rating = recommended
+
+  bool param adjustjulia
+    caption="Adjust Julia mode"
+    default=false
+    hint="Fractals that have a start value different \
+          to pixel as e.g. Mandelbrot need this option \
+          to calculate the correct julia fractal."
+  endparam
+  THMBailoutBase param bailoutbase
+    caption="Divergent Bailout"
+    default=THMBailoutDivergent
+  endparam
+
+  bool param switch1
+    caption="Use Formula 1"
+    default=true
+  endparam
+  int param iter1
+    caption="Iterations1"
+    default=1
+    visible=@switch1==true
+  endparam
+  bool param switch2
+    caption="Use Formula 2"
+    default=true
+  endparam
+  int param iter2
+    caption="Iterations2"
+    default=1
+    visible=@switch2==true
+  endparam
+  bool param switch3
+    caption="Use Formula 3"
+    default=false
+  endparam
+  int param iter3
+    caption="Iterations3"
+    default=1
+    visible=@switch3==true
+  endparam
+  Formula param classplugin1
+    caption = "Formula plug-In1"
+    default = THMSwitchMandelbrot
+  endparam
+
+  Formula param classinterplugin
+    caption = "Formula plug-In2"
+    default =  THMSwitchMandelbrot
+  endparam
+
+  Formula param classplugin3
+    caption = "Formula plug-In3"
+    default =  THMSwitchMandelbrot
+    visible=@switch3==true
+  endparam
+}
+
+class THMSwitchTransform(THMSwitchBase) {
+public:
+  import "Common.ulb"
+;  import "Standard.ulb"
+  
+	func THMSwitchTransform(Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		ppret=new @ppreplugin(this)
+		pform=new @pplugin(this)
+		ppost=new @post(this)
+	endfunc
+
+  func SetSwitchmode(bool mode, complex value)
+	  THMSwitchBase.SetSwitchmode(mode,value)
+    if @ppreplugin==THMSwitchFormulaTransform
+      THMSwitchFormulaTransform(ppret).SetSwitchmode(mode, value)
+    endif
+    if @pplugin==THMSwitchBase
+      THMSwitchBase(pform).SetSwitchmode(mode, value)
+    endif
+    if @post==THMSwitchFormulaTransform
+      THMSwitchFormulaTransform(ppost).SetSwitchmode(mode, value)
+    endif
+  endfunc
+
+  complex func Init(complex pz)
+    startz=pz
+    ppret.Init(pz)
+    ppost.Init(pz)
+    ;UF #Pixel for correct Julia mapping required
+    if @iterinit
+      pz=ppret.Iterate(thmPixel);Initmodus
+    else
+      pz=thmPixel
+    endif
+    if @pplugin==THMSwitchBase
+      THMSwitchBase(pform).setPixel(pz) ;Formulas thmPixel is now #Pixel
+    endif
+    if isJulia
+      pz=pform.Init(startz)
+    else
+      pz=pform.Init(pz)
+    endif
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    if @iterinit
+      pz=ppost.Iterate(pform.Iterate(pz)) ;Initmodus
+    else
+      pz=ppost.Iterate(pform.Iterate(ppret.Iterate(pz))) ;Iteratemodus(as mmf)
+    endif
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+		return pform.IsBailedOut(pz)
+	endfunc
+	
+private:
+   Formula pform       ;formula plugin
+   UserTransform ppret ;pretransform plugin
+   UserTransform ppost ; posttransform plugin
+default:
+  title = "TswTransform"
+  rating = recommended
+
+  bool param iterinit
+    caption="Standard Mode"
+    default=false
+    hint="This mode is needed for transformations from \
+          Standard.ulb, dmj5.ulb ,reb.ulb. If this option is \
+          off these transformtions works different. \
+          For programmers: \
+          Standard Mode=true means transformations Iterate function \
+          is excuted in the Init function from TswTransform. \
+          Standard Mode=false means transformations iterate function \
+          is excuted in the Iterate function from TswTransform."
+  endparam
+
+  UserTransform param ppreplugin
+    caption = "Pre Transform"
+    default = NullTransform
+    expanded = false
+    hint = "Transformation before Formula"
+  endparam
+	
+  Formula param pplugin
+    caption = "Formula"
+    default = THMSwitchMandelbrot
+  endparam
+	
+  UserTransform param post
+    caption = "Post Transform"
+    default = NullTransform
+    expanded = false
+    hint = "Transformation after Formula"
+  endparam
+}
+
+
+class THMSwitchFormulaTransform(common.ulb:UserTransform) {
+; Use a formula as a transform operation
+; Can be used by THMSwitchTransform
+public:
+	;import "common.ulb"
+	import "Standard.ulb"
+	
+	func THMSwitchFormulaTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		plugin = new @pplugin(this)
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+    if @pplugin==THMSwitchBase
+      THMSwitchBase(plugin).SetSwitchmode(mode, value)
+    endif
+  endfunc
+  
+  func Init(complex pz)
+		plugin.Init(pz)
+  endfunc
+
+	complex func Iterate(complex pz)
+    if @isLoopMode
+      return repeatIterate(pz)
+		else
+		  return plugin.Iterate(pz)
+		endif
+	endfunc
+;Todo: Bailout Plugin
+  complex func repeatIterate(complex pz)
+    int i = @count
+    While (i > 0 && |pz| <= @loopbail)
+      pz=plugin.Iterate(pz)
+      i = i - 1
+    Endwhile
+    return pz
+  endfunc
+
+private:
+  Formula plugin
+
+default:
+	title = "TswFormulaTransform"
+  bool param isLoopMode
+    caption="Iteration Mode"
+    default=false
+    hint="Additional options to iterating the formula. \
+          If not set the formula will be iterated only \
+          once."
+  endparam
+  
+  int param count
+    caption="Iterations"
+    default=2
+    min=0
+    visible=@isLoopMode
+    hint="Number of times the formula is iterated. \
+          The higher the value the more the shape \
+          of the plugged in formula will dominate \
+          and calculation time will also increase."
+  endparam
+  
+  float param loopbail
+    caption="Bailout"
+    default=100
+    visible=@isLoopMode
+  endparam
+  
+	Formula param pplugin
+	  caption = "Formula"
+	  default = THMSwitchMandelbrot
+	  hint = "This is the formula used as a transformation"
+  endparam
+}
+
+class THMSwitchTransformFormulas(THMSwitchTransform) {
+;This class makes it easier to use a formula as a
+;transformation for another formula. The class
+;THMSwitchFormulaTransform is already plugged in and
+;ready for use.
+;The alternative is to use the THMSwitchTransform class
+;together with the THMSwitchFormulaTransform plugin
+public:
+
+	func THMSwitchTransformFormulas(Generic pparent)
+		THMSwitchTransform.THMSwitchTransform(pparent)
+	endfunc
+
+default:
+  title = "TswTransformFormulas"
+  rating = recommended
+
+  bool param iterinit
+    caption="Standard Mode"
+    default=false
+    hint="This mode is needed for transformations from \
+          Standard.ulb, dmj5.ulb ,reb.ulb. If this option is \
+          off these transformtions works different. \
+          For programmers: \
+          Standard Mode=true means transformations Iterate function \
+          is excuted in the Init function from TswTransform. \
+          Standard Mode=false means transformations iterate function \
+          is excuted in the Iterate function from TswTransform."
+  endparam
+	
+  heading
+		caption="Pre-transform formula"
+  endheading
+	UserTransform param ppreplugin
+    selectable = false
+    default = THMSwitchFormulaTransform
+  endparam
+
+  heading
+		caption="Transformed Formula"
+  endheading
+  Formula param pplugin
+    caption = "Formula"
+    default = THMSwitchMandelbrot
+  endparam
+  UserTransform param post
+    caption = "Post Transform"
+    default = NullTransform
+    expanded = false
+    hint = "Transformation after Formula"
+  endparam
+}
+
+class THMLambdaTransform(common.ulb:UserTransform) {
+;Applies the formula lambda as a transformation.
+;This is a plugin for TswTransform and work best
+;with Standard Mode on
+public:
+import "common.ulb"
+
+	func THMLambdaTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+  func Init(complex pz)
+    tz=(0.5,0)
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=@fn2(pz)
+    tz=tz*pz*(1-pz) ;Lambda
+    return @fn1(tz)*@p1+@p2
+  endfunc
+private:
+  complex pix
+  complex tz
+default:
+  title="THMLambdaMapping"
+  func fn1
+    caption="fn(z)"
+    default=ident()
+  endfunc
+
+  func fn2
+    caption="fn(z2)"
+    default=ident()
+  endfunc
+
+  complex param p1
+    caption="factor"
+    default=1
+  endparam
+
+  complex param p2
+    caption="offset"
+    default=0
+  endparam
+}
+
+class THMFunTransform(common.ulb:UserTransform) {
+;This is a plugin for TswTransform
+;Inspired by the formulas in inv.ufm
+public:
+import "common.ulb"
+
+	func THMFunTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+  func Init(complex pz)
+    c=pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    return @fn1(@fn2(pz^@p2))*@p1+(c*@p3)
+  endfunc
+private:
+  complex c
+default:
+  title="THMFunMapping"
+  func fn1
+    caption="fn(fn2)"
+    default=ident()
+  endfunc
+
+  func fn2
+    caption="fn(z)"
+    default=log()
+  endfunc
+
+  complex param p1
+    caption="factor"
+    default=0.2
+  endparam
+
+  complex param p2
+    caption="power"
+    default=4
+  endparam
+
+  complex param p3
+    caption="c*p3"
+    default=0
+  endparam
+}
+
+class THMTalisTransform(common.ulb:UserTransform) {
+;Applies a variation of talis as a transformation.
+public:
+import "common.ulb"
+
+	func THMTalisTransform(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+  complex func Iterate(complex pz)
+    float t=@p1*atan2(pz)            ;angle
+    complex rot=cos(t)+flip(sin(t))  ;rotation vector
+    pz=@fn1(log(abs(pz)))*rot        ;Talis
+    return pz
+  endfunc
+default:
+  title="THMTalisTransform"
+  func fn1
+    caption="Talis func"
+    default=ident()
+  endfunc
+
+  float param p1
+    caption="Rotation factor"
+    default=0
+  endparam
+}
+
+
+class THMBailoutBase(common.ulb:Generic) {
+; Base Class for Bailout plug-ins
+; This class should be overwritten
+public:
+  ;import "common.ulb"
+
+	func THMBailoutBase(Generic pparent)
+		Generic.Generic(pparent)
+	endfunc
+
+   complex func Init(complex pz)
+ 	  return pz
+   endfunc
+
+   complex func Iterate(complex pz)
+ 	  return pz
+   endfunc
+
+   bool func IsBailedOut(complex pz)
+     return true
+   endfunc	
+}
+
+class THMBailoutDivergent(THMBailoutBase) {
+; Class for DivergentBailout method
+; This class can be plugged in by every Class that
+; has THMBailoutBase Parameter
+public:
+
+	func THMBailoutDivergent(Generic pparent)
+		THMBailoutBase.THMBailoutBase(pparent)
+	endfunc
+
+  bool func IsBailedOut(complex pz)
+    return |pz|>@p_bailout
+  endfunc	
+
+default:
+  title="THMBailoutDivergent"
+  float param p_bailout ; Overrides p_bailout from Formula
+    caption = "Bailout value"
+    default = 25
+    hint = "This bailout overrides the bailouts from all the \
+            formulas below. Hence you need only 1 bailout formula."
+  endparam
+}
+
+class THMBailoutConvergent(THMBailoutBase) {
+; Class for ConvergentBailout method
+; This class can be plugged in by every Class that
+; has THMBailoutBase Parameter
+public:
+  import "common.ulb"
+
+	func THMBailoutDivergent(Generic pparent)
+		THMBailoutBase.THMBailoutBase(pparent)
+	endfunc
+
+  complex func Init(complex pz)
+ 	  zold=pz
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+ 	  zold=pz
+ 	  return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return |pz-zold| < @p_bailout
+  endfunc	
+
+protected:
+  complex zold
+default:
+  title="THMBailoutConvergent"
+  float param p_bailout ; Overrides p_bailout from Formula
+    caption = "Bailout value"
+    default = 1.0e-20
+    hint = "This bailout overrides the bailouts from all the \
+            formulas below. Hence you need only 1 bailout formula."
+  endparam
+}
+
+class THMBailoutA115(THMBailoutBase) {
+; Class for Bailout method taken from formula
+; thm.ufm/a115
+; This class can be plugged in by every Class that
+; has THMBailoutBase Parameter
+public:
+  import "common.ulb"
+
+	func THMBailoutA115(Generic pparent)
+		THMBailoutBase.THMBailoutBase(pparent)
+	endfunc
+
+  complex func Init(complex pz)
+ 	  zold=pz
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+ 	  zold=pz
+ 	  return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !((|pz-zold|>1/@p_bailout)&&(|pz|<@p_bailout))
+  endfunc	
+
+protected:
+  complex zold
+default:
+  title="THMBailoutA115"
+  float param p_bailout ; Overrides p_bailout from Formula
+    caption = "Bailout value"
+    default = 50
+    hint = "This bailout overrides the bailouts from the \
+            formulas."
+  endparam
+}
+
+;###################################
+;#          Formulas               #
+;###################################
+
+class THMSwitchMandelbrot(THMSwitchBase) {
+;From the father of fractals:
+;http://de.wikipedia.org/wiki/Benoît_Mandelbrot
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+;     if @autostart
+;       return pz
+;     endif
+    if isJulia==true
+      return pz
+    else
+      thmPixel=pz
+      if @autostart
+        return pz
+      else
+        return @start ;Pertubation in Mandelmode only
+      endif
+    endif
+  endfunc
+
+  complex func Iterate(complex pz)
+    return pz^@p_power + thmPixel
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex iz
+default:
+  title = "thmSwitchMandelbrot"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 40
+    min = 0
+    exponential = true
+  endparam
+  bool param autostart
+    caption="Autostart"
+    default=true
+  endparam
+  param start
+    caption = "Starting point"
+    default = (0,0)
+    visible = !@autostart
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+  endparam
+}
+
+class THMSwitchHoffman (THMSwitchBase) {
+; Formula described by Loren Hoffman
+; f(z)=cze^z
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    return @fn2(@fn1(thmPixel^@p_power)*pz*@fn3(exp(pz)))+@scale
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+default:
+  title = "THMSwitchHoffman"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 40
+    min = 0
+    exponential = true
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (1,0)
+  endparam
+  param scale
+    caption = "TweakZ"
+    default = 0.0
+  endparam
+  func fn1
+    caption="fnPixel"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fnZ"
+    default = ident()
+  endfunc
+  func fn3
+    caption="fnExp"
+    default = ident()
+  endfunc
+}
+
+class TSwCGreenNewton(THMSwitchBase) {
+;Original author: Chris Green
+;Found in orgform.zip/FrmTutor.frm
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+;    c=@fn3(thmPixel)
+    return pz
+  endfunc
+  
+  complex func Iterate(complex pz)
+    c=@fn3(thmPixel)
+    z1=@fn1(pz)^@p_power
+    z2=sin(pz)+@fn4(z1)-@fn2(pz)+c
+    return pz-@p1*z2/(cos(pz)+z1)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(@p_bailout<|z2|)
+  endfunc
+private:
+  complex c
+  complex z1
+  complex z2
+default:
+  title = "TSwCGreenNewton"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 0.0001
+    exponential = true
+  endparam
+  param p1
+    caption = "Main Factor"
+    default = (1.4,0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (1,0)
+  endparam
+  func fn3
+    caption="fnPixel"
+    default = ident()
+  endfunc
+  func fn4
+    caption="fn(z1)"
+    default = ident()
+  endfunc
+  func fn1
+    caption="fn(za)"
+    default = exp()
+  endfunc
+  func fn2
+    caption="fn(zb)"
+    default = ident()
+  endfunc
+}
+
+class THMSwitchSpider(THMSwitchBase) {
+; Original formula by Jon Horner
+; Extended a little bit to make more variations
+; Default values show the original fractal
+public:
+   complex func Init(complex pz)
+      return THMSwitchBase.Init(pz) ;set thmpixel
+   endfunc
+
+  complex func Iterate(complex pz)
+    pz=@fn1(pz)^@fn3(@p_power)+ @fn2(thmPixel)
+    thmPixel=thmPixel*@sparam+(pz*@p1)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+default:
+  title = "thmSwitchSpider"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 40
+    min = 0
+    exponential = true
+  endparam
+  param sparam
+    caption = "Tweaker"
+    default = (0.5,0)
+  endparam
+  param p1
+    caption = "Faktor z"
+    default = (1.0,0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "zPower"
+    default = (2,0)
+  endparam
+  func fn1
+    caption="fn(z)"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn(pixel)"
+    default = ident()
+  endfunc
+  func fn3
+    caption="fn(Power)"
+    default = ident()
+  endfunc
+}
+
+class THMSwitchMandelCake(THMSwitchBase) {
+; http://www.lifesmith.com/formulas.html
+; Number 35
+public:
+  complex func Init(complex pz)
+    ;thmPixel=pz
+    return THMSwitchBase.Init(pz)
+  endfunc
+
+  complex func Iterate(complex pz)
+    c=thmPixel/@scale
+    return @fn1(c^@p_power)*(@fn2(pz) + @fn3(pz))
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+  
+default:
+  title = "thmSwitchMandelCake"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 40
+    min = 0
+    exponential = true
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (1,0)
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam
+  func fn1
+    caption="func1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="func2"
+    default = sin()
+  endfunc
+  func fn3
+    caption="func3"
+    default = cos()
+  endfunc
+}
+
+
+class THMSwitchNewton(THMSwitchBase) {
+; This class is the base class for THMSwitchNewton101
+; and make sure parameters based on this class before
+; 10.19.2010 will still work.
+
+; Not recommended for direct use.
+
+; Variation of Freeware Tiera-Zone
+; Formel Number 40
+public:
+  complex func Init(complex pz)
+   pz=THMSwitchBase.Init(pz)
+	 if !isJulia
+	   thmPixel=pz+1.0
+	 endif
+   return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    c=thmPixel
+    zold=pz
+    pw=@p_power
+    pz=@fn1(pz)-(@fn2(pz)^pw*c+@scale)/((pw-1)*@fn3(pz)^(pw-1)*c*@ff)+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return |pz-zold| < @p_bailout
+  endfunc
+  complex zold
+
+default:
+;  title = "thmSwitchNewton"
+  rating=notRecommended
+  int param version
+    default=100
+    visible=@version<101
+    enabled=false
+    hint=" This Version of THMSwitchNewton serves only as a \
+           guarantee that your parameters created before \
+           10.19.2010 will still function. \
+           For new fractals please use THMSwitchNewton101 instead"
+  endparam
+  bool param zIsPixel
+    caption="zIsPixel"
+    default=false
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1E-2
+    min = 0
+    exponential = true
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (3,0)
+  endparam
+  param scale
+    caption = "Scale"
+    default = 1.0
+  endparam
+  param ff
+    caption = "FunFactor"
+    default = (1,0)
+  endparam
+  func fn1
+    caption="func1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="func2"
+    default = ident()
+  endfunc
+  func fn3
+    caption="func3"
+    default = ident()
+  endfunc
+}
+
+class THMSwitchNewton101(THMSwitchNewton) {
+
+; Variation of Freeware Tiera-Zone
+; Formel Number 40
+public:
+  complex func Init(complex pz)
+   pz=THMSwitchBase.Init(pz)
+    if !isJulia
+      if @zIsPixel
+        return pz
+      else
+        return 1.0
+      endif
+	 else
+	   return pz
+   endif
+  endfunc
+
+default:
+  title="THMSwitchNewton101"
+  int param version
+    default=101
+    visible=false
+  endparam
+  
+}
+
+class THMSwitchSterling53(THMSwitchBase) {
+;Migrated from the source of Ammar Muqaddas
+;found in mmf.ufm
+public:
+
+  complex func Iterate(complex pz)
+    zold=pz
+    z2 = zold^2
+	  return  (zold-(zold^3*@fn1(zold)-z2*@fn2(zold)*thmPixel-1)/\
+            (3*z2*@fn3(zold)-2*zold*@fn4(zold)*thmPixel) )
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !((|pz-zold|>1/@p_bailout)&&(|pz|<@p_bailout))
+  endfunc
+
+private:
+complex zold
+
+default:
+  title = "THMSwitchSterling53"
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+    visible=false
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1E20
+  endparam
+  func fn1
+    caption="func1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="func2"
+    default = sin()
+  endfunc
+  func fn3
+    caption="func3"
+    default = ident()
+  endfunc
+  func fn4
+    caption="func4"
+    default = ident()
+  endfunc
+
+}
+
+
+class THMSwitchBoniecki1(THMSwitchBase) {
+;This formula based on those created by
+;Tad Boniecki for Stephen Ferguson's Sterling fractal program.
+;The original can be found at
+;http://www.soler7.com/Fractals/Sterling2Formulae.html
+public:
+
+  complex func Iterate(complex pz)
+	 zold = pz
+	 return pz - (@fn1(pz) * @fn2(pz)- @fn3(pz))/ (pz * (pz * @fn4(pz) - 2)) * thmPixel	
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|zold-pz|>@p_bailout)
+  endfunc
+
+private:
+complex zold
+
+default:
+  title = "TSwBoniecki1"
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (2,0)
+    visible=false
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 0.01
+  endparam
+  func fn1
+    caption="func1"
+    default = sqr()
+  endfunc
+  func fn2
+    caption="func2"
+    default = log()
+  endfunc
+  func fn3
+    caption="func3"
+    default = atan()
+  endfunc
+  func fn4
+    caption="func4"
+    default = cos()
+  endfunc
+}
+
+class THMSwitchA115(THMSwitchBase) {
+;from me:)
+public:
+
+  complex func Iterate(complex pz)
+    zo=pz
+    return (@fn1(@fn2(zo*thmPixel)^@p2)^@p1 / \
+            @fn3(@fn4(zo*thmPixel)^@p4)^@p3)* thmPixel
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !((|pz-zo|>1/@p_bailout)&&(|pz|<@p_bailout))
+  endfunc
+  
+private:
+  complex zo
+
+default:
+  title = "THMSwitchA115"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 50
+    ;min = 1.0
+    ;exponential = true
+  endparam
+  func fn1
+    caption="func1"
+    default = sin()
+  endfunc
+  func fn2
+    caption="func2"
+    default = asin()
+  endfunc
+  func fn3
+    caption="func3"
+    default = sin()
+  endfunc
+  func fn4
+    caption="func4"
+    default = sqr()
+  endfunc
+  float param p1
+    caption="power1"
+    default=0
+  endparam
+  float param p2
+    caption="power2"
+    default=1
+  endparam
+  float param p3
+    caption="power3"
+    default=1
+  endparam
+  float param p4
+    caption="power4"
+    default=1
+  endparam
+}
+
+class THMSwitchGnarly(THMSwitchBase) {
+;Clifford Pickovers Popcorn formula modified
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+    x = real(pz)
+    y = imag(pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    xx = x
+    zo=pz
+    rz=real(pz)
+    ri=imag(pz)
+    x = x + @stepx * @fn1(y + rz+ @fn2(@qx * (y + @fn3(@qy * y))))
+    y = y + @stepy * @fn1(xx + ri + @fn2(@qx * (xx + @fn3(@qy * xx))))
+    return x + @fn4(y)+@fn5(thmPixel)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !((|pz-zo|>1/@p_bailout)&&(|pz|<@p_bailout))
+  endfunc
+private:
+  complex zo
+  complex x
+  complex y
+  complex hx
+  complex hy
+default:
+  title = "thmSwitchGnarly"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10
+    ;min = 1.0
+    ;exponential = true
+  endparam
+  heading
+    caption="functions"
+  endheading
+  func fn1
+    caption="func1"
+    default = sin()
+  endfunc
+  func fn2
+    caption="func2"
+    default = sin()
+  endfunc
+  func fn3
+    caption="func3"
+    default = sin()
+  endfunc
+  func fn4
+    caption="fnY"
+    default = flip()
+  endfunc
+  func fn5
+    caption="fnPixel"
+    default = ident()
+  endfunc
+  heading
+    caption="tweaker"
+  endheading
+  param stepx
+    caption="Stepx"
+    default=0.5
+  endparam
+  param stepy
+    caption="Stepy"
+    default=0.5
+  endparam
+  param qx
+    caption="qx"
+    default=2.5
+  endparam
+  param qy
+    caption="qy"
+    default=2.5
+  endparam
+}
+
+
+class THMSwitchA110(THMSwitchBase) {
+;From me:-)Tweaking allowed (in your own formula file)
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+    c=thmPixel
+    x=c
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    x=@fn3(pz^@pwx*c)+c
+    pz=@fn1(pz*(x*@p2)-c) / @fn2(c+pz^@pwz) -(c*@p1)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex x
+  complex c
+default:
+  title = "thmSwitchA110"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+  param p1
+    caption = "Faktor c"
+    default = 2.0
+  endparam
+  param p2
+    caption = "Faktor x"
+    default = 1.0
+  endparam
+  param pwz
+    caption = "Power1"
+    default = 2.0
+  endparam
+  param pwx
+    caption = "Power2"
+    default = 2.0
+  endparam
+  func fn1
+    caption="func1"
+    default = sin()
+  endfunc
+  func fn2
+    caption="func2"
+    default = sqr()
+  endfunc
+  func fn3
+    caption="func3"
+    default = sqr()
+  endfunc
+}
+
+class THMSwitchTalis(THMSwitchBase) {
+;Found in FractalExplorer
+;Works best with Inside Coloring. Try statistic in lkm.ucl
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+		return pz
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=@fn1(abs(pz))
+    pz=@p2*pz^@pow1/(@p1+pz)+@fn2(thmPixel)^@pow2
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+default:
+  title = "thmSwitchTalis"
+  heading
+    text = "z=p2*z^power1 / (p1+z) + fn2(c)^power2"
+  endheading
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 100000
+    min = 0
+    exponential = true
+  endparam
+  complex param p1
+    caption="p1"
+    default=(1,0)
+  endparam
+  complex param p2
+    caption="p2*z"
+    default=(1,0)
+  endparam
+  complex param pow1
+    caption="power1"
+    default=(2,0)
+  endparam
+  complex param pow2
+    caption="power2"
+    default=(1,0)
+  endparam
+
+  func fn1
+    caption="fn1(abs(z))"
+    default = acosh()
+  endfunc
+	func fn2
+    caption="fn2(c)"
+    default = ident()
+  endfunc
+
+}
+
+class THMSwitchTalisMandel(THMSwitchBase) {
+;Mandelbrot enhanced with talis function
+;Works best with Inside Coloring. Try statistic in lkm.ucl
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+		return pz
+	endfunc
+
+  complex func Iterate(complex pz)
+    float t=@p1*atan2(thmPixel)      ;angle
+    complex rot=cos(t)+flip(sin(t))  ;rotation vector
+    ;thmPixel=thmPixel*rot            ;rotate pixel
+    pz=(@fn1(log(abs(pz)))^@pow1)*rot;      ;Talis
+    pz=pz^@pow2+@fn2(thmPixel)       ;Mandel
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+default:
+  title = "thmSwitchTalisMandel"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 100000
+    min = 0
+    exponential = true
+  endparam
+  float param p1
+    caption="Talisrotate"
+    default=0.0
+  endparam
+  complex param p2
+    visible=false
+    caption="p2*z"
+    default=(1,0)
+  endparam
+  complex param pow1
+    caption="powTalis"
+    default=(1,0)
+  endparam
+  complex param pow2
+    caption="powMandel"
+    default=(2,0)
+  endparam
+
+  func fn1
+    caption="TalisFunction"
+    default = ident()
+  endfunc
+	func fn2
+    caption="PixelFunction"
+    default = ident()
+  endfunc
+
+}
+
+class THMSwitchKaliDucky(THMSwitchBase) {
+;Found at http://www.fractalforums.com/new-theories-and-research/very-simple-formula-for-fractal-patterns/msg32228/#msg32228
+;Original function: z=abs(log(z*c+1))+1/abs(log(z*c+1))
+;Implemented and published with kindly permission of:
+;http://fractkali.deviantart.com/
+;Works best with Inside Coloring. Try statistic in lkm.ucl
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+		return pz
+	endfunc
+
+  complex func Iterate(complex pz)
+		pz=@fn1(@fn2(pz^@pow1*thmPixel+@p1))+@p2/@fn3(@fn4(pz^@pow2*thmPixel+@p3))
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+default:
+	#maxiter = 20
+  title = "thmSwitchKaliDucky"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+  complex param p1
+    caption="f1(f2(z*c+p1)"
+    default=(0,0)
+  endparam
+  complex param p2
+    caption="f1()+p2"
+    default=(0,0)
+  endparam
+  complex param p3
+    caption="f1()/f3(f4(z+c+p3)"
+    default=(0,0)
+  endparam
+  complex param pow1
+    caption="power z"
+    default=(1,0)
+  endparam
+  complex param pow2
+    caption="power 1/z"
+    default=(1,0)
+  endparam
+
+  heading
+		caption="Functions"
+  endheading
+
+  func fn1
+    caption="fn1"
+    default = abs()
+  endfunc
+	func fn2
+    caption="fn2"
+    default = log()
+  endfunc
+  func fn3
+    caption="fn3"
+    default = abs()
+  endfunc
+	func fn4
+    caption="fn4"
+    default = log()
+  endfunc
+
+}
+
+class THMSwitchducky(THMSwitchBase) {
+;G' = ( X + G^2) / 2G    Newtons Root finding method
+public:
+  complex func Init(complex pz)
+        temp=pz
+        return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+  complex func Iterate(complex pz)
+        c=thmpixel
+        c=@fn3(c)
+        oz=temp
+        pz=@fn2((oz*@p2)+c^@p_power/pz)+1/c
+        pz=@p1*@fn1(pz)
+        temp=pz
+        return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+    complex temp
+default:
+  title = "thmSwitchducky"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+
+  param p1
+    caption = "DuckyTweak"
+    default = (1.0,0)
+  endparam
+  param p2
+    caption = "z Tweak"
+    default = (0.0,0.0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "zPower"
+    default = (2,0)
+  endparam
+
+  func fn1
+    caption="fn(z)"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fnDucky"
+    default = abs()
+  endfunc
+  func fn3
+    caption="fnPixel"
+    default = ident()
+  endfunc
+}
+
+class THMConjugationFold(common.ulb:UserTransform) {
+
+public:
+import "common.ulb"
+
+	func THMConjugationFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		;rot=(0,1)^(@angle/90.0) ;Mark Townsend
+		rot=exp(1i*#pi*@angle/180.0)
+	endfunc
+	
+	func Init(complex pz)
+		UserTransform.Init(pz)
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot+@offset ;rotate and move the z-plane
+    if (imag(pz)>0)
+      pz=conj(pz)
+    endif
+    return pz
+  endfunc
+private:
+  complex rot
+  complex vz
+default:
+  title="ConjugationFold"
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  param offset
+    caption = "offset"
+    default = (0,0)
+  endparam
+
+}
+
+class THMInvEllipseFold(common.ulb:UserTransform) {
+;Based on Kalis Inverse Circle Fold
+;http://www.fractalforums.com/new-theories-and-research/ducky-fractals-with-conjugate-only/msg45688/#msg45688
+;Ellipse:
+;http://en.wikipedia.org/wiki/Ellipse#Equations
+public:
+import "common.ulb"
+
+	func THMInvEllipseFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+	func Init(complex pz)
+		UserTransform.Init(pz)
+		rot=(0,1)^(@angle/90.0)
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot                           ;rotate pz
+    pz=real(pz)/@a+flip(imag(pz)/@b)    ;Center equation of ellipse
+    pz=pz^@p1
+    smz=|pz|                            ;Kalis Inverse Circle Fold {
+    if smz<@k
+      pz=pz/smz*@k
+    endif
+    pz=pz*@m+@o                         ; }
+    return pz
+  endfunc
+  private:
+    complex rot
+default:
+  title="InverseEllipseFold"
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  float param a
+    caption = "Radius a"
+    default = 1.0
+  endparam
+  float param b
+    caption = "Radius b"
+    default = 1.0
+  endparam
+  float param k
+    caption = "x/a+y/b"
+    default = 1.0
+  endparam
+  param p1
+    caption = "(x/a+y/b)^p"
+    default = (1,0)
+  endparam
+  param m
+    caption = "faktor z"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset z"
+    default = (0,0)
+  endparam
+}
+
+class THMKalisInvCircleFold(common.ulb:UserTransform) {
+;Kalis invers rot. fold
+; if (|z|<1)
+;   z=z/|z|
+; endif
+; z=z*m+c
+public:
+import "common.ulb"
+
+	func THMKalisInvCircleFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+	func Init(complex pz)
+		UserTransform.Init(pz)
+	endfunc
+
+  complex func Iterate(complex pz)
+    fpz=|pz|
+    if fpz<@radius
+      pz=pz/fpz*@radius
+    endif
+    pz=pz*@m+@o
+    return pz
+  endfunc
+default:
+  title="KalisInvCircleFold"
+  param m
+    caption = "faktor"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset"
+    default = (0,0)
+  endparam
+  float param radius
+    caption = "radius"
+    default = 1
+  endparam
+
+}
+
+class THMAbsFnSum(common.ulb:UserTransform) {
+
+public:
+import "common.ulb"
+
+	func THMAbsFnSum(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+		rot=(0,1)^(@angle/90.0) ;Mark Townsend
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot
+    pz=pz/@scale
+    pz=abs(@fn1(pz)+@fn2(pz))
+    return pz
+  endfunc
+private:
+  complex rot
+default:
+  title="THMAbsFnSum"
+  float param scale
+    caption = "scale"
+    default = 1
+  endparam
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+
+}
+
+class THMKalisIterationFold(common.ulb:UserTransform) {
+;From Kali
+;http://www.fractalforums.com/new-theories-and-research/kaliset-plus-boxfold-nice-new-2d-fractal/30/
+public:
+import "common.ulb"
+
+	func THMKalisIterationFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+  complex func Iterate(complex pz)
+    int l=0 ;Iteration counter
+    complex t1=@t*@f   ;Translation and scaling of the fold
+    pz=pz+t1           ;Centering of the z plane
+    while l<@n         ;Kalis loop
+      l=l+1
+      pz=-abs(pz-t1)+t1
+      pz=-real(pz)+imag(pz)*1i
+      t1=t1*@f
+    endwhile
+    return pz
+  endfunc
+
+default:
+  title="KalisIterationFold"
+  int param n
+    caption="Iterations"
+    default=1
+  endparam
+  
+  float param f
+    caption="Fold scaling"
+    default=0.5
+  endparam
+
+  complex param t
+    caption="Fold translation"
+    default=(1.0,1.0)
+  endparam
+
+}
+
+class THMBumblebrot(thm.ulb:THMSwitchBase) {
+;http://www.fractalforums.com/index.php?topic=4881.msg40736#msg40736
+public:
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+    pz = @fn1(pz^@p_power) / @fn2(@f1+pz^@p2) + c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+default:
+  title = "ThmSwitchBumblebrot"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+  param p_power
+    caption = "z^power"
+    default = (2.0,0.0)
+  endparam
+  param p2
+    caption = "z^power2"
+    default = (1.0,0.0)
+  endparam
+  param f1
+    caption = "offset+z"
+    default = (1.0,0.0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+}
+
+
+class FunMandel (thm.ulb:THMSwitchBase) {
+;Based on Ronnie Jay's rjs.ufm/FunM formula
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+    pz=@fn1(abs(pz))^@power+c /@fn2(abs(pz))
+    if(@invert==true)
+      pz=1/pz
+    endif
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+  complex zabs
+default:
+  title = "ThmSwitchFunMandel"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+
+  bool param invert
+    caption="Z Reciproc"
+    default=false
+  endparam
+
+  func fn1
+    caption="func(abs(z))/x"
+    default=ident()
+  endfunc
+
+  func fn2
+    caption="x/func(abs(z))"
+    default=ident()
+  endfunc
+
+  param power
+    caption="z Power"
+    default=(1.0,0.0)
+  endparam
+}
+
+
+
+class THMSwitchducky3(thm.ulb:THMSwitchBase) {
+public:
+	complex func Init(complex pz)
+ 		c=@fn3(thmpixel)
+		return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+      pz=@fn1(@fn2(abs(@p1-c*pz-c*pz^@p2)))^@p_power
+		return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex temp
+	complex c
+default:
+  title = "thmSwitchducky3"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+
+  param p1
+    caption = "DuckyTweak"
+    default = (1.0,0.0)
+  endparam
+  param p2
+    caption = "z Power"
+    default = (2.0,0.0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (0.0,2.0)
+  endparam
+
+  func fn1
+    caption="fn(z)"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fnDucky"
+    default = log()
+  endfunc
+  func fn3
+    caption="fnPixel"
+    default = ident()
+  endfunc
+}
+
+class THMCircleFoldQ(common.ulb:UserTransform) {
+;http://www.fractalforums.com/index.php?topic=11439.msg46883#msg46883
+;It's the same as KalisOuterCircleFold
+;and OuterEllipseFold
+public:
+import "common.ulb"
+;return (normz > m_p1 ?
+;LongComplex((m_p0*m_p0*real(z))/normz, (m_p0*m_p0*imag(z))/normz) : z);
+	func THMCircleFoldQ(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		ut=new @pretransf(this)
+	endfunc
+	
+	func Init(complex pz)
+		UserTransform.Init(pz)
+    ut.init(pz)
+    z0=pz
+    mp1=@st
+    r=@radius
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=ut.iterate(pz)
+    complex normz=|pz|
+    complex q=normz/r
+    if q>r
+      pz=r*pz/normz*r
+    endif
+    pz=pz*@m+@o
+    return pz
+  endfunc
+private:
+  complex z0
+  complex r
+  complex mp1
+  UserTransform ut
+default:
+  title="CircleFoldQ"
+  UserTransform param pretransf
+    caption = "Pre Transform"
+    default = NullTransform
+    hint = "Additional transform can enhance possibilities"
+  endparam
+  param st
+    caption = "start"
+    default = (0.1,0)
+    visible=false
+  endparam
+  param c0
+    caption = "c"
+    default = (0.5,0)
+    visible=false
+  endparam
+  param m
+    caption = "faktor"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset"
+    default = (0,0)
+  endparam
+  float param radius
+    caption = "radius"
+    default = 1
+  endparam
+}
+
+class THMabsZCC(THMSwitchBase) {
+;Source:
+;http://softologyblog.wordpress.com/?s=ducks
+;z=abs(z)/c+c
+;best used with inside coloring
+public:
+	complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    return pz
+  endfunc
+
+	complex func Iterate(complex pz)
+;    pz=abs(@fn1(pz^@p_power))/@fn2(c)+c
+;    pz=abs(@fn1(pz^@p_power))/@fn2(c) + @fn3(c)
+    pz=abs(@fn1(pz^@p_power))/@fn2(c) + @fn3(c*@f0)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+default:
+  title = "THMAbsZCCDucky"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e12
+    min = 0
+    exponential = true
+    visible=false
+  endparam
+
+  param p_power ; Overrides p_power from Formula
+    caption = "Power1"
+    default = (1.0,0.0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+  func fn3
+    caption="fn3"
+    default = ident()
+  endfunc
+  float param f0
+    caption = "factor0"
+    default = 1.0
+  endparam
+}
+
+class THMKaliAbsZC1(thm.ulb:THMSwitchBase) {
+;Source:
+;http://www.fractalforums.com/new-theories-and-research/very-simple-formula-for-fractal-patterns/45/;Original term
+;z=abs(z)/abs(c)+c
+;best used with inside coloring
+public:
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+    pz=abs(@fn1(pz^@p_power))/abs(@fn2(c))+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+;    return !(|pz|<@p_bailout)
+    return false
+  endfunc
+private:
+	complex c
+default:
+  title = "KaliAbsZC1"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e12
+    min = 0
+    exponential = true
+    visible=false
+  endparam
+
+  param p_power ; Overrides p_power from Formula
+    caption = "Power1"
+    default = (1.0,0.0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+}
+
+class THMKaliNova(thm.ulb:THMSwitchBase) {
+;Source:
+;http://www.fractalforums.com/new-theories-and-research/a-new-look-into-escapetime-fractals-using-abs-and-inner-coloring/
+;Original term
+;pz = abs(pz-(pz^@p_power-1) / (@p2*pz^(@p2-1))+c)
+;best used with inside coloring
+public:
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+    pz = abs( pz- @fn1(pz^@p_power-1)  / @fn2(@p_power*pz^(@p_power-1)))  +c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+default:
+  title = "KaliNova"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e12
+    min = 0
+    exponential = true
+  endparam
+
+  param p_power ; Overrides p_power from Formula
+    caption = "Power1"
+    default = (2.0,0.0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+}
+
+class THMTriangleFold(common.ulb:UserTransform) {
+
+public:
+import "common.ulb"
+
+	func THMTriangleFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+;    rx=@klen/k1    ;ratio of original cathetus to z cathetus
+;    ry=@klen/k2
+;     mx=k1*rx *2  ;Mirror axis is hypothenuse
+;     my=k2*ry *2
+;      pz=mx+flip(my)
+  complex func Iterate(complex pz)
+    pz=abs(pz)     ;Only positive quadrant
+    k1=real(pz)    ;horizontal cathetus
+    k2=imag(pz)    ;vertical cathetus
+    s=k1+k2        ;If sum of cathetus smaller than klen
+    if s<@klen    ;then point is inside Triangle
+      pz=k2+flip(k1) ;exchange real and imag
+    elseif s>@klen
+      m=k1^2+k2^2 ;Ballfold
+      k1=k1/m
+      k2=k2/m
+      pz=k1+flip(k2)
+    endif
+    return pz
+  endfunc
+
+default:
+  title="TriangleFold"
+  float param klen
+    caption="Cathetus"
+    default=1.0
+  endparam
+}
+
+class THMLifeSmith9(thm.ulb:THMSwitchBase) {
+public:
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+      pz=@fn1(pz^@p_power+1+c)/@fn2(pz^@p2-1-c)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex temp
+	complex c
+default:
+  title = "LifeSmith9"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+
+  param p_power ; Overrides p_power from Formula
+    caption = "Power1"
+    default = (1.0,0.0)
+  endparam
+  param p2
+    caption = "Power2"
+    default = (3.0,0.0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+}
+
+class THMMandelcc(thm.ulb:THMSwitchBase) {
+public:
+	complex func Init(complex pz)
+		pz=THMSwitchBase.Init(pz)
+    c=thmpixel
+    if !isjulia
+      pz=0
+    endif
+    return pz
+  endfunc
+
+	complex func Iterate(complex pz)
+    pz=pz^@p_power*c + c^@p2
+    return @fn1(pz*@a+@b)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "THMMandelcc"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+  param a
+    caption = "faktor a"
+    default = (1.0,0.0)
+  endparam
+  param b
+    caption = "Coeff. b"
+    default = (0.0,0.0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "zPower"
+    default = (2.0,0.0)
+  endparam
+  param p2
+    caption = "cPower"
+    default = (2.0,0.0)
+  endparam
+  func fn1
+    caption="fn(z)"
+    default = ident()
+  endfunc
+}
+
+class THMMandelDivZ(thm.ulb:THMSwitchBase) {
+public:
+	complex func Init(complex pz)
+		return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+	complex func Iterate(complex pz)
+      ;pz=@fn1(@fn2(abs(@p1-c*pz-c*pz^@p2)))^@p_power
+		  pz=(@a*pz^@p_power+@b) / (@c*pz^@p2+thmpixel)
+    return @fn1(pz)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+default:
+  title = "MandelDivZ"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e8
+    min = 0
+    exponential = true
+  endparam
+  param a
+    caption = "faktor a"
+    default = (1.0,0.0)
+  endparam
+  param b
+    caption = "Coeff. b"
+    default = (0.0,0.0)
+  endparam
+  param c
+    caption = "faktor c"
+    default = (1.0,0.0)
+  endparam
+  param p_power ; Overrides p_power from Formula
+    caption = "Power"
+    default = (1.0,0.0)
+  endparam
+  param p2
+    caption = "c/Power"
+    default = (3.0,0.0)
+  endparam
+  func fn1
+    caption="fn(z)"
+    default = ident()
+  endfunc
+}
+
+class THMSaMMoebius(thm.ulb:THMSwitchBase) {
+;z = (a*z + b) / (c*z + d).
+;Source: http://www.fractalforums.com/mandelbrot-and-julia-set/dense-julia-sets-on-the-sphere/
+ public:
+	complex func Init(complex pz)
+		c=thmpixel
+    return THMSwitchBase.Init(pz) ;set thmpixel
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz^@p
+    return (@a*pz + @b) / (c*pz + @d)
+    ;return (@a*pz + c) / (@c*pz + @d)
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+default:
+  title = "SaMMoebius"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e12
+    min = 0
+  endparam
+  complex param a
+    caption = "a"
+    default = (1,0)
+  endparam
+  complex param b
+    caption = "b"
+    default = (0,0)
+    visible=false
+  endparam
+;   complex param c
+;     caption = "c"
+;     default = (0,0)
+;   endparam
+  complex param d
+    caption = "d"
+    default = (1,0)
+  endparam
+  complex param p
+    caption = "zpower"
+    default = (2,0)
+  endparam
+}
+
+class THMMirrorFold(common.ulb:UserTransform) {
+;Inspired by this thread
+;http://www.fractalforums.com/new-theories-and-research/folding-ifs-raytracing-and-continuity/
+public:
+import "common.ulb"
+
+	func THMMirrorFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		rectr=new @recursiont(this)
+	endfunc
+	
+	func Init(complex pz)
+    UserTransform.Init(pz)	
+    rectr.Init(pz)
+    i=@k+1
+  endfunc
+	
+  complex func Iterate(complex pz)
+    x=real(pz+@offset)
+    y=imag(pz+@offset)
+    if (x+y)<0
+      x1=x
+      x=-y
+      y=-x1
+    endif
+    if (x-y)>0
+      x1=x
+      x=y
+      y=x1
+    endif
+    pz=x+flip(y)
+    i=i-1
+    if i>0
+      pz=Iterate (rectr.Iterate(pz))
+    endif
+    return pz
+  endfunc
+private:
+  int i
+  UserTransform rectr ;transform plugin
+default:
+  title="MirrorFold"
+  param offset
+    caption="Offset z"
+    default=(0,0)
+  endparam
+
+  heading
+    caption = "Additional Transform"
+    expanded = false
+  endheading
+  int param k
+    caption="Iterations"
+    default=1
+    hint="How often the additional transformation iterated"
+  endparam
+
+  UserTransform param recursiont
+    caption = "Add Transform"
+    default = NullTransform
+    hint = "Additional transform can enhance possibilities"
+  endparam
+
+
+}
+
+class THMElem90InverseFoldIn(common.ulb:UserTransform) {
+;http://www.fractalforums.com/index.php?topic=11439.msg46883#msg46883
+;return (normz > m_p1 ? (m_p0*m_p0)/z : z);
+public:
+import "common.ulb"
+  complex func Iterate(complex pz)
+    float normz=|pz|
+    float mp0=@radius
+    float mp1=mp0*mp0
+    if normz>mp0
+      pz=mp0/pz
+    endif
+    pz=pz*@m+@o
+    return pz
+  endfunc
+default:
+  title="Elem90InversFoldIn"
+  param m
+    caption = "faktor"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset"
+    default = (0,0)
+  endparam
+  float param radius
+    caption = "radius"
+    default = 1
+  endparam
+
+}
+
+class MMFpi4+pi5-e6-mandelbrot(thm.ulb:THMSwitchBase) {
+ public:
+	complex func Init(complex pz)
+    THMSwitchBase.Init(pz) ;set thmpixel
+;		c=thmpixel
+		if isJulia==true
+      return pz
+    else
+      if @autostart
+        return pz
+      else
+        return @start ;Pertubation in Mandelmode only
+      endif
+    endif
+  endfunc
+
+  complex func Iterate(complex pz)
+     pz=pz^@power+pz^(@power-1)-thmpixel^(@power+1)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+default:
+  title = "MMFpi4+pi5-e6-mandelbrot"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1e12
+    min = 0
+  endparam
+  bool param autostart
+    caption="z=pixel"
+    default=true
+  endparam
+  complex param start
+    visible=@autostart==false
+    caption = "startZ"
+    default = (0,0)
+  endparam
+  complex param power
+    caption = "zpower"
+    default = (2,0)
+  endparam
+}
+
+class THMOuterEllipseFold(common.ulb:UserTransform) {
+;Based on Kalis Inverse Circle Fold
+;http://www.fractalforums.com/new-theories-and-research/ducky-fractals-with-conjugate-only/msg45688/#msg45688
+;Ellipse:
+;http://en.wikipedia.org/wiki/Ellipse#Equations
+public:
+import "common.ulb"
+
+	func THMOuterEllipseFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+	func Init(complex pz)
+		UserTransform.Init(pz)
+		rot=(0,1)^(@angle/90.0)
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot                           ;rotate pz
+    pz=real(pz)/@a+flip(imag(pz)/@b)    ;Center equation of ellipse
+    pz=pz^@p1
+    smz=|pz|                            ;Kalis Inverse Circle Fold {
+    if smz>@k
+      pz=pz/smz*@k
+    endif
+    pz=pz*@m+@o                         ; }
+    return pz
+  endfunc
+  private:
+    complex rot
+default:
+  title="OuterEllipseFold"
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  float param a
+    caption = "Radius a"
+    default = 1.0
+  endparam
+  float param b
+    caption = "Radius b"
+    default = 1.0
+  endparam
+  float param k
+    caption = "x/a+y/b"
+    default = 1.0
+  endparam
+  param p1
+    caption = "(x/a+y/b)^p"
+    default = (1,0)
+  endparam
+  param m
+    caption = "faktor z"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset z"
+    default = (0,0)
+  endparam
+}
+
+class THMKalisOuterCircleFold(common.ulb:UserTransform) {
+;Kalis invers rot. fold
+; if (|z|<1)  replaced with  if (|z|>1)
+;   z=z/|z|
+; endif
+; z=z*m+c
+public:
+import "common.ulb"
+  complex func Iterate(complex pz)
+    fpz=|pz|
+    if fpz>@radius
+      pz=pz/fpz*@radius
+    endif
+    pz=pz*@m+@o
+    return pz
+  endfunc
+default:
+  title="KalisOuterCircleFold"
+  param m
+    caption = "faktor"
+    default = (1,0)
+  endparam
+  param o
+    caption = "offset"
+    default = (0,0)
+  endparam
+  float param radius
+    caption = "radius"
+    default = 1
+  endparam
+
+}
+
+class THMRotationFold(common.ulb:UserTransform) {
+
+public:
+import "common.ulb"
+
+	func THMRotationFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+  complex func rotate(const complex p,const float a1)
+    float c=cabs(p)
+    float x=c*cos(a1)
+		float y=c*sin(a1)
+		return x+flip(y)
+  endfunc	
+
+  complex func Iterate(complex pz)
+		float a=atan2(pz)
+		if a<0
+      pz=rotate(pz,-a)
+    endif
+    return pz
+  endfunc
+
+default:
+  title="RotationFold"
+}
+
+class THMCircleFold(common.ulb:UserTransform) {
+;Inspiration from this thread:
+;http://fractkali.deviantart.com/art/Embrion-211943563
+public:
+import "common.ulb"
+
+	func THMCircleFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+	endfunc
+	
+;   complex func Iterate(complex pz)
+;     float mz=cabs(pz)   ; complex modulus
+;     if mz>@r          ; z outside circle
+;       pz=@r/pz        ; move z inside the circle
+;     endif
+;     return pz
+;   endfunc
+  complex func Iterate(complex pz)
+;     pz=abs(pz) ;Kalis Ballfold
+;     x=real(pz)
+;     y=imag(pz)
+;     m=x^2+y^2
+;     x=x/m
+;     y=y/m
+;     pz=x+flip(y)
+;Ballfold found here
+;http://www.fractalforums.com/programming/understanding-the-mandelbox-formula-(for-2d)/
+      pz=-abs(pz-2)+2
+      m=cabs(pz)
+      if m<@r
+        pz=pz/(@r)
+;      elseif m>1
+      elseif m<1
+        pz=pz/(m*m)
+      endif
+    return pz
+  endfunc
+
+default:
+  title="CircleFold"
+  float param r
+    caption="Radius"
+    default=1.0
+  endparam
+
+}
+
+class THMMetaAbsZ(thm.ulb:THMSwitchBase) {
+; Set z and c variable in equation z = z*z+c as
+; a result of a classplugin
+public:
+import "Standard.ulb"
+
+	func THMMetaAbsZ (Generic pparent)
+		THMSwitchBase.THMSwitchBase(pparent)
+		plugin1 = new @classplugin1(this)
+		plugin2 = new @classplugin2(this)
+		plugin3 = new @classplugin3(this)
+		thmbailout = new @bailoutbase(this)
+	endfunc
+
+	func SetSwitchmode(bool mode, complex value)
+	  THMSwitchBase.SetSwitchmode(mode,value)
+    if @classplugin1==THMSwitchBase
+      THMSwitchBase(plugin1).SetSwitchmode(mode, value)
+    endif
+    if @classplugin2==THMSwitchBase
+      THMSwitchBase(plugin2).SetSwitchmode(mode, value)
+    endif
+    if @classplugin3==THMSwitchBase
+      THMSwitchBase(plugin3).SetSwitchmode(mode, value)
+    endif
+	endfunc
+
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz)
+    pz=thmbailout.Init(pz)
+    c=thmpixel
+    pz=plugin1.Init(pz)
+    pz=plugin2.Init(pz)
+    pz=plugin3.Init(pz)
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=thmbailout.Iterate(pz)
+     pz=abs(plugin1.Iterate(pz^@p_power))/abs(plugin2.Iterate(c))+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return thmbailout.IsBailedOut(pz)
+  endfunc
+
+private:
+  Formula plugin1
+  Formula plugin2
+  Formula plugin3
+  THMBailoutBase thmbailout
+  complex c
+default:
+  title = "THMMetaAbsZ"
+	rating = recommended
+
+  THMBailoutBase param bailoutbase
+    caption="Divergent Bailout"
+    default=THMBailoutDivergent
+  endparam
+
+  Formula param classplugin1
+    caption = "Formula plug-In1"
+    default = THMSwitchMandelbrot
+  endparam
+
+  Formula param classplugin2
+    caption = "Formula plug-In2"
+    default =  THMSwitchMandelbrot
+  endparam
+
+  Formula param classplugin3
+    caption = "Formula plug-In3"
+    default =  THMSwitchMandelbrot
+    visible=false
+  endparam
+}
+
+class THMSwSmith8(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=(@fn1(pz)^@p1-@n1) * (@fn2(pz)^@p1+@n1) * (@fn3(pz)^@p2-@n1)+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+  complex z
+default:
+  title = "THMSwSmith8"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+
+  param p1
+    caption = "Power 1"
+    default = (1,0)
+  endparam
+  param p2
+    caption = "Power 2"
+    default = (2,0)
+  endparam
+
+  complex param n1
+    caption="factor 1"
+    default=(1,0)
+  endparam
+  func fn1
+    caption="fn1"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+  func fn3
+    caption="fn3"
+    default = ident()
+  endfunc
+}
+
+class THMSwBurningShip(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    c=thmpixel+@n1
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=abs(pz)^@p1 + c  ;Burning Ship
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "THMSwBurningShip"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+
+  param p1
+    caption = "Power 1"
+    default = (2,0)
+  endparam
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+}
+
+class THMSwV1Buffalo(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    c=thmpixel+@n1
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=abs(pz^@p1) + c ;Buffalo
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "THMSwV1Buffalo"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+  param p1
+    caption = "Power 1"
+    default = (2,0)
+  endparam
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+}
+
+class THMSwV2Buffalo(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    c=thmpixel+@n1
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=abs(pz^@p1-pz) + c ;Buffalo1
+    return pz
+  endfunc
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "THMSwV2Buffalo"
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+  param p1
+    caption = "Power 1"
+    default = (2,0)
+  endparam
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+}
+
+class THMSwV3Buffalo(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    c=thmpixel+@n1
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    w=abs(pz)
+    pz=w^@p1-w + c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+  complex w
+default:
+  title = "THMSwV3Buffalo"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 25
+    min = 0
+    exponential = true
+  endparam
+  param p1
+    caption = "Power 1"
+    default = (2,0)
+  endparam
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+}
+
+class THMSwPlusmandel(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel+@n1
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz^@p1 / (1+(pz^@p2)*@fz1)+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+private:
+  complex c
+default:
+  title = "THMSwPlusMandel"
+  heading
+    text = "z=z^p1/(1+(z^p2)*fz1)+c"
+  endheading
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1000
+    min = 4
+    ;exponential = true
+  endparam
+
+  complex param fz1
+    caption="fz1"
+    default=(0.01,-1)
+  endparam
+  param p1
+    caption = "Power p1"
+    default = (2,0)
+  endparam
+  param p2
+    caption = "Power p2"
+    default = (0,0)
+  endparam
+}
+
+class THMSwBenDucky(thm.ulb:THMSwitchBase) {
+;Formula by Ben Fisher ben.ufm/FviewExp
+;z=fn2(z+fn1(#pixel))^@power turned to
+;z=fn2(z+fn1(z+c))^@power + c
+;Tweaked by Thomas Michels
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel+@n1
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    z=pz
+    z=@fn2(z+@fn1(z+c*@fc1))^@p1 + c*@fc2
+    return z
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+private:
+  complex c
+  complex w
+  complex z
+default:
+  title = "THMSwBenDucky"
+
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1000
+    min = 100
+    ;exponential = true
+  endparam
+
+  complex param fc1
+    caption="z+c* fc1"
+    default=(0,0)
+  endparam
+  complex param fc2
+    caption="...+c* fc2"
+    default=(1,0)
+  endparam
+  param p1
+    caption = "Power 1"
+    default = (0,-2)
+  endparam
+  param p2
+    caption = "Power 2"
+    default = (1,0)
+    visible = false
+  endparam
+
+  func fn1
+    caption="fn(c)"
+    default = exp()
+  endfunc
+  func fn2
+    caption="fn(z)"
+    default = abs()
+  endfunc
+}
+
+class THMSwCDivZ(thm.ulb:THMSwitchBase) {
+
+;http://www.3d-meier.de/tut20/Seite1.html
+
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    pz=pz^(1/(2*@p2))  ;Try without it
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz^@p1 + c/pz^@p2
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+private:
+  complex c
+default:
+  title = "THMSwCDivZ"
+  heading
+    text = "z=z^p1 + c/z^p2"
+  endheading
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1000
+    min = 4
+    ;exponential = true
+  endparam
+
+  param p1
+    caption = "Power p1"
+    default = (-3,0)
+  endparam
+  param p2
+    caption = "Power p2"
+    default = (-3,0)
+  endparam
+}
+
+class THM160520Mandel(thm.ulb:THMSwitchBase) {
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel+@n1
+    return pz
+  endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz^@p1 + (c*@fc0) + (c*@fc1)/(pz^@p2+c*@fc2)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+
+private:
+  complex c
+default:
+  title = "THM160520Mandel"
+  heading
+    text = "z=z^p1 + (c*factorC0) + (c*factorC1)/(z^p2 + c*factorC2) "
+  endheading
+  complex param n1
+    caption="StartZ"
+    default=(0,0)
+  endparam
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 1000
+    min = 4
+    ;exponential = true
+  endparam
+
+  complex param fc0
+    caption="factorC0"
+    default=(0,0)
+  endparam
+  complex param fc1
+    caption="factorC1"
+    default=(1,0)
+  endparam
+  complex param fc2
+    caption="factorC2"
+    default=(0,0)
+  endparam
+  param p1
+    caption = "Power p1"
+    default = (2,0)
+  endparam
+  param p2
+    caption = "Power p2"
+    default = (0,0)
+  endparam
+}
+
+class THM160520Ducky(THM160520Mandel) {
+public:
+  complex func Iterate(complex pz)
+    ;pz=pz^@p1 + (c*@fc0) + (c*@fc1)/(pz^@p2+c*@fc2)
+    pz=THM160520Mandel.Iterate(pz)
+    return abs(pz)
+  endfunc
+default:
+  title = "THM160520Ducky"
+}
+
+class THMLogzzc(thm.ulb:THMSwitchBase) {
+public:
+	complex func Init(complex pz)
+    THMSwitchBase.Init(pz)
+    c=thmpixel
+;    pz=pz^(1/(2*@p1))
+    pz=@fn1(pz)^@p1*@f1
+    return pz
+  endfunc
+
+	complex func Iterate(complex pz)
+;    pz=log(abs(pz))^@p1 + c
+    pz=log(abs(@fn2(pz)^@p2) + c)
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+	complex c
+	int iter
+default:
+  title = "LogAbsZ"
+
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10000
+    min = 0
+    exponential = true
+  endparam
+  heading
+    caption = "< Init section > "
+    text="z=func(z)^p * f "
+  endheading
+
+  func fn1
+    caption="Init(func)"
+    default = ident()
+  endfunc
+  param p1
+    caption = "Init(p)ower"
+    default = (1.5,0.0)
+  endparam
+  complex param f1
+    caption="Init(f)actor"
+    default=(1.0,0.0)
+  endparam
+  heading
+    caption = "< Loop section > "
+    text = "z=log(abs(zf(z)^zp) + c)"
+  endheading
+
+  func fn2
+    caption="(zf)unc"
+    default = ident()
+  endfunc
+  param p2
+    caption = "(zp)ower"
+    default = (1.0,0.0)
+  endparam
+}
+
+class THMImagFold(common.ulb:UserTransform) {
+public:
+import "common.ulb"
+
+	func THMImagFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		rot=(0,1)^(@angle/90.0) ;Mark Townsend
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot+@offset ;rotate and move the z-plane
+    ;pz=real(@fz*@fzscale)*abs(real(pz)) + flip(imag(@fz*@fzscale)*imag(pz))
+    pz=real(@fz*@fzscale)*real(pz) + flip(imag(@fz*@fzscale)*abs(imag(pz)))
+    return pz
+  endfunc
+private:
+  complex rot
+default:
+  title="ImagFold"
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  param offset
+    caption = "offset"
+    default = (0,0)
+  endparam
+  complex param fz
+    caption = "FactorZ"
+    default = (1.0,1.0)
+  endparam
+  float param fzscale
+    caption = "FactorZ Scale"
+    default = 1.0
+  endparam
+}
+
+class THMRealFold(common.ulb:UserTransform) {
+public:
+import "common.ulb"
+
+	func THMRealFold(Generic pparent)
+		UserTransform.UserTransform(pparent)
+		rot=(0,1)^(@angle/90.0) ;Mark Townsend
+	endfunc
+
+	func Init(complex pz)
+		UserTransform.Init(pz)
+	endfunc
+
+  complex func Iterate(complex pz)
+    pz=pz*rot+@offset ;rotate and move the z-plane
+    pz=real(@fz*@fzscale)*abs(real(pz)) + flip(imag(@fz*@fzscale)*imag(pz))
+    return pz
+  endfunc
+private:
+  complex rot
+default:
+  title="RealFold"
+  float param angle
+    caption = "angle"
+    default = 0.0
+  endparam
+  param offset
+    caption = "offset"
+    default = (0,0)
+  endparam
+  complex param fz
+    caption = "FactorZ"
+    default = (1.0,1.0)
+  endparam
+  float param fzscale
+    caption = "FactorZ Scale"
+    default = 1.0
+  endparam
+}
+
+class THMEuler(thm.ulb:THMSwitchBase) {
+;Credit to Euler:
+; lim n->oo (1+1/n)^n
+; changed to z=(1+1/z)^z + c
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=pz+@pos
+    pz=(1+1/pz)^pz + c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "Euler"
+  heading
+    text="z=(1+1/z)^z + c"
+  endheading
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10e5
+    min = 0
+    exponential = true
+  endparam
+;   func fn1
+;     caption="Init: z=fn1(z)"
+;     default = ident()
+;   endfunc
+;   func fn2
+;     caption="fn2"
+;     default = ident()
+;   endfunc
+  param pos
+    caption = "Position"
+    default = (-4,0)
+  endparam
+;   param p2
+;     caption = "(p)ower1"
+;     default = (-1,0)
+;   endparam
+}
+
+class THMGerrit(thm.ulb:THMSwitchBase) {
+;Credit to Gerrit:
+;https://fractalforums.org/fractal-image-of-the-month/70/theme-contest-january-theme-is-window-and-the-winners-are/3254
+; z=z^2*exp(1/z)+c
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    pz=pz^@p1*exp(pz^@p2)+c
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+default:
+  title = "Gerrit"
+  heading
+    text="z=z^p*exp(z^p1)+c"
+  endheading
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10e5
+    min = 0
+    exponential = true
+  endparam
+;   func fn1
+;     caption="Init: z=fn1(z)"
+;     default = ident()
+;   endfunc
+;   func fn2
+;     caption="fn2"
+;     default = ident()
+;   endfunc
+  param p1
+    caption = "(p)ower"
+    default = (2,0)
+  endparam
+  param p2
+    caption = "(p)ower1"
+    default = (-1,0)
+  endparam
+}
+
+class THMSecant1a(thm.ulb:THMSwitchBase) {
+;Reimplemented from om.ufm/Secant1a
+;Changed parameter p1 with c
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+    return @fn1(pz)
+  endfunc
+  complex func Iterate(complex pz)
+;    pz=@fn2(((pz+@p1)*(pz^@p2-1)-pz*((pz+@p1)^@p2-1))/((pz^@p2-1)-((pz+@p1)^@p2-1)))
+    pz=@fn2(((pz+c)*(pz^@p2-1)-pz*((pz+c)^@p2-1))/((pz^@p2-1)-((pz+c)^@p2-1)))
+    return pz
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return |pz^@p2-1|<=@p_bailout
+  endfunc
+private:
+  complex c
+default:
+  title = "Secantia1a"
+  heading
+    text="Init: z=fn1(z)"
+    text="z=fn2(((z+c)*(z^p-1)-z*((z+c)^p-1)) / ((z^p-1)-((z+c)^p-1))) "
+  endheading
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10e-5
+    min = 0
+    exponential = true
+  endparam
+  func fn1
+    caption="Init: z=fn1(z)"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2"
+    default = ident()
+  endfunc
+  param p2
+    caption = "(p)ower"
+    default = (4,0)
+  endparam
+}
+
+class THMMoebiusMandel(thm.ulb:THMSwitchBase) {
+;Credit to Samuel Monnier
+;http://www.fractalforums.com/mandelbrot-and-julia-set/dense-julia-sets-on-the-sphere/
+public:
+  complex func Init(complex pz)
+    pz=THMSwitchBase.Init(pz) ;set thmpixel
+    c=thmpixel
+;   Calculate the value between k1 and c depending on the
+;   blend factor bl1 {0..1}
+    kc1=@k1+(c-@k1)*@bl1
+    kc2=@k2+(c-@k2)*@bl2
+    kc3=@k3+(c-@k3)*@bl3
+    kc4=@k4+(c-@k4)*@bl4
+    return pz
+  endfunc
+  complex func Iterate(complex pz)
+    z=pz
+    ;kc1=1
+    ;kc2=@k2+(c-@k2)*@bl2
+    z=(kc1*z^@p1+kc2) / (kc3*z^@p2+kc4)
+    return z
+  endfunc
+
+  bool func IsBailedOut(complex pz)
+    return !(|pz|<@p_bailout)
+  endfunc
+private:
+  complex c
+  complex z
+  complex kc1
+  complex kc2
+  complex kc3
+  complex kc4
+
+default:
+  title = "MoebiusMandel"
+  heading
+    text="z=(k1*z^p1+k2) / (k3*z^p2+k4)  ;kn={kn..C} C=pixel or C=Seed ."
+  endheading
+  float param p_bailout ; Overrides p_bailout from DivergentFormula
+    caption = "Bailout value"
+    default = 10e10
+    min = 0
+    exponential = true
+  endparam
+  heading
+    text="z=(k1*z^p1+k2) / ...    ;kn={kn..C}"
+  endheading
+  param k1
+    caption = "k1"
+    default = (1,0)
+  endparam
+  float param bl1
+    caption = "Blend k1 to C {0..1}"
+    default = 0.0
+  endparam
+  float param p1
+    caption = "(p1)power"
+    default = 2.0
+  endparam
+  param k2
+    caption = "k2"
+    default = (1,0)
+  endparam
+  float param bl2
+    caption = "Blend k2 to C {0..1}"
+    default = 0.0
+  endparam
+  heading
+    text="z= ... / (k3*z^p2+k4)    ;kn={kn..C}"
+  endheading
+  param k3
+    caption = "k3"
+    default = (-1,0)
+  endparam
+  float param bl3
+    caption = "Blend k3 to C {0..1}"
+    default = 0.0
+  endparam
+  float param p2
+    caption = "(p2)power"
+    default = 2.0
+  endparam
+  param k4
+    caption = "k4"
+    default = (1,0)
+  endparam
+  float param bl4
+    caption = "Blend k4 to C {0..1}"
+    default = 0.0
+  endparam
+}

@@ -1,0 +1,792 @@
+
+Raytrace2 {
+global:
+  
+init:
+  float angle=0
+  int c=0
+loop:
+  
+final:
+  c=round(imag(#z))
+  angle=real(#z)
+ if c!=4
+    angle=(angle+1)/2
+ endif
+  if c==0
+    angle=0
+  elseif c==1
+    angle=angle*0.99
+  elseif c==6
+    angle=angle*0.99
+  elseif c==2
+    angle=angle*0.49
+  elseif c==3
+    angle=0.50+angle*0.49
+  elseif c==7
+    angle=angle*0.32
+  elseif c==8
+    angle=angle*0.32+0.33
+  elseif c==9
+    angle=angle*0.32+0.67
+  elseif c==10
+    angle=angle*0.24
+  elseif c==11
+    angle=angle*0.24+0.25
+  elseif c==12
+    angle=angle*0.24+0.5
+  elseif c==13
+    angle=angle*0.24+0.75
+  else
+    angle=angle*0.01
+  endif
+  #index=angle
+
+default:
+  title = "Raytrace2"
+  
+  
+
+}
+
+
+
+Raytrace(BOTH) {
+
+ ;One gradient has lowest color to the left and highest to the right. Greyscale2 in \
+ ;standard library is a perfect example. Two gradients you have to divide the \
+ ;gradient in two equal halves (at 200) and make two similar gradients (as the first) \
+ ;in both halves. The first will be for the background and the second for the first \
+ ;and the second set (if Cubic). Three gradients is the gradient divided to three, \
+ ;dots at index 133 and 266, at the same manner. The first half is the background, the \
+ ;second is for the first set and the third for the second set (if cubic). With four \
+ ;gradients, dots at 100, 200, and 300 and the same procedure. The fourth half is used \
+ ;for 2-dim coloring. Twodim coloring is always at the rightmost side.
+
+init:
+
+loop:
+  float angle=0
+final:
+  angle=(real(#z)+1)/2
+  if @gradient==0
+    if imag(#z)==1.23456789e20||imag(#z)==-1.23456789e20||imag(#z)==-2.23456789e20
+      #index=angle*0.99
+     else
+       #index=@scale2d*#numiter
+     endif
+   elseif @gradient==1
+     if imag(#z)==1.23456789e20
+       #index=angle*0.49
+     elseif imag(#z)==-1.23456789e20||imag(#z)==-2.23456789e20
+       #index=0.5+angle*0.49
+     else
+       #index=0.5+(@scale2d/2*#numiter)%0.5
+     endif
+   elseif @gradient==2
+     if imag(#z)==1.23456789e20
+       #index=angle*0.32
+     elseif imag(#z)==-1.23456789e20
+       #index=0.33+angle*0.32
+     elseif imag(#z)==-2.23456789e20
+       #index=0.67+angle*0.32
+     else
+       #index=0.67+(@scale2d/3*#numiter)%0.32
+     endif
+   else
+     if imag(#z)==1.23456789e20
+       #index=angle*0.24
+     elseif imag(#z)==-1.23456789e20
+       #index=0.25+angle*0.24
+     elseif imag(#z)==-2.23456789e20
+       #index=0.5+angle*0.24
+     else
+       #index=0.75+(@scale2d/4*#numiter)%0.24
+     endif
+   endif
+  
+default:
+  title = "Raytrace"
+  
+  param gradient
+    enum="One gradient" "Two gradients" "Three gradients" "Four gradients"
+    default=0
+    hint="One gradient has lowest color to the left and highest to the right. Greyscale2 in \
+          standard library is a perfect example. Divide the gradient in equal parts and put \
+          the lowest color to the left and the highest to the right. Read in the formula."
+  endparam
+  
+  param scale2d
+    caption="Scale-2d"
+    default=0.05
+    hint="Scaling for 2d-coloring."
+  endparam
+  
+
+
+}
+
+DistanceEstimator(BOTH) {
+init:
+  bool flag=false
+  float h=0
+  float dist=0
+  float epsilon=0
+  float delta=0
+  complex zder=0
+  complex a=0
+  complex power=3
+  if @IterPlane==0
+    a=#pixel
+  elseif @IterPlane==3
+    a=real(@aparam)+flip(#pixel)
+  elseif @IterPlane<3
+    a=real(#pixel)+flip(@aparam)
+  elseif @IterPlane==4
+    a=@aparam+flip(imag(#pixel))
+  elseif @IterPlane==5
+    a=@aparam+flip(@aiparam)
+  elseif @IterPlane==6
+    power=@power
+  endif
+  
+loop:
+  if @limiton
+    if cabs(zder)>@limit
+      flag=true
+    endif
+  endif
+  if !flag
+    if @IterPlane==6
+      zder=power*#z^(power-1)*zder+1
+    else
+      zder=3*(#z^2-a*a)*zder-6*a*#z+1
+    endif
+  endif
+ 
+final:
+  if @auto==2||(@illustr==true&&@auto>0)
+    epsilon=@epsilon/#magn
+    delta=@delta/#magn
+  else
+    epsilon=@epsilon
+    delta=@delta
+  endif
+  if !flag
+    dist=cabs(power)*log(cabs(#z))*cabs(#z)/cabs(zder)
+    if @test
+      if !@illustr
+        if dist<=@testvalue
+          #index=dist
+        else
+          #index=@index4
+        endif
+      else
+        if dist>@testvalue
+          #index=@index4
+        elseif dist<=epsilon
+          #index=@index1
+        else
+          #index=@index2
+        endif
+      endif
+    elseif !@illustr
+      if @root
+        dist=dist^(1/@rootvalue)
+      endif
+      if dist<=delta
+        dist=@scale*dist
+        if @auto==1
+          dist=#magn*dist
+        endif
+        #index=dist
+      else
+        if @clog==true
+          #index=log(abs(log(dist)))
+        else
+          #index=abs(log(dist))
+        endif
+      endif
+    elseif dist<=epsilon
+
+
+      #index=@index1
+    else
+      #index=@index2
+    endif
+  else
+    if @illustr||@test
+      #index=@index3
+    else
+      h=@speed*#numiter^@acc
+      #index=h 
+      if @clog
+        if h!=0
+          #index=log(abs(h))
+        else
+          #index=0
+        endif
+      endif
+    endif    
+  endif
+default:
+  title = "DistanceEstimator"
+  
+
+  param auto
+    enum="No auto" "Dist-Color" "Log-Color" 
+    default=1
+    hint="Corrects automatically for Log or Dist-color. Epsilon and Color-Scale \
+          can still be used."
+  endparam
+  
+  param scale
+    caption="Color-Scale"
+    default=1.0
+    hint="Multiplied with distance in distance-coloring. Not in Illustrations. \
+          The Color-scale is activated when the distance is smaller than Epsilon. \
+          Otherwise logcoloring."
+  endparam
+  
+  param rootvalue
+    caption="n-Rootvalue"
+    default=2.0
+    hint="The value of the root. Default squareroot."
+  endparam
+  
+  param root
+    caption="Root"
+    default=false
+    hint="Calculates the n-root of the distance. Set value in Root-value."
+  endparam
+  
+  param delta
+    caption="Delta"
+    default=0.01
+    hint="Log-coloring will be activated if Distance is higher than this. \
+          Otherwise normal coloring with Color-scale will be activated. "
+  endparam
+
+  param epsilon
+    caption="Epsilon"
+    default=0.01
+    hint="For illustration (Two color system) Structures will be colored when \
+          distance is equal or smaller than this. "
+  endparam
+  
+  param clog
+    caption="Smooth"
+    default=true
+    hint="Works with Log-Color. Gives an extra log if set."
+  endparam
+  
+  param illustr
+    caption="Illustration"
+    default=false
+    hint="If set it will give a twocolored view - good for illustrations."
+  endparam
+  
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)" "No Cubic"
+    default=6
+    hint="The axis that will be plotted. Only for Cubic Parameterspace and its Julias. \
+          Shall be equal to the settings in Cubic Parameterspace. For other functions use \
+          No Cubic."
+  endparam
+  
+  param power
+    caption="power"
+    default=2.0
+    hint="For mandelbrot this shall be 2. Cubic parameterspace is automatic."
+  endparam
+  
+  param index1
+    caption="Structure color"
+    default=0.99
+    hint="Color of the finer structures. Between 0 and 1. Only for 'Illustrations'."
+  endparam
+  
+  param index2
+    caption="Background color"
+    default=0.0
+    hint="Background color. Between 0 and 1. Only for 'Illustrations'."
+  endparam
+  
+  param index3
+    caption="Limit color"
+    default=0.0
+    hint="Limit color. Between 0 and 1. Is set if z-derivative exceeds Limit. Limit must be on."
+  endparam
+  
+  param limiton
+    caption="Limit on"
+    default=false
+    hint="If you want 'lighter' close to M with illustrate. Gives normal coloring when \
+          exceeded and not illustrate."
+  endparam
+  
+  param limit
+    caption="Limit value"
+    default=100000.0
+    hint="Limit for z-derivative. Limit must be on."
+  endparam
+  
+  param speed
+    caption="Speed"
+    default=0.05
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param acc
+    caption="Acc"
+    default=1.0
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param aparam
+    caption="a-param"
+    default=0.0
+    hint="The intersecting a-parameter in plane 2 to 6. Only for Cubics."
+  endparam
+  
+  param aiparam
+    caption="a-imag-param"
+    default=0.0
+    hint="The intersecting a-imag-parameter (u-axis) for plane 6. Only for Cubics."
+  endparam
+  
+  param test
+    caption="Test"
+    default=false
+    hint="Tests the distance. Will set colour-index to distance \
+          if distance is <= testvalue, otherwise to 0. Test has \
+          preceedence before every other option."
+  endparam
+  
+  param testvalue
+    caption="Test-value"
+    default=4.0
+    hint="Value for testing distance"
+  endparam
+  
+  param index4
+    caption="Test color"
+    default=0.29
+  endparam
+    
+  
+}
+
+ContinousPotential(BOTH) {
+init:
+  float pot=0
+  float n=1
+  float numiter=0
+  float epsilon=0
+  float h=0
+loop:
+  
+final:
+  numiter=#numiter/@numfact
+  if @smooth
+    numiter=log(numiter)
+  endif
+  pot=0.5*log(|#z|)/@power^numiter
+  if @auto
+    n=@n+log(#magn)/log(@auton)
+    epsilon=@epsilon/#magn
+  else
+    n=@n
+    epsilon=@epsilon
+  endif
+  pot=@scale*pot^(1/n)
+  if @reversed
+    pot=1-pot
+  endif
+  if  @test==true&&pot>@testvalue
+    #index=@index4
+  else
+    if @limiton==false
+      if !@illustr
+        #index=pot
+      elseif pot<=epsilon
+         #index=@index1
+      else 
+        #index=@index2
+      endif
+    elseif pot<@limit
+      if !@illustr&&!@test
+        h=@speed*#numiter^@acc
+        #index=h 
+        if @clog
+          if h!=0
+            #index=log(abs(h))
+          else
+            #index=0
+          endif
+        endif
+      else
+        #index=@index3
+      endif
+    else
+      if !@illustr
+        #index=pot
+      elseif pot<=epsilon
+         #index=@index1
+      else 
+        #index=@index2
+      endif
+    endif
+  endif
+  
+default:
+  title = "Continous Potential"
+  
+  param auto
+    caption="Auto"
+    default=true
+    hint="Automatic correction of Scale (Closer)"
+  endparam
+  
+  param auton
+    caption="auto-const"
+    default=2.0
+    min=1.0
+    hint="Factor for the automatic scaling. Best between 1 and 2. Should not be lower than 1."
+  endparam
+  
+  param n
+    caption="Closer"
+    default=1.0
+    hint="Takes you closer to the set"
+  endparam
+  
+  param numfact
+    caption="Iteration factor"
+    default=1.0
+    min=1.0
+    hint="Slows down the potential for further zooming. Not lower than 1."
+  endparam
+  
+  param scale
+    caption="Scale factor"
+    default=1.0
+    hint="Scales the function"
+  endparam
+  
+  param smooth
+    caption="Smooth"
+    default=false
+    hint="Makes coloring smoother"
+  endparam
+
+  param epsilon
+    caption="Epsilon"
+    default=0.5
+    hint="Scale for Illustration."
+  endparam
+
+  param illustr
+    caption="Illustration"
+    default=false
+    hint="If set it will give a twocolored view - good for illustrations."
+  endparam
+  
+  param limiton
+    caption="Limit on"
+    default=false
+  endparam
+  
+  param limit
+    caption="Limit value"
+    default=0.1
+  endparam
+  
+  param index3
+    caption="Limit color"
+    default=0.0
+  endparam
+  
+  param index1
+    caption="Structure color"
+    default=0.99
+    hint="Color of the finer structures. Between 0 and 1. Only for 'Illustrations'."
+  endparam
+  
+  param index2
+    caption="Background color"
+    default=0.0
+    hint="Background color. Between 0 and 1. Only for 'Illustrations'."
+  endparam
+  
+  param speed
+    caption="Speed"
+    default=0.5
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param acc
+    caption="Acc"
+    default=1.0
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param clog
+    caption="Log Normal color"
+    default=true
+    hint="Works with normal coloring. Gives log if set."
+  endparam
+  
+  
+  param power
+    caption="Power"
+    default=2.0
+    hint="Power of polynome"
+  endparam
+  
+  param reversed
+    caption="reversed"
+    default=false
+    hint="Reverses the gradient. (g=1-g)"
+  endparam
+  
+  param test
+    caption="Test"
+    default=false
+    hint="Tests the potential. Will set colour-index to potential \
+          if potential is <= epsilon, otherwise to 0. Test has \
+          preceedence before every other option."
+  endparam
+  
+  param testvalue
+    caption="Test-value"
+    default=0.7
+    hint="Value for testing distance"
+  endparam
+  
+  param index4
+    caption="Test color"
+    default=0.29
+  endparam
+}
+
+DistanceEstimator2(BOTH) {
+init:
+  bool flag=false
+  float dist=0
+  float scale=@scale
+  float epsilon=@epsilon
+  float h=0
+  complex zder=0
+  complex a=0
+  complex power=3
+  complex zder=0
+  if @IterPlane==0
+    a=#pixel
+  elseif @IterPlane==3
+    a=real(@aparam)+flip(#pixel)
+  elseif @IterPlane<3
+    a=real(#pixel)+flip(@aparam)
+  elseif @IterPlane==4
+    a=@aparam+flip(imag(#pixel))
+  elseif @IterPlane==5
+    a=@aparam+flip(@aiparam)
+  elseif @IterPlane==6
+    power=@power
+  endif
+  
+loop:
+  if @limiton
+    if cabs(zder)>@limit
+      flag=true
+    endif
+  endif
+  if !flag
+    if @IterPlane==6
+      zder=power*#z^(power-1)*zder+1
+    else
+      zder=3*(#z^2-a*a)*zder-6*a*#z+1
+    endif
+  endif
+  
+final:
+  if @auto
+    epsilon=epsilon/#magn
+    scale=@scale*#magn
+  endif
+  if !flag
+    dist=cabs(power)*log(cabs(#z))*cabs(#z)/cabs(zder)
+    if @illustration
+      if !@test
+        if dist<=epsilon
+          #index=@index1
+        else
+          #index=@index2
+        endif
+      else
+        if dist<=@testvalue
+          if dist<=epsilon
+            #index=@index1
+          else
+            #index=@index2
+          endif
+        else
+          #index=@index4
+        endif
+      endif
+    else
+      dist=scale*dist^(1/@root)
+      if @log
+        dist=log(dist)/log(@logvalue)
+      endif
+      if !@test
+        #index=dist
+      elseif dist<=@testvalue
+        #index=dist
+      else
+        #index=@index4
+      endif
+    endif
+  else
+    if @illustration||@test
+      #index=@index3
+    else
+      h=@speed*#numiter^@acc
+      #index=h 
+      if @clog
+        if h!=0
+          #index=log(abs(h))
+        else
+          #index=@index4
+        endif
+      endif
+    endif
+  endif
+default:
+  title = "Distance Estimator 2"
+  
+  param auto
+    caption="auto"
+    default=true
+  endparam
+  
+  param scale
+    caption="Scale"
+    default=1.0
+  endparam
+  
+  param root
+    caption="Root"
+    default=1.0
+  endparam
+  
+  param log
+    caption="Log on"
+    default=false
+  endparam
+  
+  param logvalue
+    caption="Log-value"
+    default=2.718281828
+  endparam
+
+  
+  param epsilon
+    caption="Epsilon"
+    default=0.01
+    hint="Below this value set will be drawn in Illustration."
+  endparam
+  
+  param illustration
+    caption="Illustration"
+    default=false
+  endparam
+  
+  param power
+    caption="Power"
+    default=2.0
+  endparam
+  
+  param limiton
+    caption="Limit on"
+    default=false
+  endparam
+  
+  param limit
+    caption="Limit value"
+    default=100000.0
+  endparam
+  
+  param index3
+    caption="Limit color"
+    default=0.0
+  endparam
+  
+  param index1
+    caption="Structure color"
+    default=0.99
+  endparam
+  
+  param index2
+    caption="Background color"
+    default=0.0
+  endparam
+  
+  param speed
+    caption="Speed"
+    default=0.05
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param acc
+    caption="Acc"
+    default=1.0
+    hint="Only for limit and normal coloring."
+  endparam
+  
+  param clog
+    caption="Log Normal color"
+    default=true
+    hint="Works with normal coloring. Gives log if set."
+  endparam
+
+  param IterPlane
+    enum = "(a-real,a-imag)" "(a-real,b-real)" "(a-real,b-imag)" "(a-imag,breal)" \
+    "(a-imag,b-imag)" "(b-real,b-imag)" "No Cubic"
+    default=6
+    hint="The axis that will be plotted. Only for Cubic Parameterspace and its Julias. \
+          Shall be equal to the settings in Cubic Parameterspace. For other functions use \
+          No Cubic."
+  endparam
+  
+  param aparam
+    caption="a-param"
+    default=0.0
+    hint="The intersecting a-parameter in plane 2 to 6. Only for Cubics."
+  endparam
+  
+  param aiparam
+    caption="a-imag-param"
+    default=0.0
+    hint="The intersecting a-imag-parameter (u-axis) for plane 6. Only for Cubics."
+  endparam
+  
+  param test
+    caption="Test on"
+    default=false
+    hint="Tests the distance. Will set colour-index to distance \
+          if distance is <= epsilon, otherwise to 0. Test has \
+          preceedence before every other option."
+  endparam
+  
+  param testvalue
+    caption="Test-value"
+    default=4.0
+  endparam
+  
+  param index4
+    caption="Test color"
+    default=0.29
+  endparam
+}

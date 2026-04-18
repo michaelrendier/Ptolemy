@@ -1,0 +1,816 @@
+comment {
+   All formulas written by Olivier Steiger, december 2000.
+}
+
+
+Barnsley-JJ {
+;
+; Written by Olivier Steiger April 2001
+;
+; This formula incorporates many different Barnsley types
+; in conjunction with the fractal formula z -> z^p + c.
+; It is the Julia/Julia Version of it, meaning both seeds
+; (Barnsley and fractal) must be entered manually and the
+; start-value z_0 equals #pixel.
+;
+; From a pre-version of KPK's MoebiusJuliaBarnsley.
+; 
+init:
+  z = #pixel                     ; Julia/Julia Type
+  complex bseed1 = @barn_seed    ;
+  complex bseed2 = @barn_seed    ;
+  complex fseed = @frac_seed     ; 
+ 
+   complex newZ = z
+  complex bshift = 0
+  bool skip_first = false
+  float angle = 0.0             
+  float phi = 0.0
+  int bsector = 2
+  complex bshift_vec = (0,0)
+  IF (@use_conj == true)         ; Use conjugate seed?
+    bseed2 = conj(@barn_seed)
+  ENDIF
+  
+  IF (@barn_glue == 1)
+    ;
+    ; glueing provides a transformation that (sometimes)
+    ; cancels out the first barnsley step. resulting in an image that
+    ; has the biggest "splitting edge" removed.
+    ;   
+    IF (@barn_shift == 0)   
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(newZ))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(newZ)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(newZ))
+    ENDIF
+
+    IF (@barn == 0) && (real(newZ) >= 0)            ; Barnsley-Type "Real(z)"
+      z = #pixel + bshift                           ; better known as Barnsleyj1
+    ELSEIF (@barn == 0) && (real(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 1) && (imag(newZ) >= 0)            ; "Imag(z)
+      z = #pixel + bshift
+    ELSEIF (@barn == 1) && (imag(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 2) && (real(newZ*bseed1) >= 0)     ; "Real(z*c)" this is 
+      z = #pixel + bshift                           ; known Barnsleyj2
+    ELSEIF (@barn == 2) && (real(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 3) && (imag(newZ*bseed1) >= 0)     ; "Imag(z*c)
+      z = #pixel + bshift
+    ELSEIF (@barn == 3) && (imag(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 4) && (real(newZ/bseed1) >= 0)     ; "Real(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 4) && (real(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 5) && (imag(newZ/bseed1) >= 0)     ; "Imag(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 5) && (imag(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 6)                                 ; "N Pieces" Barnsley Type
+      angle = 2*pi/@barn_nr        ; Angle with N Pieces 
+      phi = atan2(newZ) + angle/2    ; Current Angle of z
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = #pixel + bshift_vec
+    ENDIF    
+  ELSEIF (@barn_glue == 2)
+    ;
+    ; pseudo-glueing makes the loop algorithm skip the first iteration.
+    ; because for many .ucl the first step is of special importance this
+    ; may remove also some "splitting edges" (of the ucl.s).
+    ;
+    skip_first = true
+  ENDIF 
+
+loop:
+  IF (skip_first == false)      ; Used for Pseudo-Glueing
+    IF (@barn_shift == 0)          ; Determine Barnsley-Shift
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(z))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(z)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(z))
+    ENDIF
+    
+    IF (@barn == 0) && (real(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 0) && (real(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 1) && (imag(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 1) && (imag(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 2) && (real(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 2) && (real(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 3) && (imag(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 3) && (imag(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 4) && (real(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 4) && (real(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 5) && (imag(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 5) && (imag(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 6)
+      angle = 2*pi/@barn_nr
+      phi = atan2(z) + angle/2
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = @barn_fn(z - bshift_vec)*bseed1
+    ENDIF
+
+    z = z^@frac_power + fseed
+  
+  ELSE
+    skip_first = false
+  ENDIF
+
+bailout:
+  ((@bail_test == 0 && |z| <= @bailout) ||                         \
+  (@bail_test == 1 && @goofy_fn(real(z)) <= @bailout) ||                                \
+  (@bail_test == 2 && @goofy_fn(imag(z)) <= @bailout) ||                                \
+  (@bail_test == 3 && (@goofy_fn(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 4 && (@goofy_fn(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 5 && (@goofy_fn(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@bail_test == 6 && (@goofy_fn(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@bail_test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@bail_test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@bail_test == 9 && (@bail_fn(z)*@bail_par) <= @bailout)) ||                 \              
+  (@bail_test == 10 && (@bail_fn(z)^@bail_par) <= @bailout) ||                 \ 
+  (@bail_test == 11 &&  (|z + pixel| < @bailout))
+
+default:
+  title = "Barnsley (JJ)"
+  center = (0, 0)
+  magn = 1.0
+  maxiter = 100
+  method = multipass
+  periodicity = 0
+
+  param barn
+    caption = "Barnsley Type"
+    enum = "Real(z)" "Imag(z)" "Real(c*z)" "Imag(c*z)" \
+           "Real(z/c)" "Imag(z/c)" "N Pieces"
+    default = 0
+    hint = "The well-known Barnsley1 and Barnsley2 formulae can be retrieved \
+            by using >Real(z)< and >Real(c*z)< respectively, with classical \
+            Barnsley Shift."
+  endparam
+  
+  param barn_shift
+    caption = "Barnsley Shift"
+    enum = "Classic" "Parabola" "Gaussian" "Sine"
+    default = 0
+  endparam
+
+  param barn_seed
+    caption = "Barnsley Seed"
+    default = (-0.5, 1.4)
+  endparam
+    
+  param barn_glue
+    caption = "Barnsley Glueing"
+    enum = "Disabled" "Enabled" "Pseudo-Glueing"
+    default = 1
+  endparam
+
+  param use_conj
+    caption = "Barnsley Conj."
+    default = false
+    hint = "If enabled the complex conjugate of the seed is \
+            used in the second part of the Barnsley formula."
+  endparam
+ 
+  param barn_nr
+    caption = "Use N Pieces"
+    default = 3
+    hint = "This is only used by the >N Pieces< Barnsley Type."
+  endparam
+
+  param frac_seed
+    caption = "Fractal Seed"
+    default = (0, 0)
+  endparam
+  
+  param frac_power
+    caption = "Fractal Power"
+    default = (1,0)
+  endparam
+
+  param bailout
+    caption = "Bailout Value"
+    default = 16.0
+        min = 1.0
+  endparam
+
+  param bail_test
+    caption = "Bailout Shape"
+       enum = "abs" "real" "imag" "or" "and" "manh" \
+              "manr" "abs(x*x/y)" "abs(y*y/x)" "fn(z)*p" \
+               "fn(z)^p" "abs(z+#pixel)" 
+    default = 0
+  endparam
+
+  param bail_par
+    caption = "Bailout Param. (p)"
+    default = (3.0,0)
+  endparam
+
+  func barn_fn 
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+
+  func bail_fn
+    caption = "Bailout Function"
+    default = ident()
+  endfunc
+
+  func goofy_fn
+    caption = "Goofy Function"
+    default = sqr()
+  endfunc
+}
+
+
+Barnsley-MJ {
+;
+; Written by Olivier Steiger April 2001
+;
+; This is the Mandelbrot-Version of Barnsley (JJ) with respect 
+; to the Barnsley-Seed. It can therefore be used as a natural map
+; to find Barnsley-Seed generating interesting images (by use of
+; the switch-feature).
+;
+init:
+  z = (0,0)                     ; Mandelbrot/Julia Type
+  complex bseed1 = #pixel       ;
+  complex bseed2 = #pixel       ;
+  complex fseed = @frac_seed    ;
+  
+  complex newZ = z
+  complex bshift = 0
+  bool skip_first = false
+  float angle = 0.0             
+  float phi = 0.0
+  int bsector = 2
+  complex bshift_vec = (0,0)
+  IF (@use_conj == true)         ; Use conjugate seed?
+    bseed2 = conj(#pixel)
+  ENDIF
+  
+  IF (@barn_glue == 1)
+    ;
+    ; glueing provides a transformation that (sometimes)
+    ; cancels out the first barnsley step. resulting in an image that
+    ; has the biggest "splitting edge" removed.
+    ;   
+    IF (@barn_shift == 0)   
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(newZ))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(newZ)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(newZ))
+    ENDIF
+
+    IF (@barn == 0) && (real(newZ) >= 0)            ; Barnsley-Type "Real(z)"
+      z = #pixel + bshift                           ; better known as Barnsleyj1
+    ELSEIF (@barn == 0) && (real(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 1) && (imag(newZ) >= 0)            ; "Imag(z)
+      z = #pixel + bshift
+    ELSEIF (@barn == 1) && (imag(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 2) && (real(newZ*bseed1) >= 0)     ; "Real(z*c)" this is 
+      z = #pixel + bshift                           ; known Barnsleyj2
+    ELSEIF (@barn == 2) && (real(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 3) && (imag(newZ*bseed1) >= 0)     ; "Imag(z*c)
+      z = #pixel + bshift
+    ELSEIF (@barn == 3) && (imag(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 4) && (real(newZ/bseed1) >= 0)     ; "Real(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 4) && (real(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 5) && (imag(newZ/bseed1) >= 0)     ; "Imag(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 5) && (imag(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 6)                                 ; "N Pieces" Barnsley Type
+      angle = 2*pi/@barn_nr        ; Angle with N Pieces 
+      phi = atan2(newZ) + angle/2    ; Current Angle of z
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = #pixel + bshift_vec
+    ENDIF    
+  ELSEIF (@barn_glue == 2)
+    ;
+    ; pseudo-glueing makes the loop algorithm skip the first iteration.
+    ; because for many .ucl the first step is of special importance this
+    ; may remove also some "splitting edges" (of the ucl.s).
+    ;
+    skip_first = true
+  ENDIF 
+
+loop:
+  IF (skip_first == false)      ; Used for Pseudo-Glueing
+    IF (@barn_shift == 0)          ; Determine Barnsley-Shift
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(z))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(z)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(z))
+    ENDIF
+    
+    IF (@barn == 0) && (real(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 0) && (real(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 1) && (imag(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 1) && (imag(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 2) && (real(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 2) && (real(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 3) && (imag(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 3) && (imag(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 4) && (real(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 4) && (real(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 5) && (imag(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 5) && (imag(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 6)
+      angle = 2*pi/@barn_nr
+      phi = atan2(z) + angle/2
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = @barn_fn(z - bshift_vec)*bseed1
+    ENDIF
+
+    z = z^@frac_power + fseed
+  
+  ELSE
+    skip_first = false
+  ENDIF
+
+bailout:
+  ((@bail_test == 0 && |z| <= @bailout) ||                         \
+  (@bail_test == 1 && @goofy_fn(real(z)) <= @bailout) ||                                \
+  (@bail_test == 2 && @goofy_fn(imag(z)) <= @bailout) ||                                \
+  (@bail_test == 3 && (@goofy_fn(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 4 && (@goofy_fn(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 5 && (@goofy_fn(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@bail_test == 6 && (@goofy_fn(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@bail_test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@bail_test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@bail_test == 9 && (@bail_fn(z)*@bail_par) <= @bailout)) ||                 \              
+  (@bail_test == 10 && (@bail_fn(z)^@bail_par) <= @bailout) ||                 \ 
+  (@bail_test == 11 &&  (|z + pixel| < @bailout))
+
+default:
+  title = "Barnsley (MJ)"
+  center = (0, 0)
+  magn = 1.0
+  maxiter = 100
+  method = multipass
+  periodicity = 0
+
+  param barn
+    caption = "Barnsley Type"
+    enum = "Real(z)" "Imag(z)" "Real(c*z)" "Imag(c*z)" \
+           "Real(z/c)" "Imag(z/c)" "N Pieces"
+    default = 0
+    hint = "The well-known Barnsley1 and Barnsley2 formulae can be retrieved \
+            by using >Real(z)< and >Real(c*z)< respectively, with classical \
+            Barnsley Shift."
+  endparam
+  
+  param barn_shift
+    caption = "Barnsley Shift"
+    enum = "Classic" "Parabola" "Gaussian" "Sine"
+    default = 0
+  endparam
+    
+  param barn_glue
+    caption = "Barnsley Glueing"
+    enum = "Disabled" "Enabled" "Pseudo-Glueing"
+    default = 0
+  endparam
+
+  param use_conj
+    caption = "Barnsley Conj."
+    default = true
+    hint = "If enabled the complex conjugate of the seed is \
+            used in the second part of the Barnsley formula."
+  endparam
+ 
+  param barn_nr
+    caption = "Use N Pieces"
+    default = 3
+    hint = "This is only used by the >N Pieces< Barnsley Type."
+  endparam
+
+  param frac_seed
+    caption = "Fractal Seed"
+    default = (0, 0)
+  endparam
+  
+  param frac_power
+    caption = "Fractal Power"
+    default = (1,0)
+  endparam
+
+  param bailout
+    caption = "Bailout Value"
+    default = 16.0
+        min = 1.0
+  endparam
+
+  param bail_test
+    caption = "Bailout Shape"
+       enum = "abs" "real" "imag" "or" "and" "manh" \
+              "manr" "abs(x*x/y)" "abs(y*y/x)" "fn(z)*p" \
+               "fn(z)^p" "abs(z+#pixel)" 
+    default = 0
+  endparam
+
+  param bail_par
+    caption = "Bailout Param. (p)"
+    default = (3.0,0)
+  endparam
+
+  func barn_fn 
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+
+  func bail_fn
+    caption = "Bailout Function"
+    default = ident()
+  endfunc
+
+  func goofy_fn
+    caption = "Goofy Function"
+    default = sqr()
+  endfunc
+
+switch:
+  type = "Barnsley-JJ"
+  frac_seed = @frac_seed
+  frac_power = @frac_power
+  barn = @barn
+  barn_shift = @barn_shift
+  barn_seed = #pixel
+  barn_glue = @barn_glue
+  use_conj = @use_conj
+  barn_nr = @barn_nr
+  bailout = @bailout
+  bail_test = @bail_test
+  bail_par = @bail_par
+  barn_fn = @barn_fn
+  bail_fn = @bail_fn
+  goofy_fn = @goofy_fn
+}
+
+
+Barnsley-JM {
+;
+; Written by Olivier Steiger April 2001
+;
+; This is the Mandelbrot-Version of Barnsley (JJ) with respect 
+; to the Fractal-Seed. It can therefore be used as a natural map
+; to find Fractal-Seed generating interesting images (by use of
+; the switch-feature).
+;
+init:
+  z = (0,0)                     ; Julia/Mandelbrot Type
+  complex bseed1 = @barn_seed   ;
+  complex bseed2 = @barn_seed   ;
+  complex fseed = #pixel        ;
+  
+  complex newZ = z
+  complex bshift = 0
+  bool skip_first = false
+  float angle = 0.0             
+  float phi = 0.0
+  int bsector = 2
+  complex bshift_vec = (0,0)
+  IF (@use_conj == true)         ; Use conjugate seed?
+    bseed2 = conj(@barn_seed)
+  ENDIF
+
+  IF (@barn_glue == 1)
+    ;
+    ; glueing provides a transformation that (sometimes)
+    ; cancels out the first barnsley step. resulting in an image that
+    ; has the biggest "splitting edge" removed.
+    ;   
+    IF (@barn_shift == 0)   
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(newZ))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(newZ)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(newZ))
+    ENDIF
+
+    IF (@barn == 0) && (real(newZ) >= 0)            ; Barnsley-Type "Real(z)"
+      z = #pixel + bshift                           ; better known as Barnsleyj1
+    ELSEIF (@barn == 0) && (real(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 1) && (imag(newZ) >= 0)            ; "Imag(z)
+      z = #pixel + bshift
+    ELSEIF (@barn == 1) && (imag(newZ) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 2) && (real(newZ*bseed1) >= 0)     ; "Real(z*c)" this is 
+      z = #pixel + bshift                           ; known Barnsleyj2
+    ELSEIF (@barn == 2) && (real(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 3) && (imag(newZ*bseed1) >= 0)     ; "Imag(z*c)
+      z = #pixel + bshift
+    ELSEIF (@barn == 3) && (imag(newZ*bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 4) && (real(newZ/bseed1) >= 0)     ; "Real(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 4) && (real(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 5) && (imag(newZ/bseed1) >= 0)     ; "Imag(z/c)"
+      z = #pixel + bshift
+    ELSEIF (@barn == 5) && (imag(newZ/bseed1) < 0)
+      z = #pixel - bshift
+    ENDIF
+    IF (@barn == 6)                                 ; "N Pieces" Barnsley Type
+      angle = 2*pi/@barn_nr        ; Angle with N Pieces 
+      phi = atan2(newZ) + angle/2    ; Current Angle of z
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = #pixel + bshift_vec
+    ENDIF    
+  ELSEIF (@barn_glue == 2)
+    ;
+    ; pseudo-glueing makes the loop algorithm skip the first iteration.
+    ; because for many .ucl the first step is of special importance this
+    ; may remove also some "splitting edges" (of the ucl.s).
+    ;
+    skip_first = true
+  ENDIF 
+
+loop:
+  IF (skip_first == false)      ; Used for Pseudo-Glueing
+    IF (@barn_shift == 0)          ; Determine Barnsley-Shift
+      bshift = 1
+    ELSEIF (@barn_shift == 1)
+      bshift = 0.5 + 0.125*sqr(imag(z))
+    ELSEIF (@barn_shift == 2)
+      bshift = 0.25 + 0.25*exp(-sqr(imag(z)))
+    ELSEIF (@barn_shift == 3)
+      bshift = 0.5 + 0.25*sin(imag(z))
+    ENDIF
+    
+    IF (@barn == 0) && (real(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 0) && (real(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 1) && (imag(z) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 1) && (imag(z) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 2) && (real(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 2) && (real(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 3) && (imag(z*bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 3) && (imag(z*bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 4) && (real(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 4) && (real(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 5) && (imag(z/bseed1) >= 0)
+      z = @barn_fn(z - bshift) * bseed1
+    ELSEIF (@barn == 5) && (imag(z/bseed1) < 0)
+      z = @barn_fn(z + bshift) * bseed2
+    ENDIF
+    IF (@barn == 6)
+      angle = 2*pi/@barn_nr
+      phi = atan2(z) + angle/2
+      IF (phi < 0)
+        phi = phi + 2*pi
+      ELSEIF (phi > 2*pi)
+        phi = phi - 2*pi
+      ENDIF
+      bsector = floor(phi/angle)
+      bshift_vec = cos(bsector*angle) + flip(sin(bsector*angle))
+      z = @barn_fn(z - bshift_vec)*bseed1
+    ENDIF
+
+    z = z^@frac_power + fseed
+  
+  ELSE
+    skip_first = false
+  ENDIF
+
+bailout:
+  ((@bail_test == 0 && |z| <= @bailout) ||                         \
+  (@bail_test == 1 && @goofy_fn(real(z)) <= @bailout) ||                                \
+  (@bail_test == 2 && @goofy_fn(imag(z)) <= @bailout) ||                                \
+  (@bail_test == 3 && (@goofy_fn(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 4 && (@goofy_fn(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||   \
+  (@bail_test == 5 && (@goofy_fn(abs(real(z)) + abs(imag(z))) <= @bailout)) ||          \
+  (@bail_test == 6 && (@goofy_fn(real(z) + imag(z)) <= @bailout)) ||                    \
+  (@bail_test == 7 && (abs(sqr(real(z))/imag(z)) <= @bailout)) ||                 \
+  (@bail_test == 8 && (abs(sqr(imag(z))/real(z)) <= @bailout)) ||                 \
+  (@bail_test == 9 && (@bail_fn(z)*@bail_par) <= @bailout)) ||                 \              
+  (@bail_test == 10 && (@bail_fn(z)^@bail_par) <= @bailout) ||                 \ 
+  (@bail_test == 11 &&  (|z + pixel| < @bailout))
+
+default:
+  title = "Barnsley (JM)"
+  center = (-0.5, 0)
+  magn = 0.5
+  maxiter = 100
+  method = multipass
+  periodicity = 0
+
+  param barn
+    caption = "Barnsley Type"
+    enum = "Real(z)" "Imag(z)" "Real(c*z)" "Imag(c*z)" \
+           "Real(z/c)" "Imag(z/c)" "N Pieces"
+    default = 0
+    hint = "The well-known Barnsley1 and Barnsley2 formulae can be retrieved \
+            by using >Real(z)< and >Real(c*z)< respectively, with classical \
+            Barnsley Shift."
+  endparam
+  
+  param barn_shift
+    caption = "Barnsley Shift"
+    enum = "Classic" "Parabola" "Gaussian" "Sine"
+    default = 0
+  endparam
+
+  param barn_seed
+    caption = "Barnsley Seed"
+    default = (-1.1, 0.2)
+  endparam
+    
+  param barn_glue
+    caption = "Barnsley Glueing"
+    enum = "Disabled" "Enabled" "Pseudo-Glueing"
+    default = 0
+  endparam
+
+  param use_conj
+    caption = "Barnsley Conj."
+    default = true
+    hint = "If enabled the complex conjugate of the seed is \
+            used in the second part of the Barnsley formula."
+  endparam
+ 
+  param barn_nr
+    caption = "Use N Pieces"
+    default = 3
+    hint = "This is only used by the >N Pieces< Barnsley Type."
+  endparam
+  
+  param frac_power
+    caption = "Fractal Power"
+    default = (1,0)
+  endparam
+
+  param bailout
+    caption = "Bailout Value"
+    default = 16.0
+        min = 1.0
+  endparam
+
+  param bail_test
+    caption = "Bailout Shape"
+       enum = "abs" "real" "imag" "or" "and" "manh" \
+              "manr" "abs(x*x/y)" "abs(y*y/x)" "fn(z)*p" \
+               "fn(z)^p" "abs(z+#pixel)" 
+    default = 0
+  endparam
+
+  param bail_par
+    caption = "Bailout Param. (p)"
+    default = (3.0,0)
+  endparam
+
+  func barn_fn 
+    caption = "Barnsley Function"
+    default = ident()
+  endfunc
+
+  func bail_fn
+    caption = "Bailout Function"
+    default = ident()
+  endfunc
+
+  func goofy_fn
+    caption = "Goofy Function"
+    default = sqr()
+  endfunc
+  
+switch:
+  type = "Barnsley-JJ"
+  frac_seed = #pixel
+  frac_power = @frac_power
+  barn = @barn
+  barn_shift = @barn_shift
+  barn_seed = @barn_seed
+  barn_glue = @barn_glue
+  use_conj = @use_conj
+  barn_nr = @barn_nr
+  bailout = @bailout
+  bail_test = @bail_test
+  bail_par = @bail_par
+  barn_fn = @barn_fn
+  bail_fn = @bail_fn
+  goofy_fn = @goofy_fn
+}

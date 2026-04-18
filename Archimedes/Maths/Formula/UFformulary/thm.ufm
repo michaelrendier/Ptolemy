@@ -1,0 +1,742 @@
+comment{
+	(c) by Thomas Michels
+	Meet me at http://stimpykatz.deviantart.com
+	Mail:thommichels@web.de
+	
+	Look at my thm.upr file to see interesting examples:-)
+	
+	This formula and all the others in this file can switch to juliamode
+	without needing to switch to a second formula
+	This one formula switching feature i found in the
+	public folder in the file bje.ufm by Barry Etheridge
+	
+	And please use this formulas as a starting point to create
+	your own much tweaked formulas. Let the world see, what you
+	are able to do:-)
+	Happy coding, Thomas
+}
+
+ThmGenericSwitch {
+;
+; ThmGenericSwitch Formula is a skeleton fractal formula
+; that accepts Formula objects and implement the Mandel to Julia
+; Switch feature. All my object formulas in thm.ulb are switchable
+; with this formula.
+;
+; If you plug-in the THMSwitchPlug_MMF or the THMSwitchPlug_REB
+; you'll be able to switch object formulas from mmf.ulb and reb.ulb
+; as well. The formula names have "switch" in their names.
+
+; For a quick start look at my thm.upr file. There are examples to
+; show you more:-)
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "thm.ulb"
+  Formula f = new @formulaClass(0)
+;   if @modeM == "Julia" && @formulaClass==THMSwitchBase
+;     THMSwitchBase(f).SetSwitchmode(true, @seed)
+;   endif
+;   if @modeM == "Mandel" && @formulaClass==THMSwitchBase
+;     THMSwitchBase(f).SetSwitchmode(false, @start)
+;   endif
+init:
+  ;Setswitchmode must be called here in init section too.
+  ;That is necessary for those formulas that change their
+  ;pixel "constant" in the Iterate loop. Good examples for
+  ;this are the spider switch formulas in reb.ulb!
+  if @modeM == "Julia" && @formulaClass==THMSwitchBase
+    THMSwitchBase(f).SetSwitchmode(true, @seed)
+  endif
+  if @modeM == "Mandel" && @formulaClass==THMSwitchBase
+    THMSwitchBase(f).SetSwitchmode(false, #pixel)
+  endif
+  #z=f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "THMGenericSwitch"
+  rating = recommended
+    param modeM  ;Mode holder
+    caption="Switchmode"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="Switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+  param seed
+    caption = "Seed"
+    visible=(@modeM == "Julia")
+    default = (0,0)
+  endparam
+  param start
+    caption = "Mandelbrot Start value"
+    default = (0,0)
+    ;visible = @modeM=="Mandel"
+    visible=false
+  endparam
+
+  heading
+    caption="PluginFormula"
+  endheading
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = THMSwitchMandelbrot
+  endparam
+
+switch:
+  type="ThmGenericSwitch"
+  seed= #pixel
+  start= #pixel
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  formulaClass=formulaClass
+}
+
+
+a112 {
+init:
+  z=c=#pixel
+  ; modeJ and modeM will be set in the
+  ; switch section
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=fn1(z^2)*fn2(fn3(c)/fn4(z))+c
+bailout:
+|z|<4
+default:
+  title = "a112"
+  param modeM  ;Mode holder
+    caption="Switchmode"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="Switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+  func fn1
+    caption="fn1(z^2)"
+    default = ident()
+  endfunc
+  func fn2
+    caption="fn2(fn3/fn4)"
+    default = sin()
+  endfunc
+  func fn3
+    caption="fn3(c)"
+    default = ident()
+  endfunc
+  func fn4
+    caption="fn4(z)"
+    default = ident()
+  endfunc
+  param seed
+    caption = "Seed"
+    visible=(@modeM == "Julia")
+    default = (1,0)
+  endparam
+
+switch:
+  type= "a112"
+  seed= #pixel
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  fn2=fn2
+  fn3=fn3
+  fn4=fn4
+}
+
+
+a113{
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn1(@fn2(z)^@p2)^@p1*@fn3(@fn4(z)^@p4)^@p3 +c
+  z=z^@p5
+bailout:
+	|z| < @bailo
+default:
+  param modeM  ;Mode holder
+    caption="switchmode"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 5
+endparam
+func fn1
+	default = sqr()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=1
+endparam
+func fn2
+	default = sqr()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+	default = recip()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+	default = sqr()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+float param p5
+  caption="powerOfZ"
+  default=1
+endparam
+param seed
+  caption = "Seed"
+  visible=(@modeM == "Julia")
+  default = (1,0)
+endparam
+switch:
+  type= "a113"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  p4=p4
+  p5=p5
+
+}
+
+
+a114{
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn1(@fn2(z/c)^@p2)^@p1 / @fn3(@fn4(c/z)^@p4)^@p3
+  z=z^@p5+c
+bailout:
+	|z| < @bailo
+default:
+  param modeM  ;Mode holder
+    caption="switchmode"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 5
+endparam
+func fn1
+	default = sqr()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=1
+endparam
+func fn2
+	default = sqr()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+	default = recip()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+	default = sqr()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+float param p5
+  caption="powerOfZ"
+  default=1
+endparam
+param seed
+  caption = "Seed"
+  visible=(@modeM == "Julia")
+  default = (1,0)
+endparam
+switch:
+  type= "a114"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  p4=p4
+  p5=p5
+
+}
+
+
+a115{
+;Natural symmetric fractals
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn1(@fn2(z*c)^@p2)^@p1 / @fn3(@fn4(c*z)^@p4)^@p3
+  z=z^@p5*c
+bailout:
+	|z| < @bailo
+default:
+  title="a115"
+  param modeM  ;Mode holder
+    caption="switchmode"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 50
+endparam
+func fn1
+	default = sin()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=0
+endparam
+func fn2
+	default = asin()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+	default = sin()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+	default = sqr()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+float param p5
+  caption="powerOfZ"
+  default=1
+endparam
+param seed
+  caption = "Seed"
+  visible=(@modeM == "Julia")
+  default = (1,0)
+endparam
+switch:
+  type= "a115"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  p4=p4
+  p5=p5
+
+}
+
+
+a116{
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn5(z^@p5+c)*@p6
+  z=((@fn1(@fn2(z)^@p2)^@p1)*c / (@fn3(@fn4(z)^@p4)^@p3)*c)+z/c
+  ;z=z^@p5+z
+bailout:
+	|z| < @bailo
+default:
+  param modeM  ;Mode holder
+    caption="1_Fractaltype"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="1_Switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 500
+endparam
+func fn1
+	default = sqr()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=1
+endparam
+func fn2
+	default = sqr()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+	default = recip()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+	default = sqr()
+endfunc
+func fn5
+  caption="Function 5"
+	default = recip()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+float param p5
+  caption="powerOfZ"
+  default=1
+endparam
+float param p6
+  caption="Z*p6"
+  default=1
+endparam
+param seed
+  caption = "Seed"
+  visible=(@modeM == "Julia")
+  default = (1,0)
+endparam
+switch:
+  type= "a116"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  fn5=fn5
+  p4=p4
+  p5=p5
+  p6=p6
+
+}
+
+
+a117{
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn5(z^@p5+c)*@p6
+  z=((@fn1(@fn2(z)^@p2)^@p1)^c / (@fn3(@fn4(z)^@p4)^@p3)^c/z)+c
+  ;z=z^@p5+z
+bailout:
+	|z| < @bailo
+default:
+  param modeM  ;Mode holder
+    caption="1_Fractaltype"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="1_Switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 500
+endparam
+func fn1
+	default = sqr()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=1
+endparam
+func fn2
+	default = sqr()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+	default = recip()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+	default = sqr()
+endfunc
+func fn5
+  caption="Function 5"
+	default = recip()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+float param p5
+  caption="powerOfZ"
+  default=1
+endparam
+float param p6
+  caption="Z*p6"
+  default=1
+endparam
+param seed
+  caption = "Seed"
+  visible=(@modeM == "Julia")
+  default = (1,0)
+endparam
+switch:
+  type= "a117"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  fn5=fn5
+  p4=p4
+  p5=p5
+  p6=p6
+
+}
+
+
+a118{
+init:
+  z = c = #pixel
+  if @modeJ == "Mandel"
+   ;z = @seed   ;optional settings for
+   ;c = #pixel  ;mandel mode
+  endif
+  if @modeM == "Julia"
+   z = pixel   ;Now julia mode is active
+   c = @seed
+  endif
+loop:
+  z=@fn5((z*@p6)^@p5)+@fn1(z^@p1/@fn2(z^@p2/@fn3(z^@p3/@fn4(z^@p4))))+ c
+bailout:
+	|z| < @bailo
+default:
+  param modeM  ;Mode holder
+    caption="1_Fractaltype"
+    enum = "Mandel""Julia"
+    default = 0
+    enabled = false
+  endparam
+  param modeJ  ;Mode holder
+    caption="1_Switchto"
+    enum = "Mandel""Julia"
+    default = 1
+    enabled = false
+  endparam
+
+float param bailo
+	caption="bailout"
+  default = 50
+endparam
+func fn5
+  caption="fn(z)"
+	default = ident()
+endfunc
+float param p5
+  caption="powerOfZ"
+  default=2
+endparam
+float param p6
+  caption="z*p6"
+  default=1
+endparam
+func fn1
+  caption="fn1"
+	default = sin()
+endfunc
+float param p1
+  caption="powerFn1"
+  default=2
+endparam
+func fn2
+  caption="fn2"
+	default = cos()
+endfunc
+float param p2
+  caption="powerFn2"
+  default=1
+endparam
+func fn3
+  caption="fn3"
+	default = cotanh()
+endfunc
+float param p3
+  caption="powerFn3"
+  default=1
+endparam
+func fn4
+  caption="fn4"
+	default = sqr()
+endfunc
+float param p4
+  caption="powerFn4"
+  default=1
+endparam
+param seed
+  caption="seed"
+  visible=(@modeM == "Julia")
+endparam
+switch:
+  type= "a118"
+  seed= #pixel
+  bailo=bailo
+  modeJ=@modeM ;Everytime when switched occured
+  modeM=@modeJ ;values of modeM and modeJ will be
+  fn1=fn1      ;exchanged.
+  p1=p1
+  fn2=fn2
+  p2=p2
+  fn3=fn3
+  p3=p3
+  fn4=fn4
+  fn5=fn5
+  p4=p4
+  p5=p5
+  p6=p6
+}
+

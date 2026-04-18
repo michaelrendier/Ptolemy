@@ -1,0 +1,136 @@
+bills_xy-trade4  {; modified for UF by Sylvie Gallet
+  a = real(p1), b = imag(p1)
+  c = real(p2), d = imag(p2)
+  g = real(p3), f = imag(p3)
+  z = pixel+1/pixel
+  zold = pixel^g:
+  x = (real(z)-real(zold))^a
+  y = (imag(z)-imag(zold))^b
+  zold = z
+  z = (y +flip(x))
+  z = (fn1(z))^c - (fn2(zold))^d
+  |z| < f
+  ;SOURCE: decker.par
+}
+
+Carr2821a { ; Modified Sylvie Gallet frm. [101324,3444],1996
+            ; Modified for IF..ELSE logic by Sylvie Gallet, March 1997
+            ; Optimized by Sylvie Gallet, April 1997
+   ee = -0.1/pixel , z = c = conj(ee) + pixel , r = |z|
+   k = ee*0.9 , p = k + flip(ee) + conj(0.01*ee) + pixel
+   bailout = 16 , im1 = imag(p1) , im2 = imag(p2)
+   iter = 0 :
+   IF (iter == real(p1))
+      p = (c^1.2)*1.5 + k , r = z = 0
+   ELSEIF (iter == im1)
+      p = conj(c)*2.25 + k , r = z = 0
+   ELSEIF (iter == real(p2))
+      p = flip(c)*3.375 + k , r = z = 0
+   ELSEIF (iter == im2)
+      p = flip(c)*5.0625 + k , r = z = 0
+   ENDIF
+   iter = iter + 1 , z = real(r)*0.2 + sqr(z) + p , r = |z|
+   r <= bailout
+     ;SOURCE: lskinner.frm
+}
+
+Carr2821b { ; Modified Sylvie Gallet frm. [101324,3444],1996
+            ; Modified for IF..ELSE logic by Sylvie Gallet, March 1997
+            ; Optimized by Sylvie Gallet, April 1997
+   ee = 0.1/pixel , z = c = conj(ee) - pixel , r = |z|
+   k = ee*(-0.9) , p = k + flip(ee) + conj(0.01*ee) - pixel
+   bailout = 16 , im1 = imag(p1) , im2 = imag(p2)
+   iter = 0 :
+   IF (iter == real(p1))
+      p = (c^1.2)*1.5 + k , r = z = 0
+   ELSEIF (iter == im1)
+      p = conj(c)*2.25 + k , r = z = 0
+   ELSEIF (iter == real(p2))
+      p = flip(c)*3.375 + k , r = z = 0
+   ELSEIF (iter == im2)
+      p = flip(c)*5.0625 + k , r = z = 0
+   ENDIF
+   iter = iter + 1 , z = real(r)*0.2 + sqr(z) + p , r = |z|
+   r <= bailout
+     ;SOURCE: lskinner.frm
+}
+
+general_jul-2lines {
+  ;
+  ; "2 general lines" coloring method for Julia sets
+  ; c = Julia parameter, hardcoded
+  ; real(p1) = x-line a
+  ; imag(p1) = x-line b
+  ; real(p2) = x-line c
+  ; imag(p2) = y-line a
+  ; real(p3) = y-line b
+  ; imag(p3) = y-line c
+  ; bailout hardcoded to 10^12
+  ; use "decomp=256" coloring
+  ;
+  ; Original Fractint formula by Kerry Mitchell, 26 Aug 98
+  ; Modified for UF by Ken Childress, 02 Nov 99
+  ;
+init:
+  zc = #pixel
+  c = @JuliaCoords
+  rmin = 1.0e12
+  ax = real(@lineA)
+  bx = real(@lineB)
+  cx = real(@lineC)
+  ay = imag(@lineA)
+  by = imag(@lineB)
+  cy = imag(@lineC)
+
+loop:
+  zc = sqr(zc) + c
+  x = real(zc)
+  y = imag(zc)
+  tempx = ax * x + bx * y + cx
+  tempy = ay * x + by * y + cy
+  temp = tempx + flip(tempy)
+  r = |temp|
+
+  if (r < rmin)
+    rmin = r
+    z = temp
+  endif
+
+bailout:
+  |zc| < @bailout
+
+default:
+  title = "Julia - 2 General Lines"
+  periodicity = 0
+  maxiter = 1000
+
+  param JuliaCoords
+    caption = "Julia Seed"
+    default = (0.26, 0.0014)
+    hint = "Julia seed value."
+  endparam
+
+  param lineA
+    caption = "Line A"
+    default = (0.0, 0.0)
+    hint = "Real = Line A x-value, Imag = Line A y-value"
+  endparam
+
+  param lineB
+    caption = "Line B"
+    default = (1.0, 0.0)
+    hint = "Real = Line B x-value, Imag = Line B y-value"
+  endparam
+
+  param lineC
+    caption = "Line C"
+    default = (1.0, 1.0)
+    hint = "Real = Line C x-value, Imag = Line C y-value"
+  endparam
+
+  param bailout
+    caption = "Bailout Value"
+    default = 1.0e12
+    hint = "The bailout value."
+  endparam
+}

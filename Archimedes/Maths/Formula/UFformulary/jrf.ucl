@@ -1,0 +1,575 @@
+Coloring {
+init:
+  closest = 1e20
+loop:
+  d = @fnd(#z)
+  if |d| <= |closest|  
+    closest = d
+  endif
+final:
+  #index = 0.01 * (#numiter + 0.1) * |closest|
+default:
+  func fnd
+    caption = "Function of d"
+    default = sin()
+  endfunc
+}
+
+Coloring_2 {
+init:
+  closest = @closest
+loop:
+  d = @fnd(#z)
+  if |d| <= |closest|  
+    closest = d
+  endif
+final:
+  #index = 0.01 * (#numiter / 0.1) * |closest|
+default:
+  param closest
+    caption = "Start Value"
+    default = 10000.0
+  endparam
+  func fnd
+    caption = "Function of d"
+    default = sin()
+  endfunc
+}
+
+Curvy {
+  init:
+    c = @start
+    d = @fnd(c / #pixel)
+  loop:
+    if |d| <= |c|
+      c = d
+    endif
+    c = d^(c - (#pixel / #z))
+  final:
+    if |@start| <= |d|
+      #index = |d| * sin(#numiter) + 0.1 * cos(|c|)
+      else
+         #index = #numiter^(|d| * |c|) + |c|^(1/#numiter)
+    endif
+  default:
+    title = "Curvy"
+    param start
+      caption = "Start Value"
+      default = (1.0, 0.0)
+    endparam
+       }
+
+Trial{
+init:
+  complex a = #pixel
+  complex b = @fnb(a^2 - (#pixel/(a - .01)))
+  complex c = @fnc(b / a)
+loop:
+  a = @fna(b / #z)
+  b = b^2 - #z
+  c = c^(b / a) - #z
+final:
+  if |a| < |b| && |b| < |c|
+    #index = tan(|a|/#numiter)
+    elseif |c| < |a|
+      #index = sin(|b|*#numiter)
+       else
+        #index = cos(#numiter/|c|)
+  endif
+default:
+  func fna
+    caption = "Function of a"
+    default = ident()
+  endfunc
+  func fnb
+    caption = "Function of b"
+    default = sin()
+  endfunc
+  func fnc
+    caption = "Function of c"
+    default = cos()
+  endfunc
+       }
+
+
+
+Dyer{
+  init:
+    a = @fna((#pixel / 3) + (sqr(#z) / #pixel))
+    b = @fnb((sqr(#z) / #pixel) - (#pixel / 3))
+    z1 = 0
+    z2 = 0
+  loop:
+    z1 = (sqr(#pixel + #z)) / (#z * (a - z1) * b)
+    z2 = (#z * (a - z2) * b) / (sqr(#pixel + #z))
+    a = (@fnb(a) - z2) / (sqr(#z) - #pixel)
+    b = (@fna(b) - z1) / (#pixel - sqr(#z))
+  final:
+    #index = cos(|z2 - a|) - (sin(#numiter)) + sin(|z1 + b| / #numiter) 
+  default:
+    title = "Dyer"
+    func fna
+      caption = "Function of a"
+      default = sqrt()
+      hint = "This function initializes a, but effects b \
+      during the iterations"
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = sin()
+      hint = "This function initializes b, but effects a \
+      during the iterations"
+    endfunc
+       }
+
+Dyer2{
+  init:
+    a = @fna((#pixel / 3) + (sqrt(#z) / #pixel))
+    b = @fnb((sqrt(#z) / #pixel) - (#pixel / 3))
+    z1 = 0
+    z2 = 0
+  loop:
+    z2 = (sqr(#pixel + #z)) / (z1 * a + #z * b)
+    z1 = (#z * a + z2 * b) / (sqr(#pixel + #z))
+    b = (@fnb(a) - z2) / (sqrt(#z) - #pixel)
+    a = (@fna(b) - z1) / (#pixel - sqrt(#z))
+  final:
+    #index = cos(|z1|) + (sin(#numiter))^2 - tan(|z2| / #numiter) 
+  default:
+    title = "Dyer 2"
+    func fna
+      caption = "Function of a"
+      default = sqrt()
+      hint = "This function initializes a, but effects b \
+      during the iterations"
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = sin()
+      hint = "This function initializes b, but effects a \
+      during the iterations"
+    endfunc
+       }
+       
+Murphy(OUTSIDE){
+  init:
+    a = #pixel
+    b = @fnb(#pixel / (a^2 + .1))
+    c = b / #pixel
+    z = c / a / b
+  loop:
+    z = z^(c - #pixel) * ((recip(a) * #pixel) - b)
+    a = @fna(a + z)
+    c = @fnc(z - c)
+    b = (b - a)^(c / z)
+  final:
+    #index = |#z|^(|z / a|) + #numiter
+  default:
+    title = "Murphy"
+    func fna
+      caption = "Function of a"
+      default = sqrt()
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = cos()
+    endfunc
+    func fnc
+      caption = "Function of c"
+      default = sqr()
+    endfunc
+       }
+       
+CurvyII{
+  init:
+    c = @start
+    d = @fnd(c / #pixel)
+  loop:
+    if |d| <= |c|
+      c = d
+    endif
+    c = d^(c + (#pixel / #z))
+  final:
+    if |@start| <= |d|
+      #index = |d| / (sin(#numiter) + 0.1) * cos(|c|)
+      else
+         #index = #numiter^(|d| * |c|) - |c|^(1/#numiter)
+    endif
+  default:
+    title = "Curvy II"
+    param start
+      caption = "Start Value"
+      default = (1.0, 0.0)
+    endparam
+       }
+       
+Storma(OUTSIDE){
+  init:
+    a = 0
+    b = 1
+  loop:
+    if (|a| <= 1) && (|b| >=1)
+      a = @fna(#pixel - b)
+      b = @fnb(#pixel - #z)
+    else
+      a = @fna(#pixel / b)
+      b = @fnb(#pixel / #z)
+    endif
+  final:
+    if |a| > |b|
+      #index = #numiter^(|(b) / (a)|) + |#pixel|
+      elseif |a| < |b|
+        #index = #numiter^(|(a) / (b)|) + |#pixel|
+        else
+        #index = #numiter^(|#z|) + |#pixel|
+    endif
+  default:
+    title = "Storm - Outside"
+    func fna
+      caption = "Function of a"
+      default = sqrt()
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = cotan()
+    endfunc
+       }
+       
+Stormb(INSIDE){
+  init:
+    a = 0
+    b = 1
+  loop:
+    if (|a| <= 1) && (|b| >=1)
+      a = @fna(#pixel - b)
+      b = @fnb(#pixel - #z)
+    else
+      a = @fna(#pixel / b)
+      b = @fnb(#pixel / #z)
+    endif
+  final:
+    if |a| > |b|
+      #index = #numiter^(|(b) / (a)|) + |#pixel|
+      elseif |a| < |b|
+        #index = #numiter^(|(a) / (b)|) + |#pixel|
+        else
+        #index = #numiter^(|#z|) + |#pixel|
+    endif
+  default:
+    title = "Storm - Inside"
+    func fna
+      caption = "Function of a"
+      default = sin()
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = sinh()
+    endfunc
+       }
+       
+USA{
+  init:
+    a = 0
+  loop:
+    a = a^(@fna(@pow / #z)) + #pixel
+  final:
+    if @oper == 0
+      #index = #numiter + |a|
+      elseif @oper == 1
+         #index = #numiter - |a|
+         elseif @oper == 2
+           #index = #numiter * |a|
+           else
+           #index = #numiter / |a|
+    endif
+  default:
+    title = "USA 1"
+    param oper
+      caption = "Operation"
+      enum = "+" "-" "*" "/"
+      default = 0
+    endparam
+    param pow
+      caption = "Power of a"
+      default = (2.0, 0.0)
+    endparam
+    func fna
+      caption = "Function of a"
+      default = ident()
+    endfunc
+       }
+       
+USA2{
+  init:
+    b = 1
+    a = @fna(b)
+  loop:
+    b = b^(@fnb(@pow / a)) + #pixel
+    a = a^2 / a^b
+   final:
+    if @oper == 0
+      #index = #numiter + |b|
+      elseif @oper == 1
+         #index = #numiter - |b|
+         elseif @oper == 2
+           #index = #numiter * |b|
+           else
+           #index = #numiter / |b|
+    endif
+  default:
+    title = "USA 2"
+    param oper
+      caption = "Operation"
+      enum = "+" "-" "*" "/"
+      default = 0
+    endparam
+    param pow
+      caption = "Power of b"
+      default = (2.0, 0.0)
+    endparam
+    func fna
+      caption = "Function of a"
+      default = ident()
+    endfunc
+    func fnb
+      caption = "Func of exponent"
+      default = ident()
+    endfunc
+       }
+
+Storm {
+  init:
+    a = 0
+    b = 1
+  loop:
+    if (|a| <= 1) && (|b| >=1)
+      a = @fna(#pixel - b)
+      b = @fnb(#pixel - #z)
+    else
+      a = @fna(#pixel / b)
+      b = @fnb(#pixel / #z)
+    endif
+  final:
+    if |a| > |b|
+      #index = #numiter^(|(b) / (a)|) + |#pixel|
+      elseif |a| < |b|
+        #index = #numiter^(|(a) / (b)|) + |#pixel|
+        else
+        #index = #numiter^(|#z|) + |#pixel|
+    endif
+  default:
+    title = "Storm"
+    func fna
+      caption = "Function of a"
+      default = sqrt()
+    endfunc
+    func fnb
+      caption = "Function of b"
+      default = cotan()
+    endfunc       
+       }
+
+GaussianInteger {
+;
+; Colors by the relationship of the orbit of Z to Gaussian 
+; Integers. 
+;
+; Written by Kerry Mitchell.
+;
+init:
+  float r=0.0
+  float rmin=1.0e12
+  float rmax=0.0
+  float rave=0.0
+  float total=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  int itermax=0
+  zmin=(0.0,0.0)
+  zmax=(0.0,0.0)
+  if(@norm==1)                       ; pixel normalization
+    normfac=#pixel
+  elseif(@norm==2)                   ; factor normalization
+    normfac=@fac
+  elseif(@norm==3)                   ; f(z) normalization
+    normfac=@normfunc(#z)
+  else                               ; no normalization
+    normfac=(1.0,0.0)
+  endif
+  float logfac=@logseed
+loop:
+  iter=iter+1
+  temp2=#z
+  if @randomize
+    logfac=4*logfac*(1-logfac)
+    temp2=temp2*(1-@randomsize*logfac)
+  endif
+ temp=@inttype(temp2/normfac)
+  remain=temp2-temp*normfac
+  r=cabs(remain)
+  total=total+r
+  rave=total/iter
+  if(r<rmin)
+    rmin=r
+    zmin=temp2
+    itermin=iter
+  endif
+  if(r>rmax)
+    rmax=r
+    zmax=temp2
+    itermax=iter
+  endif
+final:
+  if(@colorby==1)            ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)        ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)        ; maximum distance
+    #index=rmax
+  elseif(@colorby==4)        ; iteration @ max
+    #index=0.01*itermax
+  elseif(@colorby==5)        ; angle @ max
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==6)        ; average distance
+    #index=rave
+  elseif(@colorby==7)        ; min/mean/max angle
+    zmax=(rave-rmin)+flip(rmax-rave)
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==8)        ; max/min ratio
+    #index=rmax/(rmin+1.e-12)
+  else                       ; minimum distance
+    #index=rmin
+  endif
+default:
+  title="Gaussian Integer"
+  helpfile = "Uf3.chm"
+  helptopic = "Html/coloring/standard/gaussianinteger.html"
+  func inttype
+    caption="Integer Type"
+    default=round()
+  endfunc
+  param colorby
+    caption="Color By"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "maximum distance" "iteration @ max" "angle @ max" "average distance"\
+      "min/mean/max angle" "max/min ratio"
+  endparam
+  param norm
+    caption="Normalization"
+    default=0
+    enum="none" "pixel" "factor" "f(z)"
+  endparam
+  param fac
+    caption=" Factor"
+    default=(2.0,1.0)
+    hint = "Normalization factor."
+    visible = @norm == "factor"
+  endparam
+  func normfunc
+    caption=" Function"
+    default=ident()
+    hint = "Normalization function."
+    visible = @norm == "f(z)"
+  endfunc
+  param randomize
+    caption="Randomize"
+    default=false
+    hint="Applies a random factor to z every iteration before \
+      finding the Gaussian integer."
+  endparam
+  param randomsize
+    caption="Random Size"
+    default=(0.1,0)
+    hint="Size of random factor. Larger values give more randomization."
+    visible = @randomize
+  endparam
+  param logseed
+    caption="Random Seed"
+    default=0.1
+    min=0.0
+    max=1.0
+    hint="Randomize seed, between 0 and 1. Every seed gives a different \
+          image."
+    visible = @randomize
+  endparam
+}
+
+Sleep{
+  init:
+    a = #pixel
+    b = 0 
+  loop:
+    b = #z / a
+    a = @fna(a)
+  final:
+    #index = #numiter / |b+a|
+  default:
+    title = "Sleep"
+    func fna
+      caption = "Function of a"
+      default = sin()
+    endfunc
+       }
+Guess{   
+init:
+  r = 0
+  a = 0 
+loop:
+  if @fnr == 0
+    r = asin(r - a)
+    elseif @fnr == 1
+       r = asinh(r - a)
+       elseif @fnr == 2
+         r = acos(r - a)
+          elseif @fnr == 3
+           r = acosh(r - a)
+            elseif @fnr == 4
+               r = atan(r - a)
+                else
+                r = atanh(r - a)
+  endif
+  if |r| < 0
+      a = a + 2 * #pi
+    endif
+  a = #z^2 + #pixel
+final:
+  if |r| <= 0
+  #index = #numiter - |r|
+  else
+  #index = |r| + #numiter
+  endif
+default:
+  title = "Guess"
+  param fnr
+    caption = "Function of r"
+    enum = "asin()" "asinh" "acos" "acosh" "atan" "atanh" 
+    default = 1
+  endparam
+}
+
+Driving{
+  init:
+    a = 0
+  loop:
+    a = #pixel / fn1(#z - a)
+  final:
+    #index = ((#numiter * .1) / |#pixel - a|)
+  default:
+  }

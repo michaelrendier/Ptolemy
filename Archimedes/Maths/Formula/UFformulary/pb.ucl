@@ -1,0 +1,186 @@
+comment {
+;
+; Coloring formulas by Piotr Borys
+; utak3r@o2.pl
+; http://pborys.topcities.com/
+;
+; Last update: 13.12.2004
+; For a little help see pb.txt file
+}
+
+IterationPower {
+;
+; Colors by iteration with a parameter
+; For a little help see pb.txt file
+;
+final:
+  #index = @power * #numiter
+default:
+  title = "Iteration power"
+  float param power
+    caption = "Power"
+    default = 0.015
+  endparam
+}
+
+WavyTraps {
+;
+; Original idea taken from Damien M. Jones,
+; and then expanded to my personal wishes.
+; Try this with polynomials or Newton-like fractals.
+;
+; Thanks goes to Toby Marshall for his help :)
+;
+; For a little help see pb.txt file
+;
+init:
+  float d = 0.0
+  float a1
+  float b1
+  float a2
+  float b2
+  complex z2 = (0,0)
+  int iter = 0
+  complex r = (0,1) ^ (@angle / 90.0)
+  complex trapcenter2 = @trapcenter
+  if @screencenter
+    trapcenter2 = #center
+  endif
+  float closest = 1e38
+  bool usesolid = true
+  complex zvalues[#maxiter+1]
+  zvalues[0] = #z
+
+loop:
+  iter = iter + 1
+  z2 = #z
+  z2 = (z2 - trapcenter2) * r
+  zvalues[iter] = z2
+
+  if (iter > @iterskip) && (iter < @itermax)
+    a1 = abs(imag(z2)^@power1)
+    b1 = cabs(@trapfunc(((real(z2))^@power2)*@trapfreq))*@trapheight
+    d = abs(a1 - @diameter + b1)
+
+    if @modifying && (iter > 1)
+      a2 = abs(imag(zvalues[iter-1])^@power1)
+      b2 = cabs(@trapfunc(((real(zvalues[iter-1]))^@power2)*@trapfreq))*@trapheight
+      d = d + @modfactor*cabs(@modfunc(abs(a2 - @diameter + b2)))
+    endif
+  endif
+
+  if (d < closest)
+    closest = d
+  endif
+  if (d < @threshold)
+    usesolid = false
+  endif
+
+final:
+  if @solidcolor
+    #solid = usesolid
+  else
+    #solid = false
+  endif
+
+  #index = closest
+
+default:
+  title = "Wavy Traps"
+
+  heading
+    caption = "Parameters"
+  endheading
+  param diameter
+    caption = "  Diameter"
+    default = 1.0
+    hint = "The diameter of the trap."
+  endparam
+  param trapheight
+    caption = "  Height"
+    default = 1.0
+    hint = "The height of waves."
+  endparam
+  param trapfreq
+    caption = "  Frequency"
+    default = 1.5
+    hint = "The frequency of waves."
+  endparam
+  param angle
+    caption = "  Rotation"
+    default = 0.0
+    hint = "Rotation of a trap, in degrees."
+  endparam
+
+  heading
+    caption = "Type"
+  endheading
+  param power1
+    caption = "  Power 1"
+    hint = "The power of the first equation part."
+    default = 1.0
+  endparam
+  param power2
+    caption = "  Power 2"
+    hint = "The power of the second equation part."
+    default = 2.0
+  endparam
+  func trapfunc
+    caption = "  Trap function"
+    hint = "Function involved in creation of the trap."
+    default = sin()
+  endfunc
+  param modifying
+    caption = "  Iteration Modifying"
+    hint = "When enabled, the iterations chain modifies coloring"
+    default = true
+  endparam
+  func modfunc
+    caption = "  Modifying Function"
+    hint = "Function calculated when building the iterations chain."
+    default = sinh()
+    visible = @modifying == true
+  endfunc
+  param modfactor
+    caption = "  Modifying Strength"
+    hint = "Strength of the iterations chain modifier."
+    default = 0.3
+    visible = @modifying == true
+  endparam
+
+  heading
+    caption = "Options"
+  endheading
+  param trapcenter
+    caption = "  Trap Center"
+    default = (0,0)
+    hint = "This is the location of the trap in the complex plane."
+    visible = @screencenter == false
+  endparam
+  param screencenter
+    caption = "  Use Screen Center"
+    default = false
+    hint = "If enabled, trap center will be set to the screen center."
+  endparam
+  param iterskip
+    caption = "  Skip Iterations"
+    default = 0
+  endparam
+  param itermax
+    caption = "  Max Iterations"
+    default = 256
+  endparam
+  param solidcolor
+    caption = "  Use Solid Color"
+    default = false
+    hint = "If enabled, areas 'outside' the trap area will be colored \
+            with the 'solid color' on the coloring tab."
+  endparam
+  param threshold
+    caption = "  Threshold"
+    hint = "This is the width of the trap area."
+    default = 0.2
+    min = 0
+  endparam
+}
+

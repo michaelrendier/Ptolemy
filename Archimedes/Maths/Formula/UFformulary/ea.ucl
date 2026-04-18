@@ -1,0 +1,1552 @@
+Gielis_plus { 
+; 
+; based on the 'super formula' of Johan Gielis,
+; Kerry Mitchell's 'polar-curves' 15nov98, 
+; and some curves from the web and from textbooks on analytic geometry.
+;
+; The use of those three sources (gielis, single and extra) is
+; optional and there are several ways of combining them available.
+;
+; Acknowledgements
+;
+; Thanks to Mr. Gielis for his consent to use his patented 
+; 'super formula' for non-commercial use in Ultra Fractal, and
+; also to Kerry Mitchell, who allowed me to use his routines as found
+; in 'Polar Curves' in his lkm.ucl,
+; and thanks for Kerry's valuable lessons in the courses of
+; 'Writing UF Calculation Formualas', and
+; 'Writing UF Coloring and Transformation Formulas'
+;
+;
+; Copyright Ed Algra - july 22 2007
+; algra275@planet.nl
+; 
+;
+global:
+  float twopi=2.0*pi
+  float halfpi=0.5*pi
+;
+init:
+  bool flag=true
+  int iter=0
+  int itermin=0
+  int incount=0
+  float err=0.0
+  float errmin=1.0e12
+  float r=0.0   ; radius of composition
+  float rs=0.0  ; single
+  float rg=0.0  ; gielis
+  float re=0.0  ; extra
+  float t=0.0
+  float term1=0.0
+  float term2=0.0
+  float temp=0.0
+  float hk=0.0
+  complex z1=(0,0)
+  complex z2=(0,0)
+  complex zmin=(0,0)
+  complex first_in=(0,0)
+  complex last_in=(0,0)
+  complex tmp=(0,0)
+;
+loop:
+  iter=iter+1
+  if (iter%@skip==0) && (iter>@threshold) && (iter<@end)
+     z1=#z-@r_center
+;  
+; calculation angle t from z1 with Euler formula
+     t=imag(log(z1))+@rot ; total pre-rotation
+     while t>twopi
+        t=t-twopi
+     endwhile
+     while t<0.0
+        t=t+twopi
+     endwhile
+;
+; Gielis (based on the 'superformula' of Johan Gielis)
+     if @gielis==true
+        hk=0.25*@m*(t+@rot_g)
+        while hk>twopi
+           hk=hk-twopi
+        endwhile
+        while hk<0.0
+           hk=hk+twopi
+        endwhile
+        if @hf==false
+          term1=abs(cos(hk)/real(@g))^real(@ng)
+          term2=abs(sin(hk)/imag(@g))^imag(@ng)
+        else
+          term1=abs(cosh(hk)/real(@g))^real(@ng)
+          term2=abs(sinh(hk)/imag(@g))^imag(@ng)
+        endif
+        if @hyper==false
+           temp=term1+term2
+        else
+           temp=term1-term2
+        endif
+        if temp==0
+           temp=1e-30
+        endif
+        if @ge==true ; enhanced
+           rg=@rg0+real(@fg_sub(@fg_main(@gc*hk)*@gs/(temp^(1/@n1))))
+        else ; gielis 'original'
+           rg=@rg0+real(@fg_sub(@gs/(temp^(1/@n1))))
+        endif        
+     endif
+;   
+; single functions (based on 'polar curves' of Kerry Mitchell)
+     if @single==true
+        hk=@b*(t+@rot_s) 
+        while hk>twopi
+           hk=hk-twopi
+        endwhile
+        while hk<0.0
+           hk=hk+twopi
+        endwhile
+        rs=@a*real(@fs_main(hk))
+        if rs>=0.0
+           rs=rs^@n
+        else
+           rs=-((-rs)^@n)
+        endif
+        rs=@rs0+real(@fs_sub(rs))
+     endif
+;       
+; extra functions (standard polar functions, mostly composed)
+     if @extra==true
+        hk=@be*(t+@rot_e) ; be=freq. rot_e=pre-rotation extra
+        while hk>twopi
+           hk=hk-twopi
+        endwhile
+        while hk<0.0
+           hk=hk+twopi
+        endwhile
+        if @functiontype==0 ; lemniscate
+           re=real(@p)*sqr(2*cos(2*hk))+imag(@p)*sqr(2*sin(2*hk))
+        elseif @functiontype==1 ; rose
+           re=real(@p)*cos(real(@q)*hk)+imag(@p)*sin(imag(@q)*hk)
+        elseif @functiontype==2 ; conchoid
+           re=real(@p)/cos((hk)+imag(@p))
+        elseif @functiontype==3 ; limaçon
+           re=real(@p)*cos(hk)+imag(@p)
+        elseif @functiontype==4 ; cissoid
+           re=@pp*cos(2*hk)/cos(hk)
+        elseif @functiontype==5 ; trifolium
+           re=real(@p)*cos(hk)*cos(2*hk)+imag(@p) 
+        elseif @functiontype==6 ; cassinoid 1
+           re=sqr(real(@p))*(cos(2*hk)+sqrt((imag(@p)/real(@p))^4-sqr(sin(2*hk))))
+        elseif @functiontype==7 ; cassinoid 2
+           re=sqr(real(@p))*(cos(2*hk)-sqrt((imag(@p)/real(@p))^4-sqr(sin(2*hk))))
+        elseif @functiontype==8 ; ellips
+           re=real(@p)+imag(@p)*cos(hk)
+        elseif @functiontype==9 ; astroid generalized
+           re=sqrt(real(@p)*(cos(hk)^(real(@q)))+imag(@p)*(sin(hk)^(imag(@q))))
+        elseif @functiontype==10 ; rectangle
+           if hk==halfpi || hk==3*halfpi
+              re=imag(@p) ; vertical
+           elseif hk==0 || hk==pi || hk==twopi
+              re=real(@p) ; horizontal
+           else
+              if hk>halfpi && hk<pi ; NW
+                 temp=pi-hk
+              elseif hk>pi && hk<3*halfpi ; SW
+                 temp=hk-pi
+              elseif hk>3*halfpi && hk<twopi ; SE
+                 temp=twopi-hk
+              else ; NE
+                 temp=hk
+              endif
+              if temp<=atan(imag(@p)/real(@p))
+                 re=real(@p)/cos(temp)
+              else
+                 re=imag(@p)/sin(temp)
+              endif
+           endif
+        elseif @functiontype==11 ; flower
+           re=cos(@pp*hk)
+        endif
+        re=@re0+@es*real(@fe_sub(re))
+     endif
+;
+; combinations (calculation of r)
+;   
+     if @gielis==true && @single==false && @extra==false
+        r=rg
+     elseif @gielis==false && @single==true && @extra==false
+        r=rs
+     elseif @gielis==false && @single==false && @extra==true
+        r=re
+     elseif @gielis==true && @single==true && @extra==false
+        if @combi1=="g+s"
+           r=rg+rs
+        elseif @combi1=="g-s"
+           r=rg-rs
+        elseif @combi1=="g*s"
+           r=rg*rs
+        elseif @combi1=="g/s"
+           if rs==0
+              r=1e30
+           else
+              r=rg/rs
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi1=="s/g"
+           if rg==0
+              r=1e30
+           else
+              r=rs/rg
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi1=="harm.mean g,s"
+           r=2*(rg*rs)/(rg+rs)
+        elseif @combi1=="contraharm.mean g,s"
+           r=(sqr(rg)+sqr(rs))/(rg+rs)
+        elseif @combi1=="quadratic mean g,s"
+           r=sqrt(0.5*sqr(rg)+sqr(rs))
+        elseif @combi1=="root mean g,s"
+           r=sqr(0.5*(sqrt(rg)+sqrt(rs)))
+        elseif @combi1=="fantasy g,s"
+           r=(sqrt(rg)+sqrt(rs))/(rg+rs)
+        elseif @combi1=="recipr.fantasy g,s"
+           r=(rg+rs)/(sqrt(rg)+sqrt(rs))
+        endif    
+     elseif @gielis==true && @single==false && @extra==true
+        if @combi2=="g+e"
+           r=rg+re
+        elseif @combi2=="g-e"
+           r=rg-re
+        elseif @combi2=="g*e"
+           r=rg*re
+        elseif @combi2=="g/e"
+           if re==0
+              r=1e30
+           else
+              r=rg/re
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi2=="e/g"
+           if rg==0
+              r=1e30
+           else
+              r=re/rg
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi2=="harm.mean g,e"
+           r=2*(rg*re)/(rg+re)
+        elseif @combi2=="contraharm.mean g,e"
+           r=(sqr(rg)+sqr(re))/(rg+re)
+        elseif @combi2=="quadratic mean g,e"
+           r=sqrt(0.5*sqr(rg)+sqr(re))
+        elseif @combi2=="root mean g,e"
+           r=sqr(0.5*(sqrt(rg)+sqrt(re)))
+        elseif @combi2=="fantasy g,e"
+           r=(sqrt(rg)+sqrt(re))/(rg+re)
+        elseif @combi2=="recipr.fantasy g,e"
+           r=(rg+re)/(sqrt(rg)+sqrt(re))
+        endif
+     elseif @gielis==false && @single==true && @extra==true
+        if @combi3=="s+e"
+           r=rs+re
+        elseif @combi3=="s-e"
+           r=rs-re
+        elseif @combi3=="s*e"
+           r=rs*re
+        elseif @combi3=="s/e"
+           if re==0
+              r=1e30
+           else
+              r=rs/re
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi3=="e/s"
+           if rs==0
+              r=1e30
+           else
+              r=re/rs
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi3=="harm.mean s,e"
+           r=2*(rs*re)/(rs+re)
+        elseif @combi3=="contraharm.mean s,e"
+           r=(sqr(rs)+sqr(re))/(rs+re)
+        elseif @combi3=="quadratic mean s,e"
+           r=sqrt(0.5*sqr(rs)+sqr(re))
+        elseif @combi3=="root mean s,e"
+           r=sqr(0.5*(sqrt(rs)+sqrt(re)))
+        elseif @combi3=="fantasy s,e"
+           r=(sqrt(rs)+sqrt(re))/(rs+re)
+        elseif @combi3=="recipr.fantasy s,e"
+           r=(rs+re)/(sqrt(rs)+sqrt(re))
+        endif     
+     elseif @gielis==true && @single==true && @extra==true
+        if @combi4=="g+s+e" ; 0
+           r=rg+rs+re
+        elseif @combi4=="g+s-e" ; 1
+           r=rg+rs-re
+        elseif @combi4=="g-s+e" ; 2
+           r=rg-rs+re
+        elseif @combi4=="g-s-e" ; 3
+           r=rg-rs-re
+        elseif @combi4=="g*s+e" ; 4
+           r=rg*rs+re
+        elseif @combi4=="g*e+s" ; 5
+           r=rg*re+rs
+        elseif @combi4=="s*e+g" ; 6
+           r=rs*re+rg
+        elseif @combi4=="g*s-e" ; 7
+           r=rg*rs-re
+        elseif @combi4=="g*e-s" ; 8
+           r=rg*re-rs
+        elseif @combi4=="s*e-g" ; 9
+           r=rs*re-rg
+        elseif @combi4=="(g+s)e" ; 10
+           r=(rg+rs)*re
+        elseif @combi4=="(g+e)s" ; 11
+           r=(rg+re)*rs
+        elseif @combi4=="(s+e)g" ; 12
+           r=(rs+re)*rg
+        elseif @combi4=="(g-s)e" ; 13
+           r=(rg-rs)*re
+        elseif @combi4=="(g-e)s" ; 14
+           r=(rg-re)*rs
+        elseif @combi4=="(s-e)g" ; 15
+           r=(rs-re)*rg
+        elseif @combi4=="g*s*e"  ; 16
+           r=rg*rs*re
+        elseif @combi4=="g*s/e"  ; 17
+           if re==0
+              r=1e30
+           else
+              r=rg*rs/re
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="g*e/s" ; 18
+           if rs==0
+              r=1e30
+           else
+              r=rg*re/rs
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="s*e/g" ; 19
+           if rg==0
+             r=1e30
+           else
+              r=rs*re/rg
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="e/(g*s)" ; 20
+           if rg+rs==0
+              r=1e30
+           else
+              r=re/(rg*rs)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="s/(g*e)" ; 21
+           if rg+re==0
+              r=1e30
+           else
+              r=rs/(rg*re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="g/(s*e)" ; 22 
+           if rs*re==0
+              r=1e30
+           else
+              r=rg/(rs*re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(g+s)/e" ; 23
+           if re==0
+              r=1e30
+           else
+              r=(rg+rs)/re
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(g+e)/s" ; 24
+            if rs==0
+              r=1e30
+           else
+              r=(rg+re)/rs
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(s+e)/g" ; 25
+           if rg==0
+              r=1e30
+           else
+              r=(rs+re)/rg
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="e/(g+s)" ; 26
+            if rg+rs==0
+              r=1e30
+           else
+              r=re/(rg+rs)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="s/(g+e)" ; 27
+           if rg+re==0
+              r=1e30
+           else
+              r=rs/(rg+re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="g/(s+e)" ; 28
+           if rs+re==0
+              r=1e30
+           else
+              r=rg/(rs+re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(g-s)/e" ; 29
+           if re==0
+              r=1e30
+           else
+              r=(rg-rs)/re
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(g-e)/s" ; 30
+           if rs==0
+              r=1e30
+           else
+              r=(rg-re)/rs
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="(s-e)/g" ; 31
+           if rg==0
+              r=1e30
+           else
+              r=(rs-re)/rg
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="e/(g-s)" ; 32
+           if rg-rs==0
+              r=1e30
+           else
+              r=re/(rg-rs)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="s/(g-e)" ; 33
+           if rg-re==0
+              r=1e30
+           else
+              r=rs/(rg-re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="g/(s-e)" ; 34
+           if rs-re==0
+              r=1e30
+           else
+              r=rg/(rs-re)
+              if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                 r=@rc/r
+              endif
+           endif
+        elseif @combi4=="harm.mean g,s,e" ; 35
+           r=3*rg*rs*re/(rg*rs+rg*re+rs*re)
+        elseif @combi4=="contraharm.mean g,s,e" ; 36
+           r=(sqr(rg)+sqr(rs)+sqr(re))/(rg+rs+re) 
+        elseif @combi4=="quadratic mean g,s,e" ;37
+           r=sqrt(0.5*(sqr(rg)+sqr(rs)+sqr(re)))
+        elseif @combi4=="root mean g,s,e" ;38
+           r=sqr(0.5*(sqrt(rg)+sqrt(rs)+sqrt(re)))
+        elseif @combi4=="fantasy g,s,e" ; 39
+           r=(sqrt(rg)+sqrt(rs)+sqrt(re))/(rg+rs+re)
+        elseif @combi4=="recipr.fantasy g,s,e" ;40
+           r=(rg+rs+re)/(sqrt(rg)+sqrt(rs)+sqrt(re))
+        endif
+     endif ; calculation of r
+            
+; totaal 3+10+10+10+40=73 stuks
+;
+; overall parameters (scale & baseline) applied to r
+;
+     r=@scale*(@r0+r)
+;
+     if @rneg==true 
+        err=r-cabs(z1) ; ignore r<0
+     else              ; @rneg=false, 
+        err=|r|-|z1|   ; treat as positive
+     endif
+     if err<0.0
+        incount=incount+1
+        err=-err ; positive again
+        last_in=z1
+        if flag==true
+           first_in=z1
+           flag=false
+        endif
+; tmp will be used in 'final'
+        if @coloring_mode=="mean1"
+           tmp=tmp+z1
+        elseif @coloring_mode=="mean2"
+           tmp=tmp+abs(real(z1))+abs(imag(z1))
+        elseif @coloring_mode=="mean3"
+           tmp=tmp+abs(real(z1))
+        elseif @coloring_mode=="mean4"
+           tmp=tmp+abs(imag(z1))
+        endif
+     endif
+     if(err<errmin)
+        errmin=err ; nearest distance pixel to curve
+        zmin=z1
+        itermin=iter
+     endif
+  endif
+;
+final:
+  if @coloring_mode==0 ; from 'polar curves' of KM, only solid added
+     if(@colorby_1==0)               ; minimum distance
+        if err>@width
+           #solid=true
+        else
+           #index=abs(log(errmin)) ; original cabs (why? log(errmin) is a float)
+        endif
+     elseif(@colorby_1==1)           ; iteration @ min
+        if err>@width
+           #solid=true
+        else
+           #index=0.01*itermin
+        endif
+     elseif(@colorby_1==2)           ; angle @ min
+        if err>@width
+           #solid=true
+        else
+           t=atan2(zmin)
+           t=t/pi
+           if(t<0.0)
+              t=t+2.0
+           endif
+           #index=0.5*t
+        endif
+     elseif(@colorby_1==3)           ; in fraction
+        if incount==0
+           #solid=true
+        else  
+           #index=incount/iter
+        endif
+     elseif(@colorby_1==4)           ; draw curves
+        if err>@width
+           #solid=true
+        else
+           z2=#pixel-@r_center
+           t=imag(log(z2))+@rot
+           while t>twopi
+              t=t-twopi
+           endwhile
+           while t<0.0
+              t=t+twopi
+           endwhile                      
+; Gielis
+           if @gielis==true
+              hk=0.25*@m*(t+@rot_g) ; m=freq. rot_g=pre-rotation Gielis
+              term1=abs(cos(hk)/real(@g))^real(@ng)
+              term2=abs(sin(hk)/imag(@g))^imag(@ng)
+              while hk>twopi
+                 hk=hk-twopi
+              endwhile
+              while hk<0.0
+                 hk=hk+twopi
+              endwhile
+              if @hf==false
+                 term1=abs(cos(hk)/real(@g))^real(@ng)
+                 term2=abs(sin(hk)/imag(@g))^imag(@ng)
+              else
+                 term1=abs(cosh(hk)/real(@g))^real(@ng)
+                 term2=abs(sinh(hk)/imag(@g))^imag(@ng)
+              endif
+
+              if @hyper==false
+                 temp=term1+term2
+              else
+                 temp=term1-term2
+              endif
+              if temp==0
+                 temp=1e-30
+              endif
+              if @ge==true ; enhanced
+                 rg=@rg0+real(@fg_sub(@fg_main(@gc*hk)*@gs/(temp^(1/@n1))))
+              else ; gielis 'original'
+                 rg=@rg0+real(@fg_sub(@gs/(temp^(1/@n1))))
+              endif
+           endif
+;
+; single functions 
+           if @single==true
+              hk=@b*(t+@rot_s)   ; b=freq. rot_s=pre-rotation single
+              while hk>twopi
+                 hk=hk-twopi
+              endwhile
+              while hk<0.0
+                 hk=hk+twopi
+              endwhile
+              rs=@a*real(@fs_main(hk))
+              if rs>=0.0
+                 rs=rs^@n
+              else
+                 rs=-((-rs)^@n)
+              endif
+              rs=@rs0+real(@fs_sub(rs)) ; a=scale single rs0=preset single
+           endif
+;
+; extra functions 
+           if @extra==true
+              hk=@be*(t+@rot_e) ; be=freq. rot_e=pre-rotation extra
+              while hk>twopi
+                 hk=hk-twopi
+              endwhile
+              while hk<0
+                 hk=hk+twopi
+              endwhile
+              if @functiontype==0 ; lemniscate
+                 re=real(@p)*sqr(2*cos(2*hk))+imag(@p)*sqr(2*sin(2*hk))
+              elseif @functiontype==1 ; rose
+                 re=real(@p)*cos(real(@q)*hk)+imag(@p)*sin(imag(@q)*hk)
+              elseif @functiontype==2 ; conchoid
+                 re=real(@p)/cos((hk)+imag(@p))
+              elseif @functiontype==3 ; limaçon
+                 re=real(@p)*cos(hk)+imag(@p)
+              elseif @functiontype==4 ; cissoid
+                 re=@pp*cos(2*hk)/cos(hk)
+              elseif @functiontype==5 ; trifolium
+                 re=real(@p)*cos(hk)*cos(2*hk)+imag(@p) 
+              elseif @functiontype==6 ; cassinoid 1
+                 re=sqr(real(@p))*(cos(2*hk)+sqrt((imag(@p)/real(@p))^4-sqr(sin(2*hk))))
+              elseif @functiontype==7 ; cassinoid 2
+                 re=sqr(real(@p))*(cos(2*hk)-sqrt((imag(@p)/real(@p))^4-sqr(sin(2*hk))))
+              elseif @functiontype==8 ; ellips
+                 re=real(@p)+imag(@p)*cos(hk)
+              elseif @functiontype==9 ; astroid generalized
+                 re=sqrt(real(@p)*(cos(hk)^(real(@q)))+imag(@p)*(sin(hk)^(imag(@q))))
+              elseif @functiontype==10 ; rectangle
+                 if hk==halfpi || hk==3*halfpi
+                    re=imag(@p) ; vertical
+                 elseif hk==0 || hk==pi || hk==twopi
+                    re=real(@p) ; horizontal
+                 else
+                    if hk>halfpi && hk<pi ; NW
+                       temp=pi-hk
+                    elseif hk>pi && hk<3*halfpi ; SW
+                       temp=hk-pi
+                    elseif hk>3*halfpi && hk<twopi ; SE
+                       temp=twopi-hk
+                    else ; NE
+                       temp=hk
+                    endif
+                    if temp<=atan(imag(@p)/real(@p))
+                       re=real(@p)/cos(temp)
+                    else
+                       re=imag(@p)/sin(temp)
+                    endif
+                 endif
+              elseif @functiontype==11 ; flower
+                 re=cos(@pp*hk)
+              endif
+              re=@re0+@es*real(@fe_sub(re))
+           endif
+;         
+           if @gielis==true && @single==false && @extra==false
+              r=rg
+           elseif @gielis==false && @single==true && @extra==false
+              r=rs
+           elseif @gielis==false && @single==false && @extra==true
+              r=re
+           elseif @gielis==true && @single==true && @extra==false
+              if @combi1=="g+s"
+              r=rg+rs
+              elseif @combi1=="g-s"
+                 r=rg-rs
+              elseif @combi1=="g*s"
+                 r=rg*rs
+              elseif @combi1=="g/s"
+                 if rs==0
+                    r=1e30
+                 else
+                    r=rg/rs
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi1=="s/g"
+                  if rg==0
+                    r=1e30
+                 else
+                    r=rs/rg
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi1=="harm.mean g,s"
+                 r=2*(rg*rs)/(rg+rs)
+              elseif @combi1=="contraharm.mean g,s"
+                 r=(sqr(rg)+sqr(rs))/(rg+rs)
+              elseif @combi1=="quadratic mean g,s"
+                 r=sqrt(0.5*sqr(rg)+sqr(rs))
+              elseif @combi1=="root mean g,s"
+                 r=sqr(0.5*(sqrt(rg)+sqrt(rs)))
+              elseif @combi1=="fantasy g,s"
+                 r=(sqrt(rg)+sqrt(rs))/(rg+rs)
+              elseif @combi1=="recipr.fantasy g,s"
+                 r=(rg+rs)/(sqrt(rg)+sqrt(rs))
+              endif    
+           elseif @gielis==true && @single==false && @extra==true
+              if @combi2=="g+e"
+                 r=rg+re
+              elseif @combi2=="g-e"
+                 r=rg-re
+              elseif @combi2=="g*e"
+                 r=rg*re
+              elseif @combi2=="g/e"
+                 if re==0
+                    r=1e30
+                 else
+                    r=rg/re
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi2=="e/g"
+                 if rg==0
+                    r=1e30
+                 else
+                    r=re/rg
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi2=="harm.mean g,e"
+                 r=2*(rg*re)/(rg+re)
+              elseif @combi2=="contraharm.mean g,e"
+                 r=(sqr(rg)+sqr(re))/(rg+re)
+              elseif @combi2=="quadratic mean g,e"
+                 r=sqrt(0.5*sqr(rg)+sqr(re))
+              elseif @combi2=="root mean g,e"
+                 r=sqr(0.5*(sqrt(rg)+sqrt(re)))
+              elseif @combi2=="fantasy g,e"
+                 r=(sqrt(rg)+sqrt(re))/(rg+re)
+              elseif @combi2=="recipr.fantasy g,e"
+                 r=(rg+re)/(sqrt(rg)+sqrt(re))
+              endif
+           elseif @gielis==false && @single==true && @extra==true
+              if @combi3=="s+e"
+                 r=rs+re
+              elseif @combi3=="s-e"
+                 r=rs-re
+              elseif @combi3=="s*e"
+                 r=rs*re
+              elseif @combi3=="s/e"
+                 if re==0
+                    r=1e30
+                 else
+                    r=rs/re
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi3=="e/s"
+                  if rs==0
+                    r=1e30
+                 else
+                    r=re/rs
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi3=="harm.mean s,e"
+                 r=2*(rs*re)/(rs+re)
+              elseif @combi3=="contraharm.mean s,e"
+                 r=(sqr(rs)+sqr(re))/(rs+re)
+              elseif @combi3=="quadratic mean s,e"
+                 r=sqrt(0.5*sqr(rs)+sqr(re))
+              elseif @combi3=="root mean s,e"
+                 r=sqr(0.5*(sqrt(rs)+sqrt(re)))
+              elseif @combi3=="fantasy s,e"
+                 r=(sqrt(rs)+sqrt(re))/(rs+re)
+              elseif @combi3=="recipr.fantasy s,e"
+                 r=(rs+re)/(sqrt(rs)+sqrt(re))
+              endif     
+           elseif @gielis==true && @single==true && @extra==true
+              if @combi4=="g+s+e" ; 0
+                 r=rg+rs+re
+              elseif @combi4=="g+s-e" ; 1
+                 r=rg+rs-re
+              elseif @combi4=="g-s+e" ; 2
+                 r=rg-rs+re
+              elseif @combi4=="g-s-e" ; 3
+                 r=rg-rs-re
+              elseif @combi4=="g*s+e" ; 4
+                 r=rg*rs+re
+              elseif @combi4=="g*e+s" ; 5
+                 r=rg*re+rs
+              elseif @combi4=="s*e+g" ; 6
+                 r=rs*re+rg
+              elseif @combi4=="g*s-e" ; 7
+                 r=rg*rs-re
+              elseif @combi4=="g*e-s" ; 8
+                 r=rg*re-rs
+              elseif @combi4=="s*e-g" ; 9
+                 r=rs*re-rg
+              elseif @combi4=="(g+s)e" ; 10
+                 r=(rg+rs)*re
+              elseif @combi4=="(g+e)s" ; 11
+                 r=(rg+re)*rs
+              elseif @combi4=="(s+e)g" ; 12
+                 r=(rs+re)*rg
+              elseif @combi4=="(g-s)e" ; 13
+                 r=(rg-rs)*re
+              elseif @combi4=="(g-e)s" ; 14
+                 r=(rg-re)*rs
+              elseif @combi4=="(s-e)g" ; 15
+                 r=(rs-re)*rg
+              elseif @combi4=="g*s*e"  ; 16
+                 r=rg*rs*re
+              elseif @combi4=="g*s/e"  ; 17
+                 if re==0
+                    r=1e30
+                 else
+                    r=rg*rs/re
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="g*e/s" ; 18
+                 if rs==0
+                    r=1e30
+                 else
+                    r=rg*re/rs
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="s*e/g" ; 19
+                 if rg==0
+                    r=1e30
+                 else
+                    r=rs*re/rg
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="e/(g*s)" ; 20
+                 if rg+rs==0
+                    r=1e30
+                 else
+                    r=re/(rg*rs)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="s/(g*e)" ; 21
+                 if rg+re==0
+                    r=1e30
+                 else
+                    r=rs/(rg*re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="g/(s*e)" ; 22 
+                 if rs*re==0
+                    r=1e30
+                 else
+                    r=rg/(rs*re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(g+s)/e" ; 23
+                 if re==0
+                    r=1e30
+                 else
+                    r=(rg+rs)/re
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(g+e)/s" ; 24
+                 if rs==0
+                    r=1e30
+                 else
+                    r=(rg+re)/rs
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(s+e)/g" ; 25
+                 if rg==0
+                    r=1e30
+                 else
+                    r=(rs+re)/rg
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="e/(g+s)" ; 26
+                 if rg+rs==0
+                    r=1e30
+                 else
+                    r=re/(rg+rs)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                      r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="s/(g+e)" ; 27
+                 if rg+re==0
+                    r=1e30
+                 else
+                    r=rs/(rg+re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="g/(s+e)" ; 28
+                 if rs+re==0
+                    r=1e30
+                 else
+                    r=rg/(rs+re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(g-s)/e" ; 29
+                 if re==0
+                    r=1e30
+                 else
+                    r=(rg-rs)/re
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(g-e)/s" ; 30
+                 if rs==0
+                    r=1e30
+                 else
+                    r=(rg-re)/rs
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="(s-e)/g" ; 31
+                 if rg==0
+                    r=1e30
+                 else
+                    r=(rs-re)/rg
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="e/(g-s)" ; 32
+                 if rg-rs==0
+                    r=1e30
+                 else
+                    r=re/(rg-rs)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="s/(g-e)" ; 33
+                 if rg-re==0
+                    r=1e30
+                 else
+                    r=rs/(rg-re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="g/(s-e)" ; 34
+                 if rs-re==0
+                    r=1e30
+                 else
+                    r=rg/(rs-re)
+                    if (@rf=="b" && r<@rc) || (@rf=="c" && r>@rc)
+                       r=@rc/r
+                    endif
+                 endif
+              elseif @combi4=="harm.mean g,s,e" ; 35
+                 r=3*rg*rs*re/(rg*rs+rg*re+rs*re)
+              elseif @combi4=="contraharm.mean g,s,e" ; 36
+                 r=(sqr(rg)+sqr(rs)+sqr(re))/(rg+rs+re) 
+              elseif @combi4=="quadratic mean g,s,e" ;37
+                 r=sqrt(0.5*(sqr(rg)+sqr(rs)+sqr(re)))
+              elseif @combi4=="root mean g,s,e" ;38
+                 r=sqr(0.5*(sqrt(rg)+sqrt(rs)+sqrt(re)))
+              elseif @combi4=="fantasy g,s,e" ; 39
+                 r=(sqrt(rg)+sqrt(rs)+sqrt(re))/(rg+rs+re)
+              elseif @combi4=="recipr.fantasy g,s,e" ;40
+                 r=(rg+rs+re)/(sqrt(rg)+sqrt(rs)+sqrt(re))
+              endif
+           endif
+        endif ; end err <>width  
+;                        
+        r=@scale*(@r0+r)
+        if @rneg==true       
+           err=r-cabs(z2) ; ignore r<0
+        else                  ; @rneg=false, 
+           err=|r|-|z2|   ; treat as positive
+        endif
+        #index=abs(log(abs(err)))
+     endif 
+; end colorby_1=4 (draw)
+;                            
+  else ; @coloring_mode!=0, no curve
+     if incount==0
+        #solid=true
+     else
+        if @coloring_mode==1                           ; first in
+           tmp=first_in
+        elseif @coloring_mode==2                       ; last in
+           tmp=last_in
+        elseif (@coloring_mode==3 || @coloring_mode>4) ; mean1, -3 en -4
+           tmp=tmp/incount
+        elseif @coloring_mode==4                       ; "mean2"
+           tmp=0.5*tmp/incount
+        endif
+        if @colorby_2=="magnitude"
+           #index = cabs(tmp)
+        elseif @colorby_2=="angle"
+           #index=(atan2(tmp)/#pi+1)/2 ; scale the angle
+        elseif @colorby_2=="angle extra"
+           #index=real(atan(tmp)) ; scale the angle
+        elseif @colorby_2=="real"
+           #index=real(tmp)
+        elseif @colorby_2=="imag"
+           #index=imag(tmp)
+        endif
+     endif
+  endif
+;              
+default:                                                                                                                                                                                                                        
+  title="Gielis plus 1.3."
+  heading
+    caption="general"
+  endheading
+  complex param r_center
+    caption = "circle center"
+    default = (0,0)
+  endparam
+  float param scale
+    caption="overall scale"
+    default=1.0
+  endparam
+  float param r0
+    caption="overall baseline"
+    default=0.0
+  endparam 
+  float param rot
+    caption="overall rotation"
+    default=0.0
+  endparam
+  int param skip
+    caption="skip iterations"
+    default=1
+  endparam
+  int param threshold
+    caption="iter threshold"
+    default=0
+  endparam
+  int param end
+    caption="iter end"
+    default=10000000
+  endparam  
+  float param width
+    caption="width"
+    default=150
+    visible=@coloring_mode=="curve"
+  endparam
+  bool param rneg
+    caption="ignore neg.r"
+    default=false
+    hint="disabled: ignore negative r values, enabled: treat as positive"
+  endparam
+  bool param gielis
+    caption="gielis formula"
+    default=false
+  endparam
+  bool param single
+    caption="single formula"
+    default=false
+  endparam
+  bool param extra
+    caption="extra functions"
+    default=false
+  endparam
+  param combi1
+    caption="combinations"
+    default=2 ; g*s
+    enum="g+s" "g-s" "g*s" "g/s" "s/g" "harm.mean g,s" "contraharm.mean g,s" \
+         "quadratic mean g,s" "root mean g,s" "fantasy g,s" "recipr.fantasy g,s"
+    visible=(@gielis==true && @single==true && @extra==false)    
+  endparam
+  param combi2
+    caption="combinations"
+    default=2 ; g*e
+    enum="g+e" "g-e" "g*e" "g/e" "e/g" "harm.mean g,e" "contraharm.mean g,e" \
+         "quadratic mean g,e" "root mean g,e" "fantasy g,e" "recipr.fantasy g,e"
+    visible=(@gielis==true && @single==false && @extra==true)    
+  endparam
+  param combi3
+    caption="combinations"
+    default=2 ; s*e
+    enum="s+e" "s-e" "s*e" "s/e" "e/s" "harm.mean s,e" "contraharm.mean s,e" \
+         "quadratic mean s,e" "root mean s,e" "fantasy s,e" "recipr.fantasy s,e"
+    visible=(@gielis==false && @single==true && @extra==true)    
+  endparam
+  param combi4
+    caption="combinations"
+    default=16 ; g*s*e
+    enum="g+s+e" "g+s-e" "g-s+e" "g-s-e" "g*s+e" "g*e+s" "s*e+g" "g*s-e" "g*e-s" "s*e-g" \
+         "(g+s)e" "(g+e)s" "(s+e)g" "(g-s)e" "(g-e)s" "(s-e)g" "g*s*e" "g*s/e" \
+         "g*e/s" "s*e/g" "e/(g*s)" "s/(g*e)" "g/(s*e)" "(g+s)/e" "(g+e)/s" "(s+e)/g" \
+         "e/(g+s)" "s/(g+e)" "g/(s+e)" "(g-s)/e" "(g-e)/s" "(s-e)/g" "e/(g-s)" \
+         "s/(g-e)" "g/(s-e)" "harm.mean g,s,e" "contraharm.mean g,s,e" \
+         "quadratic mean g,s,e" "root mean g,s,e" "fantasy g,s,e" "recipr.fantasy g,s,e"     
+    visible=(@gielis==true && @single==true && @extra==true)    
+  endparam
+  param rf
+    caption="ratio option"
+    default=0
+    enum="a" "b" "c"
+    visible=(@combi1=="g/s" || @combi1=="s/g" || \
+     @combi2=="g/e" || @combi2=="e/g" || \
+     @combi3=="s/e" || @combi3=="e/s" || \
+     @combi4=="g*s/e" || @combi4=="g*e/s" || @combi4=="s*e/g" || \
+     @combi4=="e/(g*s)" || @combi4=="s/(g*e)" || @combi4=="g/(s*e)" || \
+     @combi4=="(g+s)/e" || @combi4=="(g+e)/s" || @combi4=="(s+e)/g" || \
+     @combi4=="e/(g+s)" || @combi4=="s/(g+e)" || @combi4=="g/(s+e)" || \
+     @combi4=="(g-s)/e" || @combi4=="(g-e)/s" || @combi4=="(s-e)/g" || \
+     @combi4=="e/(g-s)" || @combi4=="s/(g-e)" || @combi4=="g/(s-e)")
+    hint="inverting options, try both b and c"
+  endparam    
+  float param rc
+    caption="ratio constant"
+    default=1.0
+    visible=(@combi1=="g/s" || @combi1=="s/g" || \
+     @combi2=="g/e" || @combi2=="e/g" || \
+     @combi3=="s/e" || @combi3=="e/s" || \
+     @combi4=="g*s/e" || @combi4=="g*e/s" || @combi4=="s*e/g" || \
+     @combi4=="e/(g*s)" || @combi4=="s/(g*e)" || @combi4=="g/(s*e)" || \
+     @combi4=="(g+s)/e" || @combi4=="(g+e)/s" || @combi4=="(s+e)/g" || \
+     @combi4=="e/(g+s)" || @combi4=="s/(g+e)" || @combi4=="g/(s+e)" || \
+     @combi4=="(g-s)/e" || @combi4=="(g-e)/s" || @combi4=="(s-e)/g" || \
+     @combi4=="e/(g-s)" || @combi4=="s/(g-e)" || @combi4=="g/(s-e)")
+    hint="parameter to be use in connection with 'ratio option'"  
+  endparam
+  param coloring_mode
+    caption="coloring mode"
+    default=0
+    enum="curve" "first_in" "last_in" "mean1" "mean2" "mean3" "mean4"
+  endparam
+  param colorby_1
+    caption="color by"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "in fraction" "draw curves"
+    visible=@coloring_mode=="curve"
+  endparam
+  param colorby_2
+    caption="color by"
+    default=0
+    enum="magnitude" "angle" "angle extra" "real" "imag"
+    visible=@coloring_mode!="curve"
+  endparam
+;
+  heading
+    caption="gielis formla"
+    visible=@gielis==true
+  endheading
+  bool param ge
+    caption="gielis enhanced"
+    default=false
+    visible=@gielis==true
+    hint="enabled = a variation on the original gielis formula"
+  endparam
+  bool param hyper
+    caption="hyperbolic"
+    default=false
+    visible=@gielis==true
+    hint="normal case = elliptic"
+  endparam
+  bool param hf
+    caption="h function"
+    default=false
+    visible=@gielis==true
+    hint="sinh and cosh in Gielis formula in stead of sin and cos"
+  endparam
+  float param gs
+    caption="g-scale total"
+    default=1.0
+    visible=@gielis==true
+  endparam
+  complex param g
+    caption="scale R=a I=b"
+    default=(2,2)
+    visible=@gielis==true
+    hint="Gielis parameters a and b, combined into one complex number"
+  endparam
+  float param rg0
+    caption="g-baseline"
+    default=0.0
+    visible=@gielis==true
+  endparam
+  float param rot_g
+    caption="g-rotation"
+    default=0.0
+    visible=@gielis==true
+  endparam
+  float param m
+    caption="G frequency (m)"
+    default=3.0
+    visible=@gielis==true
+  endparam
+  float param n1
+    caption="g exponent n1"
+    default=2.0
+    visible=@gielis==true
+    hint="n1, one of the Gielis parameters"
+  endparam
+  complex param ng
+    caption="g exp. R=n2 I=n3"
+    default=(2,2)
+    visible=@gielis==true
+    hint="Gielis parameters n1 and n2, combined into one complex number"
+  endparam
+  float param gc
+    caption="wave"
+    default=1.0
+    visible=(@gielis==true && @ge==true)
+    hint="variable to be used for the option enhanced "
+  endparam
+  func fg_main
+    caption="gielis main function"
+    default=ident()
+    visible=(@gielis==true && @ge==true)
+    hint="additional function to enhanced formula"
+  endfunc
+  func fg_sub
+    caption="gielis sub function"
+    default=ident()
+    visible=@gielis==true
+    hint="additional function"
+  endfunc
+;
+  heading
+    caption="single functions"
+    visible=@single==true
+  endheading
+  float param a
+    caption="amplitude (s-scale)"
+    default=1.0
+    visible=@single==true
+  endparam
+  float param rs0
+    caption="s-baseline"
+    default=0.0
+    visible=@single==true
+  endparam
+  float param rot_s
+    caption="s-rotation"
+    default=0.0
+    visible=@single==true
+  endparam
+  float param b
+    caption="frequency"
+    default=1.0
+    visible=@single==true
+  endparam
+  float param n
+    caption="exponent"
+    default=1.0
+    visible=@single==true
+  endparam
+  func fs_main
+    caption="main function"
+    default=sin()
+    visible=@single==true
+  endfunc
+  func fs_sub
+    caption="sub function"
+    default=ident()
+    visible=@single==true
+  endfunc
+;
+  heading
+    caption="extra functions"
+    visible=@extra==true
+  endheading
+  float param es
+    caption="e-scale"
+    default=1.0
+    visible=@extra==true
+  endparam
+  float param re0
+    caption="e-baseline"
+    default=0.0
+    visible=@extra==true  
+  endparam  
+  float param rot_e
+    caption="e-rotation"
+    default=0.0
+    visible=@extra==true 
+  endparam
+  float param be
+    caption="frequency"
+    default=1.0
+    visible=@single==true
+  endparam
+  param functiontype
+    caption="extra functie"
+    default=0
+    enum="lemniscate" "rose" "conchoid" "limaçon" "cissoid" "trifolium" \
+         "cassinoid 1" "cassinoid 2" "ellips" "astroid" "rectangle" "flower"
+    visible=@extra==true
+  endparam
+  float param pp
+    caption="function parameter 1"
+    default=1
+    visible=@extra==true && (@functiontype=="cissoid" || @functiontype=="flower")
+  endparam
+  complex param p
+    caption="function parameter 1"
+    default=1
+    visible=(@extra==true && @functiontype=="lemniscate") || (@extra==true && @functiontype=="rose") || \
+            (@extra==true && @functiontype=="conchoid") || (@extra==true && @functiontype=="limaçon") || \
+            (@extra==true && @functiontype=="trifolium") || (@extra==true && @functiontype=="cassinoid 1") || \
+            (@extra==true && @functiontype=="cassinoid 2") || (@extra==true && @functiontype=="ellips") || \
+            (@extra==true && @functiontype=="astroid") || (@extra==true && @functiontype=="rectangle")
+  endparam
+  complex param q
+    caption="function parameter 2"
+    default=(1,1)
+    visible=(@extra==true && @functiontype=="rose") || (@extra==true && @functiontype=="astroid")
+  endparam
+  func fe_sub
+    caption="sub function"
+    default=ident()
+    visible=@extra==true
+  endfunc
+}
+
+Image {
+;
+; Image just displays an image from disk. It's best used on the Outside tab,
+; together with the Pixel formula from Standard.ufm.
+;
+; The core of this coloring formula is the same as image.ucl in the Standard file.
+; To use it in combination with some mapping formulas (e.g. foxtrot.uxf)
+; there are in this version of image.ucl some new facilities.
+; In particular when the images are abstracts, textures or fractal images 
+; from UF or other sources, a lot of interesting 'horizontal kaleido' effects 
+; are possible.
+
+global:
+  Image i = new @imageParam
+  float pir=#pi/180
+  float rota=@rot*pir
+  float hshfa=@hshf
+  float vshfa=@vshf
+  float sca1=@sc1
+  float sca2=@sc2
+  float ccr=real(#center)
+  float skangle=@skew
+  float hsta=@hst
+  float vsta=@vst
+
+final:
+  complex shfa = (0.0,0.0)
+  complex c = 0.5 * #pixel
+  float ratio
+  if !i.getEmpty()
+    ratio = i.getWidth() / i.getHeight()
+  else
+    ratio = 1
+  endif
+
+  c = sca1*c ; scaling before rotating
+
+  if @mir1
+    cr=real(c), ci=imag(c)
+    cr = 2*ccr-cr
+    c = cr + flip(ci)
+  endif
+
+  shfa = hshfa + flip(vshfa)
+  ; with scaling after rotating
+  c = sca2*exp(1i*rota)*(c+shfa)
+
+  cr=real(c)/hsta
+  ci=imag(c)/vsta
+  cr=cr+ci*tan(skangle)
+
+  if @mir2
+    cr = 2*ccr-cr
+  endif
+
+  #color = i.getColor(cr + flip(ci) * ratio)
+
+default:
+  title = "Image"
+  int param version, caption="version", default=100, visible=false, endparam
+  heading
+    text = "Tip: the Image coloring algorithm works best with the standard \
+      Pixel fractal formula."
+  endheading
+  Image param imageParam
+    caption = "Image"
+    hint = "The image selected here will fill the entire layer, if combined \
+      with the Pixel fractal formula and if the location is set to the \
+      default. To do this, click the Reset button on the Location tab."
+  endparam
+  bool param mir1
+    caption = "mirror of original image"
+    default = false
+  endparam
+  float param sc1
+    caption = "scaling original image"
+    default = 1.0
+  endparam
+  float param hshf
+    caption = "horizontal shift"
+    default = 0.0
+  endparam
+  float param vshf
+    caption = "vertical shift"
+    default = 0.0
+  endparam
+  float param rot
+    caption = "rotation (°)"
+    default = 0.0
+  endparam
+  float param hst
+    caption = "horizontal stretch"
+    default = 1.0
+  endparam
+  float param vst
+    caption = "vertical stretch"
+    default = 1.0
+  endparam
+  float param skew
+    caption = "skew angle"
+    default = 0.0
+  endparam
+  float param sc2
+    caption = "scaling processed image"
+    default = 1.0
+  endparam
+  bool param mir2
+    caption = "mirror of processed image"
+    default = false
+  endparam
+}
+
+Sphere Shadow {
+; Sept.22, 2015
+;
+; Based on 'smooth' formula of D.M.Jones
+; To be used as an outside coloring.
+; When used as a "shadow layer: no mapping, formula = pixel
+;
+init:
+  complex q = (0.0,0.0)
+  float s = 0.0
+  float noise = 0.0
+
+final:
+  #solid = false
+  if cabs(#z) >= @rd
+    #solid = true
+  endif
+  q = #z-@vct
+  s = cabs(q)
+  if (@userandom==true)
+    noise = 0.01*@noiseamount*real(#random)
+  endif
+  #index = @p-0.1*log(log(s/@corr)) + noise
+
+default:
+  title = "Sphere Shadow"
+  int param version
+    caption = "version"
+    default = 100
+    visible = false
+  endparam
+  float param p
+    caption = "general light tuning"
+    default = 0.22
+    hint = "Higher values: lamp closer to sphere"
+  endparam
+  complex param vct
+    caption = "light center"
+    default = (0.0,0.0)
+    hint = "Position of point with highest light inensity, to be adjusted by manipulating \
+            gradient points. Proposed gradient to start: 2 points: point 1: rot. = 0, \
+            pos. = 31, HSL = 0/0/255; point 2: rot.=0, pos. = 236, HSL= 0/0/0."
+  endparam
+  float param rd
+    caption = "radius sphere"
+    default = 0.99
+  endparam
+  float param corr
+    caption = "radius correction"
+    default = 1.0
+    min = 0.0001
+    hint = "If light center differs from circle center the disturbing crescent \
+            can be removed by using this correction to enhance the radius of the light circle."
+  endparam
+  bool param userandom
+    caption = "add random noise"
+    default = false
+  endparam
+  float param noiseamount
+    caption = "noise amount"
+    hint = "Best results between 1 and 6"
+    default = 2
+    visible = @userandom==true
+   endparam
+}
+
+

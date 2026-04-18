@@ -1,0 +1,2322 @@
+ObjectFormula {
+;
+;
+global:
+  $define debug
+  import "common.ulb"
+  import "reb.ulb"
+  Formula f = new @formulaClass(0)
+  Formula f2 = new @formulaClass2(0)
+  UserTransform fTransform = new @transform(0)
+  UserTransform fTransform2 = new @transform2(0)
+init:
+  complex z2 = 0
+  #z = f.Init(#pixel)
+  if @dual
+    z2 = f2.Init(#pixel)
+  endif
+  fTransform.init(#z)
+  fTransform2.init(#z)
+  int iter = 0
+  bool notx = false
+  bool iter1 = false
+  bool iter2 = false
+  bool switch1 = false
+  bool switch2 = false
+  bool m_BailedOut = false
+loop:
+  iter1 = false
+  iter2 = false
+  switch1 = false
+  switch2 = false
+  if @dual
+    if iter % (@seqgap1) >= 0 && @seqgap2 != 0
+      switch1 = true
+      switch2 = false
+    endif
+    if (iter % (@seqgap1) >= (iter % @seqgap2)+1) || @seqgap2 == 0
+      switch1 = false
+      switch2 = true
+    endif
+    if @seqgap2 > @seqgap1
+      switch1 = true
+      switch2 = false
+    endif
+  endif
+  if !@dual || @flavor == "Merge" || (@flavor == "Sequence" && @seqmethod == \
+      "Default")
+    iter1 = true
+    iter2 = true
+  elseif @dual &&  @flavor == "Sequence" && @seqmethod == "By Iter Value" && \
+     switch1
+     iter1 = true
+  elseif @dual &&  @flavor == "Sequence" && @seqmethod == "By Iter Value" && \
+     switch2
+     iter2 = true
+  endif
+  if  @v_objectformula >= 101
+    notx = true
+    if @combine == "Tx1 Fr1 Fr2 Tx2"
+      if (iter >= @prestart && iter < (@prestart+@postend))&& \
+          @transform != NullTransform
+        #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        if @dual
+          if @flavor == "Sequence"
+            #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+            if iter2
+              #z = f2.iterate(#z)
+            endif
+          elseif @flavor == "Merge"
+            z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+            z2 = f2.iterate(z2)
+          endif
+        endif
+        notx = false
+      endif
+      if (iter >= @poststart && iter < (@poststart+@postend))&& \
+         @transform2 != NullTransform
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        if @dual
+          if @flavor == "Sequence"
+            if iter2
+              #z = f2.Iterate(#z)
+            endif
+            #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+          elseif @flavor == "Merge"
+            z2 = f2.Iterate(z2)
+            z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+          endif
+        endif
+        notx = false
+      endif
+    elseif @combine == "Tx1 Fr1 Tx2 Fr2"
+      if (iter >= @prestart && iter < (@prestart+@postend))&& \
+          @transform != NullTransform
+        #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        if @dual
+          if @flavor == "Sequence"
+            #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+            if iter2
+              #z = f2.iterate(#z)
+            endif
+          elseif @flavor == "Merge"
+            z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+            z2 = f2.iterate(z2)
+          endif
+        endif
+        notx = false
+      endif
+      if (iter >= @poststart && iter < (@poststart+@postend))&& \
+          @transform2 != NullTransform
+        #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        if @dual
+          if @flavor == "Sequence"
+            #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+            if iter2
+              #z = f2.Iterate(#z)
+            endif
+          elseif @flavor == "Merge"
+            z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+            z2 = f2.Iterate(z2)
+          endif
+        endif
+        notx = false
+      endif
+    elseif @combine == "Fr1 Tx1 Tx2 Fr2"
+      if (iter >= @prestart && iter < (@prestart+@postend))&& \
+          @transform != NullTransform
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        if @dual
+          if @flavor == "Sequence"
+            if iter2
+              #z = f2.iterate(#z)
+            endif
+            #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+          elseif @flavor == "Merge"
+            z2 = f2.iterate(z2)
+            z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+          endif
+        endif
+        notx = false
+      endif
+      if (iter >= @poststart && iter < (@poststart+@postend))&& \
+          @transform2 != NullTransform
+        #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        if @dual
+          if @flavor == "Sequence"
+            #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+            if iter2
+              #z = f2.Iterate(#z)
+            endif
+          elseif @flavor == "Merge"
+            z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+            z2 = f2.Iterate(z2)
+          endif
+        endif
+        notx = false
+      endif
+    elseif @combine == "Fr1 Tx1 Fr2 Tx2"
+      if (iter >= @prestart && iter < (@prestart+@postend))&& \
+          @transform != NullTransform
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        if @dual
+          if @flavor == "Sequence"
+            if iter2
+              #z = f2.iterate(#z)
+            endif
+            #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+          elseif @flavor == "Merge"
+            z2 = f2.iterate(z2)
+            z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+          endif
+        endif
+        notx = false
+      endif
+      if (iter >= @poststart && iter < (@poststart+@postend))&& \
+          @transform2 != NullTransform
+        if iter1
+          #z = f.iterate(#z)
+        endif
+        #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        if @dual
+          if @flavor == "Sequence"
+            if iter2
+              #z = f2.Iterate(#z)
+            endif
+            #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+          elseif @flavor == "Merge"
+            z2 = f2.Iterate(z2)
+            z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+          endif
+        endif
+        notx = false
+      endif
+    endif
+    if notx
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      if @dual
+        if @flavor == "Sequence"
+          if iter2
+            #z = f2.iterate(#z)
+          endif
+        elseif @flavor == "Merge"
+          z2 = f2.iterate(z2)
+        endif
+      endif
+    endif
+    iter = iter + 1
+    if @dual && @flavor == "Merge"
+      if @merget == "A+B"
+        #z = (#z + z2)*@scale
+      elseif @merget == "A+1/B"
+        #z = (#z + 1/z2)*@scale
+      elseif @merget == "1/A+B"
+        #z = (1/#z + z2)*@scale
+      elseif @merget == "A*B"
+        #z = (#z*z2)*@scale
+      elseif @merget == "A/B"
+        #z = (#z/z2)*@scale
+      elseif @merget == "B/A"
+        #z = (z2/#z)*@scale
+      elseif @merget == "Largest(A,B)"
+        if cabs(#z) < cabs(z2)
+          #z = z2
+        endif
+      elseif @merget == "Largest(A,1/B)"
+        if cabs(#z) < cabs(1/z2)
+          #z = z2
+        endif
+      elseif @merget == "Largest(1/A,B)"
+        if cabs(1/#z) < cabs(z2)
+          #z = z2
+        endif
+      elseif @merget == "Smallest(A,B)"
+        if cabs(#z) > cabs(z2)
+          #z = z2
+        endif
+      elseif @merget == "Smallest(A,1/B)"
+        if cabs(#z) > cabs(1/z2)
+          #z = z2
+        endif
+      elseif @merget == "Smallest(1/A,B)"
+        if cabs(1/#z) > cabs(z2)
+          #z = z2
+        endif
+      endif
+    endif
+  else
+    #z = f.iterate(#z)
+  endif
+  if @dual
+    if @bailtype == "Formula 1"
+      m_BailedOut = f.IsBailedOut(#z)
+    elseif @bailtype == "Formula 2"
+      m_BailedOut = f2.IsBailedOut(#z)
+    else
+      m_BailedOut = (f.IsBailedOut(#z) || f2.IsBailedOut(#z))
+    endif
+  else
+    m_BailedOut = f.IsBailedOut(#z)
+  endif
+bailout:
+;  !f.IsBailedOut(#z)
+  !m_BailedOut
+default:
+  title = "Object Formulas"
+  maxiter = 1000
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_objectformula
+		caption = "Version (Object Formula)"
+		default = 101
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_objectformula < 101
+	endparam
+  heading
+    text = "Object formula wrapper for formulas in reb.ulb. Formulas that contain \
+    the word 'Switch' should not be used here. For those formulas use either \
+    'Object Formula Switch' or 'Object Formula Switch Lite'"
+  endheading
+  UserTransform param transform
+    caption = "Pre transform"
+    default = NullTransform
+    expanded = false
+    visible = @v_objectformula >= 101 && @formulaclass != REB_slope && @formulaclass2 != REB_slope
+  endparam
+  int param prestart
+    caption = "Start Iter (Pre)"
+    default = 0
+    visible = @transform != NullTransform && @v_objectformula >= 101
+  endparam
+  int param preend
+    caption = "Iterations (Pre)"
+    default = 1
+    visible = @transform != NullTransform && @v_objectformula >= 101
+  endparam
+  float param strength
+    caption = "Strength (Pre)"
+    default = 1
+    visible = @transform != NullTransform && @v_objectformula >= 101
+  endparam
+  bool param dual
+    caption = "Use dual formulas"
+    default = false
+    visible = @formulaclass != REB_Slope
+  endparam
+  param combine
+    caption = "Combine Order"
+    default = 0
+    enum ="Tx1 Fr1 Fr2 Tx2" "Tx1 Fr1 Tx2 Fr2" "Fr1 Tx1 Tx2 Fr2" "Fr1 Tx1 Fr2 Tx2"
+    visible = @dual  && @formulaclass != REB_Slope
+  endparam
+  param flavor
+    caption = "Combine Type"
+    default = 0
+    enum = "Sequence" "Merge"
+    visible = @dual  && @formulaclass != REB_Slope
+  endparam
+  param seqmethod
+    caption = "Sequence method"
+    default = 0
+    enum = "Default" "By Iter Value"
+    visible = @dual  && @formulaclass != REB_Slope && @flavor == "Sequence"
+  endparam
+  int param seqgap1
+    caption = "Iteration cycle"
+    default = 4
+    visible = @dual  && @formulaclass != REB_Slope && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endparam
+  heading
+    text = "'Formula 1 iters' must be less than or equal to the 'Iteration cycle' \
+            Out of range values will be truncated to the size of the 'Iteration \
+            cycle'."
+    visible = @dual  && @formulaclass != REB_Slope && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endheading
+  int param seqgap2
+    caption = "Formula 1 Iters"
+    default = 2
+    visible = @dual  && @formulaclass != REB_Slope && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endparam
+  param merget
+    caption = "Merge Type"
+    default = 0
+    enum = "A+B" "A+1/B" "1/A+B" "A*B" "A/B" "B/A" "Largest(A,B)" "Largest(A,1/B)"\
+            "Largest(1/A,B)" "Smallest(A,B)" "Smallest(A,1/B)" "Smallest(1/A,B)"
+    visible = @dual && @flavor == "Merge"  && @formulaclass != REB_Slope
+  endparam
+  float param scale
+    caption = "Merge Scale"
+    default = 1.0
+    visible = @dual && @flavor == "Merge" && (@merget == "A+B" || @merget == "A+1/B" \
+              || @merget == "1/A+B" || @merget == "A*B" || @merget == "A/B" || \
+              @merget == "B/A" )  && @formulaclass != REB_Slope
+  endparam
+  param bailtype
+    caption = "Bailout type"
+    default = 0
+    enum = "Formula 1" "Formula 2" "Both"
+    visible = @dual
+  endparam
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = REB_Julia
+  endparam
+  Formula param formulaClass2
+    caption = "Fractal Formula"
+    default = REB_IkenagaJulia
+    visible = @dual   && @formulaclass != REB_Slope
+  endparam
+  UserTransform param transform2
+    caption = "Post transform"
+    default = NullTransform
+    expanded = false
+    visible = @v_objectformula >= 101   && @formulaclass != REB_Slope && @formulaclass2 != REB_slope
+  endparam
+  int param poststart
+    caption = "Start Iter (Post)"
+    default = 0
+    visible = @transform2 != NullTransform  && @v_objectformula >= 101  && @formulaclass != REB_Slope
+  endparam
+  int param postend
+    caption = "Iterations (Post)"
+    default = 1
+    visible = @transform2 != NullTransform  && @v_objectformula >= 101   && @formulaclass != REB_Slope
+  endparam
+  float param strength2
+    caption = "Strength (Post)"
+    default = 1
+    visible = @transform2 != NullTransform && @v_objectformula >= 101  && @formulaclass != REB_Slope
+  endparam
+}
+
+REB_SlopeWrapper {
+;
+;
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  Formula f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "Slope Enhanced"
+  maxiter = 1000
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_slopewrapper
+		caption = "Version (Slope Wrapper)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_slopewrapper < 100
+	endparam
+  Formula param formulaClass
+    caption = "Fractal Formula"
+    default = REB_Slope
+    selectable = false
+  endparam
+}
+
+ObjectFormulaSwitchLite {
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  Switch f = new @formulaClass(0)
+init:
+  f.SetParams(@p_mand, @p_jul, @m_c)
+  #z = f.Init(#pixel)
+loop:
+  #z = f.iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "Object Formula Switch Lite"
+  maxiter = 1000
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_ObjectFormulaSwitchLite
+		caption = "Version (Object Formula Switch Lite)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_ObjectFormulaSwitchLite < 100
+	endparam
+  heading
+    caption = "Mandelbrot Type"
+    visible = @p_mand
+  endheading
+  heading
+    caption = "Julia Type"
+    visible = @p_jul
+  endheading
+  complex param m_c
+    caption = "Julia Seed"
+    default = (0,0)
+    visible = @p_jul
+  endparam
+  Switch param formulaClass
+    caption = "Fractal Formula"
+    default = REB_MandelbrotJulia_Switch
+  endparam
+  bool param p_mand
+    caption = "Mandel Type"
+    default = true
+    visible = false
+  endparam
+  bool param p_Jul
+    caption = "Julia Type"
+    default = false
+    visible = false
+  endparam
+switch:
+  type = "ObjectFormulaSwitchLite"
+  p_mand = p_jul
+  p_jul = p_mand
+  m_c = #pixel
+  formulaclass = formulaclass
+}
+
+ObjectFormulaSwitch {
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  Switch f = new @formulaClass(0)
+  Switch f2 = new @formulaClass2(0)
+  UserTransform fTransform = new @transform(0)
+  UserTransform fTransform2 = new @transform2(0)
+init:
+  bool m_BailedOut = false
+  complex z2 = 0
+  f.SetParams(@p_mand, @p_jul, @m_c)
+  #z = f.Init(#pixel)
+  if @dual
+    f2.SetParams(@p_mand, @p_jul, @m_c)
+    z2 = f2.Init(#pixel)
+  endif
+  fTransform.init(#z)
+  fTransform2.init(#z)
+  int iter = 0
+  bool notx = false
+  bool iter1 = false
+  bool iter2 = false
+  bool switch1 = false
+  bool switch2 = false
+loop:
+  iter1 = false
+  iter2 = false
+  switch1 = false
+  switch2 = false
+  if @dual
+    if iter % (@seqgap1) >= 0 && @seqgap2 != 0
+      switch1 = true
+      switch2 = false
+    endif
+    if (iter % (@seqgap1) >= (iter % @seqgap2)+1) || @seqgap2 == 0
+      switch1 = false
+      switch2 = true
+    endif
+    if @seqgap2 > @seqgap1
+      switch1 = true
+      switch2 = false
+    endif
+  endif
+  if !@dual || @flavor == "Merge" || (@flavor == "Sequence" && @seqmethod == \
+      "Default")
+    iter1 = true
+    iter2 = true
+  elseif @dual &&  @flavor == "Sequence" && @seqmethod == "By Iter Value" && \
+     switch1
+     iter1 = true
+  elseif @dual &&  @flavor == "Sequence" && @seqmethod == "By Iter Value" && \
+     switch2
+     iter2 = true
+  endif
+  notx = true
+  if @combine == "Tx1 Fr1 Fr2 Tx2"
+    if (iter >= @prestart && iter < (@prestart+@preend))&& \
+        @transform != NullTransform
+      #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      if @dual
+        if @flavor == "Sequence"
+          #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+          if iter2
+            #z = f2.iterate(#z)
+          endif
+        elseif @flavor == "Merge"
+          z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+          z2 = f2.iterate(z2)
+        endif
+      endif
+      notx = false
+    endif
+    if (iter >= @poststart && iter < (@poststart+@postend))&& \
+       @transform2 != NullTransform
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+      if @dual
+        if @flavor == "Sequence"
+          if iter2
+            #z = f2.Iterate(#z)
+          endif
+          #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        elseif @flavor == "Merge"
+          z2 = f2.Iterate(z2)
+          z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+        endif
+      endif
+      notx = false
+    endif
+  elseif @combine == "Tx1 Fr1 Tx2 Fr2"
+    if (iter >= @prestart && iter < (@prestart+@preend))&& \
+        @transform != NullTransform
+      #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      if @dual
+        if @flavor == "Sequence"
+          #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+          if iter2
+            #z = f2.iterate(#z)
+          endif
+        elseif @flavor == "Merge"
+          z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+          z2 = f2.iterate(z2)
+        endif
+      endif
+      notx = false
+    endif
+    if (iter >= @poststart && iter < (@poststart+@postend))&& \
+        @transform2 != NullTransform
+      #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      if @dual
+        if @flavor == "Sequence"
+          #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+          if iter2
+            #z = f2.Iterate(#z)
+          endif
+        elseif @flavor == "Merge"
+          z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+          z2 = f2.Iterate(z2)
+        endif
+      endif
+      notx = false
+    endif
+  elseif @combine == "Fr1 Tx1 Tx2 Fr2"
+    if (iter >= @prestart && iter < (@prestart+@preend))&& \
+        @transform != NullTransform
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+      if @dual
+        if @flavor == "Sequence"
+          if iter2
+            #z = f2.iterate(#z)
+          endif
+          #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        elseif @flavor == "Merge"
+          z2 = f2.iterate(z2)
+          z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+        endif
+      endif
+      notx = false
+    endif
+    if (iter >= @poststart && iter < (@poststart+@postend))&& \
+        @transform2 != NullTransform
+      #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      if @dual
+        if @flavor == "Sequence"
+          #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+          if iter2
+            #z = f2.Iterate(#z)
+          endif
+        elseif @flavor == "Merge"
+          z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+          z2 = f2.Iterate(z2)
+        endif
+      endif
+      notx = false
+    endif
+  elseif @combine == "Fr1 Tx1 Fr2 Tx2"
+    if (iter >= @prestart && iter < (@prestart+@preend))&& \
+        @transform != NullTransform
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+      if @dual
+        if @flavor == "Sequence"
+          if iter2
+            #z = f2.iterate(#z)
+          endif
+          #z = (#z + fTransform.Iterate(#z)*@strength)/(1+@strength)
+        elseif @flavor == "Merge"
+          z2 = f2.iterate(z2)
+          z2 = (z2 + fTransform.Iterate(z2)*@strength)/(1+@strength)
+        endif
+      endif
+      notx = false
+    endif
+    if (iter >= @poststart && iter < (@poststart+@postend))&& \
+        @transform2 != NullTransform
+      if iter1
+        #z = f.iterate(#z)
+      endif
+      #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+      if @dual
+        if @flavor == "Sequence"
+          if iter2
+            #z = f2.Iterate(#z)
+          endif
+          #z = (#z + fTransform2.Iterate(#z)*@strength2)/(1+@strength2)
+        elseif @flavor == "Merge"
+          z2 = f2.Iterate(z2)
+          z2 = (z2 + fTransform2.Iterate(z2)*@strength2)/(1+@strength2)
+        endif
+      endif
+      notx = false
+    endif
+  endif
+  if notx
+    if iter1
+      #z = f.iterate(#z)
+    endif
+    if @dual
+      if @flavor == "Sequence"
+        if iter2
+          #z = f2.iterate(#z)
+        endif
+      elseif @flavor == "Merge"
+        z2 = f2.iterate(z2)
+      endif
+    endif
+  endif
+  iter = iter + 1
+  if @dual && @flavor == "Merge"
+    if @merget == "A+B"
+      #z = (#z + z2)*@scale
+    elseif @merget == "A+1/B"
+      #z = (#z + 1/z2)*@scale
+    elseif @merget == "1/A+B"
+      #z = (1/#z + z2)*@scale
+    elseif @merget == "A*B"
+      #z = (#z*z2)*@scale
+    elseif @merget == "A/B"
+      #z = (#z/z2)*@scale
+    elseif @merget == "B/A"
+      #z = (z2/#z)*@scale
+    elseif @merget == "Largest(A,B)"
+      if cabs(#z) < cabs(z2)
+        #z = z2
+      endif
+    elseif @merget == "Largest(A,1/B)"
+      if cabs(#z) < cabs(1/z2)
+        #z = z2
+      endif
+    elseif @merget == "Largest(1/A,B)"
+      if cabs(1/#z) < cabs(z2)
+        #z = z2
+      endif
+    elseif @merget == "Smallest(A,B)"
+      if cabs(#z) > cabs(z2)
+        #z = z2
+      endif
+    elseif @merget == "Smallest(A,1/B)"
+      if cabs(#z) > cabs(1/z2)
+        #z = z2
+      endif
+    elseif @merget == "Smallest(1/A,B)"
+      if cabs(1/#z) > cabs(z2)
+        #z = z2
+      endif
+    endif
+  endif
+  if @dual
+    if @bailtype == "Formula 1"
+      m_BailedOut = f.IsBailedOut(#z)
+    elseif @bailtype == "Formula 2"
+      m_BailedOut = f2.IsBailedOut(#z)
+    else
+      m_BailedOut = (f.IsBailedOut(#z) || f2.IsBailedOut(#z))
+    endif
+  else
+    m_BailedOut = f.IsBailedOut(#z)
+  endif
+bailout:
+  !m_BailedOut
+default:
+  title = "Object Formula Switch"
+  maxiter = 1000
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_ObjectFormulaSwitch
+		caption = "Version (Object Formula Switch)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_ObjectFormulaSwitch < 100
+	endparam
+	heading
+	  text = "This is a fractal formula which can combine object formulas and \
+	          provide switching between the mandel type and julia type forms of \
+	          the formula(s). Transforms can also be applied."
+	endheading
+  heading
+    caption = "Mandelbrot Type"
+    visible = @p_mand
+  endheading
+  heading
+    caption = "Julia Type"
+    visible = @p_jul
+  endheading
+  complex param m_c
+    caption = "Julia Seed"
+    default = (0,0)
+    visible = @p_jul
+  endparam
+  UserTransform param transform
+    caption = "Pre transform"
+    default = NullTransform
+    expanded = false
+  endparam
+  int param prestart
+    caption = "Start Iter (Pre)"
+    default = 0
+    visible = @transform != NullTransform
+  endparam
+  int param preend
+    caption = "Iterations (Pre)"
+    default = 1
+    visible = @transform != NullTransform
+  endparam
+  float param strength
+    caption = "Strength (Pre)"
+    default = 1
+    visible = @transform != NullTransform
+  endparam
+  bool param dual
+    caption = "Use dual formulas"
+    default = false
+  endparam
+  param combine
+    caption = "Combine Order"
+    default = 0
+    enum ="Tx1 Fr1 Fr2 Tx2" "Tx1 Fr1 Tx2 Fr2" "Fr1 Tx1 Tx2 Fr2" "Fr1 Tx1 Fr2 Tx2"
+    visible = @dual
+  endparam
+  param flavor
+    caption = "Combine Type"
+    default = 0
+    enum = "Sequence" "Merge"
+    visible = @dual
+  endparam
+  param seqmethod
+    caption = "Sequence method"
+    default = 0
+    enum = "Default" "By Iter Value"
+    visible = @dual && @flavor == "Sequence"
+  endparam
+  int param seqgap1
+    caption = "Iteration cycle"
+    default = 4
+    visible = @dual && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endparam
+  heading
+    text = "'Formula 1 iters' must be less than or equal to the 'Iteration cycle' \
+            Out of range values will be truncated to the size of the 'Iteration \
+            cycle'."
+    visible = @dual  && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endheading
+  int param seqgap2
+    caption = "Formula 1 Iters"
+    default = 2
+    visible = @dual  && @flavor == "Sequence" \
+              && @seqmethod == "By Iter Value"
+  endparam
+  param merget
+    caption = "Merge Type"
+    default = 0
+    enum = "A+B" "A+1/B" "1/A+B" "A*B" "A/B" "B/A" "Largest(A,B)" "Largest(A,1/B)"\
+            "Largest(1/A,B)" "Smallest(A,B)" "Smallest(A,1/B)" "Smallest(1/A,B)"
+    visible = @dual && @flavor == "Merge"
+  endparam
+  float param scale
+    caption = "Merge Scale"
+    default = 1.0
+    visible = @dual && @flavor == "Merge" && (@merget == "A+B" || @merget == "A+1/B" \
+              || @merget == "1/A+B" || @merget == "A*B" || @merget == "A/B" || \
+              @merget == "B/A" )
+  endparam
+  param bailtype
+    caption = "Bailout type"
+    default = 0
+    enum = "Formula 1" "Formula 2" "Both"
+    visible = @dual
+  endparam
+  Switch param formulaClass
+    caption = "Fractal Formula"
+    default = REB_MandelbrotJulia_Switch
+  endparam
+  Switch param formulaClass2
+    caption = "Fractal Formula"
+    default = REB_Ikenaga_Switch
+    visible = @dual
+  endparam
+  UserTransform param transform2
+    caption = "Post transform"
+    default = NullTransform
+    expanded = false
+  endparam
+  int param poststart
+    caption = "Start Iter (Post)"
+    default = 0
+    visible = @transform2 != NullTransform
+  endparam
+  int param postend
+    caption = "Iterations (Post)"
+    default = 1
+    visible = @transform2 != NullTransform
+  endparam
+  float param strength2
+    caption = "Strength (Post)"
+    default = 1
+    visible = @transform2 != NullTransform
+  endparam
+  bool param p_mand
+    caption = "Mandel Type"
+    default = true
+    visible = false
+  endparam
+  bool param p_Jul
+    caption = "Julia Type"
+    default = false
+    visible = false
+  endparam
+switch:
+  type = "ObjectFormulaSwitch"
+  p_mand = p_jul
+  p_jul = p_mand
+  m_c = #pixel
+  dual = dual
+  transform = transform
+  transform2 = transform2
+  strength = strength
+  strength2 = strength2
+  combine = combine
+  flavor = flavor
+  scale = scale
+  seqmethod = seqmethod
+  seqgap1 = seqgap1
+  seqgap2 = seqgap2
+  prestart = prestart
+  preend = preend
+  poststart = poststart
+  postend = postend
+  formulaclass = formulaclass
+  formulaclass2 = formulaclass2
+}
+
+REB_3DFractalRayTraceProgressive {
+;
+$define debug
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  REB_3DFractalRayTraceProgressive f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "3D Fractal Raytrace Progressive"
+  maxiter = 100
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_3DFractalRaytraceProgressive
+		caption = "Version (3DFractalRaytraceProgressive)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_3DFractalRaytraceProgressive < 100
+	endparam
+  REB_3DFractalRayTraceProgressive param formulaClass
+    caption = "3D Fractal Raytrace Progressive"
+    default = REB_3DFractalRayTraceProgressive
+    selectable = false
+  endparam
+}
+
+REB_3DFractalRayTraceProgressiveDual {
+;
+$define debug
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  REB_3DFractalRayTraceProgressiveDual f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "3D Fractal Raytrace Progressive Dual (UF5)"
+  maxiter = 100
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+  magn = 0.5
+	int param v_3DFractalRaytraceProgressiveDual
+		caption = "Version (3DFractalRaytraceProgressiveDual)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_3DFractalRaytraceProgressiveDual < 100
+	endparam
+  REB_3DFractalRayTraceProgressiveDual param formulaClass
+    caption = "3D Fractal Raytrace Progressive Dual"
+    default = REB_3DFractalRayTraceProgressiveDual
+    selectable = false
+  endparam
+}
+
+
+REB_3DFractalRayTrace {
+;
+$define debug
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  REB_3DFractalRayTrace f = new @formulaClass(0)
+init:
+  #z = f.Init(#pixel)
+loop:
+  #z = f.Iterate(#z)
+bailout:
+  !f.IsBailedOut(#z)
+default:
+  title = "3D Fractal Raytrace (UF5)"
+  maxiter = 100
+  center = (0, 0)
+  periodicity = 0
+  method = multipass
+	int param v_3DFractalRaytrace
+		caption = "Version (3DFractalRaytrace)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_3DFractalRaytrace < 100
+	endparam
+  REB_3DFractalRayTrace param formulaClass
+    caption = "3D Fractal Raytrace"
+    default = REB_3DFractalRayTrace
+    selectable = false
+  endparam
+}
+
+REB_3DHeightfieldRaytrace{
+$define debug
+global:
+  import "common.ulb"
+  import "reb.ulb"
+  switch m_f = new @formulaClass(0)
+  switch m_fr = new @formulaClass(0)
+  switch m_fi = new @formulaClass(0)
+  float dr2 = #pi/180
+  ; light origin
+  float lpointx = @lpointx
+  float lpointy = @lpointy
+  float lpointz = @lplane
+
+  ; light point at
+  float lightx = @lightx
+  float lighty = @lighty
+  float lightz = @lightz
+
+  ; light vector
+  float lx = 0
+  float ly = 0
+  float lz = 0
+  lx = -lightx+lpointx
+  ly = -lighty+lpointy
+  lz = -lightz+lpointz
+  float ld = sqrt(lx^2+ly^2+lz^2)
+  lx = lx/ld
+  ly = ly/ld
+  lz = lz/ld
+  float xmax = @xmax+@xshift
+  float ymax = @ymax+@yshift
+  float xmin = @xmin+@xshift
+  float ymin = @ymin+@yshift
+  float cy = imag(#center)
+  float cx = real(#center)
+  ; angx and angy are for changing the extent of xmax etc depending upon
+  ; the angle
+  float angy = 1/cos(@xanglec*dr2)
+  float angx = 1/cos(@yanglec*dr2)
+  xmax = xmax*angx
+  ymax = ymax*angy
+  xmin = xmin*angx
+  ymin = ymin*angy
+  float scrfactor = 0
+  if #width > #height
+    scrfactor = #width
+  else
+    scrfactor = #height
+  endif
+  int arrayx = round(scrfactor*(xmax-xmin)/4+3*@off)
+  int arrayy = round(scrfactor*(ymax-ymin)/4+3*@off)
+  float hv[]
+  setlength(hv,arrayx*arrayy)
+  complex ri[]
+  setlength(ri,arrayx*arrayy)
+  int i = 0
+  int j = 0
+  while i < arrayx
+    while j < arrayy
+      hv[idx(i,j)] = 0
+      ri[idx(i,j)] = 0
+      j = j + 1
+    endwhile
+    j = 0
+    i = i + 1
+  endwhile
+  i = 0
+  j = 0
+  float fx = 0.0
+  float fy = 0.0
+  complex fz = 0
+  complex fzr = 0
+  complex fzi = 0
+  complex oldfz = 0
+  complex oldfz2 = 0
+  complex zd = 0
+  complex oldzd = 0
+  float adz = 0
+  int iter = 0
+  float dfactor = @dfactor*#magn
+  float iterexp = 0
+  float txmax = (xmax-xmin)/#magn
+  float tymax = (ymax-ymin)/#magn
+  ; rotation corrections
+  xmin = xmin/#magn + cx*angx
+  ymin = ymin/#magn + cy*angy
+  fx = xmin
+  fy = ymin+tymax
+  j = 0
+  float maxz = -1e100
+  float minz = 1e100
+  bool converge = false
+  float bail = 0
+  float f = 0
+  float power = 0
+  float dd = 0
+  bail = m_f.GetUpperBailout()
+  if bail == -1 || bail == 256
+    converge = true
+  endif
+  float zave = 0
+  int counter = 0
+  while i < arrayx
+    while j < arrayy
+      zd = 1
+      fz = fx + flip(fy)
+      oldfz2 = oldfz = fz
+      oldzd = zd
+      ri[idx(i,j)] = fz
+      fzr = fx + @deltade + flip(fy)
+      fzi = fx + flip(fy + @deltade)
+      fz = m_f.Init(fz)
+      fzr = m_fr.Init(fzr)
+      fzi = m_fi.Init(fzi)
+      oldfz = fz
+      oldfzr = fzr
+      oldfzi = fzi
+      iter = 0
+      iterexp = 0
+      repeat
+        oldzd = zd
+        if @htype == "Distance Estimate" && @deriv == "Analytical"
+          zd = m_f.Drcalc(fz,zd)
+        elseif @htype == "Distance Estimate" && @deriv == "Slope"
+          oldfzr = fzr
+          oldfzi = fzi
+          fzr = m_fr.iterate(fzr)
+          fzi = m_fi.iterate(fzi)
+        endif
+        oldfz2 = oldfz
+        oldfz = fz
+        fz = m_f.Iterate(fz)
+        if @htype == "Exponential smoothing"
+          if !converge
+            iterexp = iterexp + exp(-cabs(fz))
+          else
+            iterexp = iterexp + exp(-1/cabs(oldfz-fz))
+          endif
+        endif
+        if @htype == "General smoothing" || @htype == "Potential"   || @htype == "Distance Estimate"
+          iterexp = iterexp + exp(-cabs(fz)-0.5/(cabs(oldfz - fz)))
+        endif
+        if converge
+          bail = m_f.GetLowerBailout()
+        else
+          bail = m_f.GetUpperBailout()
+        endif
+        iter = iter + 1
+      until m_f.IsBailedOut(fz) || iter >= @iter
+      if @htype == "Exponential smoothing" || @htype == "General smoothing"
+          hv[idx(i,j)] = @hvalue*iterexp/@iter/#magn
+      elseif @htype == "Distance Estimate"
+        if @deriv == "Slope"
+          if !converge
+            adz = cabs(fzr+fzi-2*fz)/@deltade
+          else
+            adz = cabs(fzr+fzi-2*fz-(oldfzr+oldfzi-2*oldfz))/@deltade
+          endif
+        else
+          if !converge
+            adz = cabs(zd)
+          else
+            adz = cabs(oldzd-zd)
+          endif
+        endif
+        if !converge
+          dd = cabs(fz)*log(cabs(fz))/adz*dfactor
+        else
+          dd = cabs(fz-oldfz)*log(cabs(1/(fz-oldfz)))/adz*dfactor
+        endif
+        if iter < @iter
+          hv[idx(i,j)] = @hvalue*(1-tanh(dd))/#magn
+        else
+          hv[idx(i,j)] = @hvalue/#magn
+        endif
+      elseif @htype == "Potential"
+        float pot = dfactor*2^(-iterexp)
+        if iter < @iter
+          hv[idx(i,j)] = @hvalue*(1-tanh(pot))/#magn
+        else
+          hv[idx(i,j)] = @hvalue/#magn
+        endif
+      elseif @htype == "Raw iteration"
+        if iter < @iter
+          hv[idx(i,j)] = @hvalue*iter/@iter/#magn
+        else
+          hv[idx(i,j)] = @hvalue/#magn
+        endif
+      elseif @htype == "Harkonen Vepstas smoothing"
+        power = log(|fz - oldfz|) / log(|oldfz - oldfz2|)
+        f = (log(log(bail)) - log(log(1/(|(oldfz - fz)|))))/log(power)
+        iterexp = iter+f
+        if iter < @iter
+          hv[idx(i,j)] = @hvalue*iterexp/@iter/#magn
+        else
+          hv[idx(i,j)] = @hvalue/#magn
+        endif
+      endif
+      if isnan(hv[idx(i,j)]) || isinf(hv[idx(i,j)]) || isinf(-hv[idx(i,j)])
+            hv[idx(i,j)] = 0
+      endif
+      zave = zave + hv[idx(i,j)]
+      counter = counter + 1
+      if maxz < hv[idx(i,j)]
+        maxz = hv[idx(i,j)]
+      endif
+      if minz > hv[idx(i,j)]
+        minz = hv[idx(i,j)]
+      endif
+      fy = fy - tymax/arrayx
+      j = j + 1
+    endwhile
+    j = 0
+    fy = ymin+tymax
+    fx = fx + txmax/arrayx
+    i = i + 1
+  endwhile
+  zave = zave/counter
+  i = 0
+  j = 0
+  if @corrz == "By ZMax"
+    while i < arrayx
+      while j < arrayy
+        hv[idx(i,j)] = hv[idx(i,j)]-maxz
+        j = j + 1
+      endwhile
+      j = 0
+      i = i + 1
+    endwhile
+  elseif @corrz == "By ZAve"
+    while i < arrayx
+      while j < arrayy
+        hv[idx(i,j)] = hv[idx(i,j)]-zave
+        j = j + 1
+      endwhile
+      j = 0
+      i = i + 1
+    endwhile
+  endif
+
+init:
+  bool done = false
+  float camx = 0
+  float camy = 0
+  float camz = @camd
+  float fplane = 0
+  if @setplane == "Arbitrary"
+    fplane = @fplane
+  elseif @setplane == "Min Z"
+    fplane = minz
+  elseif @setplane == "Max Z"
+    fplane = maxz
+  endif
+  float camx0 =real(#pixel)
+  float camy0 = imag(#pixel)
+  float camz0 = fplane
+  float oldcamx = 0
+  float oldcamy = 0
+  ; camera rotation
+   ; rotation around the x axis
+   oldcamy = camy
+   camy = camy*cos(@xanglec*dr2) - camz*sin(@xanglec*dr2)
+   camz = oldcamy*sin(@xanglec*dr2) +  camz*cos(@xanglec*dr2)
+
+   ; rotation around the y axis
+   oldcamx = camx
+   camx = camx*cos(@yanglec*dr2) + camz*sin(@yanglec*dr2)
+   camz = -oldcamx*sin(@yanglec*dr2) +  camz*cos(@yanglec*dr2)
+
+   if @rot
+     ; screen rotation
+     ; rotation around the x axis
+     oldcamy = camy0
+     camy0 = camy0*cos(@xanglec*dr2) - camz0*sin(@xanglec*dr2)
+     camz0 = oldcamy*sin(@xanglec*dr2) +  camz0*cos(@xanglec*dr2)
+
+     ; rotation around the y axis
+     oldcamx = camx0
+     camx0 = camx0*cos(@yanglec*dr2) + camz0*sin(@yanglec*dr2)
+     camz0 = -oldcamx*sin(@yanglec*dr2) +  camz0*cos(@yanglec*dr2)
+   endif
+
+  float mind = 0
+  float d = 1e308
+  int mini = 0
+  int minj = 0
+  int ii = 0
+  float vx = 0
+  float vy = 0
+  float vz = 0
+  float vd = 0
+
+  ; Find the closest point to the camera ray. This value is used to determine
+  ; whether a grid box contains points close enough to a camera ray, or whether
+  ; the box should be skiped.
+  ;
+  ; L(t) = B + t*M
+  ; where L is a line, B is a point on the line and M is the line
+  ; direction (a vector)
+  ; Let the test point be P and t0 the the closest point on the line to P
+  ;
+  ;         M*(P-B)
+  ; t0 =  --------- = M*(P-B) if M is normalized
+  ;          M*M
+  ;
+  ; Then the distance from the line to the point is
+  ; d = |P -(B + t0*M)|
+
+  vd = sqrt((camx0-camx)^2 + (camy0-camy)^2 + (camz0-camz)^2)
+  vx = (camx0-camx)/vd
+  vy = (camy0-camy)/vd
+  vz = (camz0-camz)/vd
+  float cxx = 0
+  float cyy = 0
+  float czz = 0
+
+  ; determines whether to use the camera or the view screen as the primary
+  ; reference for intersection calculations.
+  if @cam == "Camera"
+    cxx = camx
+    cyy = camy
+    czz = camz
+  else
+    cxx = camx0
+    cyy = camy0
+    czz = camz0
+  endif
+
+  ii = 0
+  int jj = 0
+  int k = 0
+  int l = 0
+  float fx1 = 0
+  float fx2 = 0
+  float fx3 = 0
+  float fy1 = 0
+  float fy2 = 0
+  float fy3 = 0
+  float fz1 = 0
+  float fz2 = 0
+  float fz3 = 0
+  float dx1 = 0
+  float dy1 = 0
+  float dz1 = 0
+  float dx2 = 0
+  float dy2 = 0
+  float dz2 = 0
+  float nx = 0
+  float ny = 0
+  float nz = 0
+  float pspot = 0
+  float vnx1 = 0
+  float vny1 = 0
+  float vnz1 = 0
+  float vnx2 = 0
+  float vny2 = 0
+  float vnz2 = 0
+  float vnx3 = 0
+  float vny3 = 0
+  float vnz3 = 0
+  float b1 = 0
+  float b2 = 0
+  float b3 = 0
+  bool hit = false
+  float dtemp = 0
+  float xi = 0
+  float yi = 0
+  float zi = 0
+  float d1 = 0
+  float d21 = 0
+  float d23 = 0
+  float d22 = 0
+  int start_cell_x1 = 0
+  int end_cell_x1 = 0
+  int start_cell_y1 = 0
+  int end_cell_y1 = 0
+  float xii = 0
+  float yii = 0
+  float zii = 0
+  float arx = arrayx/@cells
+  float ary = arrayy/@cells
+  float boxsize = @bthresh*sqrt(3)*sqrt(txmax*tymax)/@cells/#magn
+  float addshad = 0
+  while k < @cells  && !hit
+    start_cell_x1 = floor(arx*k)
+    end_cell_x1 = ceil(arx*(k+1))
+    l = 0
+    while l < @cells && !hit
+      start_cell_y1 = floor(ary*l)
+      end_cell_y1 = ceil(ary*(l+1))
+      ii = start_cell_x1
+      while ii <= end_cell_x1 && ii < arrayx
+        jj = start_cell_y1
+        while jj <= end_cell_y1 && ii < arrayy
+          if  dist(ii, jj, vx, vy, vz, cxx, cyy, czz)  > boxsize
+            jj = end_cell_y1
+            ii = end_cell_x1
+          elseif ii >= @off && jj >= @off
+             ; set the corners of the triangle. The triangle surrounds the
+             ; the point at ii,jj and is the target for the camera ray
+             fx1 = real(ri[idx(ii,jj-@off)])
+             fy1 = imag(ri[idx(ii,jj-@off)])
+             fz1 = hv[idx(ii,jj-@off)]
+
+             fx2 = real(ri[idx(ii+@off,jj+@off)])
+             fy2 = imag(ri[idx(ii+@off,jj+@off)])
+             fz2 = hv[idx(ii+@off,jj+@off)]
+
+             fx3 = real(ri[idx(ii-@off,jj+@off)])
+             fy3 = imag(ri[idx(ii-@off,jj+@off)])
+             fz3 = hv[idx(ii-@off,jj+@off)]
+             dx1 = fx1-fx2
+             dy1 = fy1-fy2
+             dz1 = fz1-fz2
+             dx2 = fx3-fx2
+             dy2 = fy3-fy2
+             dz2 = fz3-fz2
+             nx =  dy1*dz2 - dz1*dy2
+             ny =  dz1*dx2 - dx1*dz2
+             nz =  dx1*dy2 - dy1*dx2
+             pspot = -(nx*fx1+ny*fy1+nz*fz1)
+             dtemp = -(cxx*nx+cyy*ny+czz*nz + \
+               pspot)/(vx*nx+vy*ny+vz*nz)
+             ; is there an intersection with the triangle plane?
+             if dtemp > 0 && dtemp < d
+             ;intersection point - test if inside triangle
+               xi = cxx + dtemp*vx
+               yi = cyy + dtemp*vy
+               zi = czz + dtemp*vz
+               dx1 = fx1-xi
+               dy1 = fy1-yi
+               dz1 = fz1-zi
+               dx2 = fx2-xi
+               dy2 = fy2-yi
+               dz2 = fz2-zi
+               ; N1
+               vnx1 =  dz1*dy2-dy1*dz2
+               vny1 =  dx1*dz2-dz1*dx2
+               vnz1 =  dy1*dx2-dx1*dy2
+               d1 = camx*vnx1+camy*vny1+camz*vnz1
+               d23 = d1 + (xi*vnx1+yi*vny1+zi*vnz1)
+               dx1 = fx3-xi
+               dy1 = fy3-yi
+               dz1 = fz3-zi
+               dx2 = fx2-xi
+               dy2 = fy2-yi
+               dz2 = fz2-zi
+               ; N2
+               vnx2 =  dy1*dz2-dz1*dy2
+               vny2 =  dz1*dx2-dx1*dz2
+               vnz2 =  dx1*dy2-dy1*dx2
+               d1 = camx*vnx2+camy*vny2+camz*vnz2
+               d21 = d1 + (xi*vnx2+yi*vny2+zi*vnz2)
+               dx1 = fx1-xi
+               dy1 = fy1-yi
+               dz1 = fz1-zi
+               dx2 = fx3-xi
+               dy2 = fy3-yi
+               dz2 = fz3-zi
+               ; N3
+               vnx3 =  dy1*dz2-dz1*dy2
+               vny3 =  dz1*dx2-dx1*dz2
+               vnz3 =  dx1*dy2-dy1*dx2
+               d1 = camx*vnx3+camy*vny3+camz*vnz3
+               d22 = d1 + (xi*vnx3+yi*vny3+zi*vnz3)
+              ; the intersection is inside the triangle
+              if d21 >= 0 && d22 >=0 && d23 >= 0
+                ; since the points have not been sorted by distance this is
+                ; generally not a good option (painter's algorithm) excepts
+                ; for a plain color layer
+                if @usefirst
+                  hit = true
+                  mini = ii
+                  minj = jj
+                  xii = xi
+                  yii = yi
+                  zii = zi
+                else
+                  if dtemp < d
+                    d = dtemp
+                    mini = ii
+                    minj = jj
+                    xii = xi
+                    yii = yi
+                    zii = zi
+                  endif
+                endif
+             endif
+           endif
+          endif
+          jj = jj + 1
+        endwhile
+        ii = ii + 1
+      endwhile
+      l = l + 1
+    endwhile
+    k = k + 1
+  endwhile
+  if @shad
+    k = 0
+    d = 1e100
+    addshad = 0
+    hit = false
+    float svnx1 = 0
+    float svny1 = 0
+    float svnz1 = 0
+    float svnx2 = 0
+    float svny2 = 0
+    float svnz2 = 0
+    float svnx3 = 0
+    float svny3 = 0
+    float svnz3 = 0
+    int si = mini
+    int sj = minj
+    float sxi = 0
+    float syi = 0
+    float szi = 0
+    while k < @cells  && !hit
+      start_cell_x1 = floor(arx*k)-1
+      end_cell_x1 = ceil(arx*(k+1))+1
+      l = 0
+      while l < @cells && !hit
+        start_cell_y1 = floor(ary*l)-1
+        end_cell_y1 = ceil(ary*(l+1))+1
+        ii = start_cell_x1
+        while ii <= end_cell_x1 && ii < arrayx
+          jj = start_cell_y1
+          while jj <= end_cell_y1 && ii < arrayy
+            if  sdist(ii, jj, xi, yi, zi)  > boxsize*@boxadj
+              jj = end_cell_y1
+              ii = end_cell_x1
+            elseif checktarg(ii,jj,si,sj) && ii >= @off && jj >= @off
+               ; set the corners of the triangle. The triangle surrounds the
+               ; the point at ii,jj and is the target for the camera ray
+               fx1 = real(ri[idx(ii,jj-@off)])
+               fy1 = imag(ri[idx(ii,jj-@off)])
+               fz1 = hv[idx(ii,jj-@off)]
+
+               fx2 = real(ri[idx(ii+@off,jj+@off)])
+               fy2 = imag(ri[idx(ii+@off,jj+@off)])
+               fz2 = hv[idx(ii+@off,jj+@off)]
+
+               fx3 = real(ri[idx(ii-@off,jj+@off)])
+               fy3 = imag(ri[idx(ii-@off,jj+@off)])
+               fz3 = hv[idx(ii-@off,jj+@off)]
+               dx1 = fx1-fx2
+               dy1 = fy1-fy2
+               dz1 = fz1-fz2
+               dx2 = fx3-fx2
+               dy2 = fy3-fy2
+               dz2 = fz3-fz2
+               nx =  dy1*dz2 - dz1*dy2
+               ny =  dz1*dx2 - dx1*dz2
+               nz =  dx1*dy2 - dy1*dx2
+               pspot = -(nx*fx1+ny*fy1+nz*fz1)
+               dtemp = -(xii*nx+yii*ny+zii*nz + \
+                 pspot)/(lx*nx+ly*ny+lz*nz)
+               ; is there an intersection with the triangle plane?
+               if dtemp > 0 && dtemp < d
+               ;intersection point - test if inside triangle
+                 sxi = xii + dtemp*lx
+                 syi = yii + dtemp*ly
+                 szi = zii + dtemp*lz
+                 dx1 = fx1-sxi
+                 dy1 = fy1-syi
+                 dz1 = fz1-szi
+                 dx2 = fx2-sxi
+                 dy2 = fy2-syi
+                 dz2 = fz2-szi
+                 ; N1
+                 svnx1 =  dz1*dy2-dy1*dz2
+                 svny1 =  dx1*dz2-dz1*dx2
+                 svnz1 =  dy1*dx2-dx1*dy2
+                 d1 = (lpointx-xii)*svnx1+(lpointy-yii)*svny1+(lpointz-zii)*svnz1
+                 d23 = d1 + (sxi*svnx1+syi*svny1+szi*svnz1)
+                 dx1 = fx3-sxi
+                 dy1 = fy3-syi
+                 dz1 = fz3-szi
+                 dx2 = fx2-sxi
+                 dy2 = fy2-syi
+                 dz2 = fz2-szi
+                 ; N2
+                 svnx2 =  dy1*dz2-dz1*dy2
+                 svny2 =  dz1*dx2-dx1*dz2
+                 svnz2 =  dx1*dy2-dy1*dx2
+                 d1 = (lpointx-xii)*svnx2+(lpointy-yii)*svny2+(lpointz-zii)*svnz2
+                 d21 = d1 + (sxi*svnx2+syi*svny2+szi*svnz2)
+                 dx1 = fx1-sxi
+                 dy1 = fy1-syi
+                 dz1 = fz1-szi
+                 dx2 = fx3-sxi
+                 dy2 = fy3-syi
+                 dz2 = fz3-szi
+                 ; N3
+                 svnx3 =  dy1*dz2-dz1*dy2
+                 svny3 =  dz1*dx2-dx1*dz2
+                 svnz3 =  dx1*dy2-dy1*dx2
+                 d1 = (lpointx-xii)*svnx3+(lpointy-yii)*svny3+(lpointz-zii)*svnz3
+                 d22 = d1 + (sxi*svnx3+syi*svny3+szi*svnz3)
+                ; the intersection is inside the triangle - check both sides
+                if (d21 >= 0 && d22 >=0 && d23 >= 0) || \
+                   (d21 <= 0 && d22 <=0 && d23 <= 0)
+                  hit = true
+                  addshad = @shadlev
+                endif
+              endif
+            endif
+            jj = jj + 1
+          endwhile
+          ii = ii + 1
+        endwhile
+        l = l + 1
+      endwhile
+      k = k + 1
+    endwhile
+  endif
+
+;
+;
+   float nr1 = 0
+   float ni1 = 0
+   float nj1 = 0
+   float nr2 = 0
+   float ni2 = 0
+   float nj2 = 0
+   float nr3 = 0
+   float ni3 = 0
+   float nj3 = 0
+   float nr = 0
+   float ni = 0
+   float nj = 0
+   float nd = 0
+   float nx1 = 0
+   float ny1 = 0
+   float nz1 = 0
+   float nx2 = 0
+   float ny2 = 0
+   float nz2 = 0
+   float nx3 = 0
+   float ny3 = 0
+   float nz3 = 0
+   float nx4 = 0
+   float ny4 = 0
+   float nz4 = 0
+   float nx5 = 0
+   float ny5 = 0
+   float nz5 = 0
+   float nx6 = 0
+   float ny6 = 0
+   float nz6 = 0
+   float nx7 = 0
+   float ny7 = 0
+   float nz7 = 0
+   float nx8 = 0
+   float ny8 = 0
+   float nz8 = 0
+   float nx9 = 0
+   float ny9 = 0
+   float nz9 = 0
+   float nx10 = 0
+   float ny10 = 0
+   float nz10 = 0
+   float nx11 = 0
+   float ny11 = 0
+   float nz11 = 0
+   float nx12 = 0
+   float ny12 = 0
+   float nz12 = 0
+   float nx13 = 0
+   float ny13 = 0
+   float nz13 = 0
+   float lvalue = 0
+   if @ctype == "Diffuse lighting" &&  mini >= 3*@off && minj >= 3*@off
+     ; normal calculation in this section is a modified Phong normal
+     fx1 = real(ri[idx(mini,minj-@off)])
+     fy1 = imag(ri[idx(mini,minj-@off)])
+     fz1 = hv[idx(mini,minj-@off)]
+
+     fx2 = real(ri[idx(mini-@off,minj+@off)])
+     fy2 = imag(ri[idx(mini-@off,minj+@off)])
+     fz2 = hv[idx(mini-@off,minj+@off)]
+
+     fx3 = real(ri[idx(mini+@off,minj+@off)])
+     fy3 = imag(ri[idx(mini+@off,minj+@off)])
+     fz3 = hv[idx(mini+@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx6 =  dy1*dz2 - dz1*dy2
+     ny6 =  dz1*dx2 - dx1*dz2
+     nz6 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-@off,minj-3*@off)])
+     fy1 = imag(ri[idx(mini-@off,minj-3*@off)])
+     fz1 = hv[idx(mini-@off,minj-3*@off)]
+
+     fx2 = real(ri[idx(mini-2*@off,minj-@off)])
+     fy2 = imag(ri[idx(mini-2*@off,minj-@off)])
+     fz2 = hv[idx(mini-2*@off,minj-@off)]
+
+     fx3 = real(ri[idx(mini,minj-@off)])
+     fy3 = imag(ri[idx(mini,minj-@off)])
+     fz3 = hv[idx(mini,minj-@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx1 =  dy1*dz2 - dz1*dy2
+     ny1 =  dz1*dx2 - dx1*dz2
+     nz1 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-@off,minj-3*@off)])
+     fy1 = imag(ri[idx(mini-@off,minj-3*@off)])
+     fz1 = hv[idx(mini-@off,minj-3*@off)]
+
+     fx2 = real(ri[idx(mini,minj-@off)])
+     fy2 = imag(ri[idx(mini,minj-@off)])
+     fz2 = hv[idx(mini,minj-@off)]
+
+     fx3 = real(ri[idx(mini+@off,minj-3*@off)])
+     fy3 = imag(ri[idx(mini+@off,minj-3*@off)])
+     fz3 = hv[idx(mini+@off,minj-3*@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx2 =  dy1*dz2 - dz1*dy2
+     ny2 =  dz1*dx2 - dx1*dz2
+     nz2 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini,minj-@off)])
+     fy1 = imag(ri[idx(mini,minj-@off)])
+     fz1 = hv[idx(mini,minj-@off)]
+
+     fx2 = real(ri[idx(mini+2*@off,minj-@off)])
+     fy2 = imag(ri[idx(mini+2*@off,minj-@off)])
+     fz2 = hv[idx(mini+2*@off,minj-@off)]
+
+     fx3 = real(ri[idx(mini+@off,minj-3*@off)])
+     fy3 = imag(ri[idx(mini+@off,minj-3*@off)])
+     fz3 = hv[idx(mini+@off,minj-3*@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx3 =  dy1*dz2 - dz1*dy2
+     ny3 =  dz1*dx2 - dx1*dz2
+     nz3 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-2*@off,minj-@off)])
+     fy1 = imag(ri[idx(mini-2*@off,minj-@off)])
+     fz1 = hv[idx(mini-2*@off,minj-@off)]
+
+     fx2 = real(ri[idx(mini-3*@off,minj+@off)])
+     fy2 = imag(ri[idx(mini-3*@off,minj+@off)])
+     fz2 = hv[idx(mini-3*@off,minj+@off)]
+
+     fx3 = real(ri[idx(mini-@off,minj+@off)])
+     fy3 = imag(ri[idx(mini-@off,minj+@off)])
+     fz3 = hv[idx(mini-@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx4 =  dy1*dz2 - dz1*dy2
+     ny4 =  dz1*dx2 - dx1*dz2
+     nz4 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-2*@off,minj-@off)])
+     fy1 = imag(ri[idx(mini-2*@off,minj-@off)])
+     fz1 = hv[idx(mini-2*@off,minj-@off)]
+
+     fx2 = real(ri[idx(mini-@off,minj+@off)])
+     fy2 = imag(ri[idx(mini-@off,minj+@off)])
+     fz2 = hv[idx(mini-@off,minj+@off)]
+
+     fx3 = real(ri[idx(mini,minj-@off)])
+     fy3 = imag(ri[idx(mini,minj-@off)])
+     fz3 = hv[idx(mini,minj-@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx5 =  dy1*dz2 - dz1*dy2
+     ny5 =  dz1*dx2 - dx1*dz2
+     nz5 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini,minj-@off)])
+     fy1 = imag(ri[idx(mini,minj-@off)])
+     fz1 = hv[idx(mini,minj-@off)]
+
+     fx2 = real(ri[idx(mini+@off,minj+@off)])
+     fy2 = imag(ri[idx(mini+@off,minj+@off)])
+     fz2 = hv[idx(mini+@off,minj+@off)]
+
+     fx3 = real(ri[idx(mini+2*@off,minj-@off)])
+     fy3 = imag(ri[idx(mini+2*@off,minj-@off)])
+     fz3 = hv[idx(mini+2*@off,minj-@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx7 =  dy1*dz2 - dz1*dy2
+     ny7 =  dz1*dx2 - dx1*dz2
+     nz7 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini+2*@off,minj-@off)])
+     fy1 = imag(ri[idx(mini+2*@off,minj-@off)])
+     fz1 = hv[idx(mini+2*@off,minj-@off)]
+
+     fx2 = real(ri[idx(mini+@off,minj+@off)])
+     fy2 = imag(ri[idx(mini+@off,minj+@off)])
+     fz2 = hv[idx(mini+@off,minj+@off)]
+
+     fx3 = real(ri[idx(mini+3*@off,minj+@off)])
+     fy3 = imag(ri[idx(mini+3*@off,minj+@off)])
+     fz3 = hv[idx(mini+3*@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx8 =  dy1*dz2 - dz1*dy2
+     ny8 =  dz1*dx2 - dx1*dz2
+     nz8 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-3*@off,minj+@off)])
+     fy1 = imag(ri[idx(mini-3*@off,minj+@off)])
+     fz1 = hv[idx(mini-3*@off,minj+@off)]
+
+     fx2 = real(ri[idx(mini-2*@off,minj+3*@off)])
+     fy2 = imag(ri[idx(mini-2*@off,minj+3*@off)])
+     fz2 = hv[idx(mini-2*@off,minj+3*@off)]
+
+     fx3 = real(ri[idx(mini-@off,minj+@off)])
+     fy3 = imag(ri[idx(mini-@off,minj+@off)])
+     fz3 = hv[idx(mini-@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx9 =  dy1*dz2 - dz1*dy2
+     ny9 =  dz1*dx2 - dx1*dz2
+     nz9 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-@off,minj+@off)])
+     fy1 = imag(ri[idx(mini-@off,minj+@off)])
+     fz1 = hv[idx(mini-@off,minj+@off)]
+
+     fx2 = real(ri[idx(mini-2*@off,minj+3*@off)])
+     fy2 = imag(ri[idx(mini-2*@off,minj+3*@off)])
+     fz2 = hv[idx(mini-2*@off,minj+3*@off)]
+
+     fx3 = real(ri[idx(mini,minj+3*@off)])
+     fy3 = imag(ri[idx(mini,minj+3*@off)])
+     fz3 = hv[idx(mini,minj+3*@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx10 =  dy1*dz2 - dz1*dy2
+     ny10 =  dz1*dx2 - dx1*dz2
+     nz10 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini-@off,minj+@off)])
+     fy1 = imag(ri[idx(mini-@off,minj+@off)])
+     fz1 = hv[idx(mini-@off,minj+@off)]
+
+     fx2 = real(ri[idx(mini,minj+3*@off)])
+     fy2 = imag(ri[idx(mini,minj+3*@off)])
+     fz2 = hv[idx(mini,minj+3*@off)]
+
+     fx3 = real(ri[idx(mini+@off,minj+@off)])
+     fy3 = imag(ri[idx(mini+@off,minj+@off)])
+     fz3 = hv[idx(mini+@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx11 =  dy1*dz2 - dz1*dy2
+     ny11 =  dz1*dx2 - dx1*dz2
+     nz11 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini+@off,minj+@off)])
+     fy1 = imag(ri[idx(mini+@off,minj+@off)])
+     fz1 = hv[idx(mini+@off,minj+@off)]
+
+     fx2 = real(ri[idx(mini,minj+3*@off)])
+     fy2 = imag(ri[idx(mini,minj+3*@off)])
+     fz2 = hv[idx(mini,minj+3*@off)]
+
+     fx3 = real(ri[idx(mini+2*@off,minj+3*@off)])
+     fy3 = imag(ri[idx(mini+2*@off,minj+3*@off)])
+     fz3 = hv[idx(mini+2*@off,minj+3*@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx12 =  dy1*dz2 - dz1*dy2
+     ny12 =  dz1*dx2 - dx1*dz2
+     nz12 =  dx1*dy2 - dy1*dx2
+     fx1 = real(ri[idx(mini+@off,minj+@off)])
+     fy1 = imag(ri[idx(mini+@off,minj+@off)])
+     fz1 = hv[idx(mini+@off,minj+@off)]
+
+     fx2 = real(ri[idx(mini+2*@off,minj+3*@off)])
+     fy2 = imag(ri[idx(mini+2*@off,minj+3*@off)])
+     fz2 = hv[idx(mini+2*@off,minj+3*@off)]
+
+     fx3 = real(ri[idx(mini+3*@off,minj+@off)])
+     fy3 = imag(ri[idx(mini+3*@off,minj+@off)])
+     fz3 = hv[idx(mini+3*@off,minj+@off)]
+     dx1 = fx1-fx2
+     dy1 = fy1-fy2
+     dz1 = fz1-fz2
+     dx2 = fx3-fx2
+     dy2 = fy3-fy2
+     dz2 = fz3-fz2
+     nx13 =  dy1*dz2 - dz1*dy2
+     ny13 =  dz1*dx2 - dx1*dz2
+     nz13 =  dx1*dy2 - dy1*dx2
+     ; calculate the vertex normals for the three vertices of the target triangle
+     nr1 = nx6+nx7+nx3+nx2+nx1+nx5
+     ni1 = ny6+ny7+ny3+ny2+ny1+ny5
+     nj1 = nz6+nz7+nz3+nz2+nz1+nz5
+
+     nr2 = nx6+nx4+nx9+nx10+nx1+nx11
+     ni2 = ny6+ny4+ny9+ny10+ny1+ny11
+     nj2 = nz6+nz4+nz9+nz10+nz1+nz11
+
+     nr3 = nx6+nx11+nx12+nx13+nx8+nx7
+     ni3 = ny6+ny11+ny12+ny13+ny8+ny7
+     nj3 = nz6+nz11+nz12+nz13+nz8+nz7
+
+     ; barycentric coordinates
+     b1 = sqrt(vnx1^2+vny1^2+vnz1^2)
+     b2 = sqrt(vnx2^2+vny2^2+vnz2^2)
+     b3 = sqrt(vnx3^2+vny3^2+vnz3^2)
+     ; calculate the average normal of the vertex normals at the barycentric point
+     nr = nr1*b1 + nr2*b2 + nr3*b3
+     ni = ni1*b1 + ni2*b2 + ni3*b3
+     nj = nj1*b1 + nj2*b2 + nj3*b3
+     nd = sqrt(nr^2+ni^2+nj^2)
+     ; since the surface normal is normalized the z component can be calculated
+     ; from nr and ni, which is done at the ucl level.
+     nr = nr/nd
+     ni = ni/nd
+     nj = nj/nd
+     lvalue = nr*lx + ni*ly +nj*lz
+   endif
+  ; this is used for Z value coloring.
+  mind = hv[idx(mini,minj)]
+
+	; This provides an index into a 2-dimensional dynamic array
+  int func idx(int i, int j)
+	  int k = i*arrayy + j
+	  return k
+	endfunc
+
+  float func dist(int ii, int jj, float vx, float vy, float vz, float cxx, \
+                  float cyy, float czz)
+    float x = real(ri[idx(ii,jj)])
+    float y = imag(ri[idx(ii,jj)])
+    float z = hv[idx(ii,jj)]
+    float t0 = vx*(x-cxx) + vy*(y-cyy) + vz*(z-czz)
+    float dist = (x-cxx-t0*vx)^2 + (y-cyy-t0*vy)^2 + (z-czz-t0*vz)^2
+    return dist
+  endfunc
+
+  float func sdist(int ii, int jj, float xi, float yi, float zi)
+    float x = real(ri[idx(ii,jj)])
+    float y = imag(ri[idx(ii,jj)])
+    float z = hv[idx(ii,jj)]
+    float t0 = lx*(x-xi) + ly*(y-yi) + lz*(z-zi)
+    float dist = (x-xi-t0*lx)^2 + (y-yi-t0*ly)^2 + (z-zi-t0*lz)^2
+    return dist
+  endfunc
+
+  bool func checktarg(int ii, int jj, int si, int sj)
+    bool rvalue = true
+    if (abs(ii-si) <= @off+@shadtarg-1) && (abs(jj-sj) <= @off+@shadtarg-1)
+      rvalue = false
+    endif
+    return rvalue
+  endfunc
+
+loop:
+  complex cvalue = 0
+  if @ctype == "Z value"
+    cvalue = 20*abs(mind*@cdense*#magn)-0.2
+  elseif @ctype == "Diffuse lighting"
+    cvalue = lvalue + flip(addshad)
+  endif
+  #z = cvalue
+  if #maxiter == @iter
+    done = false
+  endif
+bailout:
+  done
+
+
+default:
+  method = multipass
+  periodicity = 0
+  maxiter = 1
+  title = "3D Heightfield Raytrace"
+	int param v_3DHeightfield
+		caption = "Version (3D Heightfields)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has been made to the formula that is incompatible with the previous version. When that happens, this field will reflect the old version number to alert you to the fact that an alternate rendering is being used."
+		visible = @v_3DHeightfield < 100
+	endparam
+	heading
+	  text = "'3D Heightfield Raytrace' creates heightfield images without the use \
+	          meshes. One of the newer methods to map a point surface for raytracing \
+            is to use a point set surface approach. This mechod uses a cluster of nearby \
+            points to determine the surface characteristics near the ray itersection. \
+            The 'Basic' ucl with the real mode selected is recommended for \
+            non-raytrace coloring, while Direct Color Heightfields should be \
+            used in the raytracing (Diffuse lighting) mode."
+	endheading
+	float param camd
+	  caption = "Camera distance"
+	  default = 1e8
+	endparam
+	heading
+	  caption = "Rotations"
+	endheading
+	bool param rot
+	  caption = "Rotate view screen"
+	  default = true
+	endparam
+	float param xanglec
+	  caption = "X rotation"
+	  default = 0
+	endparam
+	float param yanglec
+	  caption = "Y rotation"
+	  default = 0
+	endparam
+	param corrz
+	  caption = "Correct z value"
+	  default = 1
+	  enum = "No correction" "By Zmax" "By Zave"
+  endparam	
+  param ctype
+    caption = "Color type"
+    default = 0
+    enum = "Diffuse lighting" "Z value"
+  endparam
+  heading
+    caption = "Illumination"
+    visible = @ctype == "Diffuse lighting"
+    expanded = false
+  endheading
+    heading
+      text = "   Light Origin"
+    visible= @ctype == "Diffuse lighting"
+    endheading
+  float param lpointx
+    caption = "       X"
+    default = 1.5
+    visible= @ctype == "Diffuse lighting"
+  endparam
+  float param lpointy
+    caption = "       Y"
+    default = 2
+    visible= @ctype == "Diffuse lighting"
+  endparam
+  float param lplane
+    caption = "       Z"
+    default = 5
+    visible= @ctype == "Diffuse lighting"
+  endparam
+    heading
+      text = "   Light Point At"
+    visible= @ctype == "Diffuse lighting"
+    endheading
+  float param lightx
+    caption = "       X"
+    default = 0.0
+    visible= @ctype == "Diffuse lighting"
+  endparam
+  float param lighty
+    caption = "       Y"
+    default = 0.0
+    visible= @ctype == "Diffuse lighting"
+  endparam
+  float param lightz
+    caption = "       Z"
+    default = 0.0
+    visible= @ctype == "Diffuse lighting"
+  endparam
+  bool param shad
+    caption = "Add shadows"
+    default = false
+    visible = @ctype == "Diffuse lighting"
+  endparam
+  float param shadlev
+    caption = "Shadow level"
+    default = 0.2
+    visible = @shad && @ctype == "Diffuse lighting"
+  endparam
+  float param boxadj
+    caption = "Grid adjustment"
+    default = 1
+    visible = @shad && @ctype == "Diffuse lighting"
+  endparam
+  int param shadtarg
+    caption = "Shadow target size"
+    default = 1
+    visible = @shad && @ctype == "Diffuse lighting"
+  endparam
+  heading
+    caption = "View plane"
+  endheading
+	heading
+	  text = "The 'View screen' helps set the camera ray position. If 'View screen \
+            setting' = 'Arbitrary' use the 'View screen' parameter for setting \
+            the value."
+  endheading
+	float param fplane
+	  caption = "View plane"
+	  default = 0
+	  visible = @setplane == "Arbitrary"
+	endparam
+	param setplane
+	  caption = "View screen setting"
+	  default = 1
+	  enum = "Arbitrary" "Min Z" "Max Z"
+	endparam
+	param cam
+	  caption = "Ray reference"
+	  default = 0
+	  enum = "Camera" "View screen"
+	endparam
+	bool param usefirst
+	  caption = "Use first hit"
+	  default = false
+	endparam
+	heading
+	  text = "Increasing 'Ray target size' can eliminate rendering artifacts, but \
+	          resolution of fine details may be decreased."
+	endheading
+	int param @off
+	  caption = "Ray target size"
+	  default = 1
+;	  min = 1
+	endparam
+	heading
+	  text = "'Grid density' and 'Grid threshold' are parameters for a simple \
+	          tree search to find the surface intersections."
+	endheading
+	int param cells
+	  caption = "Grid density"
+	  default = 100
+	  min = 1
+	endparam
+	float param bthresh
+	  caption = "Grid threshold"
+	  default = 2.0
+	endparam
+	heading
+	  text = "The following settings are for the unmagnified window ranges. For \
+	          magnified and rotated objects these ranges may need to be changed \
+	          so that the image is not artificially cut off at the edges of the \
+	          window. Increasing the window range will slow the rendering."
+	endheading
+  float param xmax
+    caption = "Max X"
+    default = 3
+  endparam
+  float param xmin
+    caption = "Min X"
+    default = -3
+  endparam
+  float param ymax
+    caption = "Max Y"
+    default = 3
+  endparam
+  float param ymin
+    caption = "Min Y"
+    default = -3
+  endparam
+  float param xshift
+    caption = "X plane shift"
+    default = 0
+  endparam
+  float param yshift
+    caption = "Y plane shift"
+    default = 0
+  endparam
+	heading
+	  caption = "Fractal Function"
+	endheading
+	heading
+	  text = "The 'Maximum Iteraions' value on the top of the Formula tab MUST be set \
+	          to 1. Otherwise rendering will be slowed down. Set 'Maximum iterations' \
+	          using the parameter below."
+	endheading
+	int param @iter
+	  caption = "Maxiumum iterations"
+	  default = 100
+	endparam
+  Switch param formulaClass
+    caption = "Fractal Formula"
+    default = REB_MandelbrotJulia_Switch
+  endparam
+	heading
+	  caption = "Coloring"
+	endheading
+	param htype
+	  caption = "Height type"
+	  default = 0
+	  enum = "Distance Estimate" "General Smoothing" "Exponential smoothing" \
+           "Potential" "Raw iteration" "Harkonen Vepstas smoothing"
+	endparam
+	heading
+	  caption = "DE Methods"
+	  visible = @htype == "Distance Estimate"
+	endheading
+	param deriv
+	  caption = "DE Method"
+	  enum = "Slope" "Analytical"
+	  visible = @htype == "Distance Estimate"
+	endparam
+	float param deltade
+	  caption = "Slope parameter"
+	  default = 1e-12
+	  visible =  @htype == "Distance Estimate" && @deriv == "Slope"
+	endparam
+	float param dfactor
+	  caption = "Distance factor"
+	  default = 1
+	  visible = @htype == "Distance Estimate" || @htype == "Potential"
+	endparam
+	float param hvalue
+	  caption = "Height scale"
+	  default = 1
+	endparam
+	float param cdense
+	  caption = "Color density"
+	  default = 1
+	  visible = @ctype != "Diffuse lighting"
+	endparam
+}
+

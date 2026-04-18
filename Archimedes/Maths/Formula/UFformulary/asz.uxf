@@ -1,0 +1,951 @@
+comment { 
+
+All transformations (c) by Andras Szolek
+
+}
+
+perpecrive-skew-stretch-rotate{
+
+transform:
+  #pixel = @var1*@function1(#pixel*@var2)\
+  -real(#pixel/(@var1/@var2))+imag(#pixel-@var3)
+
+default:
+ title = "Perpsective-Skew-Stretch-n-Rotate"
+
+ param var1
+  caption = "Parameter #1"
+  default = (1,0.1)
+ endparam
+ param var2
+  caption = "Parameter #2"
+  default = (1,1)
+ endparam
+ param var3
+  caption = "Parameter #3"
+  default = (1,0.1)
+ endparam
+ 
+ func function1
+  caption = "Function #1"
+  default = flip()
+ endfunc
+}
+
+slide{
+
+transform:
+  #pixel = @function(@var1/(1/@var2)*@var3)\
+  /real(#pixel/0.33-(@var1+(1/@var2)))\
+  +imag(#pixel-@var3/(1/@var2))
+
+default:
+ title = "Slide"
+
+ param var1
+  caption = "Smoothness"
+  default = (0.5,1)
+ endparam
+ param var2
+  caption = "Extension"
+  hint = "Size of the extension"
+  default = 0.5
+ endparam
+ param var3
+  caption = "Distance"
+  hint = "Distance between the slides"
+ default = 3
+ endparam
+
+ func function
+  caption = "Function"
+  default = flip()
+ endfunc
+}
+
+inverse-kaleidoscope{
+
+transform:
+  preset1 = 2+(0.2875,0.175)+\
+  (@seed*(0.6/@pstrength))
+
+  preset2 = 2+(-0.15,0.7)+\
+  (@seed*(0.6/@pstrength))
+  
+  preset3 = 2+(-1,0)+\
+  (@seed*(0.6/@pstrength))
+  
+  preset4 = 2+(-0.25,0.6)+\
+  (@seed*(0.6/@pstrength))
+  
+  z = 2+@seed
+  c = #pixel
+  
+ if @preset == 1
+  #pixel = @function1(preset1*c/#pixel^(@var1+1))
+  c = #pixel
+  #pixel = #pixel+(preset1-2)
+
+ elseif @preset == 2
+  #pixel = @function1(preset2*c/#pixel^(@var1+1))
+  c = #pixel
+  #pixel = #pixel+(preset2-2)
+
+ elseif @preset == 3
+  #pixel = @function1(preset3*c/#pixel^(@var1+1))
+  c = #pixel
+  #pixel = #pixel+(preset3-2)
+ 
+ elseif @preset == 4
+  #pixel = @function1(preset4*c/#pixel^(@var1+1))
+  c = #pixel
+  #pixel = #pixel+(preset4-2)
+ else
+
+  #pixel = @function1(z*c/#pixel^(@var1+1))
+  c = #pixel
+  #pixel = #pixel+@seed
+
+ endif
+
+default:
+ title = "Inverse-Kaleidoscope"
+
+ param preset
+  caption = "Presets"
+  hint = "Preset values /Seed/: #1: (0.2875,0.175), \
+  #2: (-1.5,0.7) #3: (-1,0) #4: (-0.25,0.6)."
+  enum = "None" "Preset #1" "Preset #2" "Preset #3"\
+  "Preset #4"
+ endparam
+ param pstrength
+  caption = "Preset strength"
+  default = 10.0
+ endparam
+ param var1
+  caption = "Number of sides"
+  hint = "1 inverses the fractal"
+  default = 5
+ endparam
+ param seed
+  caption = "Seed"
+  default = (0,0)
+ endparam
+ func function1
+  caption = "Function #1"
+  default = ident()
+ endfunc
+}
+
+andreskaya { ;(c) by Andras Szolek
+
+transform:
+  z = #pixel
+  c = z - #pixel^2/2
+  x = (z+c)/2
+  complex s = #pixel
+
+  #pixel = @function(z^c/(@base/10))/@power-c^(@arms/2)
+  z = (z-x+1)
+  c = (c-x+1)
+  x = x/1.0001
+
+ if @mandelbrot == true
+  z = @mandelbrot_start+(z/5)
+  z = #pixel^z/#pixel
+ endif
+
+ if @julia == true
+  z = #pixel+(z/5) 
+  z = z^@julia_power+@julia_seed
+ endif
+
+ if @sierpinsky == true
+  s = @sierpinsky_strength*s
+  s = s/@sierpinsky_strength
+
+ if (imag(s)>0.5)
+  s = (@sierpinsky_s2/10)*real(s)+\
+  @sf2((@sierpinsky_s2/10)*imag(s)-1)
+ elseif (real(s)>0.5)
+  s = (@sierpinsky_s2/10)*real(s)-\
+  1+@sf2((@sierpinsky_s2/10)*imag(s))
+ else
+  s = (@sierpinsky_s2/10)*real(s)+\
+  @sf2((@sierpinsky_s2/10)*imag(s))
+ endif
+ endif
+
+ if @transform_mode == 1
+  b = z*c
+ elseif @transform_mode == 2
+  b = |z*c|
+ elseif @transform_mode == 3
+  b = z/c
+ elseif @transform_mode == 4
+  b = |z/c|
+ elseif @transform_mode == 5
+  b = z+c
+ elseif @transform_mode == 6
+  b = |z*c|
+ elseif @transform_mode == 7
+  b = z-c
+ elseif @transform_mode == 8
+  b = |z-c|
+ elseif @transform_mode == 9
+  b = z
+ elseif @transform_mode == 10
+  b = |z|
+ elseif @transform_mode == 11
+  b = c
+ elseif @transform_mode == 12
+  b = |c|
+ else
+  b = z*c
+ endif
+
+ if @sierpinsky == true
+  z = #pixel-z
+  b = @sf(((|@sierpinsky_strength*s|+z)/\
+  @sierpinsky_strength)-@bailout)+(b/3)
+ endif
+
+ #pixel=#pixel*b
+
+default:
+ title = "Andreskaya"
+
+ param base
+  caption = "Base, ''Seed''"
+  default = (7.5, 1.5)
+ endparam
+ 
+ param power
+  caption = "Power"
+  default = 2.5
+ endparam
+ 
+ param bailout
+  caption = "Bailout"
+  default = 100
+ endparam
+ 
+ param transform_mode
+  caption = "transform Mode"
+  hint = "The transform-process : ''this value'' < \
+  ''transform parameter /variant/''"
+  enum = "z*c" "|z*c|" "z/c" "|z/c|" "z+c" "|z+c|"\
+  "z-c" "|z-c|" "z" "|z|" "c" "|c|"
+ endparam
+
+ param arms
+  caption = "Number of arms"
+  default = 2
+ endparam
+
+ param mandelbrot
+  caption = "Mandelbrot Import"
+  default = false
+ endparam
+
+ param mandelbrot_start
+  caption = "Mandelbrot Starting Point"
+  hint = "This function is working when the ''Mandelbrot \
+  import'' parameter is ticked"
+  default = (2,0)
+ endparam
+
+ param julia
+  caption = "Julia Import"
+  default = false 
+ endparam
+
+ param julia_seed
+  caption = "Julia Seed"
+  hint = "This function is working when the ''Julia import''\
+  parameter is ticked"
+  default = (-1.25,0)
+ endparam
+
+ param julia_power
+  caption = "Julia Power"
+  hint = "This function is working when the ''Julia import''\
+  parameter is ticked"
+  default = 2.0
+ endparam
+
+ param sierpinsky
+  caption = "Sierpinsky Import"
+  default = false 
+ endparam
+
+ param sierpinsky_strength
+  caption = "Sierpinsky Strength"
+  hint = "This function is working when ''Sierpinsky \
+  Import is ticked"
+  default = 20.0
+ endparam
+
+ param sierpinsky_s2
+  caption = "Sierpinsky Factor"
+  hint = "This function is working when ''Sierpinsky \
+  Import is ticked"
+  default = 20.0
+ endparam
+
+ func function
+  caption = "New ''z'' function"
+  default = conj()
+ endfunc
+
+ func sf
+  caption = "Sierpinksy function #1"
+  hint = "Sierpinsky ''transform'' in the ''transform'' section"
+  default = conj()
+ endfunc
+
+ func sf2
+  caption = "Sierpinksy function #2"
+  hint = "Sierpinsky ''shape'' in the ''loop'' section"
+  default = flip()
+ endfunc
+}
+
+smooth { ;(c) by Andras Szolek
+
+transform:
+  p = @seed
+  z = #pixel
+  c = #pixel*(@function1(@seed))
+
+ if #pixel / (@function1(p*@seed)) >\
+  @smoothness*(#random/10)*@seed
+  #pixel = z * @function1(c+@seed)
+
+ elseif #pixel*c > 2*@seed\
+  (@smoothness*(#random/10)*@seed)
+  #pixel = z * @function1(real(@seed))
+
+ else
+  #pixel = @function1(#pixel)
+ endif
+
+default:
+ title = "Smooth Sets"
+
+ param seed
+  caption = "Seed"
+  default = (-0.75,-0.725)
+ endparam
+
+ param smoothness
+  caption = "Smoothness"
+  default = 10
+ endparam
+
+ func function1
+  caption = "Function #1"
+  default = sin()
+ endfunc
+}
+
+symmugo{
+
+transform:
+  z = 0
+  c = 0
+  int fwidth = 0
+  int fheight = 0
+  complex fscreenmax = (0,0)
+
+if @fix == true
+  fscreenmax = @fixhw
+  fwidth = round(real(@fixhw))
+  fheight = round(imag(@fixhw))
+else
+  fscreenmax = #screenmax
+  fwidth = #width
+  fheight = #height
+endif
+
+ if @change1 == 0
+  z = (#pixel/fscreenmax)-(fwidth/fheight)
+ elseif @change1 == 1
+  z = (#pixel/fscreenmax)-(fwidth*fheight)
+ elseif @change1 == 2
+  z = (#pixel/fscreenmax)-(fwidth+fheight)
+ elseif @change1 == 3
+  z = (#pixel/fscreenmax)-(fwidth-fheight)
+
+ elseif @change1 == 0 && @swap == true
+  z = (#pixel/fscreenmax)-(fheight/fwidth)
+ elseif @change1 == 3 && @swap == true
+  z = (#pixel/fscreenmax)-(fheight-fwidth)
+ endif
+
+ if @change2 == 0
+  c = @function1(#pixel)/z
+ elseif @change2 == 1
+  c = @function1(#pixel)*z
+ elseif @change2 == 2
+  c = @function1(#pixel)+z
+ elseif @change2 == 3
+  c = @function1(#pixel)-z
+ endif
+
+ if @change31 == 0 && @change32 == 0 && @change33 == 0
+  #pixel = sqrt(z/c/2)/(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 0 && @change33 == 1
+  #pixel = sqrt(z/c/2)*(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 0 && @change33 == 2
+  #pixel = sqrt(z/c/2)+(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 0 && @change33 == 3
+  #pixel = sqrt(z/c/2)-(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 0 && @change33 == 4
+  #pixel = sqrt(z/c/2)^(cos(tan(c)))
+
+ elseif @change31 == 0 && @change32 == 1 && @change33 == 0
+  #pixel = sqrt(z/c*2)/(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 1 && @change33 == 1
+  #pixel = sqrt(z/c*2)*(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 1 && @change33 == 2
+  #pixel = sqrt(z/c*2)+(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 1 && @change33 == 3
+  #pixel = sqrt(z/c*2)-(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 1 && @change33 == 4
+  #pixel = sqrt(z/c*2)^(cos(tan(c)))
+
+ elseif @change31 == 0 && @change32 == 2 && @change33 == 0
+  #pixel = sqrt(z/c+2)/(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 2 && @change33 == 1
+  #pixel = sqrt(z/c+2)*(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 2 && @change33 == 2
+  #pixel = sqrt(z/c+2)+(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 2 && @change33 == 3
+  #pixel = sqrt(z/c+2)-(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 2 && @change33 == 4
+  #pixel = sqrt(z/c+2)^(cos(tan(c)))
+
+ elseif @change31 == 0 && @change32 == 3 && @change33 == 0
+  #pixel = sqrt(z/c-2)/(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 3 && @change33 == 1
+  #pixel = sqrt(z/c-2)*(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 3 && @change33 == 2
+  #pixel = sqrt(z/c-2)+(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 3 && @change33 == 3
+  #pixel = sqrt(z/c-2)-(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 3 && @change33 == 4
+  #pixel = sqrt(z/c-2)^(cos(tan(c)))
+
+ elseif @change31 == 0 && @change32 == 4 && @change33 == 0
+  #pixel = sqrt(z/c^2)/(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 4 && @change33 == 1
+  #pixel = sqrt(z/c^2)*(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 4 && @change33 == 2
+  #pixel = sqrt(z/c^2)+(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 4 && @change33 == 3
+  #pixel = sqrt(z/c^2)-(cos(tan(c)))
+ elseif @change31 == 0 && @change32 == 4 && @change33 == 4
+  #pixel = sqrt(z/c^2)^(cos(tan(c)))
+
+
+ elseif @change31 == 1 && @change32 == 0 && @change33 == 0
+  #pixel = sqrt(z*c/2)/(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 0 && @change33 == 1
+  #pixel = sqrt(z*c/2)*(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 0 && @change33 == 2
+  #pixel = sqrt(z*c/2)+(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 0 && @change33 == 3
+  #pixel = sqrt(z*c/2)-(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 0 && @change33 == 4
+  #pixel = sqrt(z*c/2)^(cos(tan(c)))
+
+ elseif @change31 == 1 && @change32 == 1 && @change33 == 0
+  #pixel = sqrt(z*c*2)/(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 1 && @change33 == 1
+  #pixel = sqrt(z*c*2)*(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 1 && @change33 == 2
+  #pixel = sqrt(z*c*2)+(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 1 && @change33 == 3
+  #pixel = sqrt(z*c*2)-(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 1 && @change33 == 4
+  #pixel = sqrt(z*c*2)^(cos(tan(c)))
+
+ elseif @change31 == 1 && @change32 == 2 && @change33 == 0
+  #pixel = sqrt(z*c+2)/(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 2 && @change33 == 1
+  #pixel = sqrt(z*c+2)*(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 2 && @change33 == 2
+  #pixel = sqrt(z*c+2)+(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 2 && @change33 == 3
+  #pixel = sqrt(z*c+2)-(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 2 && @change33 == 4
+  #pixel = sqrt(z*c+2)^(cos(tan(c)))
+
+ elseif @change31 == 1 && @change32 == 3 && @change33 == 0
+  #pixel = sqrt(z*c-2)/(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 3 && @change33 == 1
+  #pixel = sqrt(z*c-2)*(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 3 && @change33 == 2
+  #pixel = sqrt(z*c-2)+(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 3 && @change33 == 3
+  #pixel = sqrt(z*c-2)-(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 3 && @change33 == 4
+  #pixel = sqrt(z*c-2)^(cos(tan(c)))
+
+ elseif @change31 == 1 && @change32 == 4 && @change33 == 0
+  #pixel = sqrt(z*c^2)/(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 4 && @change33 == 1
+  #pixel = sqrt(z*c^2)*(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 4 && @change33 == 2
+  #pixel = sqrt(z*c^2)+(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 4 && @change33 == 3
+  #pixel = sqrt(z*c^2)-(cos(tan(c)))
+ elseif @change31 == 1 && @change32 == 4 && @change33 == 4
+  #pixel = sqrt(z*c^2)^(cos(tan(c)))
+
+
+ elseif @change31 == 2 && @change32 == 0 && @change33 == 0
+  #pixel = sqrt(z+c/2)/(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 0 && @change33 == 1
+  #pixel = sqrt(z+c/2)*(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 0 && @change33 == 2
+  #pixel = sqrt(z+c/2)+(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 0 && @change33 == 3
+  #pixel = sqrt(z+c/2)-(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 0 && @change33 == 4
+  #pixel = sqrt(z+c/2)^(cos(tan(c)))
+
+ elseif @change31 == 2 && @change32 == 1 && @change33 == 0
+  #pixel = sqrt(z+c*2)/(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 1 && @change33 == 1
+  #pixel = sqrt(z+c*2)*(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 1 && @change33 == 2
+  #pixel = sqrt(z+c*2)+(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 1 && @change33 == 3
+  #pixel = sqrt(z+c*2)-(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 1 && @change33 == 4
+  #pixel = sqrt(z+c*2)^(cos(tan(c)))
+
+ elseif @change31 == 2 && @change32 == 2 && @change33 == 0
+  #pixel = sqrt(z+c+2)/(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 2 && @change33 == 1
+  #pixel = sqrt(z+c+2)*(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 2 && @change33 == 2
+  #pixel = sqrt(z+c+2)+(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 2 && @change33 == 3
+  #pixel = sqrt(z+c+2)-(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 2 && @change33 == 4
+  #pixel = sqrt(z+c+2)^(cos(tan(c)))
+
+ elseif @change31 == 2 && @change32 == 3 && @change33 == 0
+  #pixel = sqrt(z+c-2)/(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 3 && @change33 == 1
+  #pixel = sqrt(z+c-2)*(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 3 && @change33 == 2
+  #pixel = sqrt(z+c-2)+(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 3 && @change33 == 3
+  #pixel = sqrt(z+c-2)-(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 3 && @change33 == 4
+  #pixel = sqrt(z+c-2)^(cos(tan(c)))
+
+ elseif @change31 == 2 && @change32 == 4 && @change33 == 0
+  #pixel = sqrt(z+c^2)/(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 4 && @change33 == 1
+  #pixel = sqrt(z+c^2)*(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 4 && @change33 == 2
+  #pixel = sqrt(z+c^2)+(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 4 && @change33 == 3
+  #pixel = sqrt(z+c^2)-(cos(tan(c)))
+ elseif @change31 == 2 && @change32 == 4 && @change33 == 4
+  #pixel = sqrt(z+c^2)^(cos(tan(c)))
+
+
+ elseif @change31 == 3 && @change32 == 0 && @change33 == 0
+  #pixel = sqrt(z-c/2)/(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 0 && @change33 == 1
+  #pixel = sqrt(z-c/2)*(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 0 && @change33 == 2
+  #pixel = sqrt(z-c/2)+(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 0 && @change33 == 3
+  #pixel = sqrt(z-c/2)-(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 0 && @change33 == 4
+  #pixel = sqrt(z-c/2)^(cos(tan(c)))
+
+ elseif @change31 == 3 && @change32 == 1 && @change33 == 0
+  #pixel = sqrt(z-c*2)/(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 1 && @change33 == 1
+  #pixel = sqrt(z-c*2)*(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 1 && @change33 == 2
+  #pixel = sqrt(z-c*2)+(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 1 && @change33 == 3
+  #pixel = sqrt(z-c*2)-(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 1 && @change33 == 4
+  #pixel = sqrt(z-c*2)^(cos(tan(c)))
+
+ elseif @change31 == 3 && @change32 == 2 && @change33 == 0
+  #pixel = sqrt(z-c+2)/(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 2 && @change33 == 1
+  #pixel = sqrt(z-c+2)*(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 2 && @change33 == 2
+  #pixel = sqrt(z-c+2)+(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 2 && @change33 == 3
+  #pixel = sqrt(z-c+2)-(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 2 && @change33 == 4
+  #pixel = sqrt(z-c+2)^(cos(tan(c)))
+
+ elseif @change31 == 3 && @change32 == 3 && @change33 == 0
+  #pixel = sqrt(z-c-2)/(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 3 && @change33 == 1
+  #pixel = sqrt(z-c-2)*(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 3 && @change33 == 2
+  #pixel = sqrt(z-c-2)+(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 3 && @change33 == 3
+  #pixel = sqrt(z-c-2)-(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 3 && @change33 == 4
+  #pixel = sqrt(z-c-2)^(cos(tan(c)))
+
+ elseif @change31 == 3 && @change32 == 4 && @change33 == 0
+  #pixel = sqrt(z-c^2)/(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 4 && @change33 == 1
+  #pixel = sqrt(z-c^2)*(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 4 && @change33 == 2
+  #pixel = sqrt(z-c^2)+(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 4 && @change33 == 3
+  #pixel = sqrt(z-c^2)-(cos(tan(c)))
+ elseif @change31 == 3 && @change32 == 4 && @change33 == 4
+  #pixel = sqrt(z-c^2)^(cos(tan(c)))
+
+
+ elseif @change31 == 4 && @change32 == 0 && @change33 == 0
+  #pixel = sqrt(z^c/2)/(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 0 && @change33 == 1
+  #pixel = sqrt(z^c/2)*(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 0 && @change33 == 2
+  #pixel = sqrt(z^c/2)+(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 0 && @change33 == 3
+  #pixel = sqrt(z^c/2)-(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 0 && @change33 == 4
+  #pixel = sqrt(z^c/2)^(cos(tan(c)))
+
+ elseif @change31 == 4 && @change32 == 1 && @change33 == 0
+  #pixel = sqrt(z^c*2)/(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 1 && @change33 == 1
+  #pixel = sqrt(z^c*2)*(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 1 && @change33 == 2
+  #pixel = sqrt(z^c*2)+(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 1 && @change33 == 3
+  #pixel = sqrt(z^c*2)-(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 1 && @change33 == 4
+  #pixel = sqrt(z^c*2)^(cos(tan(c)))
+
+ elseif @change31 == 4 && @change32 == 2 && @change33 == 0
+  #pixel = sqrt(z^c+2)/(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 2 && @change33 == 1
+  #pixel = sqrt(z^c+2)*(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 2 && @change33 == 2
+  #pixel = sqrt(z^c+2)+(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 2 && @change33 == 3
+  #pixel = sqrt(z^c+2)-(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 2 && @change33 == 4
+  #pixel = sqrt(z^c+2)^(cos(tan(c)))
+
+ elseif @change31 == 4 && @change32 == 3 && @change33 == 0
+  #pixel = sqrt(z^c-2)/(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 3 && @change33 == 1
+  #pixel = sqrt(z^c-2)*(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 3 && @change33 == 2
+  #pixel = sqrt(z^c-2)+(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 3 && @change33 == 3
+  #pixel = sqrt(z^c-2)-(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 3 && @change33 == 4
+  #pixel = sqrt(z^c-2)^(cos(tan(c)))
+
+ elseif @change31 == 4 && @change32 == 4 && @change33 == 0
+  #pixel = sqrt(z^c^2)/(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 4 && @change33 == 1
+  #pixel = sqrt(z^c^2)*(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 4 && @change33 == 2
+  #pixel = sqrt(z^c^2)+(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 4 && @change33 == 3
+  #pixel = sqrt(z^c^2)-(cos(tan(c)))
+ elseif @change31 == 4 && @change32 == 4 && @change33 == 4
+  #pixel = sqrt(z^c^2)^(cos(tan(c)))
+
+ endif  
+
+default:
+ title = "Symmugo"
+
+ param change1
+  caption = "Change #1"
+  enum = "Divide" "Multiply" "Add" "Subtract"
+  default = 0
+ endparam
+ param swap
+  caption = "Swap"
+  default = false
+ endparam
+ param change2
+  caption = "Change #2"
+  enum = "Divide" "Multiply" "Add" "Subtract"
+  default = 3
+ endparam
+ param change31
+  caption = "Change #3 - 1"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 0
+ endparam
+ param change32
+  caption = "Change #3 - 2"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 4
+ endparam
+ param change33
+  caption = "Change #3 - 3"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 3
+ endparam
+ param fix
+  caption = "Fix W/H"
+  default = false
+ endparam
+ param fixhw
+  caption = "Width, Height"
+  hint = "If you want to render the image, set this to the current W/H"
+  default = (320,240)
+;  visible = @fix == true
+ endparam
+ func function1
+  caption = "Function #1"
+  default = cos()
+ endfunc
+}
+
+chavalcad{
+
+transform:
+  z = 1/@var1
+  c = 0
+  x = 0
+
+ if @change11 == 0 && @change12 == 0
+  c = @function1(z/#pixel)/#pixel
+ elseif @change11 == 0 && @change12 == 1
+  c = @function1(z/#pixel)*#pixel
+ elseif @change11 == 0 && @change12 == 2
+  c = @function1(z/#pixel)+#pixel
+ elseif @change11 == 0 && @change12 == 3
+  c = @function1(z/#pixel)-#pixel
+ elseif @change11 == 0 && @change12 == 4
+  c = @function1(z/#pixel)^#pixel
+
+ elseif @change11 == 1 && @change12 == 0
+  c = @function1(z*#pixel)/#pixel
+ elseif @change11 == 1 && @change12 == 1
+  c = @function1(z*#pixel)*#pixel
+ elseif @change11 == 1 && @change12 == 2
+  c = @function1(z*#pixel)+#pixel
+ elseif @change11 == 1 && @change12 == 3
+  c = @function1(z*#pixel)-#pixel
+ elseif @change11 == 1 && @change12 == 4
+  c = @function1(z*#pixel)^#pixel
+
+ elseif @change11 == 2 && @change12 == 0
+  c = @function1(z+#pixel)/#pixel
+ elseif @change11 == 2 && @change12 == 1
+  c = @function1(z+#pixel)*#pixel
+ elseif @change11 == 2 && @change12 == 2
+  c = @function1(z+#pixel)+#pixel
+ elseif @change11 == 2 && @change12 == 3
+  c = @function1(z+#pixel)-#pixel
+ elseif @change11 == 2 && @change12 == 4
+  c = @function1(z+#pixel)^#pixel
+
+ elseif @change11 == 3 && @change12 == 0
+  c = @function1(z-#pixel)/#pixel
+ elseif @change11 == 3 && @change12 == 1
+  c = @function1(z-#pixel)*#pixel
+ elseif @change11 == 3 && @change12 == 2
+  c = @function1(z-#pixel)+#pixel
+ elseif @change11 == 3 && @change12 == 3
+  c = @function1(z-#pixel)-#pixel
+ elseif @change11 == 3 && @change12 == 4
+  c = @function1(z-#pixel)^#pixel
+
+ elseif @change11 == 4 && @change12 == 0
+  c = @function1(z^#pixel)/#pixel
+ elseif @change11 == 4 && @change12 == 1
+  c = @function1(z^#pixel)*#pixel
+ elseif @change11 == 4 && @change12 == 2
+  c = @function1(z^#pixel)+#pixel
+ elseif @change11 == 4 && @change12 == 3
+  c = @function1(z^#pixel)-#pixel
+ elseif @change11 == 4 && @change12 == 4
+  c = @function1(z^#pixel)^#pixel
+ endif
+
+ if @change21 == 0 && @change22 == 0
+  #pixel = @function2(c/(#pixel/z))
+ elseif @change21 == 0 && @change22 == 1
+  #pixel = @function2(c/(#pixel*z))
+ elseif @change21 == 0 && @change22 == 2
+  #pixel = @function2(c/(#pixel+z))
+ elseif @change21 == 0 && @change22 == 3
+  #pixel = @function2(c/(#pixel-z))
+ elseif @change21 == 0 && @change22 == 4
+  #pixel = @function2(c/(#pixel^z))
+
+ elseif @change21 == 1 && @change22 == 0
+  #pixel = @function2(c*(#pixel/z))
+ elseif @change21 == 1 && @change22 == 1
+  #pixel = @function2(c*(#pixel*z))
+ elseif @change21 == 1 && @change22 == 2
+  #pixel = @function2(c*(#pixel+z))
+ elseif @change21 == 1 && @change22 == 3
+  #pixel = @function2(c*(#pixel-z))
+ elseif @change21 == 1 && @change22 == 4
+  #pixel = @function2(c*(#pixel^z))
+
+ elseif @change21 == 2 && @change22 == 0
+  #pixel = @function2(c+(#pixel/z))
+ elseif @change21 == 2 && @change22 == 1
+  #pixel = @function2(c+(#pixel*z))
+ elseif @change21 == 2 && @change22 == 2
+  #pixel = @function2(c+(#pixel+z))
+ elseif @change21 == 2 && @change22 == 3
+  #pixel = @function2(c+(#pixel-z))
+ elseif @change21 == 2 && @change22 == 4
+  #pixel = @function2(c+(#pixel^z))
+
+ elseif @change21 == 3 && @change22 == 0
+  #pixel = @function2(c-(#pixel/z))
+ elseif @change21 == 3 && @change22 == 1
+  #pixel = @function2(c-(#pixel*z))
+ elseif @change21 == 3 && @change22 == 2
+  #pixel = @function2(c-(#pixel+z))
+ elseif @change21 == 3 && @change22 == 3
+  #pixel = @function2(c-(#pixel-z))
+ elseif @change21 == 3 && @change22 == 4
+  #pixel = @function2(c-(#pixel^z))
+
+ elseif @change21 == 4 && @change22 == 0
+  #pixel = @function2(c^(#pixel/z))
+ elseif @change21 == 4 && @change22 == 1
+  #pixel = @function2(c^(#pixel*z))
+ elseif @change21 == 4 && @change22 == 2
+  #pixel = @function2(c^(#pixel+z))
+ elseif @change21 == 4 && @change22 == 3
+  #pixel = @function2(c^(#pixel-z))
+ elseif @change21 == 4 && @change22 == 4
+  #pixel = @function2(c^(#pixel^z))
+ endif
+
+ if @change31 == 0 && @change32 == 0
+  x = z/c/#pixel
+ elseif @change31 == 0 && @change32 == 1
+  x = z/c*#pixel
+ elseif @change31 == 0 && @change32 == 2
+  x = z/c+#pixel
+ elseif @change31 == 0 && @change32 == 3
+  x = z/c-#pixel
+ elseif @change31 == 0 && @change32 == 4
+  x = z/c^#pixel
+
+ elseif @change31 == 1 && @change32 == 0
+  x = z*c/#pixel
+ elseif @change31 == 1 && @change32 == 1
+  x = z*c*#pixel
+ elseif @change31 == 1 && @change32 == 2
+  x = z*c+#pixel
+ elseif @change31 == 1 && @change32 == 3
+  x = z*c-#pixel
+ elseif @change31 == 1 && @change32 == 4
+  x = z*c^#pixel
+
+ elseif @change31 == 2 && @change32 == 0
+  x = z+c/#pixel
+ elseif @change31 == 2 && @change32 == 1
+  x = z+c*#pixel
+ elseif @change31 == 2 && @change32 == 2
+  x = z+c+#pixel
+ elseif @change31 == 2 && @change32 == 3
+  x = z+c-#pixel
+ elseif @change31 == 2 && @change32 == 4
+  x = z+c^#pixel
+
+ elseif @change31 == 3 && @change32 == 0
+  x = z-c/#pixel
+ elseif @change31 == 3 && @change32 == 1
+  x = z-c*#pixel
+ elseif @change31 == 3 && @change32 == 2
+  x = z-c+#pixel
+ elseif @change31 == 3 && @change32 == 3
+  x = z-c-#pixel
+ elseif @change31 == 3 && @change32 == 4
+  x = z-c^#pixel
+
+ elseif @change31 == 4 && @change32 == 0
+  x = z^c/#pixel
+ elseif @change31 == 4 && @change32 == 1
+  x = z^c*#pixel
+ elseif @change31 == 4 && @change32 == 2
+  x = z^c+#pixel
+ elseif @change31 == 4 && @change32 == 3
+  x = z^c-#pixel
+ elseif @change31 == 4 && @change32 == 4
+  x = z^c^#pixel
+ endif
+
+  #pixel = x-(@function3(#pixel)/(@function3(c)))*@function3(z^2)
+
+default:
+ title="Chavalcad"
+
+ param var1
+  caption = "''Chavalcadiness''"
+  default = 2
+ endparam
+ param change11
+  caption = "Change #1 - 1"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 1
+ endparam
+ param change12
+  caption = "Change #1 - 2"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 1
+ endparam
+ param change21
+  caption = "Change #2 - 1"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 1
+ endparam
+ param change22
+  caption = "Change #2 - 2"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 0
+ endparam
+ param change31
+  caption = "Change #3 - 1"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 1
+ endparam
+ param change32
+  caption = "Change #3 - 2"
+  enum = "Divide" "Multiply" "Add" "Subtract" "Raise"
+  default = 0
+ endparam
+ func function1
+  caption = "Function #1"
+  default = cos()
+ endfunc
+ func function2
+  caption = "Function #2"
+  default = abs()
+ endfunc
+ func function3
+  caption = "Function #3"
+  default = sqrt()
+ endfunc
+}

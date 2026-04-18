@@ -1,0 +1,321 @@
+comment { Copyright © 2008-2018 by Mark Townsend.
+
+  Coloring algorithms for Ultra Fractal 5.0 and above
+
+  Last update 3 October 2018
+
+; This work is licensed under a Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International License.
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
+
+}
+
+mt-ConvolutionColoring {
+;
+; Mark Townsend, May 2008
+;
+global:
+  import "mt.ulb"
+  MT_ConvolutionColoring c = new @p_class(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #color = c.Result(#z)
+default:
+  title = "Convolution"
+  heading
+    text = "Tip: use on the Pixel formula"
+  endheading
+  MT_ConvolutionColoring param p_class
+    selectable = false
+  endparam
+}
+
+mt-TextureColoring {
+;
+; Mark Townsend, May 2008
+;
+global:
+  import "mt.ulb"
+  MT_TextureColoring c = new @p_class(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #index = c.ResultIndex(#z)
+default:
+  title = "Texture"
+  MT_TextureColoring param p_class
+    selectable = false
+  endparam
+}
+
+mt-DiskTexture {
+;
+; Mark Townsend, May 2008
+;
+global:
+  import "mt.ulb"
+  MT_DiskTexture c = new @p_class(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #index = c.ResultIndex(#z)
+default:
+  title = "Disk Texture"
+  MT_DiskTexture param p_class
+    selectable = false
+  endparam
+}
+
+mt-SpriteTrap {
+;
+; Mark Townsend, May 2008
+;
+global:
+  import "mt.ulb"
+  MT_SpriteTrap c = new @p_class(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #color = c.Result(#z)
+  if c.IsSolid()
+    #solid = true
+  endif
+default:
+  title = "Sprite Trap"
+  MT_SpriteTrap param p_class
+    selectable = false
+  endparam
+}
+
+mt-ImageMask {
+global:
+  Image i = new @imageParam
+
+final:
+  complex c = 0.5 * #pixel
+
+  float ratio
+  if !i.getEmpty()
+    ratio = i.getWidth() / i.getHeight()
+  else
+    ratio = 1
+  endif
+
+  color clr = i.getColor(real(c) + flip(imag(c) * ratio))
+  float alpha = 0
+  if @indx == "Alpha"
+    alpha = alpha(clr)
+  elseif @indx == "Hue"
+    alpha = hue(clr) / 6
+  elseif @indx == "Saturation"
+    alpha = sat(clr)
+  elseif @indx == "Luminance"
+    alpha = lum(clr)
+  elseif @indx == "Red"
+    alpha = red(clr)
+  elseif @indx == "Green"
+    alpha = green(clr)
+  elseif @indx == "Blue"
+    alpha = blue(clr)
+  endif
+  #color = gradient(alpha)
+
+default:
+  title = "Image Mask"
+  param indx
+    caption = "Index"
+    enum = "Hue" "Saturation" "Luminance" "Red" "Green" "Blue" "Alpha"
+  endparam
+  Image param imageParam
+    caption = "Image"
+  endparam
+}
+
+mt-dynamical-systems-r{ ; Mark Townsend, September 2018
+
+; Based on Chapter 14 of Clifford Pickover's
+; book "Computers, Pattern, Chaos and Beauty"
+
+global:
+  import "mt.ulb"
+  import "common.ulb"
+  MT_TextureColoring noise_texture = new @noise_texture(0)
+  UserTransform transform = new @transform(0)
+  MT_DynamicalFunction XFunc = new @XFuncParam
+  MT_DynamicalFunction YFunc = new @YFuncParam
+  int seed = @seed
+  float noise = 0
+  float max = 0
+  int i = 0
+  float xx = 0
+  float yy = 0
+  complex w = 0
+  int pix[#width, #height]
+  if 3 * #width < 4 * #height
+    float scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+  int x = 0, int y = 0
+; initialize array
+  while x < #width
+    y = 0
+    while y < #height
+      pix[x, y] = 0
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+  float inc = @sample_width / @resolution
+  float xs = real(@sample_center) - (@sample_width / 2)
+  float ys = -imag(@sample_center) - (@sample_width / 2)
+  int j = 0
+  while j < @resolution
+    int k = 0
+    while k < @resolution
+      float xnew = 0
+      float ynew = 0
+      if @sample_mode == "Grid"
+        float xx = xs + j * inc
+        float yy = ys + k * inc
+      else ; Random
+        seed = Random(seed)
+        xx = xs + abs(seed) / #randomrange * @sample_width
+        seed = Random(seed)
+        yy = ys + abs(seed) / #randomrange * @sample_width
+      endif
+      w = xx + flip(-yy)
+      if (cabs(w - @sample_center) < (@sample_width / 2)) || !@circular_mask
+        int i = 0
+        while i < @max_iterations
+          if @add_noise
+            noise = @noise_amount * noise_texture.ResultIndex(@noise_scale * (xx + flip(yy)))
+          endif
+          if @dual_functions
+            xnew = xx - @h * XFunc.f(yy, xx, noise)
+            ynew = yy + @h * YFunc.f(xx, yy, noise)
+          else
+            xnew = xx - @h * XFunc.f(yy, xx, noise)
+            ynew = yy + @h * XFunc.f(xx, yy, noise)
+          endif
+          if @add_transform
+            w = xnew + flip(-ynew)
+            w = transform.Iterate(w)
+            xnew = real(w)
+            ynew = -imag(w)
+          endif
+          xx = xnew
+          yy = ynew
+          float xc = real(#center)
+          float yc = imag(#center)
+          x = round(((xx - xc) * cos(#angle) - (yy + yc) * \
+              sin(#angle)) * scale + #width / 2)
+          y = round(((xx - xc) * sin(#angle) + (yy + yc) * \
+              cos(#angle)) * scale + #height / 2)
+          ; plot the point only if inside array
+          if x >= 0 && x < #width && y >= 0 && y < #height
+            pix[x, y] = pix[x, y] + 1
+            if pix[x, y] > max
+              max = pix[x, y]
+            endif
+          endif
+          i = i + 1
+        endwhile
+      endif
+      k = k + 1
+    endwhile
+    j = j + 1
+  endwhile
+final:
+  #index = (log(pix[#x, #y])) / log(max)
+default:
+  title = "Dynamical Systems"
+  render = false
+  param sample_mode
+    caption = "Sample Mode"
+    enum = "Grid" "Random"
+  endparam
+  complex param sample_center
+    caption = "Center"
+    default = (0, 0)
+  endparam
+  float param sample_width
+    caption = "Width"
+    default = 5
+    min = 0.0001
+  endparam
+  float param h
+    caption = "Step Size"
+    default = 0.1
+    min = 0.0001
+  endparam
+  int param max_iterations
+    caption = "Iterations"
+    default = 50
+    min = 1
+  endparam
+  int param resolution
+   caption = "Resolution"
+   default = 200
+   min = 1
+  endparam
+  bool param circular_mask
+    caption = "Circular Mask"
+    default = false
+  endparam
+  bool param dual_functions
+    caption = "Dual Functions"
+    default = false
+  endparam
+  MT_DynamicalFunction param XFuncParam
+    caption = "X Function"
+;    default = MT_GnarlFunction
+  endparam
+  MT_DynamicalFunction param YFuncParam
+    caption = "Y Function"
+    visible = @dual_functions
+;    default = MT_GnarlFunction
+  endparam
+  bool param add_noise
+    caption = "Add Noise"
+    default = false
+  endparam
+  float param noise_amount
+    caption = "Noise Amount"
+    default = 1
+    visible = @add_noise
+  endparam
+  float param noise_scale
+    caption = "Noise Scale"
+    default = 1
+    min = 0.0001
+    visible = @add_noise
+  endparam
+  MT_TextureColoring param noise_texture
+    selectable = false
+    visible = @add_noise
+  endparam
+  bool param add_transform
+    caption = "Add Transform"
+    default = false
+  endparam
+  UserTransform param transform
+    caption = "Transform"
+    visible = @add_transform
+  endparam
+  int param seed
+    caption = "Random Seed"
+    default = 1234567
+    min = 0
+    visible = @sample_mode == "Random"
+  endparam
+}

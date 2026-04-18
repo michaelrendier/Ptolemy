@@ -1,0 +1,3691 @@
+
+Juliamask {
+; red williams, 1999
+; Hints revised, December 16, 1999
+;
+; A Masking Transformation Based on the Generic Julia set
+; This transformation consists of a routine which overlays a
+; Standard Julia image over the image being calculated.  The
+; Julia image has an iteration trap built in, permitting the
+; artist to create a mask within the image.  If the iteration
+; trap is inactive, the Julia image is invisible; when used,
+; it can create three separate zones within the image - one
+; containing all points whose orbits reached bailout between
+; the specified iteration limits, and the other two above and
+; below the trap.  Each zone may be independently assigned the
+; solid color or colored normally.
+;
+; The transformation has input boxes for its own Julia parameters.
+; (seed, exponent, center, magnification, etc.)  There is also
+; a box for Maximum Iterations.  This has the same effect as the
+; Maximum Iterations setting in any formula.  It has the additional
+; function of defining the limits of the iteration trap.  Limits
+; are expressed as decimal fractions of the Maximum Iterations
+; value (on the Mapping Tab - not the Location Tab).
+;
+; In the Normal mode, you may move the Julia shape from side to
+; side and rotate it at will.  Rotation will be about the center
+; of the Julia shape and is independent of the main image.  If
+; you move the image, the Julia will remain fixed within the
+; window.  If you move or rotate the Julia, the main image will
+; remain fixed.
+;
+; In the Import mode, you may create a Julia image in another
+; window or layer and import its parameters by pasting them into
+; the Transform Input Boxes.  In this mode, rotation of the Julia
+; is window-centered.  You may make side-to-side/up and down
+; adjustments as well.  All adjustments of the Julia and the main
+; image are independent.
+;
+; This trap will yield exactly the same results as the rdw Iteration
+; Trap coloring, Mark Townsend's mt-Sierpinski-trap coloring, and
+; most, if not all, of Stig Pettersson's coloring methods which 
+; incorporate iteration traps when these coloring methods are
+; applied to a Standard Julia formula.
+; 
+; Calculate upper and lower limits of trap
+int res=0
+int lowtrap=abs(round(real(@itrap)*@tmaxiter))
+int hightrap=abs(round(imag(@itrap)*@tmaxiter))
+  IF lowtrap>hightrap ; swap if limits reversed
+    res=lowtrap
+    lowtrap=hightrap
+    hightrap=res
+  ENDIF
+
+; Translate image coordinates to zero-centered Julia coordinate system
+complex tpixel = (#pixel-#center)
+
+; Translate Julia relative to center of main image window and
+; make it parallel to window axes
+  IF @mode == 0
+    complex trans = cabs(@offset)*exp(flip(atan2(@offset)+#angle))
+    tpixel = tpixel - (trans/#magn)
+
+; Make the angular position of the Julia independent of the main image
+  complex tpixel2 = cabs(tpixel)*exp(flip(-#angle+atan2(tpixel)+(@tilt*pi/180)))
+  complex tz = tpixel2*#magn/@tmag
+
+  ELSE  ; Place center of imported Julia image at center of window
+    complex trans = @tmag*cabs(@offset)*exp(flip(atan2(@offset)+#angle))
+    tpixel = tpixel + (trans/#magn)
+    complex tpixel2 = cabs(tpixel)*exp(flip(-#angle+atan2(tpixel)))
+    complex tz = tpixel2*#magn/@tmag
+    
+    ; Rotate Julia about center of window
+    complex tzz = tz - @offset
+    tz = cabs(tzz)*exp(flip((@tilt*pi/180)+atan2(tzz)))+ @offset
+  ENDIF
+int count = 0 ; iteration trap counter
+  WHILE (|tz| <= @tbail) && (count <= @tmaxiter)
+    tz = tz^@tpower + @tseed
+    count = count + 1
+  ENDWHILE
+count = count - 1
+  IF count < lowtrap
+    IF @trap1 == 1
+      #solid = true
+    ENDIF
+  ENDIF
+  IF (count >= lowtrap) && (count <= hightrap)
+    IF @trap2 == 1
+      #solid = true
+    ENDIF
+  ENDIF
+  IF count > hightrap
+    IF @trap3 == 1
+      #solid = true
+    ENDIF
+  ENDIF
+default:
+  title = "Juliamask"
+  param mode
+    caption = "Julia Mode"
+    default = 0
+    enum = "Normal" "Import"
+    hint = "Use import to transfer parameters from another \
+            image or layer."
+  endparam        
+  param tseed
+    caption = "Julia seed"
+    default = (-1.25,0)
+    hint = "Identical to the Julia seed in the \
+            Standard Julia formula"
+  endparam
+  param tpower
+    caption = "Power"
+    default = (2,0)
+    hint = "This is the exponent of the Julia equation.  \
+            Use (2,0) for the standard Julia set."
+  endparam
+  param tmaxiter
+    caption = "Maximum Iterations"
+    default = 100
+    hint = "Used to calculate trap limits - should be set to \
+            same value as Maximum Iterations on Formula Tab"
+  endparam
+  param tbail
+    caption = "Bailout Value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out; i.e., doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param offset
+    caption = "Offset"
+    default = (0,0)
+    hint = "Offset of Julia Image from Screen Center - Screen is 4 X 3 \
+            To import Julia image, enter Center Coordinates from \
+            Location Tab of Julia image or layer."
+  endparam
+  param tmag
+    caption = "Magnification"
+    default = 1.0
+    hint = "Magnification of Julia Set - Independent of Main Fractal.  \
+            When importing Julia, enter Magnification from Location Tab."
+  endparam
+  param tilt
+    caption = "Julia Rotation"
+    default = 0.0
+    hint = "Rotation Angle of Julia in Degrees.  When importing a Julia, \
+            enter Rotation Angle from Location Tab."
+  endparam  
+  param itrap
+    caption = "Iteration Trap."
+    hint = "Between 0.0 and 1.0 - Lower and Upper limits of trap, \
+            expressed as decimal fraction of Maximum Iterations \
+            (from Mapping Tab) Re is Lower limit and Im is Upper." 
+    default = (0,1)
+  endparam
+  param trap1
+    caption = "Below-Trap Color"
+    hint = "Normal for fractal image - Solid for solid color" 
+    enum = "Normal" "Solid"
+    default = 1
+  endparam
+  param trap2
+  caption = "In-Trap Color"
+    hint = "Normal for fractal image - Solid for solid color" 
+    enum = "Normal" "Solid"
+    default = 0
+  endparam
+  param trap3
+    caption = "Above-Trap Color"
+    hint = "Normal for fractal image - Solid for solid color" 
+    enum = "Normal" "Solid" 
+    default = 1
+  endparam
+}
+
+
+
+
+ 
+Landscape { ; red williams, 1999
+;
+; A transformation which creates a perspective view of the
+; image window as if the image were a photograph inclined
+; backward behind the screen.  The top of the image becomes
+; the "horizon" in the transformed view.  The vantage point
+; is controlled by the Horizon Level, L/R Offset and Viewing
+; Distance values.  Up to a point, the perspective effect is
+; enhanced by low values in the Horizon Level and Viewing
+; Distance input boxes, but extremely low Viewing Distance
+; values create a sense of distortion which can be disturbing.
+;  
+; In a perspective view, a line directly in front of the
+; observer will appear to stretch straight ahead toward the
+; horizon while lines to either side converge toward the same
+; point.  The L/R Offset controls the horizontal position of
+; the observer just Horizon Level controls height.  An entry
+; of -0.25 will move the observer one-quarter of the screen's
+; width to the left. 
+; Inclination angle is arctan(horizon height/screen height)
+;
+transform:
+
+; calculate screen height in fractal units
+
+    IF #width/#height > (4/3)
+      float scrnht = 3/#magn
+      float offset = 3*#width*@offset/(#magn*#height)
+    ELSE
+      float scrnht = 4*#height/(#width*#magn)
+      float offset = 4*@offset/#magn
+    ENDIF
+
+; convert parameters to fractal units
+  
+  float dist = @dist/#magn ; normal distance from viewer to screen
+  tpixel = #pixel - #center  
+  float rho = cabs(tpixel) ; distance of pixel from screen center
+  float theta = atan2(tpixel)-#angle  
+  float dx = rho*cos(theta) ; horizontal distance from centerline
+  dx = dx - offset
+  float dy = rho*sin(theta) ; vertical distance from centerline
+  float altpix = dy + (scrnht/2) ; distance from bottom of screen
+  float althor = @hor*scrnht ; distance from bottom of screen to horizon
+    IF altpix > althor ; is pixel above horizon?
+      #solid = true
+    ELSE ; calculate pixel to iterate and display
+      float alpha = atan((althor-altpix)/dist) ; depression angle to pixel
+           ; row measured in vertical plane normal to screen
+      float gamma = asin(@hor) ; inclination angle of image as determined
+           ; by the specified horizon height.
+      float t1 = ((scrnht*cos(gamma))+dist)*sin(gamma) ; normal distance
+           ; from vantage point to extended image plane
+      float t2 = t1*tan((pi/2)-gamma-alpha) 
+      float d1 = dist/cos(alpha)
+      float d2 = (t1/cos((pi/2)-gamma-alpha)) - d1
+      float t3 = ((scrnht*cos(gamma))+dist)*cos(gamma)           
+      float d3 = scrnht+t2-t3 ; distance from bottom of screen to pixel
+           ; to be iterated
+      dy2 = d3 - (scrnht/2) ; height above center
+      dx2 = dx*(d1+d2)/d1 ; horizontal distance from center line     
+      dx2 = dx2 + offset
+      complex temp = dx2 - flip(dy2)
+      delta = exp(flip(#angle-atan2(temp)))*cabs(temp)
+      #pixel = #center+delta
+    ENDIF
+default:
+  title = "Landscape"
+  param hor
+    caption = "Horizon Level"
+    default = 0.5
+    hint = "Level of Horizon as Fraction of Screen Height"
+  endparam
+  param dist
+    caption = "Viewing Distance"
+    default = 4.0
+    hint = "Smaller Number Increases Perspective Effect"
+  endparam
+  param offset
+    caption = "Left/Right Offset"
+    default = 0.0
+    hint = "Position of Observer - Left or Right of Center \
+            Fraction of Screen Width"
+  endparam
+}
+
+Grid { ; red williams, 2000
+;
+; A transformation which overlays a grid on the image window.
+; 
+transform:
+  int xsp = trunc(real(@space))
+  int ysp = trunc(imag(@space))
+  int xoff = trunc(real(@off))
+  int yoff = trunc(imag(@off))
+   IF (real(#screenpixel) + xoff) % xsp == 0 || \
+     (imag(#screenpixel) + yoff) % ysp == 0
+    #solid = true
+  ENDIF
+default:
+  title = "Grid"
+  param space
+    caption = "Grid Spacing"
+    default = (10,10)
+    hint = "Re portion is x spacing and Im part is y spacing"
+  endparam
+  param off
+    caption = "Grid Offset"
+    default = (1,1)
+    hint = "Re portion is x offset and Im part is y offset - \
+            useful for positioning grid."
+  endparam
+}
+
+Patterns{ ;red williams, April 24, 2000
+ 
+; This transform allows the user to create various pattterns
+; and color them the solid color.  
+
+transform:
+
+; Provision is made for using this transformation in conjunction
+; with the 3D Mapping and similar transformations which map a remote
+; fractal to a zero-centered image window.  To activate this feature,
+; check the Mapping? check box and transfer the Location Tab Center
+; Coordinates, Magnification and Rotation Angle values to the 
+; corresponding input boxes in Patterns on the Mapping Tab.  Then
+; change the Location Tab values to (0,0), 1.0 and 0.0, just as you
+; do for the 3D Mapping transformation.
+
+; Translate coordinates to zero-centered reference
+
+  IF @fmap
+    complex tpixel = #pixel - @fcent
+  ELSE
+    complex tpixel = #pixel - #center
+  ENDIF
+
+; This assumes that if #angle has a non-zero value, @frot will be zero
+; and vice versa.
+
+  complex tpixel2 = cabs(tpixel)*exp(flip(-#angle-@frot+atan2(tpixel)))
+    IF #width/#height>1.3333
+      float tmp = 3*#width/#height
+    ELSE
+      float tmp = 4
+    ENDIF
+
+; Similarly if #magn is not 1.0, @fmagn will be and vice versa.
+; The #width and #height adjustments avoid discontinuities at the axes
+; caused by using modulus arithmetic.  The +4 adjustment accommodates
+; an earlier version of the routine. 
+
+  int avar = round((#magn*@fmagn*#width/tmp)*real(tpixel2)+(2*#width))+4
+  int bvar = round((#magn*@fmagn*#width/tmp)*imag(tpixel2)+(2*#height))+4
+  
+  int a = 0
+  int b = 0
+
+  int p1x = round(real(@p1xy))
+  int p1y = round(imag(@p1xy))
+  int p2x = round(real(@p2xy))
+  int p2y = round(imag(@p2xy))
+  int p3x = round(real(@p3xy))
+  int p3y = round(imag(@p3xy))
+  
+  bool pf=false
+  
+; Is pixel in one of the patterns?
+    IF @p1 != 10
+      a = avar - round(real(@p1off))
+      b = bvar - round(imag(@p1off))
+        IF @p1 == 0 
+            IF (((a+p1y) + (b % p1y)) % p1x < @p1lwt) 
+              pf =  true
+            ENDIF
+        ELSEIF @p1 == 1 
+            IF ((a+p1y) - (b % p1y)) % p1x < @p1lwt 
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 2 
+            IF  ((a+p1x) % p1x) < @p1lwt
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 3 ; Horizontal Lines
+            IF  ((b+p1y) % p1y) < @p1lwt
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 4 ; Diamond Mesh
+            IF ((a + p1y - (b % p1y)) % p1x < @p1lwt) || \
+               ((a + p1y + (b % p1y)) % p1x < @p1lwt)
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 5 ; Rectangular Mesh
+            IF a % p1x < @p1lwt || b % p1y < @p1lwt
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 6 ; Tropical Weave
+            IF ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+               (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 7 ; XXXFine
+            IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+               (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+               (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 8 ; XXXBold
+          aa = a % 8 
+          bb = b % 8
+            IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+               (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+               ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+              pf = true
+            ENDIF
+        ELSEIF @p1 == 9 ; Combination
+            IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+               (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+               (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+              pf = true
+            ENDIF
+            IF ((a + p1y - (b % p1y)) % p1x < @p1lwt) || \
+               ((a + p1y + (b % p1y)) % p1x < @p1lwt)
+              pf = true
+            ENDIF
+        ENDIF
+    ENDIF
+    IF @p2 != 10
+      a = avar - round(real(@p2off))
+      b = bvar - round(imag(@p2off))
+        IF @p2 == 0 
+            IF (((a+p2y) + (b % p2y)) % p2x < @p2lwt) 
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 1 
+            IF ((a+p2y) - (b % p2y)) % p2x < @p2lwt 
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 2 
+            IF  ((a+p2x) % p2x) < @p2lwt
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 3 ; Horizontal Lines
+            IF  ((b+p2y) % p2y) < @p2lwt
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 4 ; Diamond Mesh
+            IF ((a + p2y - (b % p2y)) % p2x < @p2lwt) || \
+               ((a + p2y + (b % p2y)) % p2x < @p2lwt)
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 5 ; Rectangular Mesh
+            IF a % p2x < @p2lwt || b % p2y < @p2lwt
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 6 ; Tropical Weave
+            IF ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+               (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 7 ; XXXFine
+            IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+               (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+               (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 8 ; XXXBold
+          aa = a % 8 
+          bb = b % 8
+            IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+               (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+               ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+              pf = true
+            ENDIF
+        ELSEIF @p2 == 9 ; Combination
+            IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+               (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+               (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+              pf = true
+            ENDIF
+            IF ((a + p2y - (b % p2y)) % p2x < @p2lwt) || \
+               ((a + p2y + (b % p2y)) % p2x < @p2lwt)
+              pf = true
+            ENDIF
+        ENDIF
+    ENDIF
+    IF @p3 != 10
+      a = avar - round(real(@p3off))
+      b = bvar - round(imag(@p3off))    
+        IF @p3 == 0 
+            IF (((a+p3y) + (b % p3y)) % p3x < @p3lwt) 
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 1 
+            IF ((a+p3y) - (b % p3y)) % p3x < @p3lwt 
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 2 
+            IF  ((a+p3x) % p3x) < @p3lwt
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 3 ; Horizontal Lines
+            IF  ((b+p3y) % p3y) < @p3lwt
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 4 ; Diamond Mesh
+            IF ((a + p3y - (b % p3y)) % p3x < @p3lwt) || \
+               ((a + p3y + (b % p3y)) % p3x < @p3lwt)
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 5 ; Rectangular Mesh
+            IF a % p3x < @p3lwt || b % p3y < @p3lwt
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 6 ; Tropical Weave
+            IF  ((a % 6 == 1 || a % 4 == 3) && b % 6 == 1) || \
+                (a % 6 == 2 && (b % 4 == 0 || b % 6 == 1 || b % 4 == 2)) 
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 7 ; XXXFine
+            IF ((b % 4 == 0 || b % 4 == 2) && (a % 4 == 0 || a % 4 == 2)) || \
+               (b % 4 == 1 && (a % 4 == 1 || a % 4 == 5)) || \
+               (b % 4 == 5 && (a % 4 == 3 || a % 4 == 7))
+              pf = true
+          ENDIF
+        ELSEIF @p3 == 8 ; XXXBold
+          aa = a % 8 
+          bb = b % 8
+            IF ((bb == 0 || bb == 1 || bb == 4 || bb == 5) && \
+               (aa == 0 || aa == 1 || aa == 4 || aa == 5)) || \
+               ((bb == 2 || bb == 3) && (aa == 2 || aa == 3)) 
+              pf = true
+            ENDIF
+        ELSEIF @p3 == 9 ; Combination
+            IF (b % 6 == 0 && a % 6 == 3) || ((b % 6 == 1 || b % 6 == 5) && \
+               (a % 6 == 2 || a % 6 == 4)) || ((b % 6 == 2 || b % 6 == 4) && \
+               (a % 6 == 1 || a % 6 == 5)) || (b % 6 == 3 && a % 6 == 0)
+              pf = true
+            ENDIF
+            IF ((a + p3y - (b % p3y)) % p3x < @p3lwt) || \
+               ((a + p3y + (b % p3y)) % p3x < @p3lwt)
+              pf = true
+           ENDIF
+       ENDIF
+   ENDIF    
+      IF @mode == 1
+        pf = !pf
+      ENDIF
+      IF pf
+        #solid = true
+      ENDIF
+    
+default:
+  title = "Patterns"
+  param mode
+    caption = "Solid Assignment"
+    enum = "Normal" "Reverse"
+    default = 0
+    hint = "If Normal, pattern is solid color; if Reverse, spaces \
+            are solid color."
+  endparam
+  param p1
+    caption = "Pattern 1"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 4
+  endparam
+  param p1off
+    caption = "Pattern 1 Offset"
+    default = (0,0)
+    hint = "Re part is x-offset; Im part is y-offset -- \
+            DO NOT use eyedropper."
+    min = 0
+  endparam
+  param p1xy
+    caption = "Pattern 1 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (5.0,5.0)
+  endparam
+  param p1lwt
+    caption="Pattern 1 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param p2
+    caption = "Pattern 2"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param p2off
+    caption = "Pattern 2 Offset"
+    default = (0,0)
+    hint = "Re part is x-offset; Im part is y-offset -- \
+            DO NOT use eyedropper."
+    min = 0
+  endparam
+  param p2xy
+    caption = "Pattern 2 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (10.0,10.0)
+  endparam
+  param p2lwt
+    caption="Pattern 2 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param p3
+    caption = "Pattern 3"
+    enum = "UL-LR Diagonal" "LL-UR Diagonal" "Vertical Lines" \
+           "Horizontal Lines" "Diamond Mesh" "Rectangular Mesh" \
+           "Tropical Weave" "XXXFine" "XXXBold" "Combination" \
+           "None"
+    default = 10
+  endparam
+  param p3off
+    caption = "Pattern 3 Offset"
+    default = (0,0)
+    hint = "Re part is x-offset; Im part is y-offset -- \
+            DO NOT use eyedropper."
+    min = 0
+  endparam
+  param p3xy
+    caption = "Pattern 3 Spacing"
+    hint = "Spacing of lines in pixels -- Real part is x and \
+            imaginary part is y spacing.  Has no effect on the \
+            fixed patterns (Tropical, XXXFine, etc.)  If x and y \
+            values are different, diagonal lines and meshes are \
+            changed in various and often interesting ways."
+    default = (15.0,15.0)
+  endparam
+  param p3lwt
+    caption="Pattern 3 Line Wt"
+    default=1
+    hint="Thickness of Pattern Lines in Pixels"
+  endparam
+  param fmap
+    caption = "Mapping?"
+    default = false
+    hint = "For use with 3D Mapping"
+  endparam
+  param fcent
+    caption = "Fractal Center"
+    default = (0,0)
+    hint = "From Location Tab"
+  endparam
+  param fmagn
+    caption = "Fractal Magnification"
+    default = 1.0
+    hint = "From Location Tab"
+  endparam
+  param frot
+    caption = "Fractal Rotation"
+    default = 0.0
+    hint = "From Location Tab"
+  endparam
+
+}
+
+rdw_mapping { ; red williams June 5, 2000
+
+; This transformation allows the artist to map a fractal
+; image onto a sphere or egg.  The fractal image is created
+; in the normal manner and mapping it onto the selected
+; shape is as simple as activating the transform.  The
+; shape may be moved or rotated by entering appropriate
+; values into the input boxes on the Mapping Tab.
+;
+; After the fractal is mapped onto the egg, it is still
+; possible to zoom or rotate the image (within limits) by
+; changing the values on the Location Tab.
+;
+; The mathematical approach is less sophisticated than in
+; Frederik Slijkerman's version, but the egg shape is almost
+; exactly the same.  (It is possible to merge an egg made with
+; this routine with one made with Frederik's.)  The primary
+; reason for writing this was to provide a more "user-friendly"
+; version for those people who found the other one to be
+; somewhat daunting. 
+;
+; In simple terms, an image of a sphere (or egg) is projected
+; onto the image window.  The distance from the center of that
+; image to the projection of some point on the sphere is directly
+; related to and is used to calculate the corresponding arc length
+; on the surface of the sphere.  The current pixel is assigned
+; the identity of the pixel located at that distance from the
+; center.  This is roughly akin to wrapping the image into a
+; cylinder tangent to the sphere at the equator and then shrinking
+; it cicumferentially to fit as you move toward the poles.  Thus,
+; vertical lines become curved and converge at the poles; however,
+; this caused little "kinks" at the poles so I moved the actual
+; points of convergence to positions slightly outside the circle.
+
+transform:
+
+; calculate radius of sphere in fractal units
+
+  float a = @size/(2*#magn)
+   
+  float b = a
+  float xrot = @xrot*#pi/180     ; convert to radian measure
+  float zrot = @zrot*#pi/180     ; convert to radian measure
+  complex yrot = 1.57*a*@yrot/90 ; convert to arclength at equator
+  float xtran = @horpos/#magn    ; convert window units to
+  float ytran = @verpos/#magn    ;     fractal units
+  
+; the position of the current pixel is redefined in terms
+; of a translated and rotated coordinate system.  The
+; -#angle term in the third line down allows the fractal
+; to rotate independent of the shape and the zrot term
+; allows the shape to rotate independent of the fractal.
+
+  complex tran = xtran + flip(ytran)
+  tran = exp(flip(atan2(tran)+zrot))*cabs(tran)
+  complex tpixel = #pixel-#center  
+  tpixel2 = exp(flip(atan2(tpixel)-#angle+zrot))*cabs(tpixel)-tran
+  
+  tpixel2 = tpixel2-tran
+    IF @opt == 1
+      IF imag(tpixel2) >= 0
+        b = 1.46*a*cos(xrot) ; skinny end of egg
+      ELSE
+        b=1.17*a*cos(xrot)   ; fat end
+      ENDIF
+    ENDIF
+    IF b<a ; end of egg cannot be foreshortened to less than
+      b=a  ; the radius at the point of maximum girth
+    ENDIF
+    IF (imag(tpixel2)/b)^2 + (real(tpixel2)/a)^2 > 1.0
+      #solid = true
+    ENDIF
+    
+  beta = asin(imag(tpixel2)/(1.05*b)) ; 1.05 eliminates the kink
+  alph = asin(real(tpixel2)/(a*cos(beta)))
+  xpix = a*alph
+  ypix = (b*beta)-(a*tan(xrot))
+  complex delt = xpix + flip(ypix) - yrot
+  delt = exp(flip(atan2(delt)+#angle))*cabs(delt)
+  #pixel = #center + delt 
+
+default:
+
+  title = "rdw_Mapping"
+  param opt
+    caption = "Shape"
+    enum = "Sphere" "Egg"
+    default = 0
+  endparam
+  param size
+    caption = "Diameter"
+    default = 2.0
+    hint = "diameter of sphere or width of egg \
+            Screen is 4.0 across"
+    endparam
+  param xrot
+    caption = "X-axis Rotation"
+    default = 0.0
+    hint = "if negative, egg will 'lean toward' and \
+            if positive, it will 'lean away' from you"
+  endparam
+  param yrot
+    caption = "Y-axis Rotation"
+    default = 0.0
+    hint = "if negative, egg will 'face' to the left and \
+            if positive, it will 'face' to the right"
+  endparam
+  param zrot
+    caption = "Z-axis Rotation"
+    default = 0.0
+    hint = "if negative, egg will lean to the left and \
+            if positive, it will lean to the right"
+  endparam
+
+  param horpos
+    caption = "Horizontal Position"
+    default = 0.0
+    hint = "minus is left - positive is right \
+            screen is 4.0 across"
+  endparam
+  param verpos
+    caption = "Vertical Position"
+    default = 0.0
+    hint = "minus is down - positive is up \
+            screen is 4.0 across"
+    endparam
+}
+
+Stretchnsqueeze { ; red williams, 1999
+;
+; Comments revised December 26, 1999
+; Flawed coding fixed March 16, 2000
+; 
+; A transformation which "stretches" or "squeezes" all the
+; content of an image into a new image, regardless of changes
+; to the aspect ratio.  To use it, create an image with exactly
+; the desired content and enter the height and width in the input
+; boxes labelled Original Height and Original Width.  Then, any
+; change to the aspect ratio will cause the image to be stretched
+; or compressed as necessary to conform to the new ratio. 
+;
+; It may also be used to stretch or compress within the current
+; window by "lying" to the transform and telling it that the image
+; used to be a different size.  For example, if you enter a larger
+; value in the Original Height box, additional content will be
+; squeezed in at the top and bottom, exactly as if the image had
+; originally been taller.
+;
+transform:
+  float adj = 1.0
+  float scale1 = @oldw/@oldh
+  float scale2 = #width/#height
+  float scalef = scale2/scale1
+    IF scale1 >= 4/3 && scale2 <= scale1
+      float test = 4/(3*scale1)
+      IF scalef > test
+        adj = scalef
+      ELSE
+        adj = test
+      ENDIF
+    ELSEIF scale1< 4/3 && scale2 > 4/3
+      adj = 3*scale2/4
+    ELSEIF scale1 >= 4/3 && scale2 > scale1
+      adj = scalef  
+    ENDIF
+  tpixel=#pixel-#center
+  float theta = -#angle + atan2(tpixel)
+  float c = sin(theta)*cabs(tpixel)
+  delta = exp(flip((pi/2) - #angle))*c*(1-scalef)
+  delta = real(delta)-flip(imag(delta))
+  #pixel = #center + (tpixel + delta)/adj 
+
+default:
+  title = "Stretch 'n Squeeze"
+  param oldw
+    caption = "Original Width"
+    default = 480    
+    hint = "Width of Image Before Re-sizing"
+  endparam
+  param oldh
+    caption = "Original Height"
+    default = 320
+    hint = "Height of Image Before Re-sizing"
+  endparam
+}
+
+
+Cloning { ; red williams, 2000
+
+; New random number generator section and donor region marker added
+; July 10, 2000.  Marker added to clone region January 9, 2001.
+; These markers make using the eyedropper easier and more accurate.
+; 
+; This transformation allows an area defined by a specified shape
+; to be colored as if it were a similar shape at another position in
+; the complex plane.  The donor region may be oriented differently
+; from its clone and compressed or expanded parallel to either major
+; axis of the clone region.    
+;
+; The effect may be used to clone areas of an image for artistic
+; effect or to eliminate unwanted features in an image by replacing
+; them with areas of more or less uniform color from another area.  
+; 
+; An option is provided to dither the edges of the clone region
+; causing them to blend in more smoothly.  The random generator
+; in this section is based on the work of Dr. George Marsaglia.
+; It is a 3-digit version of a multiply and carry routine he terms 
+; the Mother of All Random Number Generators.
+;
+; The 'Adjustable' shape is based on the so-called general
+; equation, to wit:  (x/a)^p + (y/b)^p = 1
+;
+;  Where:  (In an un-rotated shape centered at the origin)
+;
+;   The coordinates, (x,y) define some point on the boundary; i.e.,
+;
+;     x is the horizontal distance from the center of the shape
+;     y is the vertical distance from the center of the shape
+;     a and b are the semi-major axes
+;     p is some exponent
+; 
+;      If p is:           Then the shape is:
+;
+;    less than 1     a diamond with concave sides
+;     exactly 1      a diamond
+;     exactly 2      an ellipse
+;   greater than 2   a 'squarish' ellipse tending toward a rectangle
+;
+transform:
+
+  bool aflag = false
+  bool bflag = false
+  bool cflag = false
+  bool dflag = false
+  bool eflag = false
+  bool fflag = false
+  complex tpixel2b = (0,0)
+  complex tpixel2c = (0,0)
+  complex tpixel2d = (0,0)
+  complex tpixel2e = (0,0)
+  complex tpixel2f = (0,0)
+  float w = real(@dim) ; semi-width
+  float h = imag(@dim) ; semi-height
+
+; mark centers of clone and donor regions?
+
+  IF abs(cabs(#pixel - @center1)) <= 10/(#width*#magn) && @mark
+    #solid = true
+  ENDIF 
+  IF abs(cabs(#pixel - @center2)) <= 10/(#width*#magn) && @mark
+    #solid = true
+  ENDIF 
+ 
+ ; calculate shape-centered coordinates
+
+  complex tpixel = (#pixel - @center1)*exp(flip((@tilt1*pi/180)-#angle))
+  complex tpixel2 = real(tpixel)/w + flip(imag(tpixel)/h)
+
+  complex delta = @center2 - @center1 ; offset from clone to donor
+
+; calculate scaling factors for donor region
+
+  float wadj = (1/real(@comp))*real(tpixel) 
+  float hadj = (1/imag(@comp))*imag(tpixel)
+
+  delta2 = (wadj + flip(hadj)) * exp(flip(((@tilt2-@tilt1)*pi/180)+#angle))
+ 
+; If @center1 were to be replaced by @center2, the relationship
+; below would represent the coordinates, in a donor-region-based
+; system, of the pixel which will replace the current pixel.
+ 
+  complex tpixel3 = @center1 + delta2 ;(wadj + flip(hadj))  
+
+; Is the current pixel within the boundaries of the clone region?
+; If it is, replace it with a pixel from the donor region.
+
+  IF @shape == 0
+      IF ((abs(real(tpixel2))^@power + abs(imag(tpixel2))^@power) < 1)
+        #pixel = tpixel3 + delta
+      ENDIF
+      IF @dither   ; define five dither zones around shape
+        tpixel2b = tpixel2/(1 + @step)
+        tpixel2c = tpixel2/(1 + (2*@step)) 
+        tpixel2d = tpixel2/(1 + (3*@step)) 
+        tpixel2e = tpixel2/(1 + (4*@step)) 
+        tpixel2f = tpixel2/(1 + (5*@step))
+
+; generate a seed between zero and one million
+
+        float rnd00 = real(#random)*1000000 % 1000000
+
+; generate 5 3-digit random numbers
+  
+        float rnd01 = 672 * (rnd00 % 1000) + trunc(rnd00/1000)
+        float rnd1 = (rnd01 % 1000)/1000 
+        float rnd02 = 672 * (rnd01 % 1000) + trunc(rnd01/1000)
+        float rnd2 = rnd02 % 1000/1000
+        float rnd03 = 672 * (rnd02 % 1000) + trunc(rnd02/1000)
+        float rnd3 = rnd03 % 1000/1000 
+        float rnd04 = 672 * (rnd03 % 1000) + trunc(rnd03/1000)
+        float rnd4 = rnd04 % 1000/1000
+        float rnd05 = 672 * (rnd04 % 1000) + trunc(rnd04/1000)
+        float rnd5 = rnd05 % 1000/1000
+
+          IF ((abs(real(tpixel2))^@power + abs(imag(tpixel2))^@power) < 1)
+            aflag = true 
+          ELSEIF ((abs(real(tpixel2b))^@power + abs(imag(tpixel2b))^@power) < 1)
+            bflag = true 
+          ELSEIF ((abs(real(tpixel2c))^@power + abs(imag(tpixel2c))^@power) < 1)
+            cflag = true 
+          ELSEIF ((abs(real(tpixel2d))^@power + abs(imag(tpixel2d))^@power) < 1)
+            dflag = true 
+          ELSEIF ((abs(real(tpixel2e))^@power + abs(imag(tpixel2e))^@power) < 1)
+            eflag = true 
+          ELSEIF ((abs(real(tpixel2f))^@power + abs(imag(tpixel2f))^@power) < 1)
+            fflag = true
+          ENDIF 
+          IF fflag == true && rnd1 > 0.85
+            #pixel = tpixel3 + delta
+          ENDIF
+          IF eflag == true && rnd2 > 0.75
+            #pixel =  tpixel3 + delta
+          ENDIF
+          IF dflag == true && rnd3 > 0.6
+            #pixel =  tpixel3 + delta
+          ENDIF
+          IF cflag == true && rnd4 > 0.45
+            #pixel = tpixel3 + delta
+          ENDIF
+          IF  bflag == true && rnd5 > 0.3
+            #pixel = tpixel3 + delta
+          ENDIF
+          IF aflag == true
+            #pixel = tpixel3 + delta
+          ENDIF
+      ENDIF
+  ELSEIF (@shape==1)
+    tpixel2 = tpixel2*0.707*exp(flip(pi/4))
+      IF ((abs(real(tpixel2)) + abs(imag(tpixel2))) < 1)
+        #pixel = tpixel3 + delta 
+      ENDIF
+  ENDIF
+
+default:
+  title = "Cloning"
+  param dither
+    caption = "Enable Dither?"
+    default = false
+    hint = "Dithers edges of Clone region"
+  endparam
+  param mark
+    caption = "Mark Centers?"
+    default = false
+    hint = "Puts small solid color spots at centers of \
+            Clone and Donor regions"
+  endparam
+  param step
+    caption = "Dither Step"
+    default = 0.04
+    hint = "Larger values for wider dithered boundary"
+    min = 0.0
+  endparam
+  param center1
+    caption = "Clone Center"
+    default = (0.0,0.0)
+    hint = "Center of Area to Receive Cloned Image"
+  endparam
+    param dim
+    caption = "Clone Size"
+    default = (1,1)
+    hint = "Re = Width, Im = Height.  Do NOT use the \
+            eyedropper."
+  endparam
+  param shape
+    caption = "Clone Shape"
+    default = 0
+    enum = "Adjustable" "Rectangle" 
+    hint = "Shape of Area to Receive Cloned Image - \
+            Select Adjustable for Ellipse, Astroid, \
+            Rhombus, 'Racetrack', etc.; Control Shape \
+            with Shape Adjust"
+  endparam
+  param power
+    caption = "Shape Adjust"
+    default = 2.0
+    hint = "Adjustable Shape only. If less than 1.0, the \
+            shape is a diamond with concave sides.  If \
+            1.0, it is a diamond and if 2.0, an ellipse. \ 
+            Values above 2.0 produce more and more \
+            'squarish' ellipses until, at infinity, \
+            the shape becomes a rectangle."
+  endparam
+  param tilt1
+    caption = "Clone Rotation"
+    default = 0.0
+    hint = "Rotation of the clone shape relative to the \
+            image window; i.e., at 0 degrees, up is up." 
+  endparam
+  param center2
+    caption = "Donor Center"
+    default = (0.0,0.0)
+    hint = "Center of Area to be Cloned"
+  endparam
+  param comp
+    caption = "Donor Magnification"
+    default = (1,1)
+    hint = "Re = width, Im = height.  Do NOT use the eyedropper \
+            Relative size of image in donor region. Values greater \
+            than 1.0 make elements appear larger in the clone than \
+            in the main image."
+  endparam
+  param tilt2
+    caption = "Donor Rotation"
+    default = 0.0
+    hint = "Rotation of the donor shape relative to the \
+            image window; i.e., at 0 degrees, up is up."
+  endparam
+}
+
+
+Dither { ; red williams, 2000
+;
+; A transformation which assigns an alias to the current 
+; pixel prior to iteration of the formula.  This new location
+; will be within a specified distance (Radius) of the actual
+; location, with the direction and actual distance being
+; randomly decided for each pixel.  The fraction of the total
+; number of pixels to be so treated is controlled by the
+; Frequency parameter.
+;
+; A second parameter pair (Offset/Secondary Frequency) assigns
+; an additional offset distance to a specified fraction of 
+; modified points.  The second offset is a fixed value rather
+; than a limit and will be in the same direction as the 
+; primary dislocation.
+; 
+transform:
+  complex delta = (0,0)
+  complex delta2 = (0,0)
+  float theta = 2*#pi*real(#random)
+; create a pseudo-random number independent of the sequence
+; used to modify the radius and offset parameters
+  float test = abs(1000*cos(theta)) 
+  int test2 = trunc(test)
+  test = test-test2
+   IF test < @freq
+     IF #width/#height >= 1.3333
+      float scalef = 3/(#height*#magn)
+     ELSE
+      float scalef = 4/(#width*#magn)
+     ENDIF
+    float rad = scalef*@radius*imag(#random)
+    float off = scalef*@offset
+    delta = exp(flip(theta))*rad
+    delta2 = exp(flip(theta))*off
+   ENDIF
+  #pixel = #pixel + delta
+   IF test < @freq2*@freq
+    #pixel = #pixel + delta2
+   ENDIF
+default:
+  title = "Dithering"
+  param radius
+    caption = "Dither Radius"
+    default = 0
+    hint = "Radius of Primary Blurring Effect"
+  endparam
+  param freq
+    caption = "Frequency"
+    default = 0.0
+    hint = "Fraction of Pixels Affected"
+  endparam
+  param offset
+    caption = "Offset"
+    default = 0
+    hint = "Some dislocated pixels will be shifted an \
+            additional distance in the same direction."
+  endparam
+  param freq2
+    caption = "Secondary Frequency"
+    default = 0.0
+    hint = "Fraction of already dislocated pixels to \
+            be offset the additional distance."
+  endparam
+}
+
+SwapMeet { ; red williams, 2000
+;
+; A transformation which assigns an alias to the current pixel 
+; prior to iteration of the formula.  In its primary mode, the
+; transform divides the entire image window into squares, each
+; containing four pixels, and swaps them diagonally.  In other
+; words, the pixel at the Upper Lefthand corner of a square
+; will be colored as if it were at the Lower Righthand corner.
+; 
+; The Size parameter provides an extension of this idea by
+; selecting an alias from a point on the extended diagonal.
+; For example, if Size = 2, the current pixel is colored as
+; if it were the pixel at the opposite corner of a larger
+; (4 pixels X 4 pixels) square.
+;
+; The variations mix up the directions of the adjustments to
+; the current pixel's location.  Each pixel's location is 
+; altered by adding a complex number to its coordinates.  The
+; basic adjustment is called delta1.  Delta2 is conj(delta1),
+; delta3 is flip(delta1) and delta4 is conj(flip(delta1)).  Some
+; pairs are not orthogonal so as the image is rotated, the
+; adjustments deviate from the exact diagonal directions.
+;
+; Additional control over the result is provided by the Double
+; Swap parameter which switches the rules for the UL and UR
+; pixels prior to assigning an alias.
+;
+; The Adjustment Sequence parameter controls the signs of the
+; location adjustments.  The default sequence is UL +, UR -,
+; LL +, and LR -.  The program converts the parameter to a binary
+; number and replaces the 1's with +'s and the 0's with -'s.
+; 0101 (5 decimal) is - + - +.  The default is decimal 10 (1010).
+;
+; Used alone, this routine blurs or softens the image.  The
+; exact effect depends on the nature of the image and the Size
+; value.  Large values produce overlapping "ghostly" images.
+; 
+; Used in conjunction with Iteration Trap Patterns, it yields
+; a fantastic array of effects.
+; 
+transform:
+  complex dd = (0,0)
+  complex delta1 = (0,0)
+  complex fn1 = (0,0)
+  complex fn2 = (0,0)
+  complex fn3 = (0,0)
+  complex fn4 = (0,0)
+  op1 = op2 = op3 = op4 = -1
+  complex prerot = pi/4
+    IF @bias
+      prerot = 0
+    ENDIF
+    IF @rotref == 0
+      prerot = prerot+#angle 
+    ENDIF
+    IF #width/#height >= 4/3
+      dd = 3*@size/(#height*#magn)
+    ELSE
+      dd = 4*@size/(#width*#magn)
+    ENDIF
+  delta1 = 1.4142*dd*exp(flip(#angle-prerot+(@rot*pi/180)))
+  delta2 = conj(delta1)
+  delta3 = flip(delta1)
+  delta4 = conj(flip(delta1))
+  IF @mode == 0
+    fn1 = delta4
+    fn2 = delta1
+    fn3 = delta1
+    fn4 = delta4
+  ELSEIF @mode == 1
+    fn1 = delta2
+    fn2 = delta1
+    fn3 = delta1
+    fn4 = delta2
+  ELSEIF @mode == 2 
+    fn1 = delta3 
+    fn2 = delta2 
+    fn3 = delta2
+    fn4 = delta3
+  ELSEIF @mode == 3 
+    fn1 = delta3 
+    fn2 = delta4 
+    fn3 = delta4
+    fn4 = delta3
+  ENDIF
+  IF @modevar
+    complex tmp = fn1
+    fn1 = fn2
+    fn2 = tmp
+  ENDIF
+  int test = @seq
+    IF test > 7
+      op1 = 1
+      test = test - 8
+    ENDIF
+    IF test % 2 == 1
+      op4 = 1
+      test = test - 1
+    ENDIF
+    IF test > 2
+      op2 = 1
+      test = test -4
+    ENDIF
+    IF test == 2
+      op3 = 1
+    ENDIF  
+    IF real(#screenpixel) % 2 == 0 && imag(#screenpixel) % 2 == 0
+      #pixel = #pixel + op1*fn1
+    ELSEIF real(#screenpixel) % 2 == 1 && imag(#screenpixel) % 2 == 0
+      #pixel = #pixel + op2*fn2
+    ELSEIF real(#screenpixel) % 2 == 0 && imag(#screenpixel) % 2 == 1
+      #pixel = #pixel + op3*fn3  
+    ELSE
+      #pixel = #pixel + op4*fn4  
+    ENDIF
+
+default:
+  title = "SwapMeet"
+  param mode
+    caption = "Mode"
+    enum = "Normal" "Variation 1" "Variation 2" "Variation 3"
+    default = 0
+    hint = "Normal means that pixels are swapped along diagonals. \
+            The variations swap pixels in mixed directions."  
+  endparam
+  param modevar
+    caption = "Double Swap"
+    default = false
+    hint= "Switches rules for UL and UR pixels before assigning aliases"
+  endparam
+  param seq
+    caption = "Adjustment Sequence"
+    default = 10
+    hint = "From 0 to 15"
+    min = 0
+    max = 15
+  endparam
+
+; The pixels in each group of     1  2
+; four are numbered like this:    3  4
+;
+; Each pixel location is modified by algebraically adding a complex
+; adjustment.  The sign of each adjustment may be either positive
+; or negative; therefore, there are 16 possible permutations.  To
+; determine the sequence, write the number in binary and replace
+; the 1's with +'s and the 0's with -'s; e.g., 10 (the default) is
+; 1010 = + - + -."
+
+  param size
+    caption = "Size"
+    default = 1.0
+    hint = "Size of Pixel-Swapping square in pixels"
+  endparam
+  param rotref
+    caption = "Rotation Reference"
+    enum = "Fractal" "Window"
+    default = 1
+    hint = "If you select Window, the Pixel-Swapping square will be \
+            fixed in relation to the image window; if you select \
+            Fractal, it will rotate with the fractal axis. \
+            Variations may deviate from this behavior."
+  endparam
+  param bias
+    caption = "45-Degree Bias"
+    default = false
+    hint = "Stands Pixel-Swapping Square on a Corner"
+  endparam
+  param rot
+    caption = "Square Rotation"
+    default = 0.0
+    hint = "Incremental Rotation (in Degrees) of Pixel-Swapping \
+            Square -- Useful with Iteration Trap Patterns"
+  endparam
+}
+
+shapes { ; red williams
+
+; This transform allows the artist to define up to ten
+; geometrical figures within a fractal image.  Either the
+; area outside each figure or the figure itself may be
+; assigned the solid color.  This allows the artist to
+; "cut out" portions of the layer and use them as "appliques"
+; or to cut "holes" through a layer allowing lower layers
+; to show through.
+;
+; For the 'general' shape the region is defined by:
+; (x/a)^p + (y/b)^p = 1
+;
+; x is horizontal distance from the center of shape
+; y is vertical distance from center of shape
+; (x,y include any rotation that has been done to the shape)
+; a,b are the semi-axes
+;
+; p is some power:
+;    0 < p < 1  - concave sides
+;        p = 1  - straight sides
+;        p > 1  - convex sides
+;
+; The astroid, rhombus & ellipse are all special cases of the above.
+; A rectangle can be obtained with a slight modification
+;
+; 11-25-99:
+; Added functionality by Ralph Feltens: Shape's position can now
+; be fixed relative to screen position (i.e. independent of position and
+
+; magnification of the image)
+;
+complex c0 = @center0    ; assume center is fixed
+complex c1 = @center1    ; assume center is fixed
+complex c2 = @center2    ; assume center is fixed
+complex c3 = @center3    ; assume center is fixed
+complex c4 = @center4    ; assume center is fixed
+complex c5 = @center5    ; assume center is fixed
+complex c6 = @center6    ; assume center is fixed
+complex c7 = @center7    ; assume center is fixed
+complex c8 = @center8    ; assume center is fixed
+complex c9 = @center9    ; assume center is fixed
+
+float mag0 = 1           ; assume shapesize is independent of magnification
+float mag1 = 1           ; assume shapesize is independent of magnification
+float mag2 = 1           ; assume shapesize is independent of magnification
+float mag3 = 1           ; assume shapesize is independent of magnification
+float mag4 = 1           ; assume shapesize is independent of magnification
+float mag5 = 1           ; assume shapesize is independent of magnification
+float mag6 = 1           ; assume shapesize is independent of magnification
+float mag7 = 1           ; assume shapesize is independent of magnification
+float mag8 = 1           ; assume shapesize is independent of magnification
+float mag9 = 1           ; assume shapesize is independent of magnification
+
+float ang0 = 0           ; assume shape's position is independent of rotation
+float ang1 = 0           ; assume shape's position is independent of rotation
+float ang2 = 0           ; assume shape's position is independent of rotation
+float ang3 = 0           ; assume shape's position is independent of rotation
+float ang4 = 0           ; assume shape's position is independent of rotation
+float ang5 = 0           ; assume shape's position is independent of rotation
+float ang6 = 0           ; assume shape's position is independent of rotation
+float ang7 = 0           ; assume shape's position is independent of rotation
+float ang8 = 0           ; assume shape's position is independent of rotation
+float ang9 = 0           ; assume shape's position is independent of rotation
+
+IF (@shapesize0)         ; shape will be adapted to image size/magnification
+  mag0 = #magn
+ENDIF
+IF (@shapesize1)         ; shape will be adapted to image size/magnification
+  mag1 = #magn
+ENDIF
+IF (@shapesize2)         ; shape will be adapted to image size/magnification
+  mag2 = #magn
+ENDIF
+IF (@shapesize3)         ; shape will be adapted to image size/magnification
+  mag3 = #magn
+ENDIF
+IF (@shapesize4)         ; shape will be adapted to image size/magnification
+  mag4 = #magn
+ENDIF
+IF (@shapesize5)         ; shape will be adapted to image size/magnification
+  mag5 = #magn
+ENDIF
+IF (@shapesize6)         ; shape will be adapted to image size/magnification
+  mag6 = #magn
+ENDIF
+IF (@shapesize7)         ; shape will be adapted to image size/magnification
+  mag7 = #magn
+ENDIF
+IF (@shapesize8)         ; shape will be adapted to image size/magnification
+  mag8 = #magn
+ENDIF
+IF (@shapesize9)         ; shape will be adapted to image size/magnification
+  mag9 = #magn
+ENDIF
+
+IF (@centermove0)        ; relative center requested
+  c0 = #center           ; center is image center
+  ang0 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove1)        ; relative center requested
+  c1 = #center           ; center is image center
+  ang1 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove2)        ; relative center requested
+  c2 = #center           ; center is image center
+  ang2 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove3)        ; relative center requested
+  c3 = #center           ; center is image center
+  ang3 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove4)        ; relative center requested
+  c4 = #center           ; center is image center
+  ang4 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove5)        ; relative center requested
+  c5 = #center           ; center is image center
+  ang5 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove6)        ; relative center requested
+  c6 = #center           ; center is image center
+  ang6 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove7)        ; relative center requested
+  c7 = #center           ; center is image center
+  ang7 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove8)        ; relative center requested
+  c8 = #center           ; center is image center
+  ang8 = #angle          ; compensation for image rotation
+ENDIF
+IF (@centermove9)        ; relative center requested
+  c9 = #center           ; center is image center
+  ang9 = #angle          ; compensation for image rotation
+ENDIF
+
+bool in = false
+
+IF (@shape0!=0)
+  complex pix1 = (#pixel - c0) * exp(flip(-ang0))
+  complex pix2 = (pix1 - @shift0/mag0) * exp(flip(-@tilt0*pi/180))
+  complex pix3 = (real(pix2)/@width0 + flip(imag(pix2)/@height0)) * mag0
+
+    IF (@shape0==1)
+    IF ( |pix3| < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape0==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+       in = true
+    ENDIF
+
+  ELSEIF (@shape0==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape0==4)
+    IF ((abs(real(pix3))^@power0 + abs(imag(pix3))^@power0) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape1!=0) && in != true
+  complex pix1 = (#pixel - c1) * exp(flip(-ang1))
+  complex pix2 = (pix1 - @shift1/mag1) * exp(flip(-@tilt1*pi/180))
+  complex pix3 = (real(pix2)/@width1 + flip(imag(pix2)/@height1)) * mag1
+
+  IF (@shape1==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape1==4)
+    IF ((abs(real(pix3))^@power1 + abs(imag(pix3))^@power1) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape2!=0) && in != true
+  complex pix1 = (#pixel - c2) * exp(flip(-ang2))
+  complex pix2 = (pix1 - @shift2/mag2) * exp(flip(-@tilt2*pi/180))
+  complex pix3 = (real(pix2)/@width2 + flip(imag(pix2)/@height2)) * mag2
+
+  IF (@shape2==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape2==4)
+    IF ((abs(real(pix3))^@power2 + abs(imag(pix3))^@power2) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape3!=0) && in != true
+  complex pix1 = (#pixel - c3) * exp(flip(-ang3))
+  complex pix2 = (pix1 - @shift3/mag3) * exp(flip(-@tilt3*pi/180))
+  complex pix3 = (real(pix2)/@width3 + flip(imag(pix2)/@height3)) * mag3
+
+  IF (@shape3==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape3==4)
+    IF ((abs(real(pix3))^@power3 + abs(imag(pix3))^@power3) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape4!=0) && in != true
+  complex pix1 = (#pixel - c4) * exp(flip(-ang4))
+  complex pix2 = (pix1 - @shift4/mag4) * exp(flip(-@tilt4*pi/180))
+  complex pix3 = (real(pix2)/@width4 + flip(imag(pix2)/@height4)) * mag4
+
+  IF (@shape4==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape4==4)
+    IF ((abs(real(pix3))^@power4 + abs(imag(pix3))^@power4) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape5!=0) && in != true
+  complex pix1 = (#pixel - c5) * exp(flip(-ang5))
+  complex pix2 = (pix1 - @shift5/mag5) * exp(flip(-@tilt5*pi/180))
+  complex pix3 = (real(pix2)/@width5 + flip(imag(pix2)/@height5)) * mag5
+
+  IF (@shape5==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape5==4)
+    IF ((abs(real(pix3))^@power5 + abs(imag(pix3))^@power5) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape6!=0) && in != true
+  complex pix1 = (#pixel - c6) * exp(flip(-ang6))
+  complex pix2 = (pix1 - @shift6/mag6) * exp(flip(-@tilt6*pi/180))
+  complex pix3 = (real(pix2)/@width6 + flip(imag(pix2)/@height6)) * mag6
+
+  IF (@shape6==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape6==4)
+    IF ((abs(real(pix3))^@power6 + abs(imag(pix3))^@power6) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape7!=0) && in != true
+  complex pix1 = (#pixel - c7) * exp(flip(-ang7))
+  complex pix2 = (pix1 - @shift7/mag7) * exp(flip(-@tilt7*pi/180))
+  complex pix3 = (real(pix2)/@width7 + flip(imag(pix2)/@height7)) * mag7
+
+  IF (@shape7==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape7==4)
+    IF ((abs(real(pix3))^@power7 + abs(imag(pix3))^@power7) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape8!=0) && in != true
+  complex pix1 = (#pixel - c8) * exp(flip(-ang8))
+  complex pix2 = (pix1 - @shift8/mag8) * exp(flip(-@tilt8*pi/180))
+  complex pix3 = (real(pix2)/@width8 + flip(imag(pix2)/@height8)) * mag8
+
+  IF (@shape8==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape8==4)
+    IF ((abs(real(pix3))^@power8 + abs(imag(pix3))^@power8) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (@shape9!=0) && in != true
+  complex pix1 = (#pixel - c9) * exp(flip(-ang9))
+  complex pix2 = (pix1 - @shift9/mag9) * exp(flip(-@tilt9*pi/180))
+  complex pix3 = (real(pix2)/@width9 + flip(imag(pix2)/@height9)) * mag9
+
+
+  IF (@shape9==1)
+    IF ( |pix3| < 1 )
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==2)
+    pix3 = pix3 * exp(flip(pi/4))
+    IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==3)
+    IF ((abs(real(pix3))^(2/3) + abs(imag(pix3))^(2/3)) < 1)
+      in = true
+    ENDIF
+
+  ELSEIF (@shape9==4)
+    IF ((abs(real(pix3))^@power9 + abs(imag(pix3))^@power9) < 1)
+      in = true
+    ENDIF
+
+  ENDIF
+ENDIF
+IF @mode == 1
+  IN = !in
+ENDIF
+IF in == false
+  #solid = true
+ENDIF
+default:
+  title = "Shapes"
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Opaque" "Transparent"
+  endparam
+  param shape0
+    caption = "Shape 0"
+    default = 1
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center0
+    caption = "Center 0"
+    default = (0.0,0.0)
+  endparam
+  param width0
+    caption = "Width 0"
+    default = 1.0
+  endparam
+  param height0
+    caption = "Height 0"
+    default = 1.0
+  endparam
+  param tilt0
+    caption = "Tilt Angle 0 (degrees)"
+    default = 0.0
+  endparam
+  param power0
+    caption = "Power 0"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove0
+    caption = "Use Screen Center 0"
+    default = FALSE
+    hint = "If set, the shape's center will be at the center of \
+            the window - useful in conjunction with *Adapt shape size*"
+  endparam
+  param shapesize0
+    caption = "Adapt shape size 0"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center*"
+  endparam
+  param shift0
+    caption = "shift 0"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape1
+    caption = "Shape 1"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center1
+    caption = "Center 1"
+    default = (0.0,0.0)
+  endparam
+  param width1
+    caption = "Width 1"
+    default = 1.0
+  endparam
+  param height1
+    caption = "Height 1"
+    default = 1.0
+  endparam
+  param tilt1
+    caption = "Tilt Angle 1 (degrees)"
+    default = 0.0
+  endparam
+  param power1
+    caption = "Power 1"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove1
+    caption = "Use Screen Center 1"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize1
+    caption = "Adapt shape size 1"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift1
+    caption = "shift 1"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape2
+    caption = "Shape 2"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center2
+    caption = "Center 2"
+    default = (0.0,0.0)
+  endparam
+  param width2
+    caption = "Width 2"
+    default = 1.0
+  endparam
+  param height2
+    caption = "Height 2"
+    default = 1.0
+  endparam
+  param tilt2
+    caption = "Tilt Angle 2 (degrees)"
+    default = 0.0
+  endparam
+  param power2
+    caption = "Power 2"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove2
+    caption = "Use Screen Center 2"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize2
+    caption = "Adapt shape size 2"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift2
+    caption = "shift 2"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape3
+    caption = "Shape 3"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center3
+    caption = "Center 3"
+    default = (0.0,0.0)
+  endparam
+  param width3
+    caption = "Width 3"
+    default = 1.0
+  endparam
+  param height3
+    caption = "Height 3"
+    default = 1.0
+  endparam
+  param tilt3
+    caption = "Tilt Angle 3 (degrees)"
+    default = 0.0
+  endparam
+  param power3
+    caption = "Power 3"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove3
+    caption = "Use Screen Center 3"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize3
+    caption = "Adapt shape size 3"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift3
+    caption = "shift 3"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape4
+    caption = "Shape 4"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center4
+    caption = "Center 4"
+    default = (0.0,0.0)
+  endparam
+  param width4
+    caption = "Width 4"
+    default = 1.0
+  endparam
+  param height4
+    caption = "Height 4"
+    default = 1.0
+  endparam
+  param tilt4
+    caption = "Tilt Angle 4 (degrees)"
+    default = 0.0
+  endparam
+  param power4
+    caption = "Power 4"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove4
+    caption = "Use Screen Center 4"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize4
+    caption = "Adapt shape size 4"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift4
+    caption = "shift 4"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape5
+    caption = "Shape 5"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center5
+    caption = "Center 5"
+    default = (0.0,0.0)
+  endparam
+  param width5
+    caption = "Width 5"
+    default = 1.0
+  endparam
+  param height5
+    caption = "Height 5"
+    default = 1.0
+  endparam
+  param tilt5
+    caption = "Tilt Angle 5 (degrees)"
+    default = 0.0
+  endparam
+  param power5
+    caption = "Power 5"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove5
+    caption = "Use Screen Center 5"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize5
+    caption = "Adapt shape size 5"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift5
+    caption = "shift 5"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape6
+    caption = "Shape 6"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center6
+    caption = "Center 6"
+    default = (0.0,0.0)
+  endparam
+  param width6
+    caption = "Width 6"
+    default = 1.0
+  endparam
+  param height6
+    caption = "Height 6"
+    default = 1.0
+  endparam
+  param tilt6
+    caption = "Tilt Angle 6 (degrees)"
+    default = 0.0
+  endparam
+  param power6
+    caption = "Power 6"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove6
+    caption = "Use Screen Center 6"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize6
+    caption = "Adapt shape size 6"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift6
+    caption = "shift 6"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape7
+    caption = "Shape 7"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center7
+    caption = "Center 7"
+    default = (0.0,0.0)
+  endparam
+  param width7
+    caption = "Width 7"
+    default = 1.0
+  endparam
+  param height7
+    caption = "Height 7"
+    default = 1.0
+  endparam
+  param tilt7
+    caption = "Tilt Angle 7 (degrees)"
+    default = 0.0
+  endparam
+  param power7
+    caption = "Power 7"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove7
+    caption = "Use Screen Center 7"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize7
+    caption = "Adapt shape size 7"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift7
+    caption = "shift 7"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape8
+    caption = "Shape 8"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center8
+    caption = "Center 8"
+    default = (0.0,0.0)
+  endparam
+  param width8
+    caption = "Width 8"
+    default = 1.0
+  endparam
+  param height8
+    caption = "Height 8"
+    default = 1.0
+  endparam
+  param tilt8
+    caption = "Tilt Angle 8 (degrees)"
+    default = 0.0
+  endparam
+  param power8
+    caption = "Power 8"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove8
+    caption = "Use Screen Center 8"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize8
+    caption = "Adapt shape size 8"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift8
+    caption = "shift 8"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+  param shape9
+    caption = "Shape 9"
+    default = 0
+    enum = "none" "ellipse" "rectangle" "astroid" "general"
+  endparam
+  param center9
+    caption = "Center 9"
+    default = (0.0,0.0)
+  endparam
+  param width9
+    caption = "Width 9"
+    default = 1.0
+  endparam
+  param height9
+    caption = "Height 9"
+    default = 1.0
+  endparam
+  param tilt9
+    caption = "Tilt Angle 9 (degrees)"
+    default = 0.0
+  endparam
+  param power9
+    caption = "Power 9"
+    default = 0.666666666666
+    hint = "general shape only. <1 concave, >1 convex"
+  endparam
+  param centermove9
+    caption = "Use Screen Center 9"
+    default = FALSE
+    hint = "If set, the shape's center will be fixed relative to the center \
+            of the window - useful in conjunction with *Adapt shape size* "
+  endparam
+  param shapesize9
+    caption = "Adapt shape size 9"
+    default = FALSE
+    hint = "If set, the shape's size will be adapted with the magnification \
+            of the window - useful in conjunction with *Use screen center* "
+  endparam
+  param shift9
+    caption = "shift 9"
+    default = (0.0,0.0)
+    hint = "This is the amount the shape's center will be shifted - use \
+            real values in the range from -3 to +3 and imag values in the \
+            range from -2.5 to +2.5 when *Use screen center* and \
+            *Adapt shape size* are enabled "
+  endparam
+}
+
+Polystar3 { ; red williams 
+;
+; This 'transformation' allows the artist to place regular polygons in the
+; image and assign them either the solid or the non-solid color.  It also
+; includes a five-pointed star.  The artist may specify up to 10 polygons.
+; More than one transform per layer is permitted; however, if the opaque
+; mode is chosen for any transform, the transparent areas surrounding the
+; opaque shapes will take precedence over ("erase") opaque areas of other
+; transforms.  The results can be pleasing and useful but are difficult to
+; predict and describe. 
+;
+; The strategy is fairly simple.  Regular polygons with an even number of
+; sides, n, may be described by n/2 rectangles arranged so that each one's
+; short sides coincide with opposite sides of the polygon.  Any point
+; within the polygon will fall within at least one of these rectangles.
+;
+; If a regular polygon with an odd number of sides is circumscribed by a
+; circle, each side of the polygon is also a chord of the circle.  The
+; lunes thus formed contain all points which are within the circle but
+; outside the polygon.  It is relatively simple to describe a rectangle
+; which has a side in common with the polygon and which also encompasses
+; all the points within one of the lunes.  All points outside the polygon
+; are either outside the circle or within the lunes; therefore, all those
+; which satisfy neither criterion are within the polygon.
+;
+; The five-pointed star is an extension of the same idea with the addition
+; of a second set of rectangles, each with one side consisting of the line
+; segment between two alternate vertices of the pentagon.  The intersections
+; of these rectangles form the "notches" between points of the star - any
+; point falling within exactly two rectangles is outside the star; any point
+; falling within none of them is within the interior pentagon formed by
+; these rectangles and thus, within the star. 
+;
+bool temp = false
+bool calc = false
+int counter = 0
+int shape = 0
+complex center = (0,0)
+float radius = 1.0
+float tilt = 0.0
+
+; Select parameters of polygons to be calculated, assign
+; them to variables and pass them to calculating loop
+
+WHILE counter < 10 ; select polygons 0 - 9
+  IF counter == 0
+    IF  @shape0 !=0
+      shape = @shape0 ; assign parameters to variables
+      center = @center0
+      radius = @radius0
+      tilt = @tilt0
+      calc = true ; proceed to calculation loop
+    ELSE
+      counter = 1 ; go to next @shape
+    ENDIF
+  ENDIF
+
+; If execution was diverted to the calculation loop in the previous
+; code block, the variable, counter, will be incremented and execution
+; will effectively resume here
+
+  IF counter == 1  
+    IF  @shape1 != 0
+      shape = @shape1
+      center = @center1
+      radius = @radius1
+      tilt = @tilt1
+      calc = true
+    ELSE
+      counter = 2
+    ENDIF
+  ENDIF
+  IF counter == 2
+    IF  @shape2 != 0
+      shape = @shape2
+      center = @center2
+      radius = @radius2
+      tilt = @tilt2
+      calc = true
+    ELSE
+      counter = 3
+    ENDIF
+  ENDIF
+  IF counter == 3
+    IF  @shape3 != 0
+      shape = @shape3
+      center = @center3
+      radius = @radius3
+      tilt = @tilt3
+      calc = true
+    ELSE
+      counter = 4
+    ENDIF
+  ENDIF
+  IF counter == 4
+    IF  @shape4 != 0
+      shape = @shape4
+      center = @center4
+      radius = @radius4
+      tilt = @tilt4
+      calc = true
+    ELSE
+      counter = 5
+    ENDIF
+  ENDIF
+  IF counter == 5
+    IF  @shape5 != 0
+      shape = @shape5
+      center = @center5
+      radius = @radius5
+      tilt = @tilt5
+      calc = true
+    ELSE
+      counter = 6
+    ENDIF
+  ENDIF
+  IF counter == 6
+    IF  @shape6 != 0
+      shape = @shape6
+      center = @center6
+      radius = @radius6
+      tilt = @tilt6
+      calc = true
+    ELSE
+      counter = 7
+    ENDIF
+  ENDIF
+  IF counter == 7
+    IF  @shape7 != 0
+      shape = @shape7
+      center = @center7
+      radius = @radius7
+      tilt = @tilt7
+      calc = true
+    ELSE
+      counter = 8
+    ENDIF
+  ENDIF
+  IF counter == 8
+    IF  @shape8 != 0
+      shape = @shape8
+      center = @center8
+      radius = @radius8
+      tilt = @tilt8
+      calc = true
+    ELSE
+      counter = 9
+    ENDIF
+  ENDIF
+  IF counter == 9
+    IF  @shape9 != 0
+      shape = @shape9
+      center = @center9
+      radius = @radius9
+      tilt = @tilt9
+      calc = true
+    ELSE
+      counter = 10
+    ENDIF
+  ENDIF
+  
+  IF calc == true ; Begin calculation loop
+    IF (shape == 1) ; five-pointed star
+      bool in = false
+      float r = radius
+      float h = 0.58778525*r
+      float w = 0.0954915*r
+      float h2 = 1.902113*r/2 ; height of second set of rectangles
+      float w2 = 0.690983*r/2 ; width of second set of rectangles
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/radius + flip(imag(pix2)/radius)
+      IF ( |pix3| < 1 )
+        in = true ; inside of circumscribing circle 
+      ENDIF
+   
+      IF in == true
+        float cc = 0.9045085*r*cos((tilt+54)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+54)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+54)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 1
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+126)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+126)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+126)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+198)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+198)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+198)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 3
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.9045085*r*cos((tilt+270)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+270)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+270)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 4
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+342)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+342)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+342)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 5
+        ENDIF
+      ENDIF
+
+; Change Pentagon to Star by checking five more rectangles.
+; Pixels in two rectangles are outside of star shape.  Pixels
+; in no rectangle are in central star area - tracked by flag.
+
+      bool star = false ; true means inside star figure
+      bool flag = true  ; true means within central pentagon
+      IF in == true
+        float cc = 0.65451*r*cos((tilt+18)*pi/180)
+        float dd = 0.65451*r*sin((tilt+18)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+18)*pi/180))
+        complex pix3 = real(pix2)/w2 + flip(imag(pix2)/h2)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          star = !star
+          flag = false
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.65451*r*cos((tilt+90)*pi/180)
+        float dd = 0.65451*r*sin((tilt+90)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+90)*pi/180))
+        complex pix3 = real(pix2)/w2 + flip(imag(pix2)/h2)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          star = !star
+          flag = false
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc =0.65451*r*cos((tilt+162)*pi/180)
+        float dd = 0.65451*r*sin((tilt+162)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+162)*pi/180))
+        complex pix3 = real(pix2)/w2 + flip(imag(pix2)/h2)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          star = !star
+          flag = false
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.65451*r*cos((tilt+234)*pi/180)
+        float dd = 0.65451*r*sin((tilt+234)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+234)*pi/180))
+        complex pix3 = real(pix2)/w2 + flip(imag(pix2)/h2)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          star = !star
+          flag = false
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.65451*r*cos((tilt+306)*pi/180)
+        float dd = 0.65451*r*sin((tilt+306)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+306)*pi/180))
+        complex pix3 = real(pix2)/w2 + flip(imag(pix2)/h2)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          star = !star
+          flag = false
+        ENDIF
+      ENDIF
+      IF star == false && flag == false
+      in = false
+      ENDIF
+
+      IF in == true
+        temp = true
+      ENDIF
+
+    ELSEIF (shape == 3)
+      bool in = false
+      float h = 1.73205*radius/2
+      float w = radius/4
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/radius + flip(imag(pix2)/radius)
+      IF ( |pix3| < 1 )
+        in = true ; inside of circumscribing circle 
+      ENDIF
+   
+      IF in == true
+        float r = radius
+        float cc = 0.75*r*cos((tilt+30)*pi/180)
+        float dd = 0.75*r*sin((tilt+30)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+30)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 1
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.75*r*cos((tilt+150)*pi/180)
+        float dd = 0.75*r*sin((tilt+150)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+150)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.75*r*cos((tilt+270)*pi/180)
+        float dd = 0.75*r*sin((tilt+270)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+270)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+       pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF in == true
+        temp = true
+      ENDIF
+
+    ELSEIF (shape == 4)
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/radius + flip(imag(pix2)/radius)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1)
+        temp = true
+      ENDIF
+
+    ELSEIF (shape == 5)
+      bool in = false
+      float r = radius
+      float h = 0.58778525*r
+      float w = 0.0954915*r
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/radius + flip(imag(pix2)/radius)
+      IF ( |pix3| < 1 )
+        in = true ; inside of circumscribing circle 
+      ENDIF
+   
+      IF in == true
+        float cc = 0.9045085*r*cos((tilt+54)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+54)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+54)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 1
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+126)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+126)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+126)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+198)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+198)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+198)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 3
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.9045085*r*cos((tilt+270)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+270)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+270)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 4
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9045085*r*cos((tilt+342)*pi/180)
+        float dd = 0.9045085*r*sin((tilt+342)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+342)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF in == true
+        temp = true
+      ENDIF
+
+    ELSEIF (shape == 6)
+      float h = 0.8660254*radius
+      float w = 0.5*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+60)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt-60)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+    ELSEIF (shape == 7)
+      bool in = false
+      float r = radius
+      float h = 0.43388374*r
+      float w = 0.049515566*r
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/r + flip(imag(pix2)/r)
+      IF ( |pix3| < 1 )
+      in = true ; inside of circumscribing circle 
+      ENDIF
+   
+      IF in == true
+        float cc = 0.9504844*r*cos((tilt+12.857143)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+12.857143)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+12.857143)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 1
+        ENDIF
+      ENDIF 
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9504844*r*cos((tilt+64.285714)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+64.285714)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+64.285714)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9504844*r*cos((tilt+115.714285)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+115.714285)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+115.714285)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 3
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.9504844*r*cos((tilt+167.142856)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+167.142856)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+167.142856)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 4
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9504844*r*cos((tilt+218.571427)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+218.571427)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+218.571427)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF in == true
+        float cc = 0.9504844*r*cos((tilt+269.999998)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+269.999998)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+269.999998)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 6
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float r = radius
+        float cc = 0.9504844*r*cos((tilt+321.428569)*pi/180)
+        float dd = 0.9504844*r*sin((tilt+321.428569)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+321.428569)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 7
+        ENDIF
+      ENDIF
+
+      IF in == true
+        temp = true
+      ENDIF
+
+    ELSEIF (shape==8)
+      float h = 0.923879533*radius
+      float w = 0.382683432*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+45)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+90)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+135)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+       ENDIF
+       ENDIF
+
+    ELSEIF (shape == 9)
+      bool in = false
+      float r = radius
+      float h = 0.34202*r
+      float w = 0.03015369*r
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/r + flip(imag(pix2)/r)
+      IF ( |pix3| < 1 )
+        in = true ; inside of circumscribing circle 
+      ENDIF
+   
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+30)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+30)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+30)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        in = false ; true means outside rectangle 1
+        ENDIF
+      ENDIF 
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+70)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+70)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+70)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+110)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+110)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+110)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 3
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+150)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+150)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+150)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 4
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+190)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+190)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+190)*pi/180)) 
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+230)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+230)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+230)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 6
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+270)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+270)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+270)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 7
+        ENDIF
+      ENDIF
+
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+310)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+310)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+310)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 8
+        ENDIF
+      ENDIF
+  
+      IF in == true
+        float cc = 0.96984631*r*cos((tilt+350)*pi/180)
+        float dd = 0.96984631*r*sin((tilt+350)*pi/180)
+        complex ctr = real(cc)+flip(dd)
+        complex c = center + ctr
+        complex pix2 = (#pixel - c)*exp(flip(-(tilt+350)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          in = false ; true means outside rectangle 9
+        ENDIF
+      ENDIF
+
+      IF in == true
+        temp = true
+      ENDIF
+
+    ELSEIF (shape == 10)
+      float h = 0.95105652*radius
+      float w = 0.30901699*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+36)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+72)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+108)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+144)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 5
+        ENDIF
+      ENDIF
+
+    ELSEIF (shape == 12)
+      float h = 0.96592583*radius
+      float w = 0.25881905*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+30)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+60)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+90)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+120)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+150)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 6
+        ENDIF
+      ENDIF
+    
+    ELSEIF (shape==14)
+      float h = 0.9749279*radius
+      float w = 0.2225209*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; true means inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+25.7142855)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+51.428571)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+77.142857)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+103.1428571)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+128.5714286)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+154.2857143)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true
+        ENDIF
+      ENDIF
+
+    ELSEIF (shape==16)
+      float h = 0.98078528*radius
+      float w = 0.19509032*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+22.5)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2 
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+45)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+67.5)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+90)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+112.5)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 6
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+135)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 7
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+157.5)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 8
+        ENDIF
+      ENDIF
+
+    ELSEIF (shape==18)
+      float h = 0.98480775*radius
+      float w = 0.17364818*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+20)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+40)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+60)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+80)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+100)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 6
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+120)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 7
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+140)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 8
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+160)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 9
+        ENDIF
+      ENDIF
+
+    ELSEIF (shape==20)
+      float h = 0.98768834*radius
+      float w = 0.15643447*radius
+      complex pix2 = (#pixel - center)*exp(flip(-tilt*pi/180))
+      complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+      pix3 = pix3 * exp(flip(pi/4))
+      IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+        temp = true ; inside rectangle 1
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+18)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 2
+        ENDIF
+      ENDIF
+  
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+36)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 3
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+54)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 4
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+72)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 5
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+90)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 6
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+108)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 7
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+126)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 8
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+144)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 9
+        ENDIF
+      ENDIF
+
+      IF temp != true
+        complex pix2 = (#pixel - center)*exp(flip(-(tilt+162)*pi/180))
+        complex pix3 = real(pix2)/w + flip(imag(pix2)/h)
+        pix3 = pix3 * exp(flip(pi/4))
+        IF ((abs(real(pix3)) + abs(imag(pix3))) < 1.4142)
+          temp = true ; inside rectangle 10
+        ENDIF
+      ENDIF
+
+    ENDIF ; shape determination loop
+  ENDIF ; calculation loop
+  counter = counter + 1
+  calc = false
+ENDWHILE
+  
+IF @mode == 1 ; transparent/opaque toggle
+  temp = !temp
+ENDIF
+IF temp !=true
+  #solid = true
+ENDIF
+
+default:
+  title = "Regular Polygons"
+  param mode
+  caption = "Mode"
+  default = 0
+  hint = "Opaque Means Normal Color - \
+          Transparent - Solid Color"
+  enum = "Opaque" "Transparent"
+  endparam
+  param shape0
+    caption = "Shape 0"
+    default = 1
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center0
+    caption = "Center 0"
+    default = (0.0,0.0)
+  endparam
+  param radius0
+    caption = "Radius 0"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt0
+    caption = "Rotation 0 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape1
+    caption = "Shape 1"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center1
+    caption = "Center 1"
+    default = (0.0,0.0)
+  endparam
+  param radius1
+    caption = "Radius 1"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt1
+    caption = "Rotation 1 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape2
+    caption = "Shape 2"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center2
+    caption = "Center 2"
+    default = (0.0,0.0)
+  endparam
+  param radius2
+    caption = "Radius 2"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt2
+    caption = "Rotation 2 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape3
+    caption = "Shape 3"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center3
+    caption = "Center 3"
+    default = (0.0,0.0)
+  endparam
+  param radius3
+    caption = "Radius 3"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt3
+    caption = "Rotation 3 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape4
+    caption = "Shape 4"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center4
+    caption = "Center 4"
+    default = (0.0,0.0)
+  endparam
+  param radius4
+    caption = "Radius 4"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt4
+    caption = "Rotation 4 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape5
+    caption = "Shape 5"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center5
+    caption = "Center 5"
+    default = (0.0,0.0)
+  endparam
+  param radius5
+    caption = "Radius 5"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt5
+    caption = "Rotation 5 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape6
+    caption = "Shape 6"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center6
+    caption = "Center 6"
+    default = (0.0,0.0)
+  endparam
+  param radius6
+    caption = "Radius 6"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt6
+    caption = "Rotation 6 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape7
+    caption = "Shape 7"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center7
+    caption = "Center 7"
+    default = (0.0,0.0)
+  endparam
+  param radius7
+    caption = "Radius 7"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt7
+    caption = "Rotation 7 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape8
+    caption = "Shape 8"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center8
+    caption = "Center 8"
+    default = (0.0,0.0)
+  endparam
+  param radius8
+    caption = "Radius 8"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt8
+    caption = "Rotation 8 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+  param shape9
+    caption = "Shape 9"
+    default = 0
+    hint = "Number of Sides - May be odd or even up to 10 \
+            but even only from 12 to 20.  Enter 0 (zero)for \
+            no polygon or 1 (one) for a five-pointed star."
+  endparam
+  param center9
+    caption = "Center 9"
+    default = (0.0,0.0)
+  endparam
+  param radius9
+    caption = "Radius 9"
+    default = 1.0
+    hint = "Radius of circumscribed circle; i.e., \
+            distance from center to vertex"
+  endparam
+  param tilt9
+    caption = "Rotation 9 (degrees)"
+    default = 0.0
+    hint = "Positive = CCW"
+  endparam
+ }
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

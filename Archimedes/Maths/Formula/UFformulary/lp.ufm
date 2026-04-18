@@ -1,0 +1,237 @@
+comment {
+Date: 17-10-98
+
+Luke Plant's public fractal formulae, 1998
+
+Some of the below are Fractint types,
+others are slightly more original
+(although other people have also
+done them separately)
+
+}
+
+Julibrot{;
+
+init:
+  IF (@plane == 0)
+    z = real(pixel)+ flip(imag(p1))
+    c = real(p1)+flip(imag(pixel))
+
+    ELSEIF (@plane == 1)
+    z = flip(real(pixel)) + imag(p1)
+    c = real(p1)+flip(imag(pixel))
+
+  ELSEIF (@plane == 2)
+    z = real(pixel) + flip(imag(p1))
+    c = flip(real(p1))+imag(pixel)
+
+  ELSEIF (@plane == 3)
+
+   z = flip(real(pixel)) + imag(p1)
+   c = flip(real(p1))+imag(pixel)
+
+  ENDIF
+
+loop:
+z=sqr(z) + c
+
+bailout:
+|z| < @bailout
+
+
+default:
+  title = "Julibrot"
+  
+  param p1
+    caption = "Julibrot parameters"
+    default = (0.0,0.0)
+  endparam
+  
+  param plane
+    caption = "Julibrot plane"
+    default = 0
+    enum = "1:Re(c), Im(z0)" "2:Re(c), Re(z0)" \
+    "3:Im(c), Im(z0)" "4:Im(c), Re(z0)"
+    hint = "shows which parameters are kep constant, \
+    ie what the values of parameter P1 are."
+  endparam
+  
+  param bailout
+    caption = "Bailout"
+    default = 16.0
+  endparam
+  
+switch:
+  type = "julibrot"
+  bailout = bailout
+  plane = plane
+  P1=pixel
+}
+
+
+Test2 { ;
+; little formula you may find helpful to test the 'Shape'
+; colouring method on.  It isn't a fractal in any way - 
+
+z=#pixel, count=0:
+count = count + 1
+count < 2
+
+default:
+  title = "Shape-Test"
+    
+}
+
+mandel-allout {
+; Mandelbrot, but all points bailout
+; Use when you want the same colouring method
+; for inside as outside
+; Use Periodicity checking = off
+init:
+  z = 0
+  complex c = #pixel
+  int i = 0
+  
+loop:
+  z = sqr(z) + c
+  i=i+1
+
+bailout:
+  ; carry on when
+  ;  when numiter = #maxiter-1
+  ;  IF !(bailout at maxiter only)
+  ;    when |z|>bailout
+  ; 
+  ( (|z| < @bailout) ||  (@maxitonly)) &&  (i < #maxiter)
+  
+default:
+  title = "Mandelbrot all out"
+  periodicity = 0
+  param bailout
+    caption = "Bailout value"
+    default = 16.0
+  endparam
+
+  param maxitonly
+    caption = "Bailout at max. it."
+    default = false
+    hint = "If enabled, points only bail out after \
+    maximum number of iterations"
+  endparam
+  
+switch:
+  type = "Julia-allout"
+  bailout = bailout
+  seed = pixel
+  percheck = percheck
+  maxitonly = maxitonly
+}
+
+Julia-allout {
+; Julia, but all points bailout
+; Use when you want the same colouring method
+; for inside as outside
+; Use Periodicity checking = off
+init:
+  z = #pixel
+  complex c = @seed
+  int i = 1
+  
+loop:
+  z = sqr(z) + c
+  i=i+1
+
+bailout:
+  ( (|z| < @bailout) ||  (@maxitonly)) &&  (i < #maxiter)
+
+
+
+default:
+  periodicity = 0
+  title = "Julia all out"
+  param bailout
+    caption = "Bailout value"
+    default = 16.0
+  endparam
+  
+  param seed
+    caption = "Julia seed"
+    default = (-0.1625,0.687)
+  endparam
+
+  param maxitonly
+    caption = "Bailout at max. it."
+    default = false
+    hint = "If enabled, points only bail out after \
+    maximum number of iterations"
+  endparam
+
+    
+switch:
+  type = "Mandel-allout"
+  bailout = bailout
+  maxitonly = maxitonly
+}
+
+
+Test3 {
+z=#pixel, count=0:
+count = count + 1
+count < 2
+
+default:
+  title = "Transformation-Test"
+    
+}
+
+
+Grid { ; dummy formula - bails out after 1 iteration
+int count=0:
+count = count + 1
+count < 2
+default:
+  title = "Grid"
+  method=onepass
+}
+
+
+Newton-MSet-Mix1 {
+; This formula alternates between Newton and Mandelbrot Set
+; iterations.
+
+init:
+  z = 0
+  complex c = #pixel
+  bool mand = true      ; do mandelbrot iteration first
+
+loop:
+  if (mand)
+    z = sqr(z) + c
+    mand = false
+  else
+    z = ((p1 - 1) * z^p1 + @r) / (p1 * z ^ (p1 - 1))
+    mand = true
+  endif
+
+bailout:
+  |z| < @bailout
+
+default:
+  title = "Mandelbrot-Newton mix"
+  periodicity = 0
+  param bailout
+    caption = "Mandel Bailout value"
+    default = 128.0
+  endparam
+
+  param p1
+    caption = "Degree"
+    default = (3,0)
+  endparam
+
+  param r
+    caption = "Root"
+    default = (1,0)
+  endparam
+
+}

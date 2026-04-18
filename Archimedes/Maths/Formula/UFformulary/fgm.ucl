@@ -1,0 +1,172 @@
+comment {
+Coloring formulas by Felipe Gallegos Montero
+File still in development.
+}
+
+FG-1{
+init:
+C=#pixel
+SCI=imag(#screenpixel)
+SCR=real(#screenpixel)
+counter=1
+loop:
+If counter==@CNT
+A=SCR*#z*C
+B=@FN(SCR*#z)
+Else
+A=SCI*#z*C
+B=@FN(SCI*#z)
+endif
+counter=counter+1
+If counter==@CNT*2
+counter=1
+endif
+final:
+#index=real(A+B)*#numiter
+default:
+Title= "Sparse Functions"
+int param CNT
+caption= "Change algorithm"
+default= 200
+endparam
+complex func FN
+caption= "Function"
+default= ident()
+endfunc
+}
+
+FG-2{;One-pass drawing method required
+loop:
+A=abs(#z*#pixel)*@SB
+B=cabs(#z*#pixel)*@SB
+final:
+If @type=="Curves"
+#index=(@SC*#numiter)*real(A+A)
+Elseif @type=="Circular trap"
+#index=(@SC*#numiter)*real(B+B)*@SA
+Elseif @type=="Poligonal"
+#index=(@SC*#numiter)*real(A+B)*@SA
+Elseif @type=="Disassembled"
+#index=real((A+B)*(#z*#pixel))*@SA
+Elseif @type=="Octogonal trap"
+#index=(@SC*#numiter)*log((real(A+B)+imag(A+B)))*@SA
+Elseif @type=="Rings"
+#index=(@SC*#numiter)*(sin(imag(A))+cos(real(B)))*@SA
+Endif
+default:
+Title= "Shape Traps"
+param Type
+enum= "Curves" "Circular trap" \
+"Poligonal" "Disassembled" \
+"Octogonal trap" "Rings"
+endparam
+float param SA
+Caption= "Shape"
+default= 1
+hint= "First anexed value.\
+Can change shape and density"
+endparam
+float param SB
+Caption= "Shape"
+default= 1
+hint= "Second anexed value.\
+Can change shape and density"
+endparam
+float param SC
+caption= "Shape"
+enabled= @type!="Disassembled"
+default= 1
+hint= "First anexed value.\
+Can change shape and density"
+endparam
+}
+
+FG-3{
+;still in construction. Too slow to use
+init:
+
+int NV=@NOV
+float RAIP=real(#Pixel)+imag(#Pixel)
+float LVar[@NOV]
+float HVar[@NOV]
+int C=0
+int r=0
+int Stp=0
+float CX=#x
+float CY=#Y
+int I=0
+bool STop=False
+
+final:
+repeat
+repeat ;assign values to the arrays
+Lvar[r]=(RAIP)+Stp
+Hvar[r]=(RAIP)+@Step+Stp
+Stp=Stp+@Step
+r=r+1
+until r==NV-1
+
+repeat
+If CX>=Lvar[C] && CX<=Hvar[C]
+X=log(#Pixel+#Z)
+Else
+X=#Pixel
+Endif
+If CY>=Lvar[C] && CY<=Hvar[C]
+Y=log(#Pixel+#Z)
+Else
+Y=#Pixel
+Endif
+C=C+1
+If C==NV-1 && Stop==False
+C=0
+Stop=True
+Endif
+until Stop==True
+I=I+1
+until I==@MaxIter
+
+int NM=#Numiter
+#index=log(real(X+Y))*NM
+
+
+default:
+Title= "Array"
+int param NOV
+caption= "N° of variables"
+default = 10
+endparam
+int param Step
+default = 10
+endparam
+int param MaxIter
+default= 10
+endparam 
+}
+
+FG-4 {
+; incompleted formula. Don't use.
+init:
+float Rnd[@NOV]
+int NV=@NOV
+int C=0
+int Seed=@S
+repeat
+Rnd[C]= abs(seed)%(@MR+1)
+C=C+1
+until C==NV-1 
+final:
+repeat
+#index=real(@FN(Rnd[C]))
+If C==NV-1 
+C=0
+endif
+until C==NV-1 
+default:
+int param NOV
+endparam
+int param S
+endparam
+int param MR
+endparam
+} 

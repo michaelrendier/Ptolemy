@@ -1,0 +1,5224 @@
+comment {
+
+MMF3 formulae V2.2 (26th August 2007)
+
+These formulas are written for UF3, they use a new extended
+switching method where you can specifically and
+independantly choose which parameter is switched and which
+paramater is mapped to by #pixel in the switched image.
+I think the method of separating these two options makes
+things clearer than the old extended switch method.
+
+(26th August 2007)
+Added some extra morphing options in "Morph"
+
+(30th November 2004)
+Added two more constants to "The Magic Formula" and an
+optional fix to an oversight when using the search and
+applying a function.
+
+(27th November 2004)
+Added 'Newton by Roots', 'The Magic Formula' and 'Morph'.
+
+(7th May 2003)
+Added the Multivariable Newton
+
+© David Makin (Makin' Magic)
+
+http://www.crosswinds.net/~makinmagic/
+http://website.lineone.net/~dave_makin/
+http://skyscraper.fortunecity.com/terabyte/966/
+http://www.renderosity.com/gallery.ez?ByArtist=Y&Artist=MakinMagic
+
+Please send any comments/suggestions about
+these formulae to:
+makinmagic@themutual.net
+}
+
+MMF3d-Magic {
+;
+; This formula came about when I was thinking about the orbit
+; of z and how to get the partial iteration values.
+;
+; This was an initial attempt to get a "halfway" point:
+; The derivation below IS FLAWED.
+;
+; Consider  f(z) = z^4 + c
+; Assume g(z) exists such that g(g(z)) = f(z)
+; It seems fairly logical that g(z) should involve z^2
+; so consider g(z) = z^2 + a
+;   g(g(z)) = (z^2 + a)^2 + a
+;           = z^4 + 2 * a * z^2 + a^2 + a
+;           = z^4 + a^2 + a * (2 * z^2 + 1)
+; want this to be == f(z) ie. == z^4 + c
+; so    z^4 + a^2 + a * (2 * z^2 + 1) = z^4 + c
+; giving   a^2 + a * (2 * z^2 + 1) - c = 0
+; Using quadratic for a (!!!) gives
+; a = ( - 2 * z^2 - 1 (+/-)sqrt( (2 * z^2 + 1)^2 + 4 * c ) )/2
+; This gives g(z) = z^2 + ( - 2 * z^2 - 1 (+/-)sqrt( (2 * z^2 + 1)^2 + 4 * c ) )/2
+; so initial z^2 is removed giving:
+;
+;    g(z) = ( (+/-)sqrt( (2 * z^2 + 1)^2 + 4 * c ) - 1 )/2
+;
+; Note that of course g(g(z)) doesn't produce z^4+c !
+;
+; I tried the formula for g(z) and then played with it, adding optional parameters and
+; the result is:
+;
+; g(z) = ( ( ( c2 * z^p + c3)^p1 + c )^p2 - c1 )*c4
+;
+; Note that the fractal does indeed approach the originally intended shape as the c1
+; parameter tends to infinity when using the default settings (it also gets very large
+; and shoots up the positive real axis).
+; In fact when using the default settings for c, c2, c3 and c4 and p2=1/p1 the p, p1
+; and p2 parameters result in a fractal that tends to the shape of the fractal for
+; "z^(p*p1) + c" as c1 tends to infinity (eg. try 65536), BUT the power value to use
+; for smooth colouring is based on p*p1*p2 (ie. p) NOT p*p1.
+;
+; Actually when using standard smoothing in the colouring formula the power value to
+; use is usually around p*p1*p2 - with some updated colourings (eg. in MMF3) this
+; is irrelevant as the standard smoothing options have the "auto-power" parameter.
+; The formula has the option to pass a Hinrich style smoothing fraction to a colouring
+; as final z for divergent areas, this option is left over from before I found the
+; "auto-power" method for standard smoothing :-)
+;
+; I decided to call it "The Magic Formula" after discovering what happens when the
+; c2 parameter becomes relatively large (eg. 10000) with the other parameters set to
+; the defaults. Every iteration of the Mandelbrot gets (sets of) satellite Mini-Julias
+; (the number of sets doubles per iteration) and each of the satellite Julias has a
+; MiniBrot at the centre. Of course all the Minis have similar satellite sets
+; surrounding them too !!!!
+;
+; When playing with the formula and trying using #pixel as any of the parameters
+; (ie. c, c1, c2, c3, c4 or p, p1, p2) I discovered that viewing the Mandelbrot of all
+; these alternatives could be interesting (in some cases depending on the other values).
+;
+; As mentioned above for certain values of the standard constant terms the fractal
+; result changes scale and location to quite large degree making the process of
+; zooming to the image rather tedious so I've added the search option which enables
+; a routine in the global section to find the fractal and to give you appropriate
+; location and magnification values (as compiler messages) or to autozoom to the
+; fractal.
+; NB. Use the semi-auto mode FOR EXPLORATION ONLY as the calculated values for scale
+; and location are internal to the formula and are heavily reliant on the accuracy of
+; the maths (and sometimes change when zooming by hand !!) Use the semi-auto mode to
+; get an idea of what sort of features to expect with certain combinations of
+; parameter values, then use the formula with the search set to either off or to
+; manual. Manual search mode doesn't auto-zoom but it does give you suggested values
+; for magnification/scale and centre/offset. When using manual mode for switching then
+; when switching initially there may be no fractal visible in the switch window -
+; don't worry, switch anyway and then put values in the parent fractal for Switch
+; scale and Switch centre according to the suggested values in the compiler message
+; from the child (switched fractal) and then future switch previews and switches from
+; that parent should appear correctly. Once you've set appropriate values for the
+; magnification/scale and centre/offset then you can switch the compiler messages off
+; as you manually zoom around the fractal.
+; Note that the semi-auto search mode is only valid when switching from a parent
+; not when switching from a child (unless you first disable semi-auto for the child
+; as instructed by the compiler messages when enbabling "Auto off ?" and then
+; re-enable semi-auto afterwards).
+; Please note that sometimes UF doesn't print up the compiler messages as expected,
+; if they don't appear when they should do just click the formula reload icon.
+; 
+; This formula also features a version of extended switching that allows full control
+; over which parameter is used for the switch and which parameter is replaced by the
+; value of #pixel after switching. Note that the switch value "Value" should be copied
+; into the parameter it replaces before switching using a different parameter.
+; NB. in the case of semi-auto search mode after switching if you wish to switch from
+; the child then enable "Auto off ?" and follow the instructions given as compiler
+; messages, (switch semi-auto back on), then you can switch again as you wish. Note
+; that when enabling "Auto off ?" you may need to click the formula reload icon to
+; get UF to print out the compiler messages.
+;
+; Created November 2004
+;
+global:
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(@m)*ca-real(@n)*sa
+  float r0c1 = real(@m)*sa+real(@n)*ca
+  float r1c0 = imag(@m)*ca-imag(@n)*sa
+  float r1c1 = imag(@m)*sa+imag(@n)*ca
+  float v = sqrt(@bailout)
+
+  complex gcentre = (0,0)
+  float gmagn = 1.0
+  complex gcentreo = (0,0)
+  float gmagno = 1.0
+
+  if @search>0 && @usevalue!=@usepixel && @usepixel<8
+    $define  DEBUG
+    int gs = 0
+    int gss = 0
+    complex gv = @value
+    if @search == 2 && @usevalue<8
+      gs = 1
+    endif
+    complex gz = @zstart
+    complex gc = @c
+    complex gc1 = @c1
+    complex gc2 = @c2
+    complex gc3 = @c3
+    complex gc4 = @c4
+    complex gc5 = @c5
+    complex gc6 = @c6
+    complex gp = @power
+    complex gp1 = @power1
+    complex gp2 = @power2
+
+    float gt = 0
+    complex gzs = (0,0)
+    complex gzp = (1,0)
+    float gx = 0
+    float gy = 0
+
+    complex gzc = gz
+    complex gcc = gc
+    complex gc1c = gc1
+    complex gc2c = gc2
+    complex gc3c = gc3
+    complex gc4c = gc4
+    complex gc5c = gc5
+    complex gc6c = gc6
+
+    complex gcentreb = gcentre
+    float goff = gmagn
+    float gb = 1e100
+    bool gf = false
+    int gi1 = @searchdepth
+    int gi2 = @searchdepth
+    int gi3 = @searchdepth
+    int gib = @searchdepth
+    int gbs = 0
+    float gm1 = 0
+    float gm2 = 0
+    float gm3 = 0
+    float gmb = 0
+
+    repeat
+      if gs == 0
+        if @usevalue == 0
+          gz = gv
+        elseif @usevalue == 1
+          gc = gv
+        elseif @usevalue == 2
+          gc1 = gv
+        elseif @usevalue == 3
+          gc2 = gv
+        elseif @usevalue == 4
+          gc3 = gv
+        elseif @usevalue == 5
+          gc4 = gv
+        elseif @usevalue == 6
+          gc5 = gv
+        elseif @usevalue == 7
+          gc6 = gv
+        elseif @usevalue == 8
+          gp = gv
+        elseif @usevalue == 9
+          gp1 = gv
+        elseif @usevalue == 10
+          gp2 = gv
+        endif
+      endif
+
+      gzc = gz
+      gcc = gc
+      gc1c = gc1
+      gc2c = gc2
+      gc3c = gc3
+      gc4c = gc4
+      gc5c = gc5
+      gc6c = gc6
+
+      gcentre = (0,0)
+      gcentreb = gcentre
+      gmagn = @startscale
+      goff = gmagn
+      gb = 1e100
+      gf = false
+      gi1 = @searchdepth
+      gi2 = @searchdepth
+      gi3 = 0
+      gib = @searchdepth
+      gmb = 0
+      gss = 0
+      if (gs==0 && @usepixel==0) || (gs==1 && @usevalue==0) \
+         || (!@searchimag && !@searchreal)
+        gss = 6
+      elseif !@searchreal
+        gss = 3
+      endif
+      repeat
+        if gss == 0
+          gzc = gz
+          if gs==0
+            if @usepixel==1
+              gcc = gcentre - gmagn
+            elseif @usepixel==2
+              gc1c = gcentre - gmagn
+            elseif @usepixel==3
+              gc2c = gcentre - gmagn
+            elseif @usepixel==4
+              gc3c = gcentre - gmagn
+            elseif @usepixel==5
+              gc4c = gcentre - gmagn
+            elseif @usepixel==6
+              gc5c = gcentre - gmagn
+            elseif @usepixel==7
+              gc6c = gcentre - gmagn
+            endif
+          elseif @usevalue==1
+            gcc = gcentre - gmagn
+          elseif @usevalue==2
+            gc1c = gcentre - gmagn
+          elseif @usevalue==3
+            gc2c = gcentre - gmagn
+          elseif @usevalue==4
+            gc3c = gcentre - gmagn
+          elseif @usevalue==5
+            gc4c = gcentre - gmagn
+          elseif @usevalue==6
+            gc5c = gcentre - gmagn
+          elseif @usevalue==7
+            gc6c = gcentre - gmagn
+          endif
+        elseif gss==1
+          gzc = gz
+          if gs==0
+            if @usepixel==1
+              gcc = gcentre + gmagn
+            elseif @usepixel==2
+              gc1c = gcentre + gmagn
+            elseif @usepixel==3
+              gc2c = gcentre + gmagn
+            elseif @usepixel==4
+              gc3c = gcentre + gmagn
+            elseif @usepixel==5
+              gc4c = gcentre + gmagn
+            elseif @usepixel==6
+              gc5c = gcentre + gmagn
+            elseif @usepixel==7
+              gc6c = gcentre + gmagn
+            endif
+          elseif @usevalue==1
+            gcc = gcentre + gmagn
+          elseif @usevalue==2
+            gc1c = gcentre + gmagn
+          elseif @usevalue==3
+            gc2c = gcentre + gmagn
+          elseif @usevalue==4
+            gc3c = gcentre + gmagn
+          elseif @usevalue==5
+            gc4c = gcentre + gmagn
+          elseif @usevalue==6
+            gc5c = gcentre + gmagn
+          elseif @usevalue==7
+            gc6c = gcentre + gmagn
+          endif
+        elseif gss==2 || gss==5
+          gzc = gz
+          if gs==0
+            if @usepixel==1
+              gcc = gcentre
+            elseif @usepixel==2
+              gc1c = gcentre
+            elseif @usepixel==3
+              gc2c = gcentre
+            elseif @usepixel==4
+              gc3c = gcentre
+            elseif @usepixel==5
+              gc4c = gcentre
+            elseif @usepixel==6
+              gc5c = gcentre
+            elseif @usepixel==7
+              gc6c = gcentre
+            endif
+          elseif @usevalue==1
+            gcc = gcentre
+          elseif @usevalue==2
+            gc1c = gcentre
+          elseif @usevalue==3
+            gc2c = gcentre
+          elseif @usevalue==4
+            gc3c = gcentre
+          elseif @usevalue==5
+            gc4c = gcentre
+          elseif @usevalue==6
+            gc5c = gcentre
+          elseif @usevalue==7
+            gc6c = gcentre
+          endif
+        elseif gss==3
+          gzc = gz
+          if gs==0
+            if @usepixel==1
+              gcc = gcentre - flip(gmagn)
+            elseif @usepixel==2
+              gc1c = gcentre - flip(gmagn)
+            elseif @usepixel==3
+              gc2c = gcentre - flip(gmagn)
+            elseif @usepixel==4
+              gc3c = gcentre - flip(gmagn)
+            elseif @usepixel==5
+              gc4c = gcentre - flip(gmagn)
+            elseif @usepixel==6
+              gc5c = gcentre - flip(gmagn)
+            elseif @usepixel==7
+              gc6c = gcentre - flip(gmagn)
+            endif
+          elseif @usevalue==1
+            gcc = gcentre - flip(gmagn)
+          elseif @usevalue==2
+            gc1c = gcentre - flip(gmagn)
+          elseif @usevalue==3
+            gc2c = gcentre - flip(gmagn)
+          elseif @usevalue==4
+            gc3c = gcentre - flip(gmagn)
+          elseif @usevalue==5
+            gc4c = gcentre - flip(gmagn)
+          elseif @usevalue==6
+            gc5c = gcentre - flip(gmagn)
+          elseif @usevalue==7
+            gc6c = gcentre - flip(gmagn)
+          endif
+        elseif gss==4
+          gzc = gz
+          if gs==0
+            if @usepixel==1
+              gcc = gcentre + flip(gmagn)
+            elseif @usepixel==2
+              gc1c = gcentre + flip(gmagn)
+            elseif @usepixel==3
+              gc2c = gcentre + flip(gmagn)
+            elseif @usepixel==4
+              gc3c = gcentre + flip(gmagn)
+            elseif @usepixel==5
+              gc4c = gcentre + flip(gmagn)
+            elseif @usepixel==6
+              gc5c = gcentre + flip(gmagn)
+            elseif @usepixel==7
+              gc6c = gcentre + flip(gmagn)
+            endif
+          elseif @usevalue==1
+            gcc = gcentre + flip(gmagn)
+          elseif @usevalue==2
+            gc1c = gcentre + flip(gmagn)
+          elseif @usevalue==3
+            gc2c = gcentre + flip(gmagn)
+          elseif @usevalue==4
+            gc3c = gcentre + flip(gmagn)
+          elseif @usevalue==5
+            gc4c = gcentre + flip(gmagn)
+          elseif @usevalue==6
+            gc5c = gcentre + flip(gmagn)
+          elseif @usevalue==7
+            gc6c = gcentre + flip(gmagn)
+          endif
+        elseif gss==6
+          if gi3>2
+            gmagn = gmagn*0.5
+          else
+            gmagn = gmagn*0.875
+          endif
+          if gmagn<1e-100
+            gf = true
+          elseif gs == 0
+            if @usepixel == 0
+              gzc = -gmagn-flip(gmagn)+gcentre
+            else
+              gzc = gz
+              if @usepixel == 1
+                gcc = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 2
+                gc1c = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 3
+                gc2c = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 4
+                gc3c = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 5
+                gc4c = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 6
+                gc5c = -gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 7
+                gc6c = -gmagn-flip(gmagn)+gcentre
+              endif
+            endif
+          elseif @usevalue == 0
+            gzc = -gmagn-flip(gmagn)+gcentre
+          else
+            gzc = gz
+            if @usevalue == 1
+              gcc = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 2
+              gc1c = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 3
+              gc2c = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 4
+              gc3c = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 5
+              gc4c = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 6
+              gc5c = -gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 7
+              gc6c = -gmagn-flip(gmagn)+gcentre
+            endif
+          endif
+        elseif gss==7
+          if gs == 0
+            if @usepixel == 0
+              gzc = gmagn-flip(gmagn)+gcentre
+            else
+              gzc = gz
+              if @usepixel == 1
+                gcc = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 2
+                gc1c = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 3
+                gc2c = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 4
+                gc3c = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 5
+                gc4c = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 6
+                gc5c = gmagn-flip(gmagn)+gcentre
+              elseif @usepixel == 7
+                gc6c = gmagn-flip(gmagn)+gcentre
+              endif
+            endif
+          elseif @usevalue == 0
+            gzc = gmagn-flip(gmagn)+gcentre
+          else
+            gzc = gz
+            if @usevalue == 1
+              gcc = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 2
+              gc1c = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 3
+              gc2c = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 4
+              gc3c = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 5
+              gc4c = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 6
+              gc5c = gmagn-flip(gmagn)+gcentre
+            elseif @usevalue == 7
+              gc6c = gmagn-flip(gmagn)+gcentre
+            endif
+          endif
+        elseif gs == 0
+          if @usepixel == 0
+            gzc = -gmagn+flip(gmagn)+gcentre
+          else
+            gzc = gz
+            if @usepixel == 1
+              gcc = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 2
+              gc1c = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 3
+              gc2c = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 4
+              gc3c = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 5
+              gc4c = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 6
+              gc5c = -gmagn+flip(gmagn)+gcentre
+            elseif @usepixel == 7
+              gc6c = -gmagn+flip(gmagn)+gcentre
+            endif
+          endif
+        elseif @usevalue == 0
+          gzc = -gmagn+flip(gmagn)+gcentre
+        else
+          gzc = gz
+          if @usevalue == 1
+            gcc = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 2
+            gc1c = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 3
+            gc2c = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 4
+            gc3c = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 5
+            gc4c = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 6
+            gc5c = -gmagn+flip(gmagn)+gcentre
+          elseif @usevalue == 7
+            gc6c = -gmagn+flip(gmagn)+gcentre
+          endif
+        endif
+        if !gf
+          gzs = (0,0)
+          gzp = (1,0)
+          gi3 = @searchdepth
+          repeat
+            if @sigma == true
+              gzc=gzc+gzs
+              gzs=gzc
+            endif
+            if |gzc|>0 && @product == true
+              gzc = gzc*gzp
+              gzp = gzc
+            endif
+            if @selfrot
+              gt = cabs(gzc)
+              if gt > 0
+                gzc = gzc*gzc/gt
+              endif
+            endif
+            gx = real(gzc)
+            gy = imag(gzc)
+            gt = gx
+            gx = gx*r0c0 + gy*r1c0
+            gy = gt*r0c1 + gy*r1c1
+            gzc = gx + flip(gy) + @t
+            gzc = (gc5c*(gc6c*(gc2c*gzc^gp+gc3c)^gp1 + gcc)^gp2 - gc1c)*gc4c
+            if @fixfn
+              gzc = @fn1(gzc)
+            endif
+            if @flip
+              gzc = flip(gzc)
+            endif
+            gm3 = |gzc|
+            gi3 = gi3 - 1
+          until gi3==0 || gm3>=gb
+          if gss==0 || gss==3
+            gi1 =  gi3
+            gm1 = gm3
+            gss=gss + 1
+          elseif gss==1 || gss==4
+            gi2 = gi3
+            gm2 = gm3
+            gss = gss + 1
+            goff = gmagn*0.5
+            gib = @searchdepth
+            gbs = 32
+          elseif gss==2
+            if (gi1<gi3 && gi2<gi3) || (gi1>gi3 && gi2>gi3)
+              if gi2<=gi1
+                gcentre = gcentre + goff
+                gi1 = gi3
+                gm1 = gm3
+              else
+                gcentre = gcentre - goff
+                gi2 = gi3
+                gm2 = gm3
+              endif
+            elseif gi2<gi3 || gi1>gi3
+              gcentre = gcentre + goff
+              gi1 = gi3
+              gm1 = gm3
+            elseif gi1<gi3 || gi2>gi3
+              gcentre = gcentre - goff
+              gi2 = gi3
+              gm2 = gm3
+            elseif (gm1<gm3 && gm2<gm3) || (gm1>gm3 && gm2>gm3)
+              if gm2<=gm1
+                gcentre = gcentre + goff
+                gi1 = gi3
+                gm1 = gm3
+              else
+                gcentre = gcentre - goff
+                gi2 = gi3
+                gm2 = gm3
+              endif
+            elseif gm2<=gm3 || gm1>gm3
+              gcentre = gcentre + goff
+              gi1 = gi3
+              gm1 = gm3
+            elseif gm1<=gm3 || gm2>gm3
+              gcentre = gcentre - goff
+              gi2 = gi3
+              gm2 = gm3
+            endif
+            goff = goff*0.5
+            if gi3<gib || (gib==gi3 && gm3<gmb)
+              gib = gi3
+              gmb = gm3
+              gcentreb = gcentre
+            endif
+            gbs = gbs - 1
+            if gbs==0
+              if gib<gi3 || (gib==gi3 && gmb<gm3)
+                gcentre = gcentreb
+              endif
+              if @searchimag
+                gss = 3
+              else
+                gss = 6
+              endif
+            endif
+          elseif gss == 5
+            if (gi1<gi3 && gi2<gi3) || (gi1>gi3 && gi2>gi3)
+              if gi2<=gi1
+                gcentre = gcentre + flip(goff)
+                gi1 = gi3
+                gm1 = gm3
+              else
+                gcentre = gcentre - flip(goff)
+                gi2 = gi3
+                gm2 = gm3
+              endif
+            elseif gi2<gi3 || gi1>gi3
+              gcentre = gcentre + flip(goff)
+              gi1 = gi3
+              gm1 = gm3
+            elseif gi1<gi3 || gi2>gi3
+              gcentre = gcentre - flip(goff)
+              gi2 = gi3
+              gm2 = gm3
+            elseif (gm1<gm3 && gm2<gm3) || (gm1>gm3 && gm2>gm3)
+              if gm2<=gm1
+                gcentre = gcentre + flip(goff)
+                gi1 = gi3
+                gm1 = gm3
+              else
+                gcentre = gcentre - flip(goff)
+                gi2 = gi3
+                gm2 = gm3
+              endif
+            elseif gm2<=gm3 || gm1>gm3
+              gcentre = gcentre + flip(goff)
+              gi1 = gi3
+              gm1 = gm3
+            elseif gm1<=gm3 || gm2>gm3
+              gcentre = gcentre - flip(goff)
+              gi2 = gi3
+              gm2 = gm3
+            endif
+            goff = goff*0.5
+            if gi3<gib || (gib==gi3 && gm3<gmb)
+              gib = gi3
+              gmb = gm3
+              gcentreb = gcentre
+            endif
+            gbs = gbs - 1
+            if gbs==0
+              if gib<gi3 || (gib==gi3 && gmb<gm3)
+                gcentre = gcentreb
+              endif
+              gss = 6
+            endif
+          elseif gm3<gb        ; if doesn't bail out
+            if gss==8           ; if all 3 don't bail
+              gf = true         ; then found
+            else
+              gss = gss + 1
+            endif
+          else
+            gss = 0
+            if (gs==0 && @usepixel==0) || (gs==1 && @usevalue==0) \
+                || (!@searchimag && !@searchreal)
+              gss = 6
+            elseif !@searchreal
+              gss = 3
+            endif
+          endif
+        endif
+      until gf
+      if gmagn<1e-100
+        print("Search failed - no fractal found.")
+        print("Try larger or smaller 'Start scale'.")
+        gmagn = 1.0
+        gcentre = (0,0)
+        gs = 0
+      else
+        gmagn = gmagn*2
+        if gs == 1
+          gv = gv*gmagn + gcentre
+          gcentreo = gcentre
+          gmagno = gmagn
+        elseif @search==1
+          print("Try magnification/scale ",1/gmagn)
+          print("With centre/offset ",gcentre)
+        elseif @autooff
+          if @usevalue<6
+            print("To switch off semi-auto")
+            print("keeping the current fractal:")
+            print(" 1. Change Search to 'None'")
+            print(" 2. Replace the parameter")
+            print("    below with the given value")
+            if @usevalue == 0
+              print(" Zstart = ",gv)
+            elseif @usevalue == 1
+              print(" Const c = ",gv)
+            elseif @usevalue == 2
+              print(" Const c1 = ",gv)
+            elseif @usevalue == 3
+              print(" Const c2 = ",gv)
+            elseif @usevalue == 4
+              print(" Const c3 = ",gv)
+            elseif @usevalue == 5
+              print(" Const c4 = ",gv)
+            elseif @usevalue == 6
+              print(" Const c5 = ",gv)
+            elseif @usevalue == 7
+              print(" Const c6 = ",gv)
+            elseif @usevalue == 8
+              print(" Power p = ",gv)
+            elseif @usevalue == 9
+              print(" Power p1 = ",gv)
+            elseif @usevalue == 10
+              print(" Power p2 = ",gv)
+            endif
+            print(" 3. Change ''Value' replaces'")
+            print("    to Unused.")
+            print(" 4. Change your fractal location")
+            print("    settings as follows:")
+          else
+            print("To switch off semi-auto")
+            print("keeping the current fractal:")
+            print(" 1. Change search to 'None'")
+            print(" 2. Change your fractal location")
+            print("    settings as follows:")
+          endif
+          print(" Center = ",#center*gmagn+gcentre)
+          print(" Magnification = ",#magn/gmagn)
+        endif
+      endif
+      gs = gs - 1
+    until gs<0
+  endif
+
+init:
+  complex px = #pixel
+
+  if @search == 2 && @usevalue!=@usepixel && @usepixel<8
+    px = px*gmagn + gcentre
+  endif
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @zstart
+  complex cc = @c
+  complex cc1 = @c1
+  complex cc2 = @c2
+  complex cc3 = @c3
+  complex cc4 = @c4
+  complex cc5 = @c5
+  complex cc6 = @c6
+  complex p = @power
+  complex pp = @power1
+  complex pq = @power2
+
+  if @search == 2 && @usevalue!=@usepixel && @usepixel<6
+    if @usevalue == 0
+      z = @value*gmagno + gcentreo
+    elseif @usevalue == 1
+      cc = @value*gmagno + gcentreo
+    elseif @usevalue == 2
+      cc1 = @value*gmagno + gcentreo
+    elseif @usevalue == 3
+      cc2 = @value*gmagno + gcentreo
+    elseif @usevalue == 4
+      cc3 = @value*gmagno + gcentreo
+    elseif @usevalue == 5
+      cc4 = @value*gmagno + gcentreo
+    elseif @usevalue == 6
+      cc5 = @value*gmagno + gcentreo
+    elseif @usevalue == 7
+      cc6 = @value*gmagno + gcentreo
+    elseif @usevalue == 8
+      p = @value
+    elseif @usevalue == 9
+      pp = @value
+    elseif @usevalue == 10
+      pq = @value
+    endif
+  elseif @usevalue == 0
+    z = @value
+  elseif @usevalue == 1
+    cc = @value
+  elseif @usevalue == 2
+    cc1 = @value
+  elseif @usevalue == 3
+    cc2 = @value
+  elseif @usevalue == 4
+    cc3 = @value
+  elseif @usevalue == 5
+    cc4 = @value
+  elseif @usevalue == 6
+    cc5 = @value
+  elseif @usevalue == 7
+    cc6 = @value
+  elseif @usevalue == 8
+    p = @value
+  elseif @usevalue == 9
+    pp = @value
+  elseif @usevalue == 10
+    pq = @value
+  endif
+
+  if @usepixel == 0
+    z = px
+  elseif @usepixel == 1
+    cc = px
+  elseif @usepixel == 2
+    cc1 = px
+  elseif @usepixel == 3
+    cc2 = px
+  elseif @usepixel == 4
+    cc3 = px
+  elseif @usepixel == 5
+    cc4 = px
+  elseif @usepixel == 6
+    cc5 = px
+  elseif @usepixel == 7
+    cc6 = px
+  elseif @usepixel == 8
+    p = px
+  elseif @usepixel == 9
+    pp = px
+  elseif @usepixel == 10
+    pq = px
+  endif
+
+  float t = 0
+  complex zold = z
+  complex zolder = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex zsold = zs
+  complex zpold = zp
+  complex q = zs
+  float mag = 0
+  bool bail = true
+  float x = 0
+  float y = 0
+  int i = 0
+  bool r = true
+
+loop:
+  zsold = zs
+  zpold = zp
+  zolder = zold
+  zold = z
+
+  repeat
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  if @selfrot
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y) + @t
+
+  z = @fn1((cc5*(cc6*(cc2*z^p+cc3)^pp + cc)^pq - cc1)*cc4)
+
+  if @flip
+    z = flip(z)
+  endif
+
+  if r && @smallbail<2
+    mag = |z|
+  endif
+
+  if (@smooth>0) && (mag>@bailout) && (@smallbail<2)
+    if r
+      r = false
+      q = z
+      z = v*zold/cabs(zold)
+      zold = zolder
+      if @sigma == true
+        zs = zsold
+      endif
+      if @product == true
+        zp = zpold
+      endif
+    else
+      r = true
+      x = log(0.5*log(|z|))
+      x = (x-log(0.5*log(|q|)))/(x-log(log(v)))
+      if x<0
+        x = 0
+      elseif x>1.0
+        x = 1.0
+      endif
+      z = x
+      if @smooth>2
+        z = z + flip(atan2(q))
+      endif
+      if @smooth==2 || @smooth==4
+        z = i + z
+      endif
+      bail = false
+    endif
+  endif
+
+  until r
+
+  if (@smallbail<2 && mag>@bailout) || (@smallbail>0 && |z-zold|<@bailout1)
+    bail = false
+  endif
+
+  i = i + 1
+
+bailout:
+  bail == true
+
+default:
+  title = "The Magic Formula"
+  method = multipass
+  periodicity = 0
+  center = (0, 0)
+  magn = 1.0
+  heading
+    caption = "Main Values"
+  endheading
+  param search
+    caption = "Search"
+    enum = "None" "Manual" "Semi-auto"
+    default = 2
+    hint = "Enabling this helps you view at the correct scale."
+  endparam
+  param searchdepth
+    caption = "Search depth"
+    default = 12
+    min = 3
+    hint = "Searches for areas with iteration values greater than the given value."
+    visible = @search>0
+  endparam
+  param startscale
+    caption = "Start scale"
+    default = 1e20
+    hint = "Defines the starting scale for searches, use smaller values \
+            if the fractal is small, large values if large. If no fractal \
+            is being found then try adjusting this (making it much larger or \
+            much smaller)."
+    visible = @search>0
+  endparam
+  param searchreal
+    caption = "Search real"
+    default = true
+    hint = "When enabled the search will check locations \
+            in the +/- real (x) directions."
+    visible = @search>0
+  endparam
+  param searchimag
+    caption = "Search imag"
+    default = false
+    hint = "When enabled the search will check locations \
+            in the +/- imag (y) directions."
+    visible = @search>0
+  endparam
+  param autooff
+    caption = "Auto off ?"
+    default = false
+    hint = "Enabling this will result in compiler messages telling you \
+            how to keep your current fractal but with semi-auto search \
+            mode switched off. Note that sometimes you may need to click \
+            on the reload button in the main formula section to get UF to \
+            print out the compiler message."
+    visible = @search==2
+  endparam
+  param value
+    caption = "Current value"
+    default = (0,0)
+  endparam
+  param zstart
+    caption = "Start value of z"
+    default = (0,0)
+  endparam
+  param c
+    caption = "Const c"
+    default = (4,0)
+    hint = "Constant c in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c1
+    caption = "Const c1"
+    default = (1,0)
+    hint = "Constant c1 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c2
+    caption = "Const c2"
+    default = (2,0)
+    hint = "Constant c2 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c3
+    caption = "Const c3"
+    default = (1,0)
+    hint = "Constant c3 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c4
+    caption = "Const c4"
+    default = (0.5,0)
+    hint = "Constant c4 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c5
+    caption = "Const c5"
+    default = (1,0)
+    hint = "Constant c5 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param c6
+    caption = "Const c6"
+    default = (1,0)
+    hint = "Constant c4 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4."
+  endparam
+  param power
+    caption = "Power p"
+    default = (2,0)
+    hint = "Power p in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4. \
+            When using a colouring requiring a smoothing power the \
+            value to use will be around p*p1*p2."
+  endparam
+  param power1
+    caption = "Power p1"
+    default = (2,0)
+    hint = "Power p1 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4. \
+            When using a colouring requiring a smoothing power the \
+            value to use will be around p*p1*p2."
+  endparam
+  param power2
+    caption = "Power p2"
+    default = (0.5,0)
+    hint = "Power p2 in (c5*(c6*(c2*z^p+c3)^p1 + c)^p2 - c1)*c4. \
+            When using a colouring requiring a smoothing power the \
+            value to use will be around p*p1*p2."
+  endparam
+  heading
+    caption = "Current mapping"
+  endheading
+  param showmap
+    caption = "Show mapping"
+    default = true
+  endparam
+  param usevalue
+    caption = "'Value' replaces"
+    enum = "Zstart" "Constant c" "Constant c1" "Constant c2" "Constant c3" "Constant c4" \
+           "Constant c5" "Constant c6" "Power p" "Power p1" "Power p2" "Unused (ie. nothing)"
+    default = 11
+    hint = "Shows the parameter currently being \
+            replaced by the 'Value' parameter. If you want \
+            to switch using a different parameter then you \
+            should first copy the current 'Value' into this \
+            parameter. This entry isn't really meant to be \
+            modified directly."
+    visible = @showmap
+  endparam
+  param usepixel
+    caption = "#pixel replaces"
+    enum = "Zstart" "Constant c" "Constant c1" "Constant c2" "Constant c3" "Constant c4" \
+           "Constant c5" "Constant c6" "Power p" "Power p1" "Power p2" "Unused (ie. nothing)"
+    default = 1
+    hint = "Shows the parameter currently being replaced by the \
+            value of #pixel. This entry isn't really meant to \
+            be modified directly."
+    visible = @showmap
+  endparam
+  param usecentre
+    caption = "Current centre (offset)"
+    default = (0,0)
+    hint = "This value is currently being applied to adjust \
+            the location of your fractal. If the value is not \
+            (0,0) then it's good practice to change it back to \
+            (0,0) and use UF's inbuilt centre/zoom to correct \
+            the location afterwards. (The value is copied from \
+            'Switch centre' each time you switch)"
+    visible = @showmap
+  endparam
+  param usescale
+    caption = "Current scale"
+    default = 1.0
+    hint = "This value is currently being applied to adjust \
+            the scale (magnification) of your fractal. If the \
+            value is not 1.0 then it's good practice to change \
+            it back to 1.0 and use UF's inbuilt centre/zoom to \
+            correct the magnification afterwards. (The value is \
+            copied from 'Switch scale' each time you switch)"
+    visible = @showmap
+  endparam
+  heading
+    caption = "Switch mapping"
+    visible = @showmap
+  endheading
+  param swvalue
+    caption = "Switch value"
+    enum = "Zstart" "Constant c" "Constant c1" "Constant c2" "Constant c3" "Constant c4" \
+           "Constant c5" "Constant c6" "Power p" "Power p1" "Power p2" "Unused (ie. nothing)"
+    default = 1
+    hint = "Sets which parameter is used for switching. This \
+            means that AFTER switching the value of 'Value' will \
+            be replacing this parameter."
+    visible = @showmap
+  endparam
+  param swpixel
+    caption = "Switch #pixel"
+    enum = "Zstart" "Constant c" "Constant c1" "Constant c2" "Constant c3" "Constant c4" \
+           "Constant c5" "Constant c6" "Power p" "Power p1" "Power p2" "Unused (ie. nothing)"
+    default = 0
+    hint = "Sets which parameter is to be replaced by #pixel \
+            AFTER switching."
+    visible = @showmap
+  endparam
+  param swcentre
+    caption = "Switch centre"
+    default = (0,0)
+    hint = "Use this to adjust the location of the switch \
+            preview and switched images. Note that the value \
+            is used as 'Current centre' after switching and \
+            you should then really reset 'Current centre' to \
+            (0,0) and adjust the location using UF's inbuilt \
+            centre/zoom."
+    visible = @showmap
+  endparam
+  param swscale
+    caption = "Switch scale"
+    default = 1.0
+    hint = "Use this to adjust the scale (magnification) of \
+            the switch preview and switched images. Note that \
+            the value is used as 'Current scale' after \
+            switching and you should then really reset \
+            'Current scale' to 1.0 and adjust the magnification \
+            using UF's inbuilt centre/zoom."
+    visible = @showmap
+  endparam
+  heading
+    caption = "Modifiers"
+  endheading
+  param showmod
+    caption = "Show modifiers"
+    default = true
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+    visible = @showmod
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+    visible = @showmod
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = false
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration."
+    visible = @showmod
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration."
+    visible = @showmod
+  endparam
+  param t
+    caption = "Translation"
+    default = (0,0)
+    hint = "Translates (moves) the value of z \
+            on each iteration."
+    visible = @showmod
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  func fn1
+    caption = "Final function"
+    default = ident()
+    hint = "Applied to the z value prior to bailout (and flip)."
+  endfunc
+  param fixfn
+    caption = "Fix function search"
+    default = false
+    hint = "Enable this to fix a problem with the search when using a function \
+            other than 'ident'."
+  endparam
+  param flip
+    caption = "Final flip"
+    default = false
+    hint = "Flips the z value prior to bailout testing."
+    visible = @showmod
+  endparam
+  heading
+    caption = "Bailout control"
+  endheading
+  param smallbail
+    caption = "Convergence"
+    enum = "divergent" "div+conv" "convergent"
+    default = 0
+    hint = "Allows you to set the bailout condition."
+  endparam
+  param bailout
+    caption = "Divergent test value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore, for some settings you may need \
+            to reduce this to avoid numbers becoming NAN (not-a-number)."
+  endparam
+  param bailout1
+    caption = "Convergent test value"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  heading
+    caption = "Earl Hinrich's smoothing"
+    visible = @smallbail<2
+  endheading
+  param smooth
+    caption = "Final z value"
+    enum = "Off" "Fraction" "Frac+Iter" "Frac+Atan" "Frac+Atan+Iter"
+    default = 0
+    hint = "Enables Earl Hinrich's smoothing method, can be \
+            used with some MMF colourings (where it's referred \
+            to as 'final z' colouring). Use the '+iter' methods \
+            with a colouring that uses the z value directly such \
+            as lkm3-Basic 3."
+    visible = @smallbail<2
+  endparam
+
+switch:
+  type = "MMF3d-Magic"
+  search = search
+  searchdepth = searchdepth
+  startscale = startscale
+  searchreal = searchreal
+  searchimag = searchimag
+  autooff = autooff
+  value = #pixel
+  zstart = zstart
+  c = c
+  c1 = c1
+  c2 = c2
+  c3 = c3
+  c4 = c4
+  c5 = c5
+  c6 = c6
+  power = power
+  power1 = power1
+  power2 = power2
+  showmap = showmap
+  usevalue = swvalue
+  usepixel = swpixel
+  usecentre = swcentre
+  usescale = swscale
+  swvalue = swvalue
+  swpixel = swpixel
+  swcentre = usecentre
+  swscale = usescale
+  showmod = showmod
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  ang = ang
+  t = t
+  m = m
+  n = n
+  fn1 = fn1
+  fixfn = fixfn
+  flip = flip
+  smallbail = smallbail
+  bailout = bailout
+  bailout1 = bailout1
+  smooth = smooth
+}
+
+MMF3c-Morph {
+;
+; Morph lets you select two formulas F(z) and G(z) and as
+; the iteration progresses the formula actually used morphs
+; from F(z) towards G(z).
+;
+; This formula features a new version of extended switching
+; that allows full control over which parameter is used for
+; the switch and which parameter is replaced by the value of
+; #pixel after switching. Although this requires the
+; modification of two parameters where my previous method
+; only used one, I think this way is less confusing.
+; As with the previous version the switch value "Value" should
+; be copied into the parameter it replaces before switching
+; using a different parameter.
+;
+; Created 20th November 2004
+;
+; Extra morphing options added 26th August 2007
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+global:
+  float morph = @morph/100.0
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(@m)*ca-real(@n)*sa
+  float r0c1 = real(@m)*sa+real(@n)*ca
+  float r1c0 = imag(@m)*ca-imag(@n)*sa
+  float r1c1 = imag(@m)*sa+imag(@n)*ca
+
+  complex sum2 = @nr1 + @nr2
+  complex pro2 = @nr1*@nr2
+  complex sum3a = sum2 + @nr3
+  complex sum3b = pro2 + @nr3*sum2
+  complex pro3 = pro2*@nr3
+  complex sum4a = sum3a + @nr4
+  complex sum4b = sum3b + @nr4*sum3a
+  complex sum4c = pro3 + @nr4*sum3b
+  complex pro4 = pro3*@nr4
+  complex sum5a = sum4a + @nr5
+  complex sum5b = sum4b + @nr5*sum4a
+  complex sum5c = sum4c + @nr5*sum4b
+  complex sum5d = pro4 + @nr5*sum4c
+  complex pro5 = pro4*@nr5
+  complex sum6a = sum5a + @nr6
+  complex sum6b = sum5b + @nr6*sum5a
+  complex sum6c = sum5c + @nr6*sum5b
+  complex sum6d = sum5d + @nr6*sum5c
+  complex sum6e = pro5 + @nr6*sum5d
+
+  complex s2um2 = @n2r1 + @n2r2
+  complex p2ro2 = @n2r1*@n2r2
+  complex s2um3a = s2um2 + @n2r3
+  complex s2um3b = p2ro2 + @n2r3*s2um2
+  complex p2ro3 = p2ro2*@n2r3
+  complex s2um4a = s2um3a + @n2r4
+  complex s2um4b = s2um3b + @n2r4*s2um3a
+  complex s2um4c = p2ro3 + @n2r4*s2um3b
+  complex p2ro4 = p2ro3*@n2r4
+  complex s2um5a = s2um4a + @n2r5
+  complex s2um5b = s2um4b + @n2r5*s2um4a
+  complex s2um5c = s2um4c + @n2r5*s2um4b
+  complex s2um5d = p2ro4 + @n2r5*s2um4c
+  complex p2ro5 = p2ro4*@n2r5
+  complex s2um6a = s2um5a + @n2r6
+  complex s2um6b = s2um5b + @n2r6*s2um5a
+  complex s2um6c = s2um5c + @n2r6*s2um5b
+  complex s2um6d = s2um5d + @n2r6*s2um5c
+  complex s2um6e = p2ro5 + @n2r6*s2um5d
+
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex z = @zstart
+  complex c = @c
+  complex p = @power
+  complex q = @power1
+
+  if @usevalue == 0
+    z = @value
+  elseif @usevalue == 1
+    c = @value
+  elseif @usevalue == 2
+    p = @value
+  elseif @usevalue == 3
+    q = @value
+  endif
+
+  if @usepixel == 0
+    z = px
+  elseif @usepixel == 1
+    c = px
+  elseif @usepixel == 2
+    p = px
+  elseif @usepixel == 3
+    q = px
+  endif
+
+  float t = 0
+  complex zold = z
+  complex zo = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex t1 = z
+  complex z1 = z
+  bool bail = true
+  float x = 0
+  float y = 0
+  int i = 0
+  float pwr = 1.0
+  float fac =  1.0
+  float pwr1 = 1.0
+  float fac1 = 1.0
+
+loop:
+  zo = zold
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  if @selfrot
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+  endif
+
+  z = @fn2(z)
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y) + @t
+
+  t1 = z
+
+  if @fractal == 0
+    z = z^p + c
+  elseif @fractal == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal == 3
+    z=@Fn(z)+c
+  elseif @fractal == 4
+    z=1/@Fn(z)+c
+  elseif @fractal == 5
+    z=z*@Fn(z)+c
+  elseif @fractal == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal == 11
+    z=c*@Fn(z)
+  elseif @fractal == 12
+    z=@Fn(z)+z+c
+  elseif @fractal == 13
+    z=c*@Fn(z)+z
+  elseif @fractal == 14
+    z = c*(1-z)*z^(p-1)
+  elseif @fractal == 15
+    z = (1-z)*z^(p-1) + c
+  elseif @fractal == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal == 22
+    z = z^(i+1) + c
+  elseif @fractal == 23 && @ndegree==0
+    z = z - (z-@nr1)*(z-@nr2)/(2*z-sum2) + c
+  elseif @fractal == 23 && @ndegree==1
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)/(3*z^2 - 2*sum3a*z + sum3b) + c
+  elseif @fractal == 23 && @ndegree==2
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)/(4*z^3 - 3*sum4a*z^2 + 2*sum4b*z - sum4c) + c
+  elseif @fractal == 23 && @ndegree==3
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5) \
+            /(5*z^4 - 4*sum5a*z^3 + 3*sum5b*z^2 - 2*sum5c*z + sum5d) + c
+  elseif @fractal == 23 && @ndegree==4
+    z = z - (z-@nr1)*(z-@nr2)*(z-@nr3)*(z-@nr4)*(z-@nr5)*(z-@nr6) \
+            /(6*z^5 - 5*sum6a*z^4 + 4*sum6b*z^3 - 3*sum6c*z^2 + 2*sum6d*z - sum6e) + c
+  elseif @fractal == 24
+    z = z^p + zo + c
+  elseif @fractal == 25
+    z = zo*z^p + c
+  elseif @fractal == 26
+    z = @fn1(p*@fn(z)) + c
+  elseif @fractal == 27
+    F = @fn(z)
+    z = @fn1((1+p)*F)/@fn3(F) + c
+  elseif @fractal == 28
+    z = fac*z^pwr + c
+    pwr=pwr+1
+    fac=fac/pwr
+  endif
+
+  z1=z
+  z=t1
+
+  if @fractal1 == 0
+    z = z^q + c
+  elseif @fractal1 == 1
+    z = ((z^2+c-1)/(2*z+c-2))^2
+  elseif @fractal1 == 2
+    z = ((z^3+3*(c-1)*z+(c-1)*(c-2))/(3*z^2+3*(c-2)*z+(c-1)*(c-2)+1))^2
+  elseif @fractal1 == 3
+    z=@Fn(z)+c
+  elseif @fractal1 == 4
+    z=1/@Fn(z)+c
+  elseif @fractal1 == 5
+    z=z*@Fn(z)+c
+  elseif @fractal1 == 6
+    z=(@Fn(z)-c)/z
+  elseif @fractal1 == 7
+    z=z/(@Fn(z)-c)
+  elseif @fractal1 == 8
+    z=z*@Fn(z)+z+c
+  elseif @fractal1 == 9
+    z=@Fn(z)+z*z+c
+  elseif @fractal1 == 10
+    z=z*(@Fn(z)+z)+c
+  elseif @fractal1 == 11
+    z=c*@Fn(z)
+  elseif @fractal1 == 12
+    z=@Fn(z)+z+c
+  elseif @fractal1 == 13
+    z=c*@Fn(z)+z
+  elseif @fractal1 == 14
+    z = c*(1-z)*z^(q-1)
+  elseif @fractal1 == 15
+    z = (1-z)*z^(q-1) + c
+  elseif @fractal1 == 16
+    z = @fn1(c*@fn(z))
+  elseif @fractal1 == 17
+    z = @fn1(z*@fn(c))
+  elseif @fractal1 == 18
+    if x >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 19
+    if x*imag(c)+real(c)*y >= 0
+      z = (z-1)*c
+    else
+      z = (z+1)*c
+    endif
+  elseif @fractal1 == 20
+    F = @fn(z)
+    z = @fn1(c*F)/@fn1(F)
+  elseif @fractal1 == 21
+    F = @fn(c)
+    z = @fn1(z*F)/@fn1(F)
+  elseif @fractal1 == 22
+    z = z^(i+1) + c
+  elseif @fractal1 == 23 && @ndegree1==0
+    z = z - (z-@n2r1)*(z-@n2r2)/(2*z-s2um2) + c
+  elseif @fractal1 == 23 && @ndegree1==1
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)/(3*z^2 - 2*s2um3a*z + s2um3b) + c
+  elseif @fractal1 == 23 && @ndegree1==2
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)/(4*z^3 - 3*s2um4a*z^2 + 2*s2um4b*z - s2um4c) + c
+  elseif @fractal1 == 23 && @ndegree1==3
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5) \
+            /(5*z^4 - 4*s2um5a*z^3 + 3*s2um5b*z^2 - 2*s2um5c*z + s2um5d) + c
+  elseif @fractal1 == 23 && @ndegree1==4
+    z = z - (z-@n2r1)*(z-@n2r2)*(z-@n2r3)*(z-@n2r4)*(z-@n2r5)*(z-@n2r6) \
+            /(6*z^5 - 5*s2um6a*z^4 + 4*s2um6b*z^3 - 3*s2um6c*z^2 + 2*s2um6d*z - s2um6e) + c
+  elseif @fractal1 == 24
+    z = z^q + zo + c
+  elseif @fractal1 == 25
+    z = zo*z^q + c
+  elseif @fractal1 == 26
+    z = @fn1(q*@fn(z)) + c
+  elseif @fractal1 == 27
+    F = @fn(z)
+    z = @fn1((1+q)*F)/@fn3(F) + c
+  elseif @fractal1 == 28
+    z = fac1*z^pwr1 + c
+    pwr1=pwr1+1
+    fac1=fac1/pwr1
+  endif
+
+  if @flavour == 1 || @flavour==3
+    if @flavour==1
+      t = morph^i
+    else
+      t = 2.0*(i%@mod)/@mod
+      if (t>1.0)
+        t = 2.0-t
+      endif
+    endif
+    if @rev
+      z = @fn4(t*z+(1-t)*z1)
+    else
+      z = @fn4(t*z1+(1-t)*z)
+    endif
+    i = i+1
+  else
+    i = i+1
+    if @flavour == 0
+      t = i
+    else
+      t = i^morph
+    endif
+    if @rev
+      z = @fn4(z/t + (t-1)*z1/t)
+    else
+      z = @fn4(z1/t + (t-1)*z/t)
+    endif
+  endif
+
+  if @smallbail < 2 && |z| > @bailout
+    bail = false
+  elseif @smallbail > 0 && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail == true
+
+default:
+  title = "Morph"
+  method = multipass
+  periodicity = 0
+  center = (0, 0)
+  magn = 1.0
+  helpfile = "MMF.html"
+  heading
+    caption = "Bailout control"
+  endheading
+  param smallbail
+    caption = "Convergence"
+    enum = "divergent" "both" "convergent"
+    default = 0
+    hint = "Allows you to set the bailout condition."
+  endparam
+  param bailout
+    caption = "Divergent test value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param bailout1
+    caption = "Convergent test value"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  heading
+    caption = "Current mapping"
+  endheading
+  param showmap
+    caption = "Show mapping"
+    default = true
+  endparam
+  param usevalue
+    caption = "'Value' replaces"
+    enum = "Zstart" "Constant" "F(z) Power p" "G(z) Power q"
+    default = 0
+    hint = "Shows the parameter currently being \
+            replaced by the 'Value' parameter. If you want \
+            to switch using a different parameter then you \
+            should first copy the current 'Value' into this \
+            parameter. This entry isn't really meant to be \
+            modified directly."
+    visible = @showmap
+  endparam
+  param usepixel
+    caption = "#pixel replaces"
+    enum = "Zstart" "Constant" "F(z) Power p" "G(z) Power q"
+    default = 1
+    hint = "Shows the parameter currently being replaced by the \
+            value of #pixel. This entry isn't really meant to \
+            be modified directly."
+    visible = @showmap
+  endparam
+  param usecentre
+    caption = "Current centre (offset)"
+    default = (0,0)
+    hint = "This value is currently being applied to adjust \
+            the location of your fractal. If the value is not \
+            (0,0) then it's good practice to change it back to \
+            (0,0) and use UF's inbuilt centre/zoom to correct \
+            the location afterwards. (The value is copied from \
+            'Switch centre' each time you switch)"
+    visible = @showmap
+  endparam
+  param usescale
+    caption = "Current scale"
+    default = 1.0
+    hint = "This value is currently being applied to adjust \
+            the scale (magnification) of your fractal. If the \
+            value is not 1.0 then it's good practice to change \
+            it back to 1.0 and use UF's inbuilt centre/zoom to \
+            correct the magnification afterwards. (The value is \
+            copied from 'Switch scale' each time you switch)"
+    visible = @showmap
+  endparam
+  heading
+    caption = "Switch mapping"
+    visible = @showmap
+  endheading
+  param swvalue
+    caption = "Switch value"
+    enum = "Zstart" "Constant" "F(z) Power p" "G(z) Power q"
+    default = 1
+    hint = "Sets which parameter is used for switching. This \
+            means that AFTER switching the value of 'Value' will \
+            be replacing this parameter. Note that not all formulas \
+            use the power parameters."
+    visible = @showmap
+  endparam
+  param swpixel
+    caption = "Switch #pixel"
+    enum = "Zstart" "Constant" "F(z) Power p" "G(z) Power q"
+    default = 0
+    hint = "Sets which parameter is to be replaced by #pixel \
+            AFTER switching. Note that not all formulas use the \
+            power parameters."
+    visible = @showmap
+  endparam
+  param swcentre
+    caption = "Switch centre"
+    default = (0,0)
+    hint = "Use this to adjust the location of the switch \
+            preview and switched images. Note that the value \
+            is used as 'Current centre' after switching and \
+            you should then really reset 'Current centre' to \
+            (0,0) and adjust the location using UF's inbuilt \
+            centre/zoom."
+    visible = @showmap
+  endparam
+  param swscale
+    caption = "Switch scale"
+    default = 1.0
+    hint = "Use this to adjust the scale (magnification) of \
+            the switch preview and switched images. Note that \
+            the value is used as 'Current scale' after \
+            switching and you should then really reset \
+            'Current scale' to 1.0 and adjust the magnification \
+            using UF's inbuilt centre/zoom."
+    visible = @showmap
+  endparam
+  heading
+    caption = "Modifiers"
+  endheading
+  param showmod
+    caption = "Show modifiers"
+    default = true
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+    visible = @showmod
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+    visible = @showmod
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = false
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration."
+    visible = @showmod
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration."
+    visible = @showmod
+  endparam
+  param t
+    caption = "Translation"
+    default = (0,0)
+    hint = "Translates (moves) the value of z \
+            on each iteration."
+    visible = @showmod
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  func Fn
+    caption = "Fn (all Fn types)"
+    default = acos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'acos' with the Chebyshev types for the \
+            standard Chebyshev polynomials."
+  endfunc
+  func Fn1
+    caption = "Fn1 (Chebyshevs)"
+    default = cos()
+    hint = "Some settings will only produce convergence, \
+            or require a non-zero start value. \
+            Use 'cos' with 'Cheb' and 'Cheb1' for the type 1 \
+            Chebyshev polynomials, use 'sin' with the \
+            'fn1(a*fn(b))/fn1(fn(b))' types for the type 2 \
+            Chebyshev polynomials."
+  endfunc
+  func Fn2
+    caption = "Fn2 (done first)"
+    default = ident()
+    hint = "Try using Conj or Flip."
+  endfunc
+  func Fn3
+    caption = "Fn3 (Cheb2 (Power))"
+    default = sin()
+    hint = "Only used for the Cheb2 (Power) fractal type. This is \
+            of the form 'Fn1((power+1)*Fn(z))/Fn3(Fn(z)) + c'."
+  endfunc
+  func fn4
+    caption = "Final function"
+    default = ident()
+    hint = "Applied to the z value prior to bailout testing."
+    visible = @showmod
+  endfunc
+  heading
+    caption = "Main Values"
+  endheading
+  param fractal
+    caption = "Formula 1, F(z)"
+    enum = "Standard z^p+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda^p" "Breeder^p" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "Manowar^p" "zold*z^p+c" "Cheb1 power p" \
+            "Cheb2 power p" "Integrate"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 0
+  endparam
+  param fractal1
+    caption = "Formula 2, G(z)"
+    enum = "Standard z^q+c" "Magnet1" "Magnet2" "Fn+c" "1/Fn+c" "z*Fn+c" \
+            "(Fn-c)/z" "z/(Fn-c)" "z*Fn+z+c" "Fn+z^2+c" "z*(Fn+z)+c" \
+            "c*Fn" "Fn+z+c" "c*Fn+z" "Lambda^q" "Breeder^q" \
+            "Cheb fn1(c*fn(z))" "Cheb1 fn1(z*fn(c))" "Barnsley 1" \
+            "Barnsley 2" "fn1(cfn(z))/fn1(fn(z))" "fn1(zfn(c))/fn1(fn(c))" \
+            "z^iter + c" "Nova" "Manowar^q" "zold*z^q+c" "Cheb1 power q" \
+            "Cheb2 power q" "Integrate"
+    hint = "Some settings require convergence testing enabled, also \
+            sometimes a non-zero starting point is necessary for the \
+            Mandelbrot."
+    default = 0
+  endparam
+  param flavour
+    caption = "Flavour"
+    enum = "Linear" "m^iter" "iter^m" "Mod"
+    default = 0
+    hint = "Determines how the formula morphs from F(z) to G(z). \
+            Linear uses 'F(z)/iter+(iter-1)*G(z)/iter'. \
+            m^iter and iter^m use the morphing parameter 'm'. \
+            m^iter uses '(m^iter)*F(z)+(1-m^iter)*G(z)' (starting with iter=0) \
+            iter^m uses 'F(z)/(iter^m)+(iter^m-1)*G(z)/(iter^m)'. Mod uses the \
+            Mod value supplied to decide the mix, if (iter%Mod)/Mod is zero \
+            then all F(z) is used, as (iter%Mod)/Mod approaches 0.5 more of \
+            G(z) is used (0.5==all G(z)), as (iter%Mod)/Mod approaches 1 more \
+            of F(z) is used again."
+  endparam
+  param rev
+    caption = "Reverse F(z) and G(z)"
+    default = false
+    hint = "Provides a quick way of reversing the direction of the \
+            morphing from F(z)->G(z) into G(z)->F(z) or vice-versa."
+  endparam
+  param morph
+    caption = "m (morphing value)"
+    default = 50.0
+    hint = "Controls the rate at which G(z) becomes more dominant. \
+            The useful range is from >0 to <100, \
+            when using m^iter smaller values will tend to G(z) faster. \
+            When using iter^m larger values will tend to G(z) faster."
+    visible = @flavour > 0 && @flavour<3
+  endparam
+  param mod
+    caption = "Mod"
+    default = 100
+    min = 1
+    hint = "Controls how much of F(z) and G(z) are used as iterations \
+            progress, if you set the value to maximum iterations*2 then the \
+            formula will start off as F(z) and morph to G(z) reaching G(z) at \
+            maximum iterations."
+    visible = @flavour==3
+  endparam
+  param value
+    caption = "Current value"
+    default = (0,0)
+  endparam
+  param zstart
+    caption = "Start value of z"
+    default = (0,0)
+  endparam
+  param c
+    caption = "Constant"
+    default = (0,0)
+    hint = "The constant in z^p+c etc."
+  endparam
+  param power
+    caption = "F(z) Power p"
+    default = (2,0)
+    hint = "The power in F(z)."
+    visible = @fractal==0 || @fractal==14 || @fractal==15 \
+              || (@fractal>23 && @fractal<28)
+  endparam
+  param power1
+    caption = "G(z) Power q"
+    default = (4,0)
+    hint = "The power in G(z)."
+    visible = @fractal1==0 || @fractal1==14 || @fractal1==15 \
+              || (@fractal1>23 && @fractal1<28)
+  endparam
+  param ndegree
+    caption = "Nova degree"
+    default = 1
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova formula type and \
+            hence the number of roots used."
+    visible = @fractal==23
+  endparam
+  param nr1
+    caption = "Nova 1st root"
+    default = (1,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+    visible = @fractal==23
+  endparam
+  param nr2
+    caption = "Nova 2nd root"
+    default = (-0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree."
+    visible = @fractal==23
+  endparam
+  param nr3
+    caption = "Nova 3rd root"
+    default = (-0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 3 or more."
+    visible = @fractal==23
+  endparam
+  param nr4
+    caption = "Nova 4th root"
+    default = (-1,0)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 4 or more."
+    visible = @fractal==23
+  endparam
+  param nr5
+    caption = "Nova 5th root"
+    default = (0.5,0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 5 or 6."
+    visible = @fractal==23
+  endparam
+  param nr6
+    caption = "Nova 6th root"
+    default = (0.5,-0.8660254)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree is 6."
+    visible = @fractal==23
+  endparam
+  param ndegree1
+    caption = "Nova degree (#2)"
+    default = 2
+    enum = "2" "3" "4" "5" "6"
+    hint = "Sets the degree used for the Nova (#2) formula type and \
+            hence the number of roots used."
+    visible = @fractal1==23
+  endparam
+  param n2r1
+    caption = "Nova (#2) 1st root"
+    default = (2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+    visible = @fractal1==23
+  endparam
+  param n2r2
+    caption = "Nova (#2) 2nd root"
+    default = (-2,0)
+    hint = "Modify for different Nova fractals, used for all \
+            values of Nova degree (#2)."
+    visible = @fractal1==23
+  endparam
+  param n2r3
+    caption = "Nova (#2) 3rd root"
+    default = (0,2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 3 or more."
+    visible = @fractal1==23
+  endparam
+  param n2r4
+    caption = "Nova (#2) 4th root"
+    default = (0,-2)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 4 or more."
+    visible = @fractal1==23
+  endparam
+  param n2r5
+    caption = "Nova (#2) 5th root"
+    default = (1.5,1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 5 or 6."
+    visible = @fractal1==23
+  endparam
+  param n2r6
+    caption = "Nova (#2) 6th root"
+    default = (-1.5,-1.5)
+    hint = "Modify for different Nova fractals, used when \
+            Nova degree (#2) is 6."
+    visible = @fractal1==23
+  endparam
+
+switch:
+  type = "MMF3c-Morph"
+  smallbail = smallbail
+  bailout = bailout
+  bailout1 = bailout1
+  showmap = showmap
+  usevalue = swvalue
+  usepixel = swpixel
+  usecentre = swcentre
+  usescale = swscale
+  swvalue = swvalue
+  swpixel = swpixel
+  swcentre = usecentre
+  swscale = usescale
+  showmod = showmod
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  ang = ang
+  t = t
+  m = m
+  n = n
+  fn1 = fn1
+  fractal = fractal
+  fractal1 = fractal1
+  flavour = flavour
+  rev = rev
+  morph = morph
+  mod = mod
+  value = #pixel
+  zstart = zstart
+  c = c
+  power = power
+  power1 = power1
+  ndegree = ndegree
+  nr1 = nr1
+  nr2 = nr2
+  nr3 = nr3
+  nr4 = nr4
+  nr5 = nr5
+  nr6 = nr6
+  ndegree1 = ndegree1
+  n2r1 = n2r1
+  n2r2 = n2r2
+  n2r3 = n2r3
+  n2r4 = n2r4
+  n2r5 = n2r5
+  n2r6 = n2r6
+}
+
+MMF3b-NewtRoot {
+;
+; This Newton formula lets you define the roots yourself
+; so you can tailor the image in a very controlled manner.
+;
+; Suggested colourings:
+;
+; dmj-Exponential smoothing (convergent)
+; mt-Newton basins
+; mmf3 formulas
+; and it's worth trying other methods meant for convergent areas.
+;
+; For those interested I worked out the method from:
+;
+; http://mathworld.wolfram.com/LaguerresMethod.html
+;
+; I did try implimenting Laguerre's Method itself but it's so
+; good at root-finding for standard polynomials that no fractals
+; are produced !
+;
+; This formula features a new version of extended switching
+; that allows full control over which parameter is used for
+; the switch and which parameter is replaced by the value of
+; #pixel after switching. Although this requires the
+; modification of two parameters where my previous method
+; only used one, I think this way is less confusing.
+; As with the previous version the switch value "Value" should
+; be copied into the parameter it replaces before switching
+; using a different parameter.
+;
+; Created 12th June 2003
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  complex r1 = @root1
+  complex r2 = @root2
+  complex r3 = @root3
+  complex r4 = @root4
+  complex r5 = @root5
+  complex r6 = @root6
+  complex r7 = @root7
+  complex r8 = @root8
+  complex r9 = @root9
+  complex r10 = @root10
+  complex r11 = @root11
+  complex r12 = @root12
+  complex r13 = @root13
+  complex r14 = @root14
+  complex r15 = @root15
+  complex r16 = @root16
+  complex r17 = @root17
+  complex r18 = @root18
+  complex r19 = @root19
+  complex r20 = @root20
+
+  complex z = @zstart
+
+  if @usevalue == 0
+    z = @value
+  elseif @usevalue == 1
+    r1 = @value
+  elseif @usevalue == 2
+    r2 = @value
+  elseif @usevalue == 3
+    r3 = @value
+  elseif @usevalue == 4
+    r4 = @value
+  elseif @usevalue == 5
+    r5 = @value
+  elseif @usevalue == 6
+    r6 = @value
+  elseif @usevalue == 7
+    r7 = @value
+  elseif @usevalue == 8
+    r8 = @value
+  elseif @usevalue == 9
+    r9 = @value
+  elseif @usevalue == 10
+    r10 = @value
+  elseif @usevalue == 11
+    r11 = @value
+  elseif @usevalue == 12
+    r12 = @value
+  elseif @usevalue == 13
+    r13 = @value
+  elseif @usevalue == 14
+    r14 = @value
+  elseif @usevalue == 15
+    r15 = @value
+  elseif @usevalue == 16
+    r16 = @value
+  elseif @usevalue == 17
+    r17 = @value
+  elseif @usevalue == 18
+    r18 = @value
+  elseif @usevalue == 19
+    r19 = @value
+  elseif @usevalue == 20
+    r20 = @value
+  endif
+
+  if @usepixel == 0
+    z = px
+  elseif @usepixel == 1
+    r1 = px
+  elseif @usepixel == 2
+    r2 = px
+  elseif @usepixel == 3
+    r3 = px
+  elseif @usepixel == 4
+    r4 = px
+  elseif @usepixel == 5
+    r5 = px
+  elseif @usepixel == 6
+    r6 = px
+  elseif @usepixel == 7
+    r7 = px
+  elseif @usepixel == 8
+    r8 = px
+  elseif @usepixel == 9
+    r9 = px
+  elseif @usepixel == 10
+    r10 = px
+  elseif @usepixel == 11
+    r11 = px
+  elseif @usepixel == 12
+    r12 = px
+  elseif @usepixel == 13
+    r13 = px
+  elseif @usepixel == 14
+    r14 = px
+  elseif @usepixel == 15
+    r15 = px
+  elseif @usepixel == 16
+    r16 = px
+  elseif @usepixel == 17
+    r17 = px
+  elseif @usepixel == 18
+    r18 = px
+  elseif @usepixel == 19
+    r19 = px
+  elseif @usepixel == 20
+    r20 = px
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+
+  float t = 0
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(@m)*ca-real(@n)*sa
+  float r0c1 = real(@m)*sa+real(@n)*ca
+  float r1c0 = imag(@m)*ca-imag(@n)*sa
+  float r1c1 = imag(@m)*sa+imag(@n)*ca
+  complex zold = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  complex g = (0,0)
+  bool bail = true
+  bool bailed = false
+
+loop:
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  if @selfrot
+;    z = z * (0,1)^(twodpi*atan2(z))
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y) + @t
+
+  g = 1/(z-r1)+1/(z-r2)
+
+  if @degree>0
+    g = g + 1/(z-r3)
+    if @degree>1
+      g = g + 1/(z-r4)
+      if @degree>2
+        g = g + 1/(z-r5)
+        if @degree>3
+          g = g + 1/(z-r6)
+          if @degree>4
+            g = g + 1/(z-r7)
+            if @degree>5
+              g = g + 1/(z-r8)
+              if @degree>6
+                g = g + 1/(z-r9)
+                if @degree>7
+                  g = g + 1/(z-r10)
+                  if @degree>8
+                    g = g + 1/(z-r11)
+                    if @degree>9
+                      g = g + 1/(z-r12)
+                      if @degree>10
+                        g = g + 1/(z-r13)
+                        if @degree>11
+                          g = g + 1/(z-r14)
+                          if @degree>12
+                            g = g + 1/(z-r15)
+                            if @degree>13
+                              g = g + 1/(z-r16)
+                              if @degree>14
+                                g = g + 1/(z-r17)
+                                if @degree>15
+                                  g = g + 1/(z-r18)
+                                  if @degree>16
+                                    g = g + 1/(z-r19)
+                                    if @degree>17
+                                      g = g + 1/(z-r20)
+                                    endif
+                                  endif
+                                endif
+                              endif
+                            endif
+                          endif
+                        endif
+                      endif
+                    endif
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif 
+
+  z = fn1(z - 1/g)
+
+  if |z|>@bigbail
+    bailed=true
+    if @usebail>1
+      bail = false
+    endif
+  endif
+
+  if @usebail<4 && |z-zold|<@bailout && !bailed
+    if @usebail==1 || @usebail==3 \
+       || |z-r1|<@bailout || |z-r2|<@bailout
+      bail = false
+    elseif @degree>0
+      if |z-r3|<@bailout
+        bail = false
+      elseif @degree>1
+        if |z-r4|<@bailout
+          bail = false
+        elseif @degree>2
+          if |z-r5|<@bailout
+            bail = false
+          elseif @degree>3
+            if |z-r6|<@bailout
+              bail = false
+            elseif @degree>4
+              if |z-r7|<@bailout
+                bail = false
+              elseif @degree>5
+                if |z-r8|<@bailout
+                  bail = false
+                elseif @degree>6
+                  if |z-r9|<@bailout
+                    bail = false
+                  elseif @degree>7
+                    if |z-r10|<@bailout
+                      bail = false
+                    elseif @degree>8
+                      if |z-r11|<@bailout
+                        bail = false
+                      elseif @degree>9
+                        if |z-r12|<@bailout
+                          bail = false
+                        elseif @degree>10
+                          if |z-r13|<@bailout
+                            bail = false
+                          elseif @degree>11
+                            if |z-r14|<@bailout
+                              bail = false
+                            elseif @degree>12
+                              if |z-r15|<@bailout
+                                bail = false
+                              elseif @degree>13
+                                if |z-r16|<@bailout
+                                  bail = false
+                                elseif @degree>14
+                                  if |z-r17|<@bailout
+                                    bail = false
+                                  elseif @degree>15
+                                    if |z-r18|<@bailout
+                                      bail = false
+                                    elseif @degree>16
+                                      if |z-r19|<@bailout
+                                        bail = false
+                                      elseif @degree>17
+                                        if |z-r20|<@bailout
+                                          bail = false
+                                        endif
+                                      endif
+                                    endif
+                                  endif
+                                endif
+                              endif
+                            endif
+                          endif
+                        endif
+                      endif
+                    endif
+                  endif
+                endif
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+
+bailout:
+  bail == true
+
+default:
+  title = "Newton by Roots"
+  method = multipass
+  periodicity = 0
+  center = (0, 0)
+  magn = 1.0
+  helpfile = "MMF.html"
+  heading
+    caption = "Bailout control"
+  endheading
+  param usebail
+    caption = "Bailout method"
+    enum = "Roots (convergent)" "General (convergent)" "Roots+Divergent" \
+           "General+Divergent" "Divergent only"
+  endparam
+  param bailout
+    caption = "Convergent Bailout"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+    visible = @usebail < 4
+  endparam
+  param bigbail
+    caption = "Divergent Bailout"
+    default = 65536.0
+    hint = "Bailout for detecting divergence. Please note that \
+            this value is used in the convergent only bailout \
+            methods to test for divergence and avoid errors due \
+            to z becoming NotANumber."
+  endparam
+  heading
+    caption = "Current mapping"
+  endheading
+  param showmap
+    caption = "Show mapping"
+    default = true
+  endparam
+  param usevalue
+    caption = "'Value' replaces"
+    enum = "Zstart" "1st root" "2nd root" "3rd root" \
+           "4th root" "5th root" "6th root" "7th root" \
+           "8th root" "9th root" "10th root" "11th root" \
+           "12th root" "13th root" "14th root" "15th root" \
+           "16th root" "17th root" "18th root" "19th root" \
+           "20th root"
+    default = 0
+    hint = "Shows the parameter currently being \
+            replaced by the 'Value' parameter. If you want \
+            to switch using a different parameter then you \
+            should first copy the current 'Value' into this \
+            parameter. This entry isn't really meant to be \
+            modified directly."
+    visible = @showmap
+  endparam
+  param usepixel
+    caption = "#pixel replaces"
+    enum = "Zstart" "1st root" "2nd root" "3rd root" \
+           "4th root" "5th root" "6th root" "7th root" \
+           "8th root" "9th root" "10th root" "11th root" \
+           "12th root" "13th root" "14th root" "15th root" \
+           "16th root" "17th root" "18th root" "19th root" \
+           "20th root"
+    default = 1
+    hint = "Shows the parameter currently being replaced by the \
+            value of #pixel. This entry isn't really meant to \
+            be modified directly."
+    visible = @showmap
+  endparam
+  param usecentre
+    caption = "Current centre (offset)"
+    default = (0,0)
+    hint = "This value is currently being applied to adjust \
+            the location of your fractal. If the value is not \
+            (0,0) then it's good practice to change it back to \
+            (0,0) and use UF's inbuilt centre/zoom to correct \
+            the location afterwards. (The value is copied from \
+            'Switch centre' each time you switch)"
+    visible = @showmap
+  endparam
+  param usescale
+    caption = "Current scale"
+    default = 1.0
+    hint = "This value is currently being applied to adjust \
+            the scale (magnification) of your fractal. If the \
+            value is not 1.0 then it's good practice to change \
+            it back to 1.0 and use UF's inbuilt centre/zoom to \
+            correct the magnification afterwards. (The value is \
+            copied from 'Switch scale' each time you switch)"
+    visible = @showmap
+  endparam
+  heading
+    caption = "Switch mapping"
+    visible = @showmap
+  endheading
+  param swvalue
+    caption = "Switch value"
+    enum = "Zstart" "1st root" "2nd root" "3rd root" \
+           "4th root" "5th root" "6th root" "7th root" \
+           "8th root" "9th root" "10th root" "11th root" \
+           "12th root" "13th root" "14th root" "15th root" \
+           "16th root" "17th root" "18th root" "19th root" \
+           "20th root"
+    default = 1
+    hint = "Sets which parameter is used for switching. This \
+            means that AFTER switching the value of 'Value' will \
+            be replacing this parameter."
+    visible = @showmap
+  endparam
+  param swpixel
+    caption = "Switch #pixel"
+    enum = "Zstart" "1st root" "2nd root" "3rd root" \
+           "4th root" "5th root" "6th root" "7th root" \
+           "8th root" "9th root" "10th root" "11th root" \
+           "12th root" "13th root" "14th root" "15th root" \
+           "16th root" "17th root" "18th root" "19th root" \
+           "20th root"
+    default = 0
+    hint = "Sets which parameter is to be replaced by #pixel \
+            AFTER switching."
+    visible = @showmap
+  endparam
+  param swcentre
+    caption = "Switch centre"
+    default = (0,0)
+    hint = "Use this to adjust the location of the switch \
+            preview and switched images. Note that the value \
+            is used as 'Current centre' after switching and \
+            you should then really reset 'Current centre' to \
+            (0,0) and adjust the location using UF's inbuilt \
+            centre/zoom."
+    visible = @showmap
+  endparam
+  param swscale
+    caption = "Switch scale"
+    default = 1.0
+    hint = "Use this to adjust the scale (magnification) of \
+            the switch preview and switched images. Note that \
+            the value is used as 'Current scale' after \
+            switching and you should then really reset \
+            'Current scale' to 1.0 and adjust the magnification \
+            using UF's inbuilt centre/zoom."
+    visible = @showmap
+  endparam
+  heading
+    caption = "Modifiers"
+  endheading
+  param showmod
+    caption = "Show modifiers"
+    default = true
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+    visible = @showmod
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+    visible = @showmod
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = false
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration."
+    visible = @showmod
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration."
+    visible = @showmod
+  endparam
+  param t
+    caption = "Translation"
+    default = (0,0)
+    hint = "Translates (moves) the value of z \
+            on each iteration."
+    visible = @showmod
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  func fn1
+    caption = "Final function"
+    default = ident()
+    hint = "Applied to the z value prior to bailout testing."
+    visible = @showmod
+  endfunc
+  heading
+    caption = "Main Values"
+  endheading
+  param degree
+    caption = "Degree of P(z)"
+    enum = "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12" \
+           "13" "14" "15" "16" "17" "18" "19" "20"
+    default = 2
+    hint = "Sets the degree (max. exponent/power) of P(z)."
+  endparam
+  param value
+    caption = "Value"
+    default = (1,0)
+    hint = "This is the extra parameter used for switching. \
+            After switching it's good practice to copy it \
+            into the parameter it is replacing straight away."
+  endparam
+  param zstart
+    caption = "Start value of z"
+    default = (0,0)
+  endparam
+  param root1
+    caption = "1st root"
+    default = (1,0)
+    hint = "The 1st root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root2
+    caption = "2nd root"
+    default = (-1,0)
+    hint = "The 2nd root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root3
+    caption = "3rd root"
+    default = (0,1)
+    hint = "The 3rd root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root4
+    caption = "4th root"
+    default = (0,-1)
+    hint = "The 4th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root5
+    caption = "5th root"
+    default = (1,0)
+    hint = "The 5th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root6
+    caption = "6th root"
+    default = (1,0)
+    hint = "The 6th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root7
+    caption = "7th root"
+    default = (1,0)
+    hint = "The 7th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root8
+    caption = "8th root"
+    default = (-1,0)
+    hint = "The 8th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root9
+    caption = "9th root"
+    default = (0,1)
+    hint = "The 9th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root10
+    caption = "10th root"
+    default = (0,-1)
+    hint = "The 10th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root11
+    caption = "11th root"
+    default = (1,0)
+    hint = "The 11th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root12
+    caption = "12th root"
+    default = (1,0)
+    hint = "The 12th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root13
+    caption = "13th root"
+    default = (0,-1)
+    hint = "The 13th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root14
+    caption = "14th root"
+    default = (1,0)
+    hint = "The 14th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root15
+    caption = "15th root"
+    default = (1,0)
+    hint = "The 15th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root16
+    caption = "16th root"
+    default = (0,-1)
+    hint = "The 16th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root17
+    caption = "17th root"
+    default = (1,0)
+    hint = "The 17th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root18
+    caption = "18th root"
+    default = (1,0)
+    hint = "The 18th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root19
+    caption = "19th root"
+    default = (0,-1)
+    hint = "The 19th root in (z-r1)(z-r2)...(z-rn)."
+  endparam
+  param root20
+    caption = "20th root"
+    default = (1,0)
+    hint = "The 20th root in (z-r1)(z-r2)...(z-r20)."
+  endparam
+
+switch:
+  type = "MMF3b-NewtRoot"
+  usebail = usebail
+  bailout = bailout
+  bigbail = bigbail
+  showmap = showmap
+  usevalue = swvalue
+  usepixel = swpixel
+  usecentre = swcentre
+  usescale = swscale
+  swvalue = swvalue
+  swpixel = swpixel
+  swcentre = usecentre
+  swscale = usescale
+  showmod = showmod
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  ang = ang
+  t = t
+  m = m
+  n = n
+  fn1 = fn1
+  degree = degree
+  value = #pixel
+  zstart = zstart
+  root1 = root1
+  root2 = root2
+  root3 = root3
+  root4 = root4
+  root5 = root5
+  root6 = root6
+  root7 = root7
+  root8 = root8
+  root9 = root9
+  root10 = root10
+  root11 = root11
+  root12 = root12
+  root13 = root13
+  root14 = root14
+  root15 = root15
+  root16 = root16
+  root17 = root17
+  root18 = root18
+  root19 = root19
+  root20 = root20
+}
+
+MMF3a-NewtonMulti {
+;
+; Based on the standard Newton extended to a general
+; system of two equations in two variables.
+; By default I've enabled "Iterate the product" which turns
+; the Newton into a more standard Mandelbrot/Julia form (and
+; gives some interesting results). Note that in this form the
+; formula always has a smoothing "power" of 2 since the basic
+; Newton formula is linear ie. changing the degree of F(x,y)
+; or G(x,y) will not affect the power value for smoothing.
+;
+; For anyone interested you can see the maths involved here:
+; http://pegasus.cc.ucf.edu/~fgonzale/eel4832/RootFindingSystemsNonlinearEquations.pdf
+;
+; Note that the default values of the coefficients are set to
+; standard complex values for F(x,y) and G(x,y), in fact they
+; are defined such that if you set the degree of F() and G()
+; to 6 the system produces the standard complex equation
+; z^6+z^5+z^4+z^3+z^2+constant, if you set the degrees to 3
+; you'll get z^3+z^2+constant etc.
+; Hence if you want z^3+c for example, then set both degrees
+; to 3 and set the coeffs of x^2, xy and y^2 to zero.
+; I've chosen these defaults since they give you a recognisable
+; baseline to work from when modifying the coefficients.
+;
+; If you want to investigate the standard Newton version of
+; this formula then (from the defaults) disable 'Iterate the
+; product' and then switch (which will switch to the 'Julia'
+; form which is basically the standard Newton) and then you
+; can see what happens to the Newton for a general 2 variable
+; system by modifying the coefficients.
+; NB. When 'Iterate the sum' and 'Iterate the product' are
+; both disabled you'll need to enable convergence testing as
+; for a normal Newton formula.
+;
+; This formula features a new version of extended switching
+; that allows full control over which parameter is used for
+; the switch and which parameter is replaced by the value of
+; #pixel after switching. Although this requires the
+; modification of two parameters where my previous method
+; only used one, I think this way is less confusing.
+; As with the previous version the switch value "Value" should
+; be copied into the parameter it replaces before switching
+; using a different parameter.
+;
+; Created 4th-7th May 2003
+;
+; (c) Dave Makin (Makin' Magic)
+; http://website.lineone.net/~dave_makin/
+;
+
+init:
+  complex px = #pixel
+
+  if @usescale != 1.0
+    px = px/@usescale
+  endif
+  if @usecentre != (0,0)
+    px = px + @usecentre
+  endif
+
+  float fc = real(@c)
+  float fx = real(@cx)
+  float fy = real(@cy)
+
+  float fx2 = real(@cx2)
+  float fxy = real(@cxy)
+  float fy2 = real(@cy2)
+
+  float fx3 = real(@cx3)
+  float fx2y = real(@cx2y)
+  float fxy2 = real(@cxy2)
+  float fy3 = real(@cy3)
+
+  float fx4 = real(@cx4)
+  float fx3y = real(@cx3y)
+  float fx2y2 = real(@cx2y2)
+  float fxy3 = real(@cxy3)
+  float fy4 = real(@cy4)
+
+  float fx5 = real(@cx5)
+  float fx4y = real(@cx4y)
+  float fx3y2 = real(@cx3y2)
+  float fx2y3 = real(@cx2y3)
+  float fxy4 = real(@cxy4)
+  float fy5 = real(@cy5)
+
+  float fx6 = real(@cx6)
+  float fx5y = real(@cx5y)
+  float fx4y2 = real(@cx4y2)
+  float fx3y3 = real(@cx3y3)
+  float fx2y4 = real(@cx2y4)
+  float fxy5 = real(@cxy5)
+  float fy6 = real(@cy6)
+
+  float gc = imag(@c)
+  float gx = imag(@cx)
+  float gy = imag(@cy)
+
+  float gx2 = imag(@cx2)
+  float gxy = imag(@cxy)
+  float gy2 = imag(@cy2)
+
+  float gx3 = imag(@cx3)
+  float gx2y = imag(@cx2y)
+  float gxy2 = imag(@cxy2)
+  float gy3 = imag(@cy3)
+
+  float gx4 = imag(@cx4)
+  float gx3y = imag(@cx3y)
+  float gx2y2 = imag(@cx2y2)
+  float gxy3 = imag(@cxy3)
+  float gy4 = imag(@cy4)
+
+  float gx5 = imag(@cx5)
+  float gx4y = imag(@cx4y)
+  float gx3y2 = imag(@cx3y2)
+  float gx2y3 = imag(@cx2y3)
+  float gxy4 = imag(@cxy4)
+  float gy5 = imag(@cy5)
+
+  float gx6 = imag(@cx6)
+  float gx5y = imag(@cx5y)
+  float gx4y2 = imag(@cx4y2)
+  float gx3y3 = imag(@cx3y3)
+  float gx2y4 = imag(@cx2y4)
+  float gxy5 = imag(@cxy5)
+  float gy6 = imag(@cy6)
+
+  complex z = @zstart
+
+  if @usevalue == 0
+    z = @value
+  elseif @usevalue == 1
+    fc = real(@value)
+    gc = imag(@value)
+  elseif @usevalue == 2
+    fx = real(@value)
+    gx = imag(@value)
+  elseif @usevalue == 3
+    fy = real(@value)
+    gy = imag(@value)
+  elseif @usevalue == 4
+    fx2 = real(@value)
+    gx2 = imag(@value)
+  elseif @usevalue == 5
+    fxy = real(@value)
+    gxy = imag(@value)
+  elseif @usevalue == 6
+    fy2 = real(@value)
+    gy2 = imag(@value)
+  elseif @usevalue == 7
+    fx3 = real(@value)
+    gx3 = imag(@value)
+  elseif @usevalue == 8
+    fx2y = real(@value)
+    gx2y = imag(@value)
+  elseif @usevalue == 9
+    fxy2 = real(@value)
+    gxy2 = imag(@value)
+  elseif @usevalue == 10
+    fy3 = real(@value)
+    gy3 = imag(@value)
+  elseif @usevalue == 11
+    fx4 = real(@value)
+    gx4 = imag(@value)
+  elseif @usevalue == 12
+    fx3y = real(@value)
+    gx3y = imag(@value)
+  elseif @usevalue == 13
+    fx2y2 = real(@value)
+    gx2y2 = imag(@value)
+  elseif @usevalue == 14
+    fxy3 = real(@value)
+    gxy3 = imag(@value)
+  elseif @usevalue == 15
+    fy4 = real(@value)
+    gy4 = imag(@value)
+  elseif @usevalue == 16
+    fx5 = real(@value)
+    gx5 = imag(@value)
+  elseif @usevalue == 17
+    fx4y = real(@value)
+    gx4y = imag(@value)
+  elseif @usevalue == 18
+    fx3y2 = real(@value)
+    gx3y2 = imag(@value)
+  elseif @usevalue == 19
+    fx2y3 = real(@value)
+    gx2y3 = imag(@value)
+  elseif @usevalue == 20
+    fxy4 = real(@value)
+    gxy4 = imag(@value)
+  elseif @usevalue == 21
+    fy5 = real(@value)
+    gy5 = imag(@value)
+  elseif @usevalue == 22
+    fx6 = real(@value)
+    gx6 = imag(@value)
+  elseif @usevalue == 23
+    fx5y = real(@value)
+    gx5y = imag(@value)
+  elseif @usevalue == 24
+    fx4y2 = real(@value)
+    gx4y2 = imag(@value)
+  elseif @usevalue == 25
+    fx3y3 = real(@value)
+    gx3y3 = imag(@value)
+  elseif @usevalue == 26
+    fx2y4 = real(@value)
+    gx2y4 = imag(@value)
+  elseif @usevalue == 27
+    fxy5 = real(@value)
+    gxy5 = imag(@value)
+  elseif @usevalue == 28
+    fy6 = real(@value)
+    gy6 = imag(@value)
+  endif
+
+  if @usepixel == 0
+    z = px
+  elseif @usepixel == 1
+    fc = real(px)
+    gc = imag(px)
+  elseif @usepixel == 2
+    fx = real(px)
+    gx = imag(px)
+  elseif @usepixel == 3
+    fy = real(px)
+    gy = imag(px)
+  elseif @usepixel == 4
+    fx2 = real(px)
+    gx2 = imag(px)
+  elseif @usepixel == 5
+    fxy = real(px)
+    gxy = imag(px)
+  elseif @usepixel == 6
+    fy2 = real(px)
+    gy2 = imag(px)
+  elseif @usepixel == 7
+    fx3 = real(px)
+    gx3 = imag(px)
+  elseif @usepixel == 8
+    fx2y = real(px)
+    gx2y = imag(px)
+  elseif @usepixel == 9
+    fxy2 = real(px)
+    gxy2 = imag(px)
+  elseif @usepixel == 10
+    fy3 = real(px)
+    gy3 = imag(px)
+  elseif @usepixel == 11
+    fx4 = real(px)
+    gx4 = imag(px)
+  elseif @usepixel == 12
+    fx3y = real(px)
+    gx3y = imag(px)
+  elseif @usepixel == 13
+    fx2y2 = real(px)
+    gx2y2 = imag(px)
+  elseif @usepixel == 14
+    fxy3 = real(px)
+    gxy3 = imag(px)
+  elseif @usepixel == 15
+    fy4 = real(px)
+    gy4 = imag(px)
+  elseif @usepixel == 16
+    fx5 = real(px)
+    gx5 = imag(px)
+  elseif @usepixel == 17
+    fx4y = real(px)
+    gx4y = imag(px)
+  elseif @usepixel == 18
+    fx3y2 = real(px)
+    gx3y2 = imag(px)
+  elseif @usepixel == 19
+    fx2y3 = real(px)
+    gx2y3 = imag(px)
+  elseif @usepixel == 20
+    fxy4 = real(px)
+    gxy4 = imag(px)
+  elseif @usepixel == 21
+    fy5 = real(px)
+    gy5 = imag(px)
+  elseif @usepixel == 22
+    fx6 = real(px)
+    gx6 = imag(px)
+  elseif @usepixel == 23
+    fx5y = real(px)
+    gx5y = imag(px)
+  elseif @usepixel == 24
+    fx4y2 = real(px)
+    gx4y2 = imag(px)
+  elseif @usepixel == 25
+    fx3y3 = real(px)
+    gx3y3 = imag(px)
+  elseif @usepixel == 26
+    fx2y4 = real(px)
+    gx2y4 = imag(px)
+  elseif @usepixel == 27
+    fxy5 = real(px)
+    gxy5 = imag(px)
+  elseif @usepixel == 28
+    fy6 = real(px)
+    gy6 = imag(px)
+  endif
+
+  float x = real(z)
+  float y = imag(z)
+
+  float dxfc = fx
+  float dyfc = fy
+
+  float dxfx = 2*fx2
+  float dxfy = fxy
+  float dyfx = fxy
+  float dyfy = 2*fy2
+
+  float dxfx2 = 3*fx3
+  float dxfxy = 2*fx2y
+  float dxfy2 = fxy2
+  float dyfx2 = fx2y
+  float dyfxy = 2*fxy2
+  float dyfy2 = 3*fy3
+
+  float dxfx3 = 4*fx4
+  float dxfx2y = 3*fx3y
+  float dxfxy2 = 2*fx2y2
+  float dxfy3 = fxy3
+  float dyfx3 = fx3y
+  float dyfx2y = dxfxy2
+  float dyfxy2 = 3*fxy3
+  float dyfy3 = 4*fy4
+
+  float dxfx4 = 5*fx5
+  float dxfx3y = 4*fx4y
+  float dxfx2y2 = 3*fx3y2
+  float dxfxy3 = 2*fx2y3
+  float dxfy4 = fxy4
+  float dyfx4 = fx4y
+  float dyfx3y = 2*fx3y2
+  float dyfx2y2 = 3*fx2y3
+  float dyfxy3 = 4*fxy4
+  float dyfy4 = 5*fy5
+
+  float dxfx5 = 6*fx6
+  float dxfx4y = 5*fx5y
+  float dxfx3y2 = 4*fx4y2
+  float dxfx2y3 = 3*fx3y3
+  float dxfxy4 = 2*fx2y4
+  float dxfy5 = fxy5
+  float dyfx5 = fx5y
+  float dyfx4y = 2*fx4y2
+  float dyfx3y2 = dxfx2y3
+  float dyfx2y3 = 4*fx2y4
+  float dyfxy4 = 5*fxy5
+  float dyfy5 = 6*fy6
+
+  float dxgc = gx
+  float dygc = gy
+
+  float dxgx = 2*gx2
+  float dxgy = gxy
+  float dygx = gxy
+  float dygy = 2*gy2
+
+  float dxgx2 = 3*gx3
+  float dxgxy = 2*gx2y
+  float dxgy2 = gxy2
+  float dygx2 = gx2y
+  float dygxy = 2*gxy2
+  float dygy2 = 3*gy3
+
+  float dxgx3 = 4*gx4
+  float dxgx2y = 3*gx3y
+  float dxgxy2 = 2*gx2y2
+  float dxgy3 = gxy3
+  float dygx3 = gx3y
+  float dygx2y = dxgxy2
+  float dygxy2 = 3*gxy3
+  float dygy3 = 4*gy4
+
+  float dxgx4 = 5*gx5
+  float dxgx3y = 4*gx4y
+  float dxgx2y2 = 3*gx3y2
+  float dxgxy3 = 2*gx2y3
+  float dxgy4 = gxy4
+  float dygx4 = gx4y
+  float dygx3y = 2*gx3y2
+  float dygx2y2 = 3*gx2y3
+  float dygxy3 = 4*gxy4
+  float dygy4 = 5*gy5
+
+  float dxgx5 = 6*gx6
+  float dxgx4y = 5*gx5y
+  float dxgx3y2 = 4*gx4y2
+  float dxgx2y3 = 3*gx3y3
+  float dxgxy4 = 2*gx2y4
+  float dxgy5 = gxy5
+  float dygx5 = gx5y
+  float dygx4y = 2*gx4y2
+  float dygx3y2 = dxgx2y3
+  float dygx2y3 = 4*gx2y4
+  float dygxy4 = 5*gxy5
+  float dygy5 = 6*gy6
+
+  float t = 0
+  float ang = #pi*@ang/180.0
+  float ca = cos(ang)
+  float sa = sin(ang)
+  float r0c0 = real(@m)*ca-real(@n)*sa
+  float r0c1 = real(@m)*sa+real(@n)*ca
+  float r1c0 = imag(@m)*ca-imag(@n)*sa
+  float r1c1 = imag(@m)*sa+imag(@n)*ca
+  complex zold = z
+  complex zs = (0,0)
+  complex zp = (1,0)
+  bool bail = true
+  float x2 = x
+  float xy = x
+  float y2 = y
+  float x3 = x
+  float x2y = x
+  float xy2 = y
+  float y3 = y
+  float x4 = x
+  float x3y = x
+  float x2y2 = x
+  float xy3 = y
+  float y4 = y
+  float x5 = x
+  float x4y = x
+  float x3y2 =x
+  float x2y3 = y
+  float xy4 = y
+  float y5 = y
+  float x6 = x
+  float x5y = x
+  float x4y2 = x
+  float x3y3 = x
+  float x2y4 = y
+  float xy5 = y
+  float y6 = y
+  float a = x
+  float b = x
+  float c = x
+  float d = x
+  float ee = x
+  float f = x
+
+loop:
+  zold = z
+
+  if @sigma == true
+    z=z+zs
+    zs=z
+  endif
+
+  if |z|>0 && @product == true
+    z = z*zp
+    zp = z
+  endif
+
+  if @selfrot
+;    z = z * (0,1)^(twodpi*atan2(z))
+    t = cabs(z)
+    if t > 0
+      z = z*z/t
+    endif
+  endif
+
+  x = real(z)
+  y = imag(z)
+  t = x
+  x = x*r0c0 + y*r1c0
+  y = t*r0c1 + y*r1c1
+  z = x + flip(y) + @t
+
+  x = real(z)
+  y = imag(z)
+
+  a = dxfc
+  b = dyfc
+  c = dxgc
+  d = dygc
+  ee = fx*x + fy*y + fc
+  f = gx*x + gy*y + gc
+
+  if @fdegree > 0 || @gdegree > 0
+    x2 = x*x
+    xy = x*y
+    y2 = y*y
+    if @fdegree > 0
+      ee = ee + fx2*x2 + fxy*xy + fy2*y2
+      a = a + dxfx*x + dxfy*y
+      b = b + dyfx*x + dyfy*y
+    endif
+    if @gdegree > 0
+      f = f + gx2*x2 + gxy*xy + gy2*y2
+      c = c + dxgx*x + dxgy*y
+      d = d + dygx*x + dygy*y
+    endif
+  endif
+
+  if @fdegree > 1 || @gdegree > 1
+    x3 = x*x2
+    x2y = x*xy
+    xy2 = x*y2
+    y3 = y*y2
+    if @fdegree > 1
+      ee = ee + fx3*x3 + fx2y*x2y + fxy2*xy2 + fy3*y3
+      a = a + dxfx2*x2 + dxfxy*xy + dxfy2*y2
+      b = b + dyfx2*x2 + dyfxy*xy + dyfy2*y2
+    endif
+    if @gdegree > 1
+      f = f + gx3*x3 + gx2y*x2y + gxy2*xy2 + gy3*y3
+      c = c + dxgx2*x2 + dxgxy*xy + dxgy2*y2
+      d = d + dygx2*x2 + dygxy*xy + dygy2*y2
+    endif
+  endif
+
+  if @fdegree > 2 || @gdegree > 2
+    x4 = x*x3
+    x3y = x*x2y
+    x2y2 = x*xy2
+    xy3 = x*y3
+    y4 = y*y3
+    if @fdegree > 2
+      ee = ee + fx4*x4 + fx3y*x3y + fx2y2*x2y2 + fxy3*xy3 + fy4*y4
+      a = a + dxfx3*x3 + dxfx2y*x2y + dxfxy2*xy2 + dxfy3*y3
+      b = b + dyfx3*x3 + dyfx2y*x2y + dyfxy2*xy2 + dyfy3*y3
+    endif
+    if @gdegree > 2
+      f = f + gx4*x4 + gx3y*x3y + gx2y2*x2y2 + gxy3*xy3 + gy4*y4
+      c = c + dxgx3*x3 + dxgx2y*x2y + dxgxy2*xy2 + dxgy3*y3
+      d = d + dygx3*x3 + dygx2y*x2y + dygxy2*xy2 + dygy3*y3
+    endif
+  endif
+
+  if @fdegree > 3 || @gdegree > 3
+    x5 = x*x4
+    x4y = x*x3y
+    x3y2 = x*x2y2
+    x2y3 = x*xy3
+    xy4 = x*y4
+    y5 = y*y4
+    if @fdegree > 3
+      ee = ee + fx5*x5 + fx4y*x4y + fx3y2*x3y2 + fx2y3*x2y3 + fxy4*xy4 + fy5*y5
+      a = a + dxfx4*x4 + dxfx3y*x3y + dxfx2y2*x2y2 + dxfxy3*xy3 + dxfy4*y4
+      b = b + dyfx4*x4 + dyfx3y*x3y + dyfx2y2*x2y2 + dyfxy3*xy3 + dyfy4*y4
+    endif
+    if @gdegree > 3
+      f = f + gx5*x5 + gx4y*x4y + gx3y2*x3y2 + gx2y3*x2y3 + gxy4*xy4 + gy5*y5
+      c = c + dxgx4*x4 + dxgx3y*x3y + dxgx2y2*x2y2 + dxgxy3*xy3 + dxgy4*y4
+      d = d + dygx4*x4 + dygx3y*x3y + dygx2y2*x2y2 + dygxy3*xy3 + dygy4*y4
+    endif
+  endif
+
+  if @fdegree > 4 || @gdegree > 4
+    x6 = x*x5
+    x5y = x*x4y
+    x4y2 = x*x3y2
+    x3y3 = x*x2y3
+    x2y4 = x*xy4
+    xy5 = x*y5
+    y6 = y*y5
+    if @fdegree > 4
+      ee = ee + fx6*x6 + fx5y*x5y + fx4y2*x4y2 + fx3y3*x3y3 + fx2y4*x2y4 + fxy5*xy5 + fy6*y6
+      a = a + dxfx5*x5 + dxfx4y*x4y + dxfx3y2*x3y2 + dxfx2y3*x2y3 + dxfxy4*xy4 + dxfy5*y5
+      b = b + dyfx5*x5 + dyfx4y*x4y + dyfx3y2*x3y2 + dyfx2y3*x2y3 + dyfxy4*xy4 + dyfy5*y5
+    endif
+    if @gdegree > 4
+      f = f + gx6*x6 + gx5y*x5y + gx4y2*x4y2 + gx3y3*x3y3 + gx2y4*x2y4 + gxy5*xy5 + gy6*y6
+      c = c + dxgx5*x5 + dxgx4y*x4y + dxgx3y2*x3y2 + dxgx2y3*x2y3 + dxgxy4*xy4 + dxgy5*y5
+      d = d + dygx5*x5 + dygx4y*x4y + dygx3y2*x3y2 + dygx2y3*x2y3 + dygxy4*xy4 + dygy5*y5
+    endif
+  endif
+
+  if @addfunc
+
+  if @addcoeff
+  
+  if @ffnx==1
+    ee = ee + @cfx*sin(x)
+    a = a + @cfx*cos(x)
+  elseif @ffnx==2
+    ee = ee + @cfx*cos(x)
+    a = a - @cfx*sin(x)
+  elseif @ffnx==3
+    ee = ee + @cfx*tan(x)
+    a = a + @cfx/(cos(x)^2)
+  elseif @ffnx==4
+    ee = ee + @cfx*sinh(x)
+    a = a + @cfx*cosh(x)
+  elseif @ffnx==5
+    ee = ee + @cfx*cosh(x)
+    a = a + @cfx*sinh(x)
+  elseif @ffnx==6
+    ee = ee + @cfx*tanh(x)
+    a = a + @cfx/(cosh(x)^2)
+  elseif @ffnx==7
+    ee = ee + @cfx*asin(x)
+    a = a + @cfx/sqrt(1-x^2)
+  elseif @ffnx==8
+    ee = ee + @cfx*acos(x)
+    a = a - @cfx/sqrt(1-x^2)
+  elseif @ffnx==9
+    ee = ee + @cfx*atan(x)
+    a = a + @cfx/(1+x^2)
+  elseif @ffnx==10
+    ee = ee + @cfx*asinh(x)
+    a = a + @cfx/sqrt(x^2+1)
+  elseif @ffnx==11
+    ee = ee + @cfx*acosh(x)
+    a = a + @cfx/sqrt(x^2-1)
+  elseif @ffnx==12
+    ee = ee + @cfx*atanh(x)
+    a = a + @cfx/(1-x^2)
+  elseif @ffnx==13
+    ee = ee + @cfx*exp(x)
+    a = a + @cfx*exp(x)
+  elseif @ffnx==14
+    ee = ee + @cfx*log(x)
+    a = a + @cfx/x
+  elseif @ffnx==15
+    ee = ee + @cfx/x
+    a = a - @cfx*x^-2
+  endif
+
+  if @gfnx==1
+    f = f + @cgx*sin(x)
+    c = c + @cgx*cos(x)
+  elseif @gfnx==2
+    f = f + @cgx*cos(x)
+    c = c - @cgx*sin(x)
+  elseif @gfnx==3
+    f = f + @cgx*tan(x)
+    c = c + @cgx/(cos(x)^2)
+  elseif @gfnx==4
+    f = f + @cgx*sinh(x)
+    c = c + @cgx*cosh(x)
+  elseif @gfnx==5
+    f = f + @cgx*cosh(x)
+    c = c + @cgx*sinh(x)
+  elseif @gfnx==6
+    f = f + @cgx*tanh(x)
+    c = c + @cgx/(cosh(x)^2)
+  elseif @gfnx==7
+    f = f + @cgx*asin(x)
+    c = c + @cgx/sqrt(1-x^2)
+  elseif @gfnx==8
+    f = f + @cgx*acos(x)
+    c = c - @cgx/sqrt(1-x^2)
+  elseif @gfnx==9
+    f = f + @cgx*atan(x)
+    c = c + @cgx/(1+x^2)
+  elseif @gfnx==10
+    f = f + @cgx*asinh(x)
+    c = c + @cgx/sqrt(x^2+1)
+  elseif @gfnx==11
+    f = f + @cgx*acosh(x)
+    c = c + @cgx/sqrt(x^2-1)
+  elseif @gfnx==12
+    f = f + @cgx*atanh(x)
+    c = c + @cgx/(1-x^2)
+  elseif @gfnx==13
+    f = f + @cgx*exp(x)
+    c = c + @cgx*exp(x)
+  elseif @gfnx==14
+    f = f + @cgx*log(x)
+    c = c + @cgx/x
+  elseif @gfnx==15
+    f = f + @cgx/x
+    c = c - @cgx*x^-2
+  endif
+
+  if @ffny==1
+    ee = ee + @cfy*sin(y)
+    b = b + @cfy*cos(y)
+  elseif @ffny==2
+    ee = ee + @cfy*cos(y)
+    b = b - @cfy*sin(y)
+  elseif @ffny==3
+    ee = ee + @cfy*tan(y)
+    b = b + @cfy/(cos(y)^2)
+  elseif @ffny==4
+    ee = ee + @cfy*sinh(y)
+    b = b + @cfy*cosh(y)
+  elseif @ffny==5
+    ee = ee + @cfy*cosh(y)
+    b = b + @cfy*sinh(y)
+  elseif @ffny==6
+    ee = ee + @cfy*tanh(y)
+    b = b + @cfy/(cosh(y)^2)
+  elseif @ffny==7
+    ee = ee + @cfy*asin(y)
+    b = b + @cfy/sqrt(1-y^2)
+  elseif @ffny==8
+    ee = ee + @cfy*acos(y)
+    b = b - @cfy/sqrt(1-y^2)
+  elseif @ffny==9
+    ee = ee + @cfy*atan(y)
+    b = b + @cfy/(1+y^2)
+  elseif @ffny==10
+    ee = ee + @cfy*asinh(y)
+    b = b + @cfy/sqrt(y^2+1)
+  elseif @ffny==11
+    ee = ee + @cfy*acosh(y)
+    b = b + @cfy/sqrt(y^2-1)
+  elseif @ffny==12
+    ee = ee + @cfy*atanh(y)
+    b = b + @cfy/(1-y^2)
+  elseif @ffny==13
+    ee = ee + @cfy*exp(y)
+    b = b + @cfy*exp(y)
+  elseif @ffny==14
+    ee = ee + @cfy*log(y)
+    b = b + @cfy/y
+  elseif @ffny==15
+    ee = ee + @cfy/y
+    b = b - @cfy*y^-2
+  endif
+
+  if @gfny==1
+    f = f + @cgy*sin(y)
+    d = d + @cgy*cos(y)
+  elseif @gfny==2
+    f = f + @cgy*cos(y)
+    d = d - @cgy*sin(y)
+  elseif @gfny==3
+    f = f + @cgy*tan(y)
+    d = d + @cgy/(cos(y)^2)
+  elseif @gfny==4
+    f = f + @cgy*sinh(y)
+    d = d + @cgy*cosh(y)
+  elseif @gfny==5
+    f = f + @cgy*cosh(y)
+    d = d + @cgy*sinh(y)
+  elseif @gfny==6
+    f = f + @cgy*tanh(y)
+    d = d + @cgy/(cosh(y)^2)
+  elseif @gfny==7
+    f = f + @cgy*asin(y)
+    d = d + @cgy/sqrt(1-y^2)
+  elseif @gfny==8
+    f = f + @cgy*acos(y)
+    d = d - @cgy/sqrt(1-y^2)
+  elseif @gfny==9
+    f = f + @cgy*atan(y)
+    d = d + @cgy/(1+y^2)
+  elseif @gfny==10
+    f = f + @cgy*asinh(y)
+    d = d + @cgy/sqrt(y^2+1)
+  elseif @gfny==11
+    f = f + @cgy*acosh(y)
+    d = d + @cgy/sqrt(y^2-1)
+  elseif @gfny==12
+    f = f + @cgy*atanh(y)
+    d = d + @cgy/(1-y^2)
+  elseif @gfny==13
+    f = f + @cgy*exp(y)
+    d = d + @cgy*exp(y)
+  elseif @gfny==14
+    f = f + @cgy*log(y)
+    d = d + @cgy/y
+  elseif @gfny==15
+    f = f + @cgy/y
+    d = d - @cgy*y^-2
+  endif
+
+  if @ffnx2==1
+    ee = ee + @cfx2*sin(x^2)
+    a = a + 2*@cfx2*x*cos(x^2)
+  elseif @ffnx2==2
+    ee = ee + @cfx2*cos(x^2)
+    a = a - 2*@cfx2*x*sin(x^2)
+  elseif @ffnx2==3
+    ee = ee + @cfx2*tan(x^2)
+    a = a + 2*@cfx2*x/(cos(x^2)^2)
+  elseif @ffnx2==4
+    ee = ee + @cfx2*sinh(x^2)
+    a = a + 2*@cfx2*x*cosh(x^2)
+  elseif @ffnx2==5
+    ee = ee + @cfx2*cosh(x^2)
+    a = a + 2*@cfx2*x*sinh(x^2)
+  elseif @ffnx2==6
+    ee = ee + @cfx2*tanh(x^2)
+    a = a + 2*@cfx2*x/(cosh(x^2)^2)
+  elseif @ffnx2==7
+    ee = ee + @cfx2*asin(x^2)
+    a = a + 2*@cfx2*x/sqrt(1-x^4)
+  elseif @ffnx2==8
+    ee = ee + @cfx2*acos(x^2)
+    a = a - 2*@cfx2*x/sqrt(1-x^4)
+  elseif @ffnx2==9
+    ee = ee + @cfx2*atan(x^2)
+    a = a + 2*@cfx2*x/(1+x^4)
+  elseif @ffnx2==10
+    ee = ee + @cfx2*asinh(x^2)
+    a = a + 2*@cfx2*x/sqrt(x^4+1)
+  elseif @ffnx2==11
+    ee = ee + @cfx2*acosh(x^2)
+    a = a + 2*@cfx2*x/sqrt(x^4-1)
+  elseif @ffnx2==12
+    ee = ee + @cfx2*atanh(x^2)
+    a = a + 2*@cfx2*x/(1-x^4)
+  elseif @ffnx2==13
+    ee = ee + @cfx2*exp(x^2)
+    a = a + 2*@cfx2*x*exp(x^2)
+  elseif @ffnx2==14
+    ee = ee + @cfx2*log(x^2)
+    a = a + @cfx2*2/x
+  elseif @ffnx2==15
+    ee = ee + @cfx2*x^-2
+    a = a - 2*@cfx2*(x^-3)
+  endif
+
+  if @gfnx2==1
+    f = f + @cgx2*sin(x^2)
+    c = c + 2*@cgx2*x*cos(x^2)
+  elseif @gfnx2==2
+    f = f + @cgx2*cos(x^2)
+    c = c - 2*@cgx2*x*sin(x^2)
+  elseif @gfnx2==3
+    f = f + @cgx2*tan(x^2)
+    c = c + 2*@cgx2*x/(cos(x^2)^2)
+  elseif @gfnx2==4
+    f = f + @cgx2*sinh(x^2)
+    c = c + 2*x*cosh(x^2)
+  elseif @gfnx2==5
+    f = f + @cgx2*cosh(x^2)
+    c = c + 2*@cgx2*x*sinh(x^2)
+  elseif @gfnx2==6
+    f = f + @cgx2*tanh(x^2)
+    c = c + 2*@cgx2*x/(cosh(x^2)^2)
+  elseif @gfnx2==7
+    f = f + @cgx2*asin(x^2)
+    c = c + 2*@cgx2*x/sqrt(1-x^4)
+  elseif @gfnx2==8
+    f = f + @cgx2*acos(x^2)
+    c = c - 2*@cgx2*x/sqrt(1-x^4)
+  elseif @gfnx2==9
+    f = f + @cgx2*atan(x^2)
+    c = c + 2*@cgx2*x/(1+x^4)
+  elseif @gfnx2==10
+    f = f + @cgx2*asinh(x^2)
+    c = c + 2*@cgx2*x/sqrt(x^4+1)
+  elseif @gfnx2==11
+    f = f + @cgx2*acosh(x^2)
+    c = c + 2*@cgx2*x/sqrt(x^4-1)
+  elseif @gfnx2==12
+    f = f + @cgx2*atanh(x^2)
+    c = c + 2*@cgx2*x/(1-x^4)
+  elseif @gfnx2==13
+    f = f + @cgx2*exp(x^2)
+    c = c + 2*@cgx2*x*exp(x^2)
+  elseif @gfnx2==14
+    f = f + @cgx2*log(x^2)
+    c = c + @cgx2*2/x
+  elseif @gfnx2==15
+    f = f + @cgx2*x^-2
+    c = c - 2*@cgx2*(x^-3)
+  endif
+
+  if @ffnxy==1
+    ee = ee + @cfxy*sin(x*y)
+    a = a + @cfxy*y*cos(x*y)
+    b = b + @cfxy*x*cos(x*y)
+  elseif @ffnxy==2
+    ee = ee + @cfxy*cos(y)
+    a = a - @cfxy*y*sin(x*y)
+    b = b - @cfxy*x*sin(x*y)
+  elseif @ffnxy==3
+    ee = ee + @cfxy*tan(x*y)
+    a = a + @cfxy*y/(cos(x*y)^2)
+    b = b + @cfxy*x/(cos(x*y)^2)
+  elseif @ffnxy==4
+    ee = ee + @cfxy*sinh(x*y)
+    a = a + @cfxy*y*cosh(x*y)
+    b = b + @cfxy*x*cosh(x*y)
+  elseif @ffnxy==5
+    ee = ee + @cfxy*cosh(x*y)
+    a = a + @cfxy*y*sinh(x*y)
+    b = b + @cfxy*x*sinh(x*y)
+  elseif @ffnxy==6
+    ee = ee + @cfxy*tanh(x*y)
+    a = a + @cfxy*y/(cosh(x*y)^2)
+    b = b + @cfxy*x/(cosh(x*y)^2)
+  elseif @ffnxy==7
+    ee = ee + @cfxy*asin(x*y)
+    a = a + @cfxy*y/sqrt(1-(x*y)^2)
+    b = b + @cfxy*x/sqrt(1-(x*y)^2)
+  elseif @ffnxy==8
+    ee = ee + @cfxy*acos(x*y)
+    a = a - @cfxy*y/sqrt(1-(x*y)^2)
+    b = b - @cfxy*x/sqrt(1-(x*y)^2)
+  elseif @ffnxy==9
+    ee = ee + @cfxy*atan(x*y)
+    a = a - @cfxy*y/(1+(x*y)^2)
+    b = b + @cfxy*x/(1+(x*y)^2)
+  elseif @ffnxy==10
+    ee = ee + @cfxy*asinh(x*y)
+    a = a + @cfxy*y/sqrt((x*y)^2+1)
+    b = b + @cfxy*x/sqrt((x*y)^2+1)
+  elseif @ffnxy==11
+    ee = ee + @cfxy*acosh(x*y)
+    a = a + @cfxy*y/sqrt((x*y)^2-1)
+    b = b + @cfxy*x/sqrt((x*y)^2-1)
+  elseif @ffnxy==12
+    ee = ee + @cfxy*atanh(x*y)
+    a = a + @cfxy*y/(1-(x*y)^2)
+    b = b + @cfxy*x/(1-(x*y)^2)
+  elseif @ffnxy==13
+    ee = ee + @cfxy*exp(x*y)
+    a = a + @cfxy*y*exp(x*y)
+    b = b + @cfxy*x*exp(x*y)
+  elseif @ffnxy==14
+    ee = ee + @cfxy*log(x*y)
+    a = a + @cfxy/x
+    b = b + @cfxy/y
+  elseif @ffnxy==15
+    ee = ee + @cfxy/(x*y)
+    a = a - @cfxy*(x^-2)/y
+    b = b - @cfxy*(y^-2)/x
+  endif
+
+  if @gfnxy==1
+    f = f + @cgxy*sin(x*y)
+    c = c + @cgxy*y*cos(x*y)
+    d = d + @cgxy*x*cos(x*y)
+  elseif @gfnxy==2
+    f = f + @cgxy*cos(x*y)
+    c = c - @cgxy*y*sin(x*y)
+    d = d - @cgxy*x*sin(x*y)
+  elseif @gfnxy==3
+    f = f + @cgxy*tan(x*y)
+    c = c + @cgxy*y/(cos(x*y)^2)
+    d = d + @cgxy*x/(cos(x*y)^2)
+  elseif @gfnxy==4
+    f = f + @cgxy*sinh(x*y)
+    c = c + @cgxy*y*cosh(x*y)
+    d = d + @cgxy*x*cosh(x*y)
+  elseif @gfnxy==5
+    f = f + @cgxy*cosh(x*y)
+    c = c + @cgxy*y*sinh(x*y)
+    d = d + @cgxy*x*sinh(x*y)
+  elseif @gfnxy==6
+    f = f + @cgxy*tanh(x*y)
+    c = c + @cgxy*y/(cosh(x*y)^2)
+    d = d + @cgxy*x/(cosh(x*y)^2)
+  elseif @gfnxy==7
+    f = f + @cgxy*asin(x*y)
+    c = c + @cgxy*y/sqrt(1-(x*y)^2)
+    d = d + @cgxy*x/sqrt(1-(x*y)^2)
+  elseif @gfnxy==8
+    f = f + @cgxy*acos(x*y)
+    c = c - @cgxy*y/sqrt(1-(x*y)^2)
+    d = d - @cgxy*x/sqrt(1-(x*y)^2)
+  elseif @gfnxy==9
+    f = f + @cgxy*atan(x*y)
+    c = c + @cgxy*y/(1+(x*y)^2)
+    d = d + @cgxy*x/(1+(x*y)^2)
+  elseif @gfnxy==10
+    f = f + asinh(x*y)
+    c = c + y/sqrt((x*y)^2+1)
+    d = d + x/sqrt((x*y)^2+1)
+  elseif @gfnxy==11
+    f = f + @cgxy*acosh(x*y)
+    c = c + @cgxy*y/sqrt((x*y)^2-1)
+    d = d + @cgxy*x/sqrt((x*y)^2-1)
+  elseif @gfnxy==12
+    f = f + @cgxy*atanh(x*y)
+    c = c + @cgxy*y/(1-(x*y)^2)
+    d = d + @cgxy*x/(1-(x*y)^2)
+  elseif @gfnxy==13
+    f = f + @cgxy*exp(x*y)
+    c = c + @cgxy*y*exp(x*y)
+    d = d + @cgxy*x*exp(x*y)
+  elseif @gfnxy==14
+    f = f + @cgxy*log(x*y)
+    c = c + @cgxy/x
+    d = d + @cgxy/y
+  elseif @gfnxy==15
+    f = f + 1/(x*y)
+    c = c - (x^-2)/y
+    d = d - (y^-2)/x
+  endif
+
+  if @ffny2==1
+    ee = ee + @cfy2*sin(y^2)
+    b = b + 2*@cfy2*y*cos(y^2)
+  elseif @ffny2==2
+    ee = ee + @cfy2*cos(y^2)
+    b = b - 2*@cfy2*y*sin(y^2)
+  elseif @ffny2==3
+    ee = ee + @cfy2*tan(y^2)
+    b = b + 2*@cfy2*y/(cos(y^2)^2)
+  elseif @ffny2==4
+    ee = ee + @cfy2*sinh(y^2)
+    b = b + 2*@cfy2*y*cosh(y^2)
+  elseif @ffny2==5
+    ee = ee + @cfy2*cosh(y^2)
+    b = b + 2*@cfy2*y*sinh(y^2)
+  elseif @ffny2==6
+    ee = ee + @cfy2*tanh(y^2)
+    b = b + 2*@cfy2*y/(cosh(y^2)^2)
+  elseif @ffny2==7
+    ee = ee + @cfy2*asin(y^2)
+    b = b + 2*@cfy2*y/sqrt(1-y^4)
+  elseif @ffny2==8
+    ee = ee + @cfy2*acos(y^2)
+    b = b - 2*@cfy2*y/sqrt(1-y^4)
+  elseif @ffny2==9
+    ee = ee + @cfy2*atan(y^2)
+    b = b + 2*@cfy2*y/(1+y^4)
+  elseif @ffny2==10
+    ee = ee + @cfy2*asinh(y^2)
+    b = b + 2*@cfy2*y/sqrt(y^4+1)
+  elseif @ffny2==11
+    ee = ee + @cfy2*acosh(y^2)
+    b = b + 2*@cfy2*y/sqrt(y^4-1)
+  elseif @ffny2==12
+    ee = ee + @cfy2*atanh(y^2)
+    b = b + 2*@cfy2*y/(1-y^4)
+  elseif @ffny2==13
+    ee = ee + @cfy2*exp(y^2)
+    b = b + 2*@cfy2*y*exp(y^2)
+  elseif @ffny2==14
+    ee = ee + @cfy2*log(y^2)
+    b = b + @cfy2*2/y
+  elseif @ffny2==15
+    ee = ee + @cfy2*y^-2
+    b = b - @cfy2*2*(y^-3)
+  endif
+
+  if @gfny2==1
+    f = f + @cgy2*sin(y^2)
+    d = d + 2*@cgy2*y*cos(y^2)
+  elseif @gfny2==2
+    f = f + @cgy2*cos(y^2)
+    d = d - 2*@cgy2*y*sin(y^2)
+  elseif @gfny2==3
+    f = f + @cgy2*tan(y^2)
+    d = d + 2*@cgy2*y/(cos(y^2)^2)
+  elseif @gfny2==4
+    f = f + @cgy2*sinh(y^2)
+    d = d + 2*@cgy2*y*cosh(y^2)
+  elseif @gfny2==5
+    f = f + @cgy2*cosh(y^2)
+    d = d + 2*@cgy2*y*sinh(y^2)
+  elseif @gfny2==6
+    f = f + @cgy2*tanh(y^2)
+    d = d + 2*@cgy2*y/(tanh(y^2)^2)
+  elseif @gfny2==7
+    f = f + @cgy2*asin(y^2)
+    d = d + 2*@cgy2*y/sqrt(1-y^4)
+  elseif @gfny2==8
+    f = f + @cgy2*acos(y^2)
+    d = d - 2*@cgy2*y/sqrt(1-y^4)
+  elseif @gfny2==9
+    f = f + @cgy2*atan(y^2)
+    d = d + 2*@cgy2*y/(1+y^4)
+  elseif @gfny2==10
+    f = f + @cgy2*asinh(y^2)
+    d = d + 2*@cgy2*y/sqrt(y^4+1)
+  elseif @gfny2==11
+    f = f + @cgy2*acosh(y^2)
+    d = d + 2*@cgy2*y/sqrt(y^4-1)
+  elseif @gfny2==12
+    f = f + @cgy2*atanh(y^2)
+    d = d + 2*@cgy2*y/(1-y^4)
+  elseif @gfny2==13
+    f = f + @cgy2*exp(y^2)
+    d = d + 2*@cgy2*y*exp(y^2)
+  elseif @gfny2==14
+    f = f + @cgy2*log(y^2)
+    d = d + @cgy2*2/y
+  elseif @gfny2==15
+    f = f + @cgy2*y^-2
+    d = d - 2*@cgy2*(y^-3)
+  endif
+
+  else
+
+  if @ffnx==1
+    ee = ee + sin(x)
+    a = a + cos(x)
+  elseif @ffnx==2
+    ee = ee + cos(x)
+    a = a - sin(x)
+  elseif @ffnx==3
+    ee = ee + tan(x)
+    a = a + 1/(cos(x)^2)
+  elseif @ffnx==4
+    ee = ee + sinh(x)
+    a = a + cosh(x)
+  elseif @ffnx==5
+    ee = ee + cosh(x)
+    a = a + sinh(x)
+  elseif @ffnx==6
+    ee = ee + tanh(x)
+    a = a + 1/(cosh(x)^2)
+  elseif @ffnx==7
+    ee = ee + asin(x)
+    a = a + 1/sqrt(1-x^2)
+  elseif @ffnx==8
+    ee = ee + acos(x)
+    a = a - 1/sqrt(1-x^2)
+  elseif @ffnx==9
+    ee = ee + atan(x)
+    a = a + 1/(1+x^2)
+  elseif @ffnx==10
+    ee = ee + asinh(x)
+    a = a + 1/sqrt(x^2+1)
+  elseif @ffnx==11
+    ee = ee + acosh(x)
+    a = a + 1/sqrt(x^2-1)
+  elseif @ffnx==12
+    ee = ee + atanh(x)
+    a = a + 1/(1-x^2)
+  elseif @ffnx==13
+    ee = ee + exp(x)
+    a = a + exp(x)
+  elseif @ffnx==14
+    ee = ee + log(x)
+    a = a + 1/x
+  elseif @ffnx==15
+    ee = ee + 1/x
+    a = a - x^-2
+  endif
+
+  if @gfnx==1
+    f = f + sin(x)
+    c = c + cos(x)
+  elseif @gfnx==2
+    f = f + cos(x)
+    c = c - sin(x)
+  elseif @gfnx==3
+    f = f + tan(x)
+    c = c + 1/(cos(x)^2)
+  elseif @gfnx==4
+    f = f + sinh(x)
+    c = c + cosh(x)
+  elseif @gfnx==5
+    f = f + cosh(x)
+    c = c + sinh(x)
+  elseif @gfnx==6
+    f = f + tanh(x)
+    c = c + 1/(cosh(x)^2)
+  elseif @gfnx==7
+    f = f + asin(x)
+    c = c + 1/sqrt(1-x^2)
+  elseif @gfnx==8
+    f = f + acos(x)
+    c = c - 1/sqrt(1-x^2)
+  elseif @gfnx==9
+    f = f + atan(x)
+    c = c + 1/(1+x^2)
+  elseif @gfnx==10
+    f = f + asinh(x)
+    c = c + 1/sqrt(x^2+1)
+  elseif @gfnx==11
+    f = f + acosh(x)
+    c = c + 1/sqrt(x^2-1)
+  elseif @gfnx==12
+    f = f + atanh(x)
+    c = c + 1/(1-x^2)
+  elseif @gfnx==13
+    f = f + exp(x)
+    c = c + exp(x)
+  elseif @gfnx==14
+    f = f + log(x)
+    c = c + 1/x
+  elseif @gfnx==15
+    f = f + 1/x
+    c = c - x^-2
+  endif
+
+  if @ffny==1
+    ee = ee + sin(y)
+    b = b + cos(y)
+  elseif @ffny==2
+    ee = ee + cos(y)
+    b = b - sin(y)
+  elseif @ffny==3
+    ee = ee + tan(y)
+    b = b + 1/(cos(y)^2)
+  elseif @ffny==4
+    ee = ee + sinh(y)
+    b = b + cosh(y)
+  elseif @ffny==5
+    ee = ee + cosh(y)
+    b = b + sinh(y)
+  elseif @ffny==6
+    ee = ee + tanh(y)
+    b = b + 1/(cosh(y)^2)
+  elseif @ffny==7
+    ee = ee + asin(y)
+    b = b + 1/sqrt(1-y^2)
+  elseif @ffny==8
+    ee = ee + acos(y)
+    b = b - 1/sqrt(1-y^2)
+  elseif @ffny==9
+    ee = ee + atan(y)
+    b = b + 1/(1+y^2)
+  elseif @ffny==10
+    ee = ee + asinh(y)
+    b = b + 1/sqrt(y^2+1)
+  elseif @ffny==11
+    ee = ee + acosh(y)
+    b = b + 1/sqrt(y^2-1)
+  elseif @ffny==12
+    ee = ee + atanh(y)
+    b = b + 1/(1-y^2)
+  elseif @ffny==13
+    ee = ee + exp(y)
+    b = b + exp(y)
+  elseif @ffny==14
+    ee = ee + log(y)
+    b = b + 1/y
+  elseif @ffny==15
+    ee = ee + 1/y
+    b = b - y^-2
+  endif
+
+  if @gfny==1
+    f = f + sin(y)
+    d = d + cos(y)
+  elseif @gfny==2
+    f = f + cos(y)
+    d = d - sin(y)
+  elseif @gfny==3
+    f = f + tan(y)
+    d = d + 1/(cos(y)^2)
+  elseif @gfny==4
+    f = f + sinh(y)
+    d = d + cosh(y)
+  elseif @gfny==5
+    f = f + cosh(y)
+    d = d + sinh(y)
+  elseif @gfny==6
+    f = f + tanh(y)
+    d = d + 1/(cosh(y)^2)
+  elseif @gfny==7
+    f = f + asin(y)
+    d = d + 1/sqrt(1-y^2)
+  elseif @gfny==8
+    f = f + acos(y)
+    d = d - 1/sqrt(1-y^2)
+  elseif @gfny==9
+    f = f + atan(y)
+    d = d + 1/(1+y^2)
+  elseif @gfny==10
+    f = f + asinh(y)
+    d = d + 1/sqrt(y^2+1)
+  elseif @gfny==11
+    f = f + acosh(y)
+    d = d + 1/sqrt(y^2-1)
+  elseif @gfny==12
+    f = f + atanh(y)
+    d = d + 1/(1-y^2)
+  elseif @gfny==13
+    f = f + exp(y)
+    d = d + exp(y)
+  elseif @gfny==14
+    f = f + log(y)
+    d = d + 1/y
+  elseif @gfny==15
+    f = f + 1/y
+    d = d - y^-2
+  endif
+
+  if @ffnx2==1
+    ee = ee + sin(x^2)
+    a = a + 2*x*cos(x^2)
+  elseif @ffnx2==2
+    ee = ee + cos(x^2)
+    a = a - 2*x*sin(x^2)
+  elseif @ffnx2==3
+    ee = ee + tan(x^2)
+    a = a + 2*x/(cos(x^2)^2)
+  elseif @ffnx2==4
+    ee = ee + sinh(x^2)
+    a = a + 2*x*cosh(x^2)
+  elseif @ffnx2==5
+    ee = ee + cosh(x^2)
+    a = a + 2*x*sinh(x^2)
+  elseif @ffnx2==6
+    ee = ee + tanh(x^2)
+    a = a + 2*x/(cosh(x^2)^2)
+  elseif @ffnx2==7
+    ee = ee + asin(x^2)
+    a = a + 2*x/sqrt(1-x^4)
+  elseif @ffnx2==8
+    ee = ee + acos(x^2)
+    a = a - 2*x/sqrt(1-x^4)
+  elseif @ffnx2==9
+    ee = ee + atan(x^2)
+    a = a + 2*x/(1+x^4)
+  elseif @ffnx2==10
+    ee = ee + asinh(x^2)
+    a = a + 2*x/sqrt(x^4+1)
+  elseif @ffnx2==11
+    ee = ee + acosh(x^2)
+    a = a + 2*x/sqrt(x^4-1)
+  elseif @ffnx2==12
+    ee = ee + atanh(x^2)
+    a = a + 2*x/(1-x^4)
+  elseif @ffnx2==13
+    ee = ee + exp(x^2)
+    a = a + 2*x*exp(x^2)
+  elseif @ffnx2==14
+    ee = ee + log(x^2)
+    a = a + 2/x
+  elseif @ffnx2==15
+    ee = ee + x^-2
+    a = a - 2*(x^-3)
+  endif
+
+  if @gfnx2==1
+    f = f + sin(x^2)
+    c = c + 2*x*cos(x^2)
+  elseif @gfnx2==2
+    f = f + cos(x^2)
+    c = c - 2*x*sin(x^2)
+  elseif @gfnx2==3
+    f = f + tan(x^2)
+    c = c + 2*x/(cos(x^2)^2)
+  elseif @gfnx2==4
+    f = f + sinh(x^2)
+    c = c + 2*x*cosh(x^2)
+  elseif @gfnx2==5
+    f = f + cosh(x^2)
+    c = c + 2*x*sinh(x^2)
+  elseif @gfnx2==6
+    f = f + tanh(x^2)
+    c = c + 2*x/(cosh(x^2)^2)
+  elseif @gfnx2==7
+    f = f + asin(x^2)
+    c = c + 2*x/sqrt(1-x^4)
+  elseif @gfnx2==8
+    f = f + acos(x^2)
+    c = c - 2*x/sqrt(1-x^4)
+  elseif @gfnx2==9
+    f = f + atan(x^2)
+    c = c + 2*x/(1+x^4)
+  elseif @gfnx2==10
+    f = f + asinh(x^2)
+    c = c + 2*x/sqrt(x^4+1)
+  elseif @gfnx2==11
+    f = f + acosh(x^2)
+    c = c + 2*x/sqrt(x^4-1)
+  elseif @gfnx2==12
+    f = f + atanh(x^2)
+    c = c + 2*x/(1-x^4)
+  elseif @gfnx2==13
+    f = f + exp(x^2)
+    c = c + 2*x*exp(x^2)
+  elseif @gfnx2==14
+    f = f + log(x^2)
+    c = c + 2/x
+  elseif @gfnx2==15
+    f = f + x^-2
+    c = c - 2*(x^-3)
+  endif
+
+  if @ffnxy==1
+    ee = ee + sin(x*y)
+    a = a + y*cos(x*y)
+    b = b + x*cos(x*y)
+  elseif @ffnxy==2
+    ee = ee + cos(y)
+    a = a - y*sin(x*y)
+    b = b - x*sin(x*y)
+  elseif @ffnxy==3
+    ee = ee + tan(x*y)
+    a = a + y/(cos(x*y)^2)
+    b = b + x/(cos(x*y)^2)
+  elseif @ffnxy==4
+    ee = ee + sinh(x*y)
+    a = a + y*cosh(x*y)
+    b = b + x*cosh(x*y)
+  elseif @ffnxy==5
+    ee = ee + cosh(x*y)
+    a = a + y*sinh(x*y)
+    b = b + x*sinh(x*y)
+  elseif @ffnxy==6
+    ee = ee + tanh(x*y)
+    a = a + y/(cosh(x*y)^2)
+    b = b + x/(cosh(x*y)^2)
+  elseif @ffnxy==7
+    ee = ee + asin(x*y)
+    a = a + y/sqrt(1-(x*y)^2)
+    b = b + x/sqrt(1-(x*y)^2)
+  elseif @ffnxy==8
+    ee = ee + acos(x*y)
+    a = a - y/sqrt(1-(x*y)^2)
+    b = b - x/sqrt(1-(x*y)^2)
+  elseif @ffnxy==9
+    ee = ee + atan(x*y)
+    a = a - y/(1+(x*y)^2)
+    b = b + x/(1+(x*y)^2)
+  elseif @ffnxy==10
+    ee = ee + asinh(x*y)
+    a = a + y/sqrt((x*y)^2+1)
+    b = b + x/sqrt((x*y)^2+1)
+  elseif @ffnxy==11
+    ee = ee + acosh(x*y)
+    a = a + y/sqrt((x*y)^2-1)
+    b = b + x/sqrt((x*y)^2-1)
+  elseif @ffnxy==12
+    ee = ee + atanh(x*y)
+    a = a + y/(1-(x*y)^2)
+    b = b + x/(1-(x*y)^2)
+  elseif @ffnxy==13
+    ee = ee + exp(x*y)
+    a = a + y*exp(x*y)
+    b = b + x*exp(x*y)
+  elseif @ffnxy==14
+    ee = ee + log(x*y)
+    a = a + 1/x
+    b = b + 1/y
+  elseif @ffnxy==15
+    ee = ee + 1/(x*y)
+    a = a - (x^-2)/y
+    b = b - (y^-2)/x
+  endif
+
+  if @gfnxy==1
+    f = f + sin(x*y)
+    c = c + y*cos(x*y)
+    d = d + x*cos(x*y)
+  elseif @gfnxy==2
+    f = f + cos(x*y)
+    c = c - y*sin(x*y)
+    d = d - x*sin(x*y)
+  elseif @gfnxy==3
+    f = f + tan(x*y)
+    c = c + y/(cos(x*y)^2)
+    d = d + x/(cos(x*y)^2)
+  elseif @gfnxy==4
+    f = f + sinh(x*y)
+    c = c + y*cosh(x*y)
+    d = d + x*cosh(x*y)
+  elseif @gfnxy==5
+    f = f + cosh(x*y)
+    c = c + y*sinh(x*y)
+    d = d + x*sinh(x*y)
+  elseif @gfnxy==6
+    f = f + tanh(x*y)
+    c = c + y/(cosh(x*y)^2)
+    d = d + x/(cosh(x*y)^2)
+  elseif @gfnxy==7
+    f = f + asin(x*y)
+    c = c + y/sqrt(1-(x*y)^2)
+    d = d + x/sqrt(1-(x*y)^2)
+  elseif @gfnxy==8
+    f = f + acos(x*y)
+    c = c - y/sqrt(1-(x*y)^2)
+    d = d - x/sqrt(1-(x*y)^2)
+  elseif @gfnxy==9
+    f = f + atan(x*y)
+    c = c + y/(1+(x*y)^2)
+    d = d + x/(1+(x*y)^2)
+  elseif @gfnxy==10
+    f = f + asinh(x*y)
+    c = c + y/sqrt((x*y)^2+1)
+    d = d + x/sqrt((x*y)^2+1)
+  elseif @gfnxy==11
+    f = f + acosh(x*y)
+    c = c + y/sqrt((x*y)^2-1)
+    d = d + x/sqrt((x*y)^2-1)
+  elseif @gfnxy==12
+    f = f + atanh(x*y)
+    c = c + y/(1-(x*y)^2)
+    d = d + x/(1-(x*y)^2)
+  elseif @gfnxy==13
+    f = f + exp(x*y)
+    c = c + y*exp(x*y)
+    d = d + x*exp(x*y)
+  elseif @gfnxy==14
+    if @bugfix
+      f = f + log(x*y)
+    else
+      f = f + log(x)
+    endif
+    c = c + 1/x
+    d = d + 1/y
+  elseif @gfnxy==15
+    f = f + 1/(x*y)
+    c = c - (x^-2)/y
+    d = d - (y^-2)/x
+  endif
+
+  if @ffny2==1
+    ee = ee + sin(y^2)
+    b = b + 2*y*cos(y^2)
+  elseif @ffny2==2
+    ee = ee + cos(y^2)
+    b = b - 2*y*sin(y^2)
+  elseif @ffny2==3
+    ee = ee + tan(y^2)
+    b = b + 2*y/(cos(y^2)^2)
+  elseif @ffny2==4
+    ee = ee + sinh(y^2)
+    b = b + 2*y*cosh(y^2)
+  elseif @ffny2==5
+    ee = ee + cosh(y^2)
+    b = b + 2*y*sinh(y^2)
+  elseif @ffny2==6
+    ee = ee + tanh(y^2)
+    b = b + 2*y/(cosh(y^2)^2)
+  elseif @ffny2==7
+    ee = ee + asin(y^2)
+    b = b + 2*y/sqrt(1-y^4)
+  elseif @ffny2==8
+    ee = ee + acos(y^2)
+    b = b - 2*y/sqrt(1-y^4)
+  elseif @ffny2==9
+    ee = ee + atan(y^2)
+    b = b + 2*y/(1+y^4)
+  elseif @ffny2==10
+    ee = ee + asinh(y^2)
+    b = b + 2*y/sqrt(y^4+1)
+  elseif @ffny2==11
+    ee = ee + acosh(y^2)
+    b = b + 2*y/sqrt(y^4-1)
+  elseif @ffny2==12
+    ee = ee + atanh(y^2)
+    b = b + 2*y/(1-y^4)
+  elseif @ffny2==13
+    ee = ee + exp(y^2)
+    b = b + 2*y*exp(y^2)
+  elseif @ffny2==14
+    ee = ee + log(y^2)
+    b = b + 2/y
+  elseif @ffny2==15
+    ee = ee + y^-2
+    b = b - 2*(y^-3)
+  endif
+
+  if @gfny2==1
+    f = f + sin(y^2)
+    d = d + 2*y*cos(y^2)
+  elseif @gfny2==2
+    f = f + cos(y^2)
+    d = d - 2*y*sin(y^2)
+  elseif @gfny2==3
+    f = f + tan(y^2)
+    d = d + 2*y/(cos(y^2)^2)
+  elseif @gfny2==4
+    f = f + sinh(y^2)
+    d = d + 2*y*cosh(y^2)
+  elseif @gfny2==5
+    f = f + cosh(y^2)
+    d = d + 2*y*sinh(y^2)
+  elseif @gfny2==6
+    f = f + tanh(y^2)
+    d = d + 2*y/(tanh(y^2)^2)
+  elseif @gfny2==7
+    f = f + asin(y^2)
+    d = d + 2*y/sqrt(1-y^4)
+  elseif @gfny2==8
+    f = f + acos(y^2)
+    d = d - 2*y/sqrt(1-y^4)
+  elseif @gfny2==9
+    f = f + atan(y^2)
+    d = d + 2*y/(1+y^4)
+  elseif @gfny2==10
+    f = f + asinh(y^2)
+    d = d + 2*y/sqrt(y^4+1)
+  elseif @gfny2==11
+    f = f + acosh(y^2)
+    d = d + 2*y/sqrt(y^4-1)
+  elseif @gfny2==12
+    f = f + atanh(y^2)
+    d = d + 2*y/(1-y^4)
+  elseif @gfny2==13
+    f = f + exp(y^2)
+    d = d + 2*y*exp(y^2)
+  elseif @gfny2==14
+    f = f + log(y^2)
+    d = d + 2/y
+  elseif @gfny2==15
+    f = f + y^-2
+    d = d - 2*(y^-3)
+  endif
+
+  endif
+
+  endif
+
+  t = a*d - b*c
+  z = fn1(z + (b*f - ee*d)/t + flip((ee*c - a*f)/t))
+
+  if @smallbail < 2 && |z| > @bailout
+    bail = false
+  elseif @smallbail > 0 && |z-zold| < @bailout1
+    bail = false
+  endif
+
+bailout:
+  bail == true
+
+default:
+  title = "Multivariable 'Newton'"
+  method = multipass
+  periodicity = 0
+  center = (0, 0)
+  magn = 1.0
+  helpfile = "MMF.html"
+  heading
+    caption = "Bailout control"
+  endheading
+  param smallbail
+    caption = "Convergence"
+    enum = "divergent" "both" "convergent"
+    default = 0
+    hint = "Allows you to set the bailout condition."
+  endparam
+  param bailout
+    caption = "Divergent test value"
+    default = 65536.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the Mandelbrot set anymore."
+  endparam
+  param bailout1
+    caption = "Convergent test value"
+    default = 1e-5
+    hint = "Bailout for detecting convergence."
+  endparam
+  heading
+    caption = "Current mapping"
+  endheading
+  param showmap
+    caption = "Show mapping"
+    default = true
+  endparam
+  param usevalue
+    caption = "'Value' replaces"
+    enum = "Zstart" "Constants" "Coeffs of x" "Coeffs of y" \
+           "Coeffs of x^2" "Coeffs of xy" "Coeffs of y^2" \
+           "Coeffs of x^3" "Coeffs of x^2.y" "Coeffs of x.y^2" \
+           "Coeffs of y^3" "Coeffs of x^4" "Coeffs of x^3.y" \
+           "Coeffs of x^2.y^2" "Coeffs of x.y^3" "Coeffs of y^4" \
+           "Coeffs of x^5" "Coeffs of x^4.y" "Coeffs of x^3.y^2" \
+           "Coeffs of x^2.y^3" "Coeffs of x.y^4" "Coeffs of y^5" \
+           "Coeffs of x^6" "Coeffs of x^5.y" "Coeffs of x^4.y^2" \
+           "Coeffs of x^3.y^3" "Coeffs of x^2.y^4" "Coeffs of x.y^5" \
+           "Coeffs of y^6"
+    default = 0
+    hint = "Shows the parameter currently being \
+            replaced by the 'Value' parameter. If you want \
+            to switch using a different parameter then you \
+            should first copy the current 'Value' into this \
+            parameter. This entry isn't really meant to be \
+            modified directly."
+    visible = @showmap
+  endparam
+  param usepixel
+    caption = "#pixel replaces"
+    enum = "Zstart" "Constants" "Coeffs of x" "Coeffs of y" \
+           "Coeffs of x^2" "Coeffs of xy" "Coeffs of y^2" \
+           "Coeffs of x^3" "Coeffs of x^2.y" "Coeffs of x.y^2" \
+           "Coeffs of y^3" "Coeffs of x^4" "Coeffs of x^3.y" \
+           "Coeffs of x^2.y^2" "Coeffs of x.y^3" "Coeffs of y^4" \
+           "Coeffs of x^5" "Coeffs of x^4.y" "Coeffs of x^3.y^2" \
+           "Coeffs of x^2.y^3" "Coeffs of x.y^4" "Coeffs of y^5" \
+           "Coeffs of x^6" "Coeffs of x^5.y" "Coeffs of x^4.y^2" \
+           "Coeffs of x^3.y^3" "Coeffs of x^2.y^4" "Coeffs of x.y^5" \
+           "Coeffs of y^6"
+    default = 1
+    hint = "Shows the parameter currently being replaced by the \
+            value of #pixel. This entry isn't really meant to \
+            be modified directly."
+    visible = @showmap
+  endparam
+  param usecentre
+    caption = "Current centre (offset)"
+    default = (0,0)
+    hint = "This value is currently being applied to adjust \
+            the location of your fractal. If the value is not \
+            (0,0) then it's good practice to change it back to \
+            (0,0) and use UF's inbuilt centre/zoom to correct \
+            the location afterwards. (The value is copied from \
+            'Switch centre' each time you switch)"
+    visible = @showmap
+  endparam
+  param usescale
+    caption = "Current scale"
+    default = 1.0
+    hint = "This value is currently being applied to adjust \
+            the scale (magnification) of your fractal. If the \
+            value is not 1.0 then it's good practice to change \
+            it back to 1.0 and use UF's inbuilt centre/zoom to \
+            correct the magnification afterwards. (The value is \
+            copied from 'Switch scale' each time you switch)"
+    visible = @showmap
+  endparam
+  heading
+    caption = "Switch mapping"
+    visible = @showmap
+  endheading
+  param swvalue
+    caption = "Switch value"
+    enum = "Zstart" "Constants" "Coeffs of x" "Coeffs of y" \
+           "Coeffs of x^2" "Coeffs of xy" "Coeffs of y^2" \
+           "Coeffs of x^3" "Coeffs of x^2.y" "Coeffs of x.y^2" \
+           "Coeffs of y^3" "Coeffs of x^4" "Coeffs of x^3.y" \
+           "Coeffs of x^2.y^2" "Coeffs of x.y^3" "Coeffs of y^4" \
+           "Coeffs of x^5" "Coeffs of x^4.y" "Coeffs of x^3.y^2" \
+           "Coeffs of x^2.y^3" "Coeffs of x.y^4" "Coeffs of y^5" \
+           "Coeffs of x^6" "Coeffs of x^5.y" "Coeffs of x^4.y^2" \
+           "Coeffs of x^3.y^3" "Coeffs of x^2.y^4" "Coeffs of x.y^5" \
+           "Coeffs of y^6"
+    default = 1
+    hint = "Sets which parameter is used for switching. This \
+            means that AFTER switching the value of 'Value' will \
+            be replacing this parameter."
+    visible = @showmap
+  endparam
+  param swpixel
+    caption = "Switch #pixel"
+    enum = "Zstart" "Constants" "Coeffs of x" "Coeffs of y" \
+           "Coeffs of x^2" "Coeffs of xy" "Coeffs of y^2" \
+           "Coeffs of x^3" "Coeffs of x^2.y" "Coeffs of x.y^2" \
+           "Coeffs of y^3" "Coeffs of x^4" "Coeffs of x^3.y" \
+           "Coeffs of x^2.y^2" "Coeffs of x.y^3" "Coeffs of y^4" \
+           "Coeffs of x^5" "Coeffs of x^4.y" "Coeffs of x^3.y^2" \
+           "Coeffs of x^2.y^3" "Coeffs of x.y^4" "Coeffs of y^5" \
+           "Coeffs of x^6" "Coeffs of x^5.y" "Coeffs of x^4.y^2" \
+           "Coeffs of x^3.y^3" "Coeffs of x^2.y^4" "Coeffs of x.y^5" \
+           "Coeffs of y^6"
+    default = 0
+    hint = "Sets which parameter is to be replaced by #pixel \
+            AFTER switching."
+    visible = @showmap
+  endparam
+  param swcentre
+    caption = "Switch centre"
+    default = (0,0)
+    hint = "Use this to adjust the location of the switch \
+            preview and switched images. Note that the value \
+            is used as 'Current centre' after switching and \
+            you should then really reset 'Current centre' to \
+            (0,0) and adjust the location using UF's inbuilt \
+            centre/zoom."
+    visible = @showmap
+  endparam
+  param swscale
+    caption = "Switch scale"
+    default = 1.0
+    hint = "Use this to adjust the scale (magnification) of \
+            the switch preview and switched images. Note that \
+            the value is used as 'Current scale' after \
+            switching and you should then really reset \
+            'Current scale' to 1.0 and adjust the magnification \
+            using UF's inbuilt centre/zoom."
+    visible = @showmap
+  endparam
+  heading
+    caption = "Modifiers"
+  endheading
+  param showmod
+    caption = "Show modifiers"
+    default = true
+  endparam
+  param sigma
+    caption = "Iterate the sum"
+    default = false
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0+z1), z3=f(z0+z1+z2) etc. "
+    visible = @showmod
+  endparam
+  param product
+    caption = "Iterate the product"
+    default = true
+    hint = "When enabled instead of z1=f(z0), z2=f(z1), z3=f(z2) etc. \
+            z1=f(z0), z2=f(z0*z1), z3=f(z0*z1*z2) etc. The process is \
+            fudged slightly if zn is zero at any time."
+    visible = @showmod
+  endparam
+  param selfrot
+    caption = "Self-rotation"
+    default = false
+    hint = "When enabled z is rotated by atan2(z) at the start of each iteration."
+    visible = @showmod
+  endparam
+  param ang
+    caption = "Rotation (degrees)"
+    default = 0.0
+    hint = "Rotational transformation applied at each \
+            iteration."
+    visible = @showmod
+  endparam
+  param t
+    caption = "Translation"
+    default = (0,0)
+    hint = "Translates (moves) the value of z \
+            on each iteration."
+    visible = @showmod
+  endparam
+  param m
+    caption = "Matrix col 0"
+    default = (1,0)
+    hint = "Column 0 of a generalised \
+            transformation matrix - use (1,0) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  param n
+    caption = "Matrix col 1"
+    default = (0,1)
+    hint = "Column 1 of a generalised \
+            transformation matrix - use (0,1) \
+            for the identity matrix."
+    visible = @showmod
+  endparam
+  func fn1
+    caption = "Final function"
+    default = ident()
+    hint = "Applied to the z value prior to bailout testing."
+    visible = @showmod
+  endfunc
+  heading
+    caption = "Main Values"
+  endheading
+  param fdegree
+    caption = "Degree of F(x,y)"
+    default = 2
+    enum = "1" "2" "3" "4" "5" "6"
+    hint = "Sets the highest powers in x and y to be used \
+            in F(x,y) ie. the degree of the polynomial."
+  endparam
+  param gdegree
+    caption = "Degree of G(x,y)"
+    default = 2
+    enum = "1" "2" "3" "4" "5" "6"
+    hint = "Sets the highest powers in x and y to be used \
+            in G(x,y) ie. the degree of the polynomial."
+  endparam
+  param value
+    caption = "Value"
+    default = (0.5,0)
+    hint = "This is the extra parameter used for switching. \
+            After switching it's good practice to copy it \
+            into the parameter it is replacing straight away."
+  endparam
+  param zstart
+    caption = "Start value of z"
+    default = (0.5,0)
+  endparam
+  param c
+    caption = "Constants"
+    default = (0,0)
+    hint = "The constants in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+  endparam
+  param cx
+    caption = "Coeffs of x"
+    default = (0,0)
+    hint = "The coefficients of x in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+  endparam
+  param cy
+    caption = "Coeffs of y"
+    default = (0,0)
+    hint = "The coefficients of y in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+  endparam
+  param cx2
+    caption = "Coeffs of x^2"
+    default = (1,0)
+    hint = "The coefficients of x^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>0 || @gdegree>0
+  endparam
+  param cxy
+    caption = "Coeffs of xy"
+    default = (0,2)
+    hint = "The coefficients of xy in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>0 || @gdegree>0
+  endparam
+  param cy2
+    caption = "Coeffs of y^2"
+    default = (-1,0)
+    hint = "The coefficients of y^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>0 || @gdegree>0
+  endparam
+  param cx3
+    caption = "Coeffs of x^3"
+    default = (1,0)
+    hint = "The coefficients of x^3 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>1 || @gdegree>1
+  endparam
+  param cx2y
+    caption = "Coeffs of x^2.y"
+    default = (0,3)
+    hint = "The coefficients of x^2.y in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>1 || @gdegree>1
+  endparam
+  param cxy2
+    caption = "Coeffs of x.y^2"
+    default = (-3,0)
+    hint = "The coefficients of x.y^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>1 || @gdegree>1
+  endparam
+  param cy3
+    caption = "Coeffs of y^3"
+    default = (0,-1)
+    hint = "The coefficients of y^3 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>1 || @gdegree>1
+  endparam
+  param cx4
+    caption = "Coeffs of x^4"
+    default = (1,0)
+    hint = "The coefficients of x^4 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>2 || @gdegree>2
+  endparam
+  param cx3y
+    caption = "Coeffs of x^3.y"
+    default = (0,4)
+    hint = "The coefficients of x^3.y in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>2 || @gdegree>2
+  endparam
+  param cx2y2
+    caption = "Coeffs of x^2.y^2"
+    default = (-6,0)
+    hint = "The coefficients of x^2.y^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>2 || @gdegree>2
+  endparam
+  param cxy3
+    caption = "Coeffs of x.y^3"
+    default = (0,-4)
+    hint = "The coefficients of x.y^3 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>2 || @gdegree>2
+  endparam
+  param cy4
+    caption = "Coeffs of y^4"
+    default = (1,0)
+    hint = "The coefficients of y^4 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>2 || @gdegree>2
+  endparam
+  param cx5
+    caption = "Coeffs of x^5"
+    default = (1,0)
+    hint = "The coefficients of x^5 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cx4y
+    caption = "Coeffs of x^4.y"
+    default = (0,5)
+    hint = "The coefficients of x^4.y in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cx3y2
+    caption = "Coeffs of x^3.y^2"
+    default = (-10,0)
+    hint = "The coefficients of x^3.y^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cx2y3
+    caption = "Coeffs of x^2.y^3"
+    default = (0,-10)
+    hint = "The coefficients of x^2.y^3 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cxy4
+    caption = "Coeffs of x.y^4"
+    default = (5,0)
+    hint = "The coefficients of x.y^4 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cy5
+    caption = "Coeffs of y^5"
+    default = (0,1)
+    hint = "The coefficients of y^5 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>3 || @gdegree>3
+  endparam
+  param cx6
+    caption = "Coeffs of x^6"
+    default = (1,0)
+    hint = "The coefficients of x^6 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cx5y
+    caption = "Coeffs of x^5.y"
+    default = (0,6)
+    hint = "The coefficients of x^5.y in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cx4y2
+    caption = "Coeffs of x^4.y^2"
+    default = (-15,0)
+    hint = "The coefficients of x^4.y^2 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cx3y3
+    caption = "Coeffs of x^3.y^3"
+    default = (0,-20)
+    hint = "The coefficients of x^3.y^3 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cx2y4
+    caption = "Coeffs of x^2.y^4"
+    default = (15,0)
+    hint = "The coefficients of x^2.y^4 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cxy5
+    caption = "Coeffs of x.y^5"
+    default = (0,6)
+    hint = "The coefficients of x.y^5 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param cy6
+    caption = "Coeffs of y^6"
+    default = (-1,0)
+    hint = "The coefficients of y^6 in F(x,y) and G(x,y), \
+            please note that the real part sets the value in F() \
+            and the imaginary part sets the value in G()."
+    visible = @fdegree>4 || @gdegree>4
+  endparam
+  param addfunc
+    caption = "Add functions"
+    default = false
+    hint = "Allows you to add functions of x and/or y to the \
+            equations of F() and/or G()."
+  endparam
+  param ffnx
+    caption = "F() fn(x)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x to the equation for F(x,y)."
+    visible = @addfunc
+  endparam
+  param gfnx
+    caption = "G() fn(x)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x to the equation for G(x,y)."
+    visible = @addfunc
+  endparam
+  param ffny
+    caption = "F() fn(y)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of y to the equation for F(x,y)."
+    visible = @addfunc
+  endparam
+  param gfny
+    caption = "G() fn(y)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of y to the equation for G(x,y)."
+    visible = @addfunc
+  endparam
+  param ffnx2
+    caption = "F() fn(x^2)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x^2 to the equation for F(x,y)."
+    visible = @addfunc
+  endparam
+  param gfnx2
+    caption = "G() fn(x^2)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x^2 to the equation for G(x,y)."
+    visible = @addfunc
+  endparam
+  param ffnxy
+    caption = "F() fn(x*y)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x*y to the equation for F(x,y)."
+    visible = @addfunc
+  endparam
+  param gfnxy
+    caption = "G() fn(x*y)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of x*y to the equation for G(x,y)."
+    visible = @addfunc
+  endparam
+  param bugfix
+    caption = "Bugfix for G() log(x*y)"
+    default = false
+    hint = "The original formula used log(x) instead of log(x*y) \
+            enabling the bugfix corrects this mistake."
+    visible = @addfunc && @gfnxy==14
+  endparam
+  param ffny2
+    caption = "F() fn(y^2)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of y^2 to the equation for F(x,y)."
+    visible = @addfunc
+  endparam
+  param gfny2
+    caption = "G() fn(y^2)"
+    enum = "unused" "sin" "cos" "tan" "sinh" "cosh" "tanh" \
+           "asin" "acos" "atan" "asinh" "acosh" "atanh" \
+           "exp" "ln" "inv"
+    default = 0
+    hint = "Adds a function of y^2 to the equation for G(x,y)."
+    visible = @addfunc
+  endparam
+  param addcoeff
+    caption = "Add coefficients to functions"
+    default = false
+    hint = "Allows you to scale the functions used in the \
+            equations of F() and/or G()."
+    visible = @addfunc
+  endparam
+  param cfx
+    caption = "Coefficient of fn(x) in F()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @ffnx!=0
+  endparam
+  param cgx
+    caption = "Coefficient of fn(x) in G()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @gfnx!=0
+  endparam
+  param cfy
+    caption = "Coefficient of fn(y) in F()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @ffny!=0
+  endparam
+  param cgy
+    caption = "Coefficient of fn(y) in G()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @gfny!=0
+  endparam
+  param cfx2
+    caption = "Coefficient of fn(x^2) in F()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @ffnx2!=0
+  endparam
+  param cgx2
+    caption = "Coefficient of fn(x^2) in G()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @gfnx2!=0
+  endparam
+  param cfxy
+    caption = "Coefficient of fn(x*y) in F()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @ffnxy!=0
+  endparam
+  param cgxy
+    caption = "Coefficient of fn(x*y) in G()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @gfnxy!=0
+  endparam
+  param cfy2
+    caption = "Coefficient of fn(y^2) in F()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @ffny2!=0
+  endparam
+  param cgy2
+    caption = "Coefficient of fn(y^2) in G()"
+    default = 1.0
+    visible = @addfunc && @addcoeff && @gfny2!=0
+  endparam
+
+switch:
+  type = "MMF3a-NewtonMulti"
+  smallbail = smallbail
+  bailout = bailout
+  bailout1 = bailout1
+  showmap = showmap
+  usevalue = swvalue
+  usepixel = swpixel
+  usecentre = swcentre
+  usescale = swscale
+  swvalue = swvalue
+  swpixel = swpixel
+  swcentre = usecentre
+  swscale = usescale
+  showmod = showmod
+  sigma = sigma
+  product = product
+  selfrot = selfrot
+  ang = ang
+  t = t
+  m = m
+  n = n
+  fn1 = fn1
+  fdegree = fdegree
+  gdegree = gdegree
+  value = #pixel
+  zstart = zstart
+  c = c
+  cx = cx
+  cy = cy
+  cx2 = cx2
+  cxy = cxy
+  cy2 = cy2
+  cx3 = cx3
+  cx2y = cx2y
+  cxy2 = cxy2
+  cy3 = cy3
+  cx4 = cx4
+  cx3y = cx3y
+  cx2y2 = cx2y2
+  cxy3 = cxy3
+  cy4 = cy4
+  cx5 = cx5
+  cx4y = cx4y
+  cx3y2 = cx3y2
+  cx2y3 = cx2y3
+  cxy4 = cxy4
+  cy5 = cy5
+  cx6 = cx6
+  cx5y = cx5y
+  cx4y2 = cx4y2
+  cx3y3 = cx3y3
+  cx2y4 = cx2y4
+  cxy5 = cxy5
+  cy6 = cy6
+  addfunc = addfunc
+  ffnx = ffnx
+  gfnx = gfnx
+  ffny = ffny
+  gfny = gfny
+  ffnx2 = ffnx2
+  gfnx2 = gfnx2
+  ffnxy = ffnxy
+  gfnxy = gfnxy
+  bugfix = bugfix
+  ffny2 = ffny2
+  gfny2 = gfny2
+  addcoeff = addcoeff
+  cfx = cfx
+  cgx = cgx
+  cfy = cfy
+  cgy = cgy
+  cfx2 = cfx2
+  cgx2 = cgx2
+  cfxy = cfxy
+  cgxy = cgxy
+  cfy2 = cfy2
+  cgy2 = cgy2
+}

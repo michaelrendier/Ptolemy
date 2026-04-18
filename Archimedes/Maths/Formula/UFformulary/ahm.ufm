@@ -1,0 +1,555 @@
+comment {
+ These formulas were written by Alexander H. Meiburg.
+ Licensed under GPLv3 2010.
+}
+
+Whirlwind {
+; Credit must go to Tglad for inventing this formula. It works
+; by making the addition and exponentiation have less effect,
+; thus making them more continuous. The limit as the timestep
+; goes to zero appears to be a cardioid. Functions like a
+; multibrot, but with scaling so that it stays within reasonable
+; sizes.
+init:
+ IF (@Initial == 0)
+ z=0
+ ELSEIF (@Initial == 1)
+ z=#pixel
+ ELSEIF (@Initial == 2)
+ z=#pixel*@DeltaT
+ ENDIF
+ z=z+@Perturb
+ exponent=2^@DeltaT
+ c=#pixel*@DeltaT
+loop:
+IF (@DeltaT == 1)
+ z=z*z + c
+ELSEIF (@DeltaT == 2)
+  z2=z*z
+  z=z2*z2 + c
+ELSE
+  z=z^exponent + c
+ENDIF
+bailout:
+ |z| <= @Bailout
+default:
+  center=(-0.125,0)
+  magn=1.25
+  title = "Whirlwind"
+  float param DeltaT
+     default = 1.3
+     min = 0
+     caption = "Timestep"
+     hint = "How small the timestep is. A value of \
+     1 produces the Mandelbrot Set."
+     exponential = true
+   endparam
+   complex param Perturb
+      default = (0,0)
+      caption = "Perturbation"
+      hint = "This allows you to change the initial value by \
+      a certain amount."
+   endparam
+   param Initial
+      enum = "0" "Pixel" "J*Pixel"
+      default = 0
+      hint = "This controls the initial value. You can choose 0, \
+      the value of the pixel, or the scaled value of the pixel."
+   endparam
+   int param Bailout
+      default = 10
+      min=1
+      hint = "Upper limit of absolute value for points in the set."
+   endparam
+}
+
+Alternating {
+; Alternates the iterations between "z^2", "z^2 + c", "z + c", and
+; "z^2 + c" again. Plans include changing the period via parameter.
+init:
+  z=@Perturb
+  c=#pixel
+loop:
+  IF (@Period == 0)
+  z=z*z
+  z=z*z + c + c
+  z=z*z + c
+  ELSEIF (@Period == 1)
+  z=z + c
+  z=z*z + c
+  z=z*z
+  z=z*z + c
+  ELSEIF (@Period == 2)
+  z=z+c
+  z=z*z
+  z=z*z
+  z=z+c
+  z=z*z
+  ENDIF
+bailout:
+  |z| < @Bailout
+default:
+  center=(-0.25,0)
+  magn=1.5
+  title="Alternating"
+  float param Bailout
+     default=4
+     min=1
+     hint="Upper limit of absolute value for points in the set."
+  endparam
+  complex param Perturb
+     caption="Perturbation"
+     default=(0,0)
+     hint="This allows you to change the initial value."
+  endparam
+  param Period
+     caption="Period"
+     enum="z^2, z^2+c, z+c, z^2+c" "z+c, z^2+c, z^2, z^2+c" "z+c, z^2, z^2, z+c, z^2"
+     default = 2
+     hint = "This is the mapping that is repeated. They are all \
+     combinations of squaring and constant addition.The first two \
+     options look alike, but with different perturbations they \
+     produce different results."
+  endparam
+}
+
+WhirlwindShift {
+; This is like the whirlwind fractal, but (just as z=z^2+2*z*c+c^2 also
+; produce the mandelbrot set) uses a similar version. Since there is no
+; clear way to replace the c^2, there are many options for this parameter.
+init:
+ IF (@Initial == 0)
+ z=0
+ ELSEIF (@Initial == 1)
+ z=#pixel
+ ELSEIF (@Initial == 2)
+ z=#pixel*@DeltaT
+ ENDIF
+ z=z+@Perturb
+ exponent=2^@DeltaT
+ c=#pixel*@DeltaT
+loop:
+ IF (@CSquared == 0)
+  z=z^exponent + 2*z*c + c
+ ELSEIF (@CSquared == 1)
+  z=z^exponent + 2*z*c + c*#pixel
+ ELSEIF (@CSquared == 2)
+  z=z^exponent + 2*z*c + c*c
+ ELSEIF (@CSquared == 3)
+  z=z^exponent + 2*z*c + @DeltaT*(#pixel^exponent)
+ ELSEIF (@CSquared == 4)
+  z=z^exponent + 2*z*c + c^exponent
+ ELSEIF (@CSquared == 5)
+  z=z^exponent + 2*z*c + @DeltaT*@DeltaT*(#pixel^exponent)
+ ENDIF
+bailout:
+ |z| <= @Bailout
+default:
+  center = (-0.125,0)
+  magn = 2.5
+  title = "Shifted Whirlwind"
+  param CSquared
+     enum="J*Pixel" "J*(Pixel^2)" "(J*Pixel)^2" "J*(Pixel^J)" "(J*\
+     Pixel)^J" "(J^2)*(Pixel^J)"
+     default=0
+     caption="C Squared"
+     hint="This replaces the regular c^2 term in the Mandelbrot Set. \
+     Note that where it says ^J, it actually means ^(2^J)."
+  endparam
+  float param DeltaT
+     default = 1.3
+     min = 0
+     caption = "Timestep"
+     hint = "How small the timestep is. A value of \
+     1 produces the Mandelbrot Set."
+     exponential = true
+   endparam
+   complex param Perturb
+      default = (0,0)
+      caption = "Perturbation"
+      hint = "This allows you to change the initial value by \
+      a certain amount."
+   endparam
+   param Initial
+      enum = "0" "Pixel" "J*Pixel"
+      default = 0
+      hint = "This controls the initial value. You can choose 0, \
+      the value of the pixel, or the scaled value of the pixel."
+   endparam
+   int param Bailout
+      default = 10
+      min=1
+      hint = "Upper limit of absolute value for points in the set."
+   endparam
+}
+
+SwirlMandelbrot {
+;This gives the Mandelbrot Set for the standard "Swirl" transform found in
+;image editors and Flam3 fractals. By default this would have circular symmetry,
+;but certain errors were kept (and can be turned off) in order to make it more
+;interesting. An alternative is to give Perturbation and Offset, which are
+;also provided as options.
+init:
+ c=#pixel + @Offset
+ z=@Perturbation
+loop:
+ x=real(z)+real(@Offset)
+ y=imag(z)+imag(@Offset)
+ If @Var1
+  r2=|z|
+ Else
+  r2=|z+@Offset|
+ Endif
+ If @Var2
+  z=x*sin(r2) - y*cos(r2) + c
+ Else
+  xTemp=x*sin(r2) - y*cos(r2)
+  y=x*cos(r2) + y*sin(r2)
+  z=xTemp+(y*1i)+c
+ Endif
+bailout:
+ (@BailoutType == 0 && (|z| <= @Bailout)) || (@BailoutType == 1 && (|z| >= @Bailout))
+default:
+ magn=0.6
+ title="Swirl (Mandelbrot)"
+ param BailoutType
+  enum="<=" ">="
+  hint="For this case, the option divides the fractal into a circle and it's complement\
+  . Try both settings to see the different images."
+  default=0
+ endparam
+ float param Bailout
+  hint="This also doesn't behave normally, for some reason. Different values \
+  produce quite different images; there isn't any particularly correct value, though."
+  default=8
+ endparam
+ complex param Perturbation
+  caption="Z Start"
+  hint="This changes the start value. This is different from Offset."
+  default=0.0 + 0i
+ endparam
+ complex param Offset
+  hint="This can shift the value a constant amount before the swirl transform is applied."
+  default=0.0 + 0i
+ endparam
+ bool param Var1
+  caption="Variation 1"
+  hint="This was discovered as an error that was included originally; this turns it \
+  back on. This is only relevant if Offset is non-zero."
+ endparam
+ bool param Var2
+  caption="Variation 2"
+  hint="This was for another error that was included originally; this turns it back on.\
+  This can be combined with 'Variation 1'."
+  default=true
+ endparam
+}
+
+DiscMandelbrot {
+;This gives the Mandelbrot Set for the standard "Disc" transform found in
+;image editors and Flam3 fractals. There is an option to multiply by R^2 after
+;each iteration, which also makes things interesting. An alternative is to give
+;Perturbation and Offset, which are also provided as options.
+init:
+ c=#pixel + @Offset
+ z=@Perturbation
+loop:
+ z=z+@Offset
+ rPi=cabs(z)*#pi
+ ThetaNorm=atan2(z)/#pi
+ x=sin(rPi)
+ y=sqrt((x^2)-1);This would be 1-x^2, but since in the next step we multiply by i, this saves time.
+ If @RSquared
+  z=ThetaNorm*(x+y)*|z| + c
+ Else
+  z=ThetaNorm*(x+y) + c
+ Endif
+bailout:
+ (@BailoutType == 0 && (|z| <= @Bailout)) || (@BailoutType == 1 && (|z| >= @Bailout))
+default:
+ center=(0.72,-0.2)
+ magn=0.8
+ title="Disc (Mandelbrot)"
+ param BailoutType
+  enum="<=" ">="
+  hint="<= will give the set that doesn't escape; >= will give the set that doesn\
+  't go close to the origin."
+  default=0
+ endparam
+ bool param RSquared
+  caption="R Squared"
+  hint="This multiplies by the radius squared after each transform, producing \
+  quite a different image."
+  default=true
+ endparam
+ float param Bailout
+  hint="Value to bailout"
+  default=8
+ endparam
+ complex param Perturbation
+  caption="Z Start"
+  hint="This changes the start value. This is different from Offset."
+  default=0
+ endparam
+ complex param Offset
+  hint="This can shift the value a constant amount before the disc transform is applied."
+  default=0
+ endparam
+}
+
+PolarAddition {
+;This functions by the regular squaring/addition formula of the M-Set,
+;but stores the C value as a polar vector. This invariably produces circles
+;and lines as the set, but with good coloring it can produce nice "sunny"
+;images.
+;
+;Note: In order to produce more interesting results, this uses Real(z)
+;for the bailout test. The test |z| doesn't look as nice.
+init:
+ ThetaC=atan2(#pixel)
+ RadiusC=cabs(#pixel)
+ z=@Perturbation
+loop:
+ z=z^2
+ Theta=atan2(z)
+ Radius=cabs(z)
+ Radius=Radius+RadiusC
+ Theta=Theta+ThetaC
+ z=Radius*exp(Theta*1i)
+bailout:
+ Real(z)<=@Bailout
+default:
+ title="Polar Addition"
+ float param Bailout
+  default=4
+ endparam
+ complex param Perturbation
+  default=(0.2,0.25)
+ endparam
+}
+
+IndependentPower {
+init:
+ c=#pixel
+ z=@Perturbation
+loop:
+ z=(cabs(z)^@AbsPower)*exp((0,1)*@SignPower*atan2(z)) + c
+bailout:
+ |z| <= @Bailout
+default:
+ title="Independent Powers"
+ float param Bailout
+  default=4
+ endparam
+ complex param AbsPower
+  default=1.1
+  caption="Absolute Value Pwr"
+ endparam
+ complex param SignPower
+  default=-2.5
+  caption="Sign Power"
+ endparam
+}
+
+ChaosbrotMandel {
+;It was sad day when this page was deleted from Wikipedia.
+;Tip: In general, The Julia sets look a lot better than the M-Sets.
+init:
+ c=#pixel
+ z=@Perturbation
+loop:
+ x=Real(z)
+ y=Imag(z)
+ xTemp=x^2 - y^2
+ y=@J*x*y
+ x=xTemp
+ z=x + y*1i + c
+bailout:
+ |z|<=@Bailout
+switch:
+ type="ChaosbrotJulia"
+ Constant=#pixel
+ J=J
+default:
+ title="Chaosbrot (Mandelbrot)"
+ center=(-0.5,0)
+ float param Bailout
+  default=20
+ endparam
+ complex param J
+  caption="J"
+  hint="This is the unnamed parameter that primarily determines the fractal."
+  default=0.6
+ endparam
+ complex param Perturbation
+  default=(0,0)
+ endparam
+}
+
+ChaosbrotJulia {
+;Julia set of the "Chaosbrot" fractal.
+;This once was on Wikipedia, but it got deleted.
+;Please petition at Talk:Chaosbrot to get it reinstated! Please!
+;And I didn't even invent them!!!
+init:
+ c=@Constant
+ z=#Pixel
+loop:
+ x=Real(z)
+ y=Imag(z)
+ xTemp=x^2 - y^2
+ y=@J*x*y
+ x=xTemp
+ z=x + y*1i + c
+bailout:
+ |z|<=@Bailout
+default:
+ title="Chaosbrot (Julia)"
+ float param Bailout
+  default=10
+ endparam
+ complex param J
+  caption="J"
+  hint="This is the unnamed parameter that primarily determines the fractal."
+  default=1.5
+ endparam
+ complex param Constant
+  hint="This is the 'normal' parameter for the Julia Set, where its value \
+  corresponds with a point in the M-Set, yada yada."
+  default=(0.317,0.647)
+ endparam
+switch:
+ type="ChaosbrotMandel"
+ Perturbation=#pixel
+ J=J
+}
+
+PerpendicularMSet {
+;This produces slice of the second order Mandelbulb directly perpendicular to the regular Mandelbrot set.
+init:
+ Cx=Real(#pixel+@Perturbation)
+ Cy=Imag(#pixel+@Perturbation)
+ x=0
+ y=0
+loop:
+ xTemp=x^2 - y^2 + Cx
+ y=-2*y*Abs(x) + Cy
+ x=xTemp
+ z=x+y*1i
+bailout:
+ |x+y*(1i)|<=@Bailout
+default:
+ center=(-0.5,0)
+ title="Perpendicular Mandelbrot"
+ float param Bailout
+  default=4
+ endparam
+switch:
+ type="PerpendicularJulia"
+ Start=#pixel
+}
+
+PerpendicularJulia {
+;This produces slices of the second order Juliabulb directly perpendicular to regular Julia sets.
+init:
+ x=Real(#pixel)
+ y=Imag(#pixel)
+ Cx=Real(@Start)
+ Cy=Imag(@Start)
+loop:
+ xTemp=x^2 - y^2 + Cx
+ y=-2*y*Abs(x) + Cy
+ x=xTemp
+ z=x+y*1i
+bailout:
+ |x+y*(1i)|<=@Bailout
+default:
+ center=(-0.5,0)
+ title="Perpendicular Julia"
+ float param Bailout
+  default=4
+ endparam
+switch:
+ type="PerpendicularMSet"
+ bailout=bailout
+}
+
+MonotonicGrowthMandel {
+;Displays the locus of points that *monotonically increase* under the iteration of
+;z*func(z)+c.
+init:
+ c=#pixel
+ z=@Perturbation
+loop:
+ zOld=z
+ z=@Growth*(z*@fun(z)) + c
+bailout:
+ |z| >= |zOld|
+default:
+ title="Monotonic Growth (Mandelbrot)"
+ func fun
+  caption="Function"
+ endfunc
+ complex param Growth
+  default=1
+  hint="Multiplies the values of z before addition by a constant value. Usually\
+  , this just ends up scaling the image."
+ endparam
+switch:
+ type="MonontonicGrowthJulia"
+ c=#pixel
+}
+
+MonotonicGrowthJulia {
+;Displays the locus of points that *monotonically increase* under the iteration of
+;z*func(z)+c
+init:
+ c=@c
+ z=#pixel
+loop:
+ zOld=z
+ z=z*@fun(z) + c
+bailout:
+ |z| >= |zOld|
+default:
+ title="Monotonic Growth (Julia)"
+ func fun
+  caption="Function"
+ endfunc
+ complex param c
+  caption="C"
+ endparam
+switch:
+ type="MonontonicGrowthMandel"
+}
+
+ScaledBwp14 {
+;almost identical to BWP14, but it has been scaled
+;so as to view certain values more clearly.
+init:
+  z = @Start
+  PixMod = (#pixel / (cabs(sqrt(sqrt(@Exponent2+1))))) ^ @Exponent2
+  c = #pixel
+loop:
+  z = (z ^ @Exponent1) * PixMod + c
+bailout:
+  |z| <= @Bailout
+default:
+  title = "Scaled BWP 14"
+  complex param Start
+    caption = "Start"
+  endparam
+  complex param Exponent1
+    caption = "Exponent 1"
+    default = 2
+  endparam
+  complex param Exponent2
+    caption = "Exponent 2"
+  endparam
+  float param Bailout
+    caption = "Bailout Value"
+    default = 4.0
+  endparam
+}
+
+

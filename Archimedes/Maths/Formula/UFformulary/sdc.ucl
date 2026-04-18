@@ -1,0 +1,6586 @@
+sdc-gaussInt+Angle {
+;
+; Colors by the relationship of the orbit of Z to Gaussian 
+; Integers. 
+;
+; Written by Kerry Mitchell.
+;
+; Modified to add angle & factor for normalization by function
+; Susan D. Chambless, 17 Jan 2003
+;
+init:
+  float r=0.0                   ; remainder
+  float rmin=1.0e12             ; 
+  float rmax=0.0
+  float rave=0.0
+  float total=0.0
+  float t=0.0
+  int iter=0
+  int itermin=0
+  int itermax=0
+  zmin=(0.0,0.0)
+  zmax=(0.0,0.0)
+  if(@norm==1)                       ; pixel normalization
+    normfac=#pixel
+  elseif(@norm==2)                   ; factor normalization
+    normfac=@fac
+  elseif(@norm==3)                   ; f(z) normalization
+    float nx =  cos( @normangle * #pi / 180.0 ) / @normmult
+    float ny = -sin( @normangle * #pi / 180.0 ) / @normmult
+    normfac=(@normfunc(#z * (nx + flip(ny)))) - @normshift
+  else                               ; no normalization
+    normfac=(1.0,0.0)
+  endif
+  float logfac=@logseed
+loop:
+  iter=iter+1
+  temp2=#z
+  if @randomize
+    logfac=4*logfac*(1-logfac)
+    temp2=temp2*(1-@randomsize*logfac)
+  endif
+  if(@inttype==1)                    ; trunc
+    temp=trunc(temp2/normfac)
+  elseif(@inttype==2)                ; floor
+    temp=floor(temp2/normfac)
+  elseif(@inttype==3)                ; ceil
+    temp=ceil(temp2/normfac)
+  else                               ; round
+    temp=round(temp2/normfac)
+  endif
+  remain=temp2-temp*normfac
+  r=cabs(remain)
+  total=total+r
+  rave=total/iter
+  if(r<rmin)
+    rmin=r
+    zmin=temp2
+    itermin=iter
+  endif
+  if(r>rmax)
+    rmax=r
+    zmax=temp2
+    itermax=iter
+  endif
+final:
+  if(@colorby==1)            ; iteration @ min
+    #index=0.01*itermin
+  elseif(@colorby==2)        ; angle @ min
+    t=atan2(zmin)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==3)        ; maximum distance
+    #index=rmax
+  elseif(@colorby==4)        ; iteration @ max
+    #index=0.01*itermax
+  elseif(@colorby==5)        ; angle @ max
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==6)        ; average distance
+    #index=rave
+  elseif(@colorby==7)        ; min/mean/max angle
+    zmax=(rave-rmin)+flip(rmax-rave)
+    t=atan2(zmax)
+    t=t/pi
+    if(t<0.0)
+      t=t+2.0
+    endif
+    #index=0.5*t
+  elseif(@colorby==8)        ; max/min ratio
+    #index=rmax/(rmin+1.e-12)
+  else                       ; minimum distance
+    #index=rmin
+  endif
+default:
+  title="Gaussian Integer + Angle"
+;  helpfile = "Uf3.chm"
+;  helptopic = "Html/coloring/standard/gaussianinteger.html"
+  param inttype
+    caption="Integer Type"
+    default=0
+    enum="round(z)" "trunc(z)" "floor(z)" "ceil(z)"
+  endparam
+  param colorby
+    caption="Color By"
+    default=0
+    enum="minimum distance" "iteration @ min" "angle @ min" \
+      "maximum distance" "iteration @ max" "angle @ max" "average distance"\
+      "min/mean/max angle" "max/min ratio"
+  endparam
+  param norm
+    caption="Normalization"
+    default=0
+    enum="none" "pixel" "factor" "f(z)"
+  endparam
+  param fac
+    caption=" Factor"
+    default=(2.0,1.0)
+    hint = "Normalization factor."
+    visible = @norm == "factor"
+  endparam
+  func normfunc
+    caption=" Function"
+    default=ident()
+    hint = "Normalization function."
+    visible = @norm == "f(z)"
+    enabled = @norm == "f(z)"
+  endfunc
+  float param normangle
+    caption=" Normalization Angle"
+    default= 0.0
+    hint = "Normalization angle."
+    visible = @norm == "f(z)"
+    enabled = @norm == "f(z)"
+  endparam
+  float param normmult
+    caption=" Normalization Multiplier"
+    default= 1.0
+    hint = "Normalization Multiplier."
+    visible = @norm == "f(z)"
+    enabled = @norm == "f(z)"
+  endparam
+  complex param normshift
+    caption=" Normalization Shift"
+    default= (0.0, 0.0)
+    hint = "Normalization Shift."
+    visible = @norm == "f(z)"
+    enabled = @norm == "f(z)"
+  endparam
+  param randomize
+    caption="Randomize"
+    default=false
+    hint="Applies a random factor to z every iteration before \
+      finding the Gaussian integer."
+  endparam
+  param randomsize
+    caption="Random Size"
+    default=(0.1,0)
+    hint="Size of random factor. Larger values give more randomization."
+    visible = @randomize
+  endparam
+  param logseed
+    caption="Random Seed"
+    default=0.1
+    min=0.0
+    max=1.0
+    hint="Randomize seed, between 0 and 1. Every seed gives a different \
+          image."
+    visible = @randomize
+  endparam
+}
+
+sdc-frames {
+  ; Similiar to Sylvie Gallet's Tryptich,
+          ; makes it possible to frame the images
+          ; that have been generated as subdivisions 
+          ; with the corresponding "Frame" transform 
+          ; in Raf.uxf
+          ; Ralph Feltens March 2000
+  ; Corrected reference to "color" reserved word, set
+          ; to my own favorite defaults
+          ; Susan Chambless, February 2003
+final:
+  float w = #width/(1+@ncols)
+  float h = #height/(1+@nrows)
+  int cn = @colno
+  int rn = @rowno
+  int nc = @ncols
+  int nr = @nrows
+  
+  if (abs(real(@shift))<1)         ;values between -1 and 1 will not shift
+     float xp = real(#screenpixel)
+  else
+     float xp = real(#screenpixel) - #width/real(@shift)
+  endif
+  if (abs(imag(@shift))<1)         ;values between -1 and 1 will not shift
+     float yp = imag(#screenpixel)
+  else
+     float yp = imag(#screenpixel) - #height/imag(@shift)
+  endif
+
+  if cn > nc           ;so "column number" will not exceed "number of columns"
+     cn = nc
+  endif   
+  if rn > nr           ;so "row number" will not exceed "number of rows"
+     rn = nr
+  endif
+
+  if (round(xp/w - 0.5) != cn) || (round(yp/h - 0.5) != rn)
+      #solid = true
+  else
+    float w2 = w/2
+    float h2 = h/2
+    float bw = #width * @borderw / 100
+    float bh = #width * @borderh / 100
+    xp = abs (xp - w * cn - w2) - w2 + bw
+    yp = abs (yp - h * rn - h2) - h2 + bh
+    float bhwxp = (@borderh / @borderw) * xp
+    
+    if (xp < 0) && (yp < 0)
+      if @usesolid
+        #solid = true
+      else
+        #index = (@col+1) / 400 - 0.0025
+      endif
+    elseif (xp > 0) && (yp < bhwxp) 
+       #index = xp/bw - 0.01
+    else
+       #index = yp/bh - 0.01
+    endif
+  endif
+
+default:
+  title = "Frames"
+param colno
+  caption = "Column Number"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 0
+endparam
+param ncols
+  caption = "Number of Columns"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 0
+endparam
+param rowno
+  caption = "Row Number"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 0
+endparam
+param nrows
+  caption = "Number of Rows"
+  enum = "1" "2" "3" "4" "5" "6" "7" "8" "9" "10" "11" "12"
+  default = 0
+endparam
+param borderw
+  caption = "Border Width"
+  default = 8.0
+endparam
+param borderh
+  caption = "Border Height"
+  default = 8.0
+endparam
+param @col
+  caption = "Inside color"
+  default = 0
+  min = 0
+  max = 399
+endparam
+param usesolid
+  caption = "Use solid color"
+  default = true
+endparam
+param shift
+  caption = "Shift right and down"
+  hint = "shift this fraction of the image's size to the right and down;\
+         values between -1 and 1 will yield no shifting"
+endparam
+
+}
+
+sdc-buddabrot {
+; Melinda Green's Buddhabrot coloring technique
+; for the Mandelbrot set
+; for more, see:
+; http://www.superliminal.com/fractals/bbrot/bbrot.htm
+; http://astronomy.swin.edu.au/~pbourke/fractals/buddhabrot/
+; 
+; 
+
+global:
+  int seed = @startSeed             ; Seed for random numbers
+  int pix[#width, #height]          ; "Virtual screen" array
+  complex locations[@maxiter]       ; collect locations
+  int i = 0                         ; Loop counters
+  int x = 0, int y = 0              ; Loop counters & integer coords 
+  float max = 0.0                   ; maximum value for scaling
+  float xc =  real(#center)         ; Scaling constants
+  float yc = -imag(#center)
+  float sina = sin(#angle)
+  float cosa = cos(#angle)
+  float transx = #width * 0.5
+  float transy = #height * 0.5
+  
+  float srcMinX =  real( @srcCenter ) - (@srcRange * 0.5)
+  float srcMinY = -imag( @srcCenter ) - (@srcRange * 0.5)       
+  
+; Adjust scaling for aspect ratio  
+  if 3 * #width < 4 * #height     
+    float scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+; Initialize screen array  
+  while x < #width
+    y = 0
+    while y < #height
+      pix[x, y] = 0
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile    
+
+ 
+  ;;;;; Main iteration loop
+  int nsamples = round(#width * #height * @sampleDensity)
+  i = 0
+  while i < nsamples
+    seed = random(seed)
+    float srcA = @srcRange*(abs(seed)/#randomrange) + srcMinX
+    seed = random(seed)
+    float srcB = @srcRange*(abs(seed)/#randomrange) + srcMinY
+    complex z = 0
+    complex c = srcA + flip(srcB) ; random constant
+    int iter = 0
+    while (|z| < @bailout) && (iter < @maxIter)
+      z = z * z + c
+      locations[iter] = z
+      iter = iter + 1
+    endwhile
+    
+    bool plotit = false
+    if ( iter < @maxIter-1 ) ; point is outside
+      plotit = true
+    endif
+    
+    if ( plotit )
+      int locindex = 0
+      while( locIndex < iter )
+        float dx =  real( locations[locIndex] ) - xc
+        float dy =  imag( locations[locIndex] ) - yc
+      ; Scale to image
+        x = round((dx*cosa - dy*sina) * scale + transx)
+        y = round((dx*sina + dy*cosa) * scale + transy)
+      ; Plot the point only if inside image
+        if x >= 0 && x < #width && y >= 0 && y < #height
+            pix[x, y] = pix[x, y] + 1
+            if pix[x, y] > max
+              max = pix[x, y]
+            endif  
+        endif
+        locIndex = locIndex + 1
+        i = i+1
+      endwhile
+    endif
+
+  endwhile 
+
+final:
+  #index = pix[#x, #y] / max
+    
+    
+default:
+  title = "Buddhabrot Classic"
+  render = false
+
+  float param bailout
+    caption = "Bailout"
+    default = 4.0
+  endparam
+  int param maxiter
+    caption = "Max Iterations"
+    default = 100
+  endparam
+  float param sampleDensity
+    caption = "Sample Density"
+    default = 50.0
+  endparam
+  int param startSeed
+    caption = "Start Seed"
+    default = 123456
+  endparam
+  
+  heading
+    caption = "Source Square"
+  endheading
+  complex param srcCenter
+    caption = "Center"
+    default = (-0.5, 0.0)
+  endparam
+  float param srcRange
+    caption = "Range"
+    default = 4.0
+  endparam
+
+
+
+}
+
+sdc-buddhabrot2 {
+; Melinda Green's Buddhabrot coloring technique
+; for the Mandelbrot set
+; for more, see:
+; http://www.superliminal.com/fractals/bbrot/bbrot.htm
+; http://astronomy.swin.edu.au/~pbourke/fractals/buddhabrot/
+; 
+; 6 Jan 2003 -- added log scaling & power option. -- SDC
+
+global:
+  int seed = @startSeed             ; Seed for random numbers
+  int pix[#width, #height]          ; "Virtual screen" array
+  complex locations[@maxiter]       ; collect locations
+  int i = 0                         ; Loop counters
+  int x = 0, int y = 0              ; Loop counters & integer coords 
+  float max = 0.0                   ; maximum value for scaling
+  float xc =  real(#center)         ; Scaling constants
+  float yc = -imag(#center)
+  float sina = sin(#angle)
+  float cosa = cos(#angle)
+  float transx = #width * 0.5
+  float transy = #height * 0.5
+  
+  float srcMinX =  real( @srcCenter ) - (@srcRange * 0.5)
+  float srcMinY = -imag( @srcCenter ) - (@srcRange * 0.5)       
+  
+; Adjust scaling for aspect ratio  
+  if 3 * #width < 4 * #height     
+    float scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+; Initialize screen array  
+  while x < #width
+    y = 0
+    while y < #height
+      pix[x, y] = 0
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile    
+
+ 
+  ;;;;; Main iteration loop
+  int nsamples = #width * #height * @sampleDensity
+  i = 0
+  while i < nsamples
+    if @itype == 1          ; holograpic
+      seed = random(seed)
+      float srcA = @srcRange*(abs(seed)/#randomrange) + srcMinX
+      seed = random(seed)
+      float srcB = @srcRange*(abs(seed)/#randomrange) + srcMinY
+      seed = random(seed)
+      z = srcA + flip(srcB) ; random constant
+    endif
+    float srcC = @srcRange*(abs(seed)/#randomrange) + srcMinX
+    seed = random(seed)
+    float srcD = @srcRange*(abs(seed)/#randomrange) + srcMinY
+    complex z = (0.0, 0.0)
+    complex c = srcC + flip(srcD) ; random constant
+    int iter = 0
+    while (|z| < @bailout) && (iter < @maxIter)
+      if @powtype == 0
+        z = z * z + c
+      else
+        z = z^@power + c
+      endif
+      if @itype == 0 || @pplane == 0                    ; Z.r, Z.i
+        locations[iter] = z
+      elseif @pplane == 1                ; Z.r, C.r
+        locations[iter] = real(z) + flip(real(c))
+      elseif @pplane == 2                ; Z.r, C.i
+        locations[iter] = real(z) + flip(imag(c))
+      elseif @pplane == 3                ; Z.i, C.r
+        locations[iter] = imag(z) + flip(real(c))
+      elseif @pplane == 4                ; Z.i, C.i
+        locations[iter] = imag(z) + flip(imag(c)) 
+      elseif @pplane == 5                ; C.r, C.i
+        locations[iter] = c
+      endif
+      iter = iter + 1
+    endwhile
+    
+    bool plotit = false
+    bool outside = (iter < @maxIter-1)
+    if @ptype==2                        ; both
+      plotit = true
+    elseif @ptype==0 && outside         ; point is outside (Buddhabrot)
+      plotit = true
+    elseif @ptype==1 && !outside        ; point is inside
+      plotit = true
+    endif
+    
+    if ( plotit )
+      int locindex = 0
+      while( locIndex < iter )
+        float dx =  real( locations[locIndex] ) - xc
+        float dy =  imag( locations[locIndex] ) - yc
+      ; Scale to image
+        x = round((dx*cosa - dy*sina) * scale + transx)
+        y = round((dx*sina + dy*cosa) * scale + transy)
+      ; Plot the point only if inside image
+        if x >= 0 && x < #width && y >= 0 && y < #height
+            pix[x, y] = pix[x, y] + 1
+            if pix[x, y] > max
+              max = pix[x, y]
+            endif
+        endif
+        locIndex = locIndex + 1
+        i = i+1
+      endwhile
+    endif
+  endwhile
+  float fmax = max
+  ;float lmax = log(fmax)
+
+final:
+  if pix[#x, #y] == 0
+    if @solid==true
+      #solid = true
+    else
+      #index = 0
+    endif
+  elseif @scaletype == 0        ; linear
+    #index = pix[#x, #y] / max
+  else                      ; log
+    float pv = pix[#x, #y]
+    #index = log(pv / fmax)
+  endif    
+    
+default:
+  title = "Buddhabrot II"
+  render = false
+
+  float param bailout
+    caption = "Bailout"
+    default = 256.0
+  endparam
+  int param maxiter
+    caption = "Max Iterations"
+    default = 2000
+    hint = "Increase this for a cleaner image"
+  endparam
+  int param sampleDensity
+    caption = "Sample Density"
+    default = 50
+  endparam
+  bool param solid
+    caption = "Solid Background??"
+    default = true
+  endparam
+  int param startSeed
+    caption = "Start Seed"
+    default = 963487
+    hint = "This greatly affects image."
+  endparam
+  param powtype
+    caption = "Power Type"
+    default = 0
+    enum = "Z squared" "Arbitrary Power"
+  endparam
+  complex param power
+    caption = "Power"
+    default = (2.0, 0.0)
+    visible = @powtype==1
+  endparam
+  param scaletype
+    caption = "Scale type"
+    default = 0
+    enum = "Linear" "Log"
+  endparam
+  
+  heading
+    caption = "Source Square"
+  endheading
+  complex param srcCenter
+    caption = "Center"
+    default = (-0.5, 0.0)
+  endparam
+  float param srcRange
+    caption = "Range"
+    default = 4.0
+  endparam
+  
+  heading
+    caption = "Advanced"
+  endheading
+  param itype
+    caption = "Image Type"
+    default = 0
+    enum = "Classic" "Hologram"
+  endparam
+  param pplane
+    caption = "Projection Plane"
+    default = 0
+    enum = "Z.r,Z.i" "Z.r,C.r" "Z.r,C.i" "Z.i,C.r" "Z.i,C.i" "C.r,C.i"
+    visible = @itype==1
+    enabled = @itype==1
+  endparam
+  param ptype
+    caption = "Plot Type"
+    default = 0
+    enum = "Outside(Buddhabrot)" "Inside" "Both"
+  endparam
+}
+
+sdc-buddhabrot3 {
+; Melinda Green's Buddhabrot coloring technique
+; for the Mandelbrot set
+; for more, see:
+; http://www.superliminal.com/fractals/bbrot/bbrot.htm
+; http://astronomy.swin.edu.au/~pbourke/fractals/buddhabrot/
+; 
+; 6 Jan 2003 -- added log scaling & power option. -- SDC
+; 8 Jan 2003 -- added src square options -- SDC
+
+global:
+  int seed = @startSeed             ; Seed for random numbers
+  int bsA                           ; binned seeds
+  int bsB
+  int bsC
+  int bsD
+  int pix[#width, #height]          ; "Virtual screen" array
+  complex locations[@maxiter]       ; collect locations
+  int i = 0                         ; Loop counters
+  int x = 0, int y = 0              ; Loop counters & integer coords 
+  float max = 0.0                   ; maximum value for scaling
+  float xc =  real(#center)         ; Scaling constants
+  float yc = -imag(#center)
+  float sina = sin(#angle)
+  float cosa = cos(#angle)
+  float transx = #width * 0.5
+  float transy = #height * 0.5
+  
+  float srcMinX =  real( @srcCenter ) - (@srcWidth * 0.5)
+  float srcMinY = -imag( @srcCenter ) - (@srcHeight * 0.5)       
+  
+; Adjust scaling for aspect ratio  
+  if 3 * #width < 4 * #height     
+    float scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+  
+  int srcDens = @srcDensity
+  if (@detBinsBy == "Corrected")
+    srcDens = @srcDensity * 100000
+  endif
+  
+; Initialize screen array  
+  while x < #width
+    y = 0
+    while y < #height
+      pix[x, y] = 0
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile    
+
+ 
+  ;;;;; Main iteration loop
+  int nsamples = round(#width * #height * @sampleDensity)
+  i = 0
+  while i < nsamples
+    bsA = seed = random(seed)
+    bsB = seed = random(seed)
+    bsC = seed = random(seed)
+    bsD = seed = random(seed)
+
+    if @binFcn == 0                ;floor
+       bsA =  floor( bsA / srcDens ) * srcDens
+       bsB =  floor( bsB / srcDens ) * srcDens
+       bsC =  floor( bsC / srcDens ) * srcDens
+       bsD =  floor( bsD / srcDens ) * srcDens
+    elseif @binFcn == 1            ;ceil
+       bsA =  ceil( bsA / srcDens ) * srcDens
+       bsB =  ceil( bsB / srcDens ) * srcDens
+       bsC =  ceil( bsC / srcDens ) * srcDens
+       bsD =  ceil( bsD / srcDens ) * srcDens
+    elseif @binFcn == 2            ;round
+       bsA =  round( bsA / srcDens ) * srcDens
+       bsB =  round( bsB / srcDens ) * srcDens
+       bsC =  round( bsC / srcDens ) * srcDens
+       bsD =  round( bsD / srcDens ) * srcDens
+    elseif @binFcn == 3            ;trunc
+       bsA =  trunc( bsA / srcDens ) * srcDens
+       bsB =  trunc( bsB / srcDens ) * srcDens
+       bsC =  trunc( bsC / srcDens ) * srcDens
+       bsD =  trunc( bsD / srcDens ) * srcDens
+    endif
+    if @itype == 1          ; holograpic
+      float srcA = @srcWidth*(abs(bsA)/#randomrange) + srcMinX
+      float srcB = @srcHeight*(abs(bsB)/#randomrange) + srcMinY
+      z = srcA + flip(srcB) ; random constant
+    endif
+    float srcC = @srcWidth*(abs(bsC)/#randomrange) + srcMinX
+    float srcD = @srcHeight*(abs(bsD)/#randomrange) + srcMinY
+    complex z = (0.0, 0.0)
+    complex c = srcC + flip(srcD) ; random constant
+    int iter = 0
+    while (|z| < @bailout) && (iter < @maxIter)
+      if @powtype == 0
+        z = z * z + c
+      else
+        z = z^@power + c
+      endif
+      if @pplane == 0                    ; Z.r, Z.i
+        locations[iter] = z
+      elseif @pplane == 1                ; Z.r, C.r
+        locations[iter] = real(z) + flip(real(c))
+      elseif @pplane == 2                ; Z.r, C.i
+        locations[iter] = real(z) + flip(imag(c))
+      elseif @pplane == 3                ; Z.i, C.r
+        locations[iter] = imag(z) + flip(real(c))
+      elseif @pplane == 4                ; Z.i, C.i
+        locations[iter] = imag(z) + flip(imag(c)) 
+      elseif @pplane == 5                ; C.r, C.i
+        locations[iter] = c
+      endif
+      iter = iter + 1
+    endwhile
+    
+    bool plotit = false
+    bool outside = (iter < @maxIter-1)
+    if @ptype==2                        ; both
+      plotit = true
+    elseif @ptype==0 && outside         ; point is outside (Buddhabrot)
+      plotit = true
+    elseif @ptype==1 && !outside        ; point is inside
+      plotit = true
+    endif
+    
+    if ( plotit )
+      int locindex = 1          ; skip first point
+      while( locIndex < iter )
+        float dx =  real( locations[locIndex] ) - xc
+        float dy =  imag( locations[locIndex] ) - yc
+      ; Scale to image
+        x = round((dx*cosa - dy*sina) * scale + transx)
+        y = round((dx*sina + dy*cosa) * scale + transy)
+      ; Plot the point only if inside image
+        if x >= 0 && x < #width && y >= 0 && y < #height
+            pix[x, y] = pix[x, y] + 1
+            if pix[x, y] > max
+              max = pix[x, y]
+            endif
+        endif
+        locIndex = locIndex + 1
+        i = i+1
+      endwhile
+    endif
+  endwhile
+  float fmax = max
+  ;float lmax = log(fmax)
+
+final:
+  if pix[#x, #y] == 0
+    if @solid==true
+      #solid = true
+    else
+      #index = 0
+    endif
+  elseif @scaletype == 0        ; linear
+    #index = pix[#x, #y] / max
+  else                      ; log
+    float pv = pix[#x, #y]
+    #index = log(pv / fmax)
+  endif    
+    
+default:
+  title = "Buddhabrot III"
+  render = false
+
+  float param bailout
+    caption = "Bailout"
+    default = 100
+  endparam
+  int param maxiter
+    caption = "Max Iterations"
+    default = 3000
+    hint = "Increase this for a cleaner image"
+  endparam
+  float param sampleDensity
+    caption = "Sample Density"
+    default = .02
+  endparam
+  bool param solid
+    caption = "Solid Background??"
+    default = true
+  endparam
+  int param startSeed
+    caption = "Start Seed"
+    default = 963487
+    hint = "This greatly affects image."
+  endparam
+  param powtype
+    caption = "Power Type"
+    default = 0
+    enum = "Z squared" "Arbitrary Power"
+  endparam
+  complex param power
+    caption = "Power"
+    default = (2.0, 0.0)
+    visible = @powtype==1
+  endparam
+  param scaletype
+    caption = "Scale type"
+    default = 0
+    enum = "Linear" "Log"
+  endparam
+  
+  heading
+    caption = "Source Square"
+  endheading
+  complex param srcCenter
+    caption = "Center"
+    default = (-0.5, 0.0)
+  endparam
+  float param srcWidth
+    caption = "Width"
+    default = 4.0
+  endparam
+  float param srcHeight
+    caption = "Height"
+    default = 4.0
+  endparam
+  param detBinsBy
+    caption = "Determine Bins by"
+    enum = "Orignal" "Corrected"
+    default = 1
+  endparam
+  int param srcDensity
+    caption = "Bin Size"
+    default = 12
+    min = 1
+    max = 100000000
+  endparam
+  param binFcn
+    caption = "Binning Function"
+    enum = "floor" "ceil" "round" "trunc"
+    default = 0
+  endParam
+  
+  heading
+    caption = "Advanced"
+  endheading
+  param itype
+    caption = "Image Type"
+    default = 0
+    enum = "Classic" "Hologram"
+  endparam
+  param pplane
+    caption = "Projection Plane"
+    default = 0
+    enum = "Z.r,Z.i" "Z.r,C.r" "Z.r,C.i" "Z.i,C.r" "Z.i,C.i" "C.r,C.i"
+    visible = @itype==1
+    enabled = @itype==1
+  endparam
+  param ptype
+    caption = "Plot Type"
+    default = 0
+    enum = "Outside(Buddhabrot)" "Inside" "Both"
+  endparam
+}
+
+sdc-attractor {
+
+init:
+  complex orbit=(0,0)
+  complex diff=(0,0)
+  complex iterz=(0,0)
+  int iter=0
+
+loop:
+  orbit=(#z-@center)*@mag*exp(flip(@rot*#pi/180))
+;   float x = real(orbit)
+;   float y = imag(orbit)
+
+  iter=iter+1
+  diff=orbit-#z
+
+  if (iter <= @iterate)
+    iterz = diff
+  endif
+  
+final:
+  #index=@randfactor*real(#rand-.5)+cabs(iterz)
+  
+default:
+  title = "Attractor"
+  
+  float param version
+    default = 0.0
+    visible = false
+  endparam
+  
+  param randfactor
+  caption = "Random"
+  default = 0.0
+  endparam
+
+  param iterate
+  caption = "Iteration # for attractor value"
+  default = 10
+  hint = "Number of iterations to determine the attractor value."
+  endparam
+
+  param @center
+  caption="Trap center"
+  default=(0,0)
+  endparam
+  
+  param @mag
+  caption="Trap magnitude"
+  default=3.0
+  endparam
+  
+  param @rot
+  caption="Trap rotation"
+  default=0.0
+  endparam
+}
+
+sdc-buddhabrot4 {
+; Melinda Green's Buddhabrot coloring technique
+; for the Mandelbrot set
+; for more, see:
+; http://www.superliminal.com/fractals/bbrot/bbrot.htm
+; http://astronomy.swin.edu.au/~pbourke/fractals/buddhabrot/
+; 
+; 6 Jan 2003 -- added log scaling & power option. -- SDC
+; 8 Jan 2003 -- added src square options -- SDC
+; Nov, 2004  -- added mapping, optional binning & function
+
+global:
+  int seed = @startSeed             ; Seed for random numbers
+  
+  ;;;;  Nov 2004
+  float incMult = 1.0 + (@percentInc*.01)
+  int pix[trunc(#width*(1.0+(@percentInc*.01))),\
+          trunc(#height*(1.0+(@percentInc*.01)))]  ; offscreen image
+
+  int pwid = trunc(#width*incMult)
+  int phgt = trunc(#height*incMult)
+  complex locations[@maxiter]       ; collect locations
+  int i = 0                         ; Loop counters
+  int x = 0, int y = 0              ; Loop counters & integer coords 
+  float max = 0.0                   ; maximum value for scaling
+  float xc =  real(#center)         ; Scaling constants
+  float yc = -imag(#center)
+  float sina = sin(#angle)
+  float cosa = cos(#angle)
+  float transx = pwid * 0.5
+  float transy = phgt * 0.5
+  
+  float srcMinX =  real( @srcCenter ) - (@srcWidth * 0.5)
+  float srcMinY = -imag( @srcCenter ) - (@srcHeight * 0.5)       
+  
+; Adjust scaling for aspect ratio  
+  if 3 * #width < 4 * #height     
+    float scale = (#width * #magn) / 4
+  else
+    scale = (#height * #magn) / 3
+  endif
+  
+; Initialize screen array  
+  while x < #width
+    y = 0
+    while y < #height
+      pix[x, y] = 0
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile    
+
+ 
+  ;;;;; Main iteration loop
+  int nsamples = round(#width * #height * @sampleDensity)
+  int tenth = round(nsamples / 10)
+  i = 0
+  
+  while i < nsamples
+    ; generate random numbers (-#randomrange to #randomrange)
+    int irandX1 = seed = random(seed)
+    int irandY1 = seed = random(seed)
+    int irandX2 = seed = random(seed)
+    int irandY2 = seed = random(seed)
+    
+    ; convert to random numbers between 0-1    
+    float frandX1 = abs(irandX1) / #randomrange
+    float frandY1 = abs(irandY1) / #randomrange
+    float frandX2 = abs(irandX2) / #randomrange
+    float frandY2 = abs(irandY2) / #randomrange
+       
+    if @binning == true
+      ; convert to random numbers (0-1), 
+      ; but only nBins number of values
+      frandX1 = frandX1 * @nBinsX
+      frandY1 = frandY1 * @nBinsY
+      frandX2 = frandX2 * @nBinsX
+      frandY2 = frandY2 * @nBinsY
+      ; bin the numbers
+      if @binFcn == 0                ;floor
+         irandX1 =  floor( frandX1 )
+         irandY1 =  floor( frandY1 )
+         irandX2 =  floor( frandX2 )
+         irandY2 =  floor( frandY2 )
+      elseif @binFcn == 1            ;ceil
+         irandX1 =  ceil( frandX1 )
+         irandY1 =  ceil( frandY1 )
+         irandX2 =  ceil( frandX2 )
+         irandY2 =  ceil( frandY2 )
+      elseif @binFcn == 2            ;round
+         irandX1 =  round( frandX1 )
+         irandY1 =  round( frandY1 )
+         irandX2 =  round( frandX2 )
+         irandY2 =  round( frandY2 )
+     elseif @binFcn == 3            ;trunc
+         irandX1 =  trunc( frandX1 )
+         irandY1 =  trunc( frandY1 )
+         irandX2 =  trunc( frandX2 )
+         irandY2 =  trunc( frandY2 )
+      endif
+      ; convert back to (0-1)
+      frandX1 = irandX1 / @nbinsX
+      frandY1 = irandY1 / @nbinsY
+      frandX2 = irandX2 / @nbinsX
+      frandY2 = irandY2 / @nbinsY
+    endif                   ; endif @binning == true
+    float srcX1 = @srcWidth*(frandX1) + srcMinX
+    float srcY1 = @srcHeight*(frandY1) + srcMinY
+    ; Mandelbrot mode
+    complex z = @z0
+    complex c = srcX1 + flip(srcY1) ; random constant
+    if (@mode == "Julia")
+      z = c              ; make z0 the randomly generated value
+      c = @juliaseed
+    endif
+    ; I am not sure whether the holographic mode makes sense
+    ; with Julia.
+    if @itype == 1        ; holograpic
+      float srcX2 = @srcWidth*(frandX2) + srcMinX
+      float srcY2 = @srcHeight*(frandY2) + srcMinY
+      z = srcX2 + flip(srcY2) ; random constant
+    endif
+    ; count iterations
+    int iter = 0
+    while (|z| < @bailout) && (iter < @maxIter)
+      if @formulatype == 0
+        z = z * z + c
+      elseif @orderfn==0
+        z = @fn0(z^@power) + c
+      else
+        z = @fn0(z)^@power + c
+      endif
+      if @itype==0 || @pplane == 0       ; Z.r, Z.i
+        locations[iter] = z
+      elseif @pplane == 1                ; Z.r, C.r
+        locations[iter] = real(z) + flip(real(c))
+      elseif @pplane == 2                ; Z.r, C.i
+        locations[iter] = real(z) + flip(imag(c))
+      elseif @pplane == 3                ; Z.i, C.r
+        locations[iter] = imag(z) + flip(real(c))
+      elseif @pplane == 4                ; Z.i, C.i
+        locations[iter] = imag(z) + flip(imag(c)) 
+      elseif @pplane == 5                ; C.r, C.i
+        locations[iter] = c
+      endif
+      iter = iter + 1
+    endwhile
+    
+    bool plotit = false
+    bool outside = (iter < @maxIter-1)
+    if @ptype==2                        ; both
+      plotit = true
+    elseif @ptype==0 && outside         ; point is outside (Buddhabrot)
+      plotit = true
+    elseif @ptype==1 && !outside        ; point is inside
+      plotit = true
+    endif
+    
+    if ( plotit )
+      int locindex = 1          ; skip first point
+      while( locIndex < iter )
+        float dx =  real( locations[locIndex] ) - xc
+        float dy =  imag( locations[locIndex] ) - yc
+      ; Scale to image
+        x = round((dx*cosa - dy*sina) * scale + transx)
+        y = round((dx*sina + dy*cosa) * scale + transy)
+      ; Plot the point only if inside image
+        if x >= 0 && x < pwid && y >= 0 && y < phgt
+            pix[x, y] = pix[x, y] + 1
+            if pix[x, y] > max
+              max = pix[x, y]
+            endif
+        endif
+        locIndex = locIndex + 1
+        if (@progress==true && i%tenth == 0)
+$define DEBUG
+          print(round(i/nsamples*100), " percent")
+        endif
+        i = i+1
+      endwhile
+    endif
+  endwhile
+  float fmax = max
+  float lmax = log(fmax)
+
+final:
+  int xcrd = #x
+  int ycrd = #y
+  bool inside = true
+  if (@applyMapping == true)
+      ; generate the x and y location in the image      
+      float dxx = (real(#pixel)-real(#center))
+      float dyy = (imag(#pixel)-imag(#center))
+      
+      xcrd = floor(transx + (dxx*cosa + dyy*sina)*scale)
+      ycrd = floor(transy + (dxx*sina - dyy*cosa)*scale)                 
+                              
+      ; is this in our image?
+      if (xcrd<0 || xcrd>=pwid || ycrd<0 || ycrd>=phgt)
+        inside = false
+      endif
+  endif
+  if inside
+    if pix[xcrd, ycrd] == 0
+      if @solid==true
+        #solid = true
+      else
+        #index = 0
+      endif
+    elseif @scaletype == 0        ; linear
+      #index = pix[xcrd, ycrd] / max
+    else                      ; log
+      float pv = pix[xcrd, ycrd]
+      #index = pv / lmax
+    endif
+  else
+    if @solid==true
+      #solid = true
+    else
+      #index = 0
+    endif
+  endif   
+    
+default:
+  title = "Buddhabrot IV"
+  render = false
+
+  float param version
+    default = 2.0
+    visible = false
+  endparam
+  
+  param mode
+    caption="ManJul mode"
+    enum="Mandelbrot" "Julia"
+    default = 0
+  endparam
+  
+  complex param z0
+    caption = "Initial Z value"
+    default = (0.0, 0.0)
+    visible=(@mode==0)
+  endparam
+  
+  complex param juliaseed
+    caption = "Julia Seed"
+    default = (-0.8, 0.2)
+    hint = "No Switch: Select seed from your favorite Julia.."
+    visible=(@mode==1)
+  endparam
+
+  float param bailout
+    caption = "Bailout"
+    default = 100
+  endparam
+  int param maxiter
+    caption = "Max Iterations"
+    default = 300
+    hint = "Increase this for a cleaner image"
+  endparam
+  float param sampleDensity
+    caption = "Sample Density"
+    default = 50.0
+  endparam
+  bool param solid
+    caption = "Solid Background??"
+    default = true
+  endparam
+  
+  bool param progress
+    caption = "Show Progress??"
+    hint = "Use for a long render to see how it is progressing."
+    default = false
+  endparam
+  
+  heading
+    caption = "Source Square"
+  endheading
+  complex param srcCenter
+    caption = "Center"
+    default = (-0.5, 0.0)
+  endparam
+  float param srcWidth
+    caption = "Width"
+    default = 4.0
+  endparam
+  float param srcHeight
+    caption = "Height"
+    default = 4.0
+  endparam
+  param scaletype
+    caption = "Scale type"
+    default = 0
+    enum = "Linear" "Log"
+  endparam
+  
+  param formulatype
+    caption = "Formula Type"
+    default = 0
+    enum = "Classic" "Enhanced"
+  endparam
+  
+  
+  heading
+    caption = "Advanced"
+    visible = @formulatype==1
+  endheading
+  int param startSeed
+    caption = "Start Seed"
+    default = 963487
+    hint = "This greatly affects binned image."
+    visible = @formulatype==1
+  endparam
+  bool param applyMapping
+    caption = "Apply Mapping"
+    default = true
+    visible = false
+  endparam  
+  float param percentInc
+    caption = "Oversize by (%)"
+    default = 0.0
+    visible = @formulatype==1 && @applyMapping == true
+  endparam
+  heading
+    caption = "Enhancement Params"
+    visible = @formulatype==1
+  endheading
+  complex param power
+    caption = "Power"
+    default = (2.0, 0.0)
+    visible = @formulatype==1
+  endparam
+  func fn0
+    caption = "Function"
+    default = ident()
+    visible = @formulatype==1
+  endfunc
+  param orderfn
+    caption = "Order Applied"
+    enum = "f(z^p)" "f(z)^p"
+    default = 0
+    visible = @formulatype==1
+  endparam
+  
+  bool param binning
+    caption = "Binning?"
+    hint = "Binning combines orbits"
+    default = false
+    visible = @formulatype==1
+  endparam
+  heading 
+    caption = "Binning Parameters"
+    visible = @formulatype==1 && @binning==true
+  endheading
+  int param nBinsX
+    caption = "Number of Bins in X"
+    hint = "Controls number of orbits."
+    default = 100
+    min = 1
+    max = 100000000
+    visible = @formulatype==1 && @binning==true
+  endparam
+  int param nBinsY
+    caption = "Number of Bins in Y"
+    hint = "Controls number of orbits."
+    default = 100
+    min = 1
+    max = 100000000
+    visible = @formulatype==1 && @binning==true
+  endparam
+  param binFcn
+    caption = "Binning Function"
+    enum = "floor" "ceil" "round" "trunc"
+    default = 0
+    visible = @formulatype==1 && @binning==true
+  endParam
+  
+  heading
+    caption = "Image Types"
+    visible = @formulatype==1
+  endheading
+  param itype
+    caption = "Image Type"
+    default = 0
+    enum = "Buddhabrot" "Hologram"
+    visible = @formulatype==1
+  endparam
+  param pplane
+    caption = "Projection Plane"
+    default = 0
+    enum = "Z.r,Z.i" "Z.r,C.r" "Z.r,C.i" "Z.i,C.r" "Z.i,C.i" "C.r,C.i"
+    visible = @formulatype==1 && @itype==1  
+    enabled = @itype==1
+  endparam
+  param ptype
+    caption = "Plot Type"
+    default = 0
+    enum = "Outside(Buddhabrot)" "Inside" "Both"
+    visible = @formulatype==1
+  endparam
+}
+
+sdc-KologyTrap {
+; Inspired by work of Mark Townsend, Damien Jones, Ron Barnett,
+;   and Gilles Nadeau, and, doubtless, others.
+;
+; 
+; Susan Chambless
+;  12/24/2004
+;
+init:
+  pat_p = 0
+  trap_z = 0
+  trap_p = 0
+  int seed = random(@randomseed);; initialize random numbers
+  float sum = 0.0
+  float dist = 0.0
+  float noise = 0.0
+  int trap_iter = 0
+  float texture = 0.0
+  bool masked = false
+  float min_dist = 1e30
+  int iter = 0
+  
+loop:
+  
+  p = @fn1(#z / @scale) - @offset
+  
+; Iterate Kology formula
+  if (@inititer == true)
+    iter = 0
+    seed = random(@randomseed)  
+  endif
+  int seed = random(@randomseed);; initialize random numbers
+  int i = 0
+  float x = real(p)
+  float y = imag(p)
+  while i < @max_iterations
+    float oldx = x
+    float oldy = y
+    bool  formula1 = false
+    
+    
+    ; Determine formula to be used:
+    iter = iter + 1
+    if ( @seq == 1 )                  ; First formula
+      formula1 = true
+    elseif ( @seq == 2 )              ; Second formula
+      formula1 = false
+    elseif ( @seq==3 )
+      seed = random(seed)
+      if ( abs(seed)/#randomrange < @prob1 )
+        formula1 = true
+      else
+        formula1 = false
+      endif
+    elseif ( @seq == 0 ); Modulation
+      if (iter % @modBy < @modCmp)
+        formula1 = true
+      else
+        formula1 = false
+      endif
+    endif
+  
+    if( formula1 == true )
+      float x1 = @ampA1 * real(@fcnA1(@freqA1 * oldy + \
+                   @ampB1 * real(@fcnB1(@freqB1 * oldy ))))
+      float x2 = @ampC1 * real(@fcnC1(@freqC1 * oldy + \
+                   @ampD1 * real(@fcnD1(@freqD1 * oldy ))))
+      float y1 = @ampA1 * real(@fcnA1(@freqA1 * oldx + \
+                   @ampB1 * real(@fcnB1(@freqB1 * oldx ))))
+      float y2 = @ampC1 * real(@fcnC1(@freqC1 * oldx + \
+                   @ampD1 * real(@fcnD1(@freqD1 * oldx ))))
+                   
+      float xx
+      float yy      
+      if ( @op11 == 0 )           ; +
+        xx = x1 + x2
+      elseif ( @op11 == 1 )       ; -
+        xx = x1 - x2
+      else                        ; *
+        xx = x1 * x2
+      endif          
+      if ( @op12 == 0 )           ; +
+        yy = y1 + y2
+      elseif ( @op12 == 1 )       ; -
+        yy = y1 - y2
+      else                        ; *
+        yy = y1 * y2
+      endif
+        
+      x = oldx + @multiplier * xx      
+      y = oldy - @multiplier * yy
+    else  ; formula 2
+      float x1 = @ampA2 * real(@fcnA2(@freqA2 * oldy + \
+                   @ampB2 * real(@fcnB2(@freqB2 * oldy ))))
+      float x2 = @ampC2 * real(@fcnC2(@freqC2 * oldy + \
+                   @ampD2 * real(@fcnD2(@freqD2 * oldy ))))
+      float y1 = @ampA2 * real(@fcnA2(@freqA2 * oldx + \
+                   @ampB2 * real(@fcnB2(@freqB2 * oldx ))))
+      float y2 = @ampC2 * real(@fcnC2(@freqC2 * oldx + \
+                   @ampD2 * real(@fcnD2(@freqD2 * oldx ))))
+      
+     ;; float xx
+     ;; float yy
+      if ( @op21 == 0 )           ; +
+        xx = x1 + x2
+      elseif ( @op21 == 1 )       ; -
+        xx = x1 - x2
+      else                        ; *
+        xx = x1 * x2
+      endif   
+      if ( @op22 == 0 )           ; +
+        yy = y1 + y2
+      elseif ( @op22 == 1 )       ; -
+        yy = y1 - y2
+      else                        ; *
+        yy = y1 * y2
+      endif
+      
+      x = oldx + @multiplier * xx
+      y = oldy - @multiplier * yy
+    endif
+    i = i + 1   ;;; increment iteration count
+  endwhile
+  
+  ;; collect trap information
+  p = @fn2(x + flip(y)) + @offset
+  dist = cabs(#z - p)
+  if (iter >= @skip) && dist < min_dist
+    trap_z = #z
+    trap_p = p
+    min_dist = dist
+    trap_iter = iter
+  endif 
+final:
+  if @mask_type == 0 
+    if @mask != 0
+      if min_dist > @mask
+        masked = true
+      endif  
+    endif  
+  elseif @mask_type == 1
+    if @mask != 0
+      float mask_val = trap_iter
+      if @mask_mod != 0
+        mask_val = trap_iter % @mask_mod
+      endif  
+      if mask_val < @mask
+        masked = true
+      endif  
+    endif  
+  elseif @mask_type == 2
+    if (trap_iter >= @mask) && (trap_iter <= @mask_mod)
+      masked = true
+    endif  
+  endif
+  if @inverse
+    masked = !masked
+  endif  
+  if masked
+    #solid = true
+  else  
+    if (@texture_type == 0) 
+    ;Random
+      texture = @rnd * real(#random)
+    else
+    ; fBm
+      if (@rnd != 0)
+        complex r = (0,1) ^ (@angle / 90.0)
+        complex r2 = (0,1) ^ (@anglestep / 90.0)
+        if @initial == 0
+          pat_p = #pixel * r + @fbmOffset
+          complex p = #pixel * @fbmscale * r + @fbmoffset
+        elseif @initial == 1
+          pat_p = trap_z * r + @fbmOffset
+          complex p = trap_z * @fbmscale * r + @fbmoffset
+        elseif @initial == 2
+          pat_p = trap_p * r + @fbmOffset
+           complex p = trap_p * @fbmscale * r + @fbmoffset
+        endif
+        float freq = 1.0
+        int i = @octaves
+        while (i > 0)
+          ; determine integer coordinate for corners of square
+          ; surrounding p
+          float bx0 = floor(real(p)) % 256
+          float by0 = floor(imag(p)) % 256
+          if (bx0 < 0)
+            bx0 = bx0 + 256
+          endif
+          if (by0 < 0)
+            by0 = by0 + 256
+          endif
+          float bx1 = (bx0 + 1) % 256
+          float by1 = (by0 + 1) % 256
+          float rx0 = real(p) - floor(real(p))
+          float ry0 = imag(p) - floor(imag(p))
+          float rx1 = rx0 - 1
+          float ry1 = ry0 - 1
+          float b00 = (bx0^@power % 65536 + by0)^@power % 65536
+          float b10 = (bx1^@power % 65536 + by0)^@power % 65536
+          float b01 = (bx0^@power % 65536 + by1)^@power % 65536
+          float b11 = (bx1^@power % 65536 + by1)^@power % 65536
+          float g_b00_0 = (b00)^@power*0.25 % 512 - 256
+          float g_b10_0 = (b10)^@power*0.25 % 512 - 256
+          float g_b01_0 = (b01)^@power*0.25 % 512 - 256
+          float g_b11_0 = (b11)^@power*0.25 % 512 - 256
+          float g_b00_1 = (b00+1)^@power*0.25 % 512 - 256
+          float g_b10_1 = (b10+1)^@power*0.25 % 512 - 256
+          float g_b01_1 = (b01+1)^@power*0.25 % 512 - 256
+          float g_b11_1 = (b11+1)^@power*0.25 % 512 - 256
+          float d = 0.0;
+          d = 1 / sqrt(sqr(g_b00_0) + sqr(g_b00_1))
+          g_b00_0 = g_b00_0 * d
+          g_b00_1 = g_b00_1 * d
+          d = 1 / sqrt(sqr(g_b10_0) + sqr(g_b10_1))
+          g_b10_0 = g_b10_0 * d
+          g_b10_1 = g_b10_1 * d
+          d = 1 / sqrt(sqr(g_b01_0) + sqr(g_b01_1))
+          g_b01_0 = g_b01_0 * d
+          g_b01_1 = g_b01_1 * d
+          d = 1 / sqrt(sqr(g_b11_0) + sqr(g_b11_1))
+          g_b11_0 = g_b11_0 * d
+          g_b11_1 = g_b11_1 * d
+          float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+          float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+          float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+          float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+          float sx = sqr(rx0) * (3 - rx0*2)
+          float sy = sqr(ry0) * (3 - ry0*2)
+          float a = u1 + sx*(v1 - u1)
+          float b = u2 + sx*(v2 - u2)
+          if @fbmfunc == 0
+          ; Ident
+            sum = sum + (a + sy * (b - a)) * freq
+          elseif @fbmfunc == 1   
+          ; Abs
+            sum = sum + sqrt(2) * abs(a + sy * (b - a)) * freq
+          elseif @fbmfunc == 2
+          ; Sqr
+            sum = sum + 4 * sqr(a + sy * (b - a)) * freq
+          elseif @fbmfunc == 3
+          ; Sqrt
+            float noise = a + sy * (b - a)
+            if noise < 0
+              noise = imag(sqrt(noise))
+            else
+              noise = real(sqrt(noise))
+            endif
+            sum = sum + noise * freq
+          elseif @fbmfunc == 4
+          ; Ceil
+            sum = sum + ceil(a + sy * (b - a)) * freq
+          endif  
+          freq = freq * @step
+          p = p * r2 / @step
+          i = i - 1
+        endwhile
+      endif
+      if @pattern == 0
+        noise = sum
+      elseif @pattern == 1    
+      ; Marble
+        noise = real(sin(@pfreq * real(pat_p) + (@turb * sum)))
+      elseif @pattern == 2    
+      ; Wood
+        noise = cabs(@pfreq * pat_p) + (@turb * sum)
+      elseif @pattern == 3    
+      ; Cells
+        float x = sin(@pfreq * real(pat_p))
+        float y = cos(@pfreq * imag(pat_p))
+        noise = cabs(x + flip(y)) + (@turb * sum)
+      elseif @pattern == 4    
+        p = round(pat_p * @pfreq) / @pfreq
+        noise = 2 * cabs(@pfreq * pat_p - @pfreq * p) + (@turb * sum)
+      endif
+      if @texture_type == 1
+      ; Original fBm
+        texture = @rnd * noise
+      elseif @texture_type == 2
+      ; Corrected fBm
+        texture = @rnd * ((noise + 1) * 0.5)
+      endif
+    endif  
+    if @color_mode == 0
+    ; Distance  
+      #index = min_dist + texture
+    elseif @color_mode == 1
+    ; Iteration
+      #index = 0.01 * trap_iter + texture
+    elseif @color_mode == 2
+    ; Magnitude
+      #index = cabs(trap_z) + texture
+    elseif @color_mode == 3
+    ; Real
+      #index = abs(real(trap_z)) + texture
+    elseif @color_mode == 4
+    ; Imag
+      #index = abs(imag(trap_z)) + texture
+    elseif @color_mode == 5
+    ; Angle
+      float angle = atan2(trap_z)
+      if angle < 0
+        angle = angle + 2 * #pi
+      endif
+      angle = 1 / (2 * #pi) * angle
+      #index = angle + (@rnd * real(#random))
+    elseif @color_mode == 6
+   ; Modulated iteration
+        #index =  ((trap_iter) % 8) / 8 + texture
+    elseif @color_mode == 7
+    ; Angle to Trap
+      float angle = atan2(trap_z - trap_p)
+      if angle < 0
+        angle = angle + 2 * #pi
+      endif
+      angle = 1 / (2 * #pi) * angle
+      #index = angle + texture
+    endif
+  endif
+default:
+  title = "Trap Kology"
+  param version
+    caption = "Version"
+    default = 1.1
+    visible = false
+  endparam
+  
+  heading
+    caption = "Global Settings"
+  endheading
+  param color_mode
+    caption = "Coloring Mode"
+    enum = "Distance" "Iteration" "Magnitude" "Real" "Imag" \
+           "Angle" "Modulated Iter" "Angle to Trap"
+  endparam  
+  param max_iterations
+    caption = "Iterations"
+    default = 10
+    min = 1
+  endparam  
+  param @scale
+    caption = "Scale"
+    default = 0.5
+  endparam  
+  param offset
+    caption = "Offset"  
+    default = (0,0)
+  endparam  
+  param skip
+    caption = "Iterations to Skip"
+    hint = "This is the number of iterations to skip before watching \
+           the orbit."
+    default = 0
+    min = 0
+  endparam
+  bool param inititer
+    caption = "Init sequence in loop"
+    default = true
+  endparam
+  heading
+    caption = "Global functions"
+  endheading
+  func fn1
+    caption = "Initial function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc    
+  func fn2
+    caption = "Final function"
+    hint = "This function changes the overall shape of \
+            the trap."
+    default = ident()
+  endfunc
+  
+  heading
+    caption = "Formula Selection"
+  endheading
+  int param seq
+    enum = "Modulation" "First Scenario" "Second Scenario" "Random"
+    default = 0
+    caption = "Scenario Sequence"
+  endparam
+  int param modBy
+    default = 10
+    caption = "Mod By"
+    hint = "Iteration Modulated by This"
+    visible = @seq==0
+  endparam
+  int param modCmp
+    default = 5
+    caption = "Mod Compare"
+    hint = "Modulated Iteration < this -> Scenario 1"
+    visible = @seq==0
+  endparam
+  int param randomseed
+    caption = "Random Seed"
+    default = 123456
+    visible = @seq==3
+  endparam
+  float param prob1
+    caption = "Prob for Formula 1"
+    default = 0.5
+    min = 0.0
+    max = 1.0
+    visible = @seq==3
+  endparam
+  
+  heading
+    caption = "Kology specific"
+  endheading
+  
+  float param multiplier
+    default = .1
+    caption = "Multiplier"
+  endparam
+  
+  bool param progressive
+    caption = "Progressive Params?"
+    default = false
+    visible = false  ;;; maybe later
+  endparam
+
+  bool param showfn1
+    caption = "Show Function 1"
+    default = true
+    visible= @seq != 2
+  endparam
+  bool param showfn2
+    caption = "Show Function 2"
+    default = true
+    visible = @seq != 1
+  endparam
+
+   heading
+     caption = "Function 1"
+     visible = @showfn1 && @seq != 2
+   endheading
+   param op11
+     caption = "Fcn 1, Op 1"
+     default = 0
+     enum = "+" "-" "*"
+    visible = @showfn1 && @seq != 2
+   endparam 
+   param op12
+     caption = "Fcn 1, Op 2"
+     default = 0
+     enum = "+" "-" "*"
+     visible = @showfn1 && @seq != 2
+   endparam
+   
+   func fcnA1
+     default = sinh()
+     caption = "Function A1"
+     visible = @showfn1 && @seq != 2
+   endfunc 
+   
+   float param ampA1
+     default = 1.0
+     caption = "Amplitude A1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dAmpA1
+     default = 0.0
+     caption = "Delta Amplitude A1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+   
+   float param freqA1
+     default = 1.0
+     caption = "Frequency A1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dFreqA1
+     default = 0.0
+     caption = "Delta Frequency A1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+   
+   func fcnB1
+     default = sin()
+     caption = "Function B1"
+     visible = @showfn1 && @seq != 2
+   endfunc
+   
+   float param ampB1
+     default = 1.0
+     caption = "Amplitude B1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dAmpB1
+     default = 0.0
+     caption = "Delta Amplitude B1"
+     visible = @progressive && @showfn1 && @seq != 2
+   endparam
+   
+   float param freqB1
+     default = 1.0
+     caption = "Frequency B1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dFreqB1
+     default = 0.0
+     caption = "Delta Frequency B1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+   
+   func fcnC1
+     default = sin()
+     caption = "Function C1"
+     visible = @showfn1 && @seq != 2
+   endfunc
+   
+   float param ampC1
+     default = 1.0
+     caption = "Amplitude C1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dAmpC1
+     default = 0.0
+     caption = "Delta Amplitude C1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+   
+   float param freqC1
+     default = 1.0
+     caption = "Frequency C1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dFreqC1
+     default = 0.0
+     caption = "Delta Frequency C1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+     
+   func fcnD1
+     default = cos()
+     caption = "Function D1"
+     visible = @showfn1 && @seq != 2
+   endfunc
+   
+   float param ampD1
+     default = 1.0
+     caption = "Amplitude D1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dAmpD1
+     default = 0.0
+     caption = "Delta Amplitude D1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+   
+   float param freqD1
+     default = 1.0
+     caption = "Frequency D1"
+     visible = @showfn1 && @seq != 2
+   endparam
+   float param dFreqD1
+     default = 0.0
+     caption = "Delta Frequency D1"
+     visible = @showfn1 && @seq != 2 && @progressive
+   endparam
+     
+   heading
+     caption = "Function2"
+     visible = @showfn2 && @seq != 1
+   endheading  
+      
+   param op21
+     caption = "Formula 2, Op 1"
+     default = 0
+     enum = "+" "-" "*"
+     visible = @showfn2 && @seq != 1
+   endparam 
+   param op22
+     caption = "Formula 2, Op 2"
+     default = 0
+     enum = "+" "-" "*"
+     visible = @showfn2 && @seq != 1
+   endparam
+   func fcnA2
+     default = sinh()
+     caption = "Function A2"
+     visible = @showfn2 && @seq != 1
+   endfunc
+   
+   float param ampA2
+     default = 1.0
+     caption = "Amplitude A2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dAmpA2
+     default = 0.0
+     caption = "Delta Amplitude A2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   float param freqA2
+     default = 1.0
+     caption = "Frequency A2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dFreqA2
+     default = 0.0
+     caption = "Delta Frequency A2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   func fcnB2
+     default = cos()
+     caption = "Function B2"
+     visible = @showfn2 && @seq != 1
+   endfunc
+   
+   float param ampB2
+     default = 1.0
+     caption = "Amplitude B2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dAmpB2
+     default = 0.0
+     caption = "Delta Amplitude B2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   float param freqB2
+     default = 1.0
+     caption = "Frequency B2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dFreqB2
+     default = 0.0
+     caption = "Delta Frequency B2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   func fcnC2
+     default = cos()
+     caption = "Function C2"
+     visible = @showfn2 && @seq != 1
+   endfunc
+   
+   float param ampC2
+     default = 1.0
+     caption = "Amplitude C2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dAmpC2
+     default = 0.0
+     caption = "Delta Amplitude C2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   float param freqC2
+     default = 1.0
+     caption = "Frequency C2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dFreqC2
+     default = 0.0
+     caption = "Delta Frequency C2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+     
+   func fcnD2
+     default = sin()
+     caption = "Function D2"
+     visible = @showfn2 && @seq != 1
+   endfunc
+   
+   float param ampD2
+     default = 1.0
+     caption = "Amplitude D2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dAmpD2
+     default = 0.0
+     caption = "Delta Amplitude D2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam
+   
+   float param freqD2
+     default = 1.0
+     caption = "Frequency D2"
+     visible = @showfn2 && @seq != 1
+   endparam
+   float param dFreqD2
+     default = 0.0
+     caption = "Delta Frequency D2"
+     visible = @showfn2 && @seq != 1 && @progressive
+   endparam      
+
+  heading
+    caption = "Masking"
+  endheading
+  param mask_type
+    caption = "Mask Type"
+    enum = "Distance" "Iteration" "Range"
+  endparam  
+  param mask
+    caption = "Mask Threshold"
+    default = 0.0
+    min = 0.0
+    hint = "With the Distance Mask Type orbits that don't come at least \
+            this close to the trap are made solid. A value of zero means \
+            that no pixels are made solid."
+  endparam
+  param mask_mod
+    caption = "Mask Modulation"
+    default = 0
+    hint = "With the Modulation Mask Type the iteration that the orbit \
+            was caught by the trap is modulated by this value, and if \
+            the Mask Threshold is smaller the pixel is made solid."
+  endparam
+  param inverse
+    caption = "Mask Reversed"
+    default = false
+  endparam
+  param texture_type
+    caption = "Texture Type"
+    enum = "Random" "fBm" "Corrected fBm"
+    hint = "This is the type of texture to add to the coloring. The \
+           Texture Amount parameter must be non-zero for texture to be added."
+  endparam
+  param rnd
+    caption = "Texture Amount"
+    default = 0.0
+    hint = "This is the amount of texturing to add to the coloring."
+  endparam
+  heading
+  caption = "fBm Parameters"
+  endheading
+  param initial
+    caption = "fBm Initialisation"
+    enum = "Pixel" "Orbit" "Trap"
+    hint = "Different ways of starting the fBm formula. With \
+           Orbit and Trap the texture will follow the orbit trap \
+           elements in some way."
+  endparam  
+  param fbmfunc
+    caption = "fBm Function"
+    enum = "Ident" "Abs" "Sqr" "Sqrt" "Ceil"
+    hint = "This is a function that is added to the fBm to chnage \
+            the way that it looks."
+  endparam  
+  param fbmscale
+    caption = "fBm Scale"
+    default = 1.0
+    hint = "This is the overall scale of the noise."
+  endparam
+  param fbmoffset
+    caption = "fBm Offset"
+    default = (0,0)
+    hint = "This is the offset of the pattern. You can use this to shift \
+            the pattern around on the complex plane."
+  endparam
+  param angle
+    caption = "fBm Rotation"
+    default = 0.0
+    hint = "This is the angle, in degrees, of the noise."
+  endparam
+  param step
+    caption = "fBm Scale Step"
+    default = 0.5
+    hint = "This is the step in scale between noise iterations."
+  endparam
+  param anglestep
+    caption = "fBm Rotation Step"
+    default = 37.0
+    hint = "This is the angle, in degrees, to rotate between noise \
+            iterations."
+  endparam
+  param octaves
+    caption = "fBm Octaves"
+    default = 7
+    min = 1
+    hint = "This is the number of iterations of the noise formula."
+  endparam
+  param power
+    caption = "fBm Exponent"
+    default = 2.0
+    hint = "This is the exponent used to scramble numbers."
+  endparam
+  param pattern
+    caption = "fBm Pattern"
+    enum = "None" "Marble" "Wood" "Cells" "Squares"
+    hint = "This creates a repeating pattern to be disturbed by the fBm."
+  endparam
+  param pfreq
+    caption = "fBm Frequency"
+    default = 1.0
+    hint = "This controls the frequency of the Pattern."
+  endparam
+  param turb
+    caption = "fBm Turbulence"
+    default = 1.0
+    hint = "With a Pattern other than None this effects how \
+           the pattern will be by the fBm."
+  endparam
+}
+
+sdc+enr-flame-a {
+;
+; Modified to add Exponential, Power, Cosine and Sawtooth
+; variations, January, 2005
+;
+; Modified to use all apophysis transforms and
+; to allow incorporation of mappings
+; by Susan Chambless, October 2004
+; Special thanks to Bill Smith and Ron Barnett for
+; beta testing.
+;
+; Modified for compatibility with Apophysis 2.0
+; by Mark Townsend, January 2004
+;
+; Flame Fractal Coloring Method by Erik Reckase
+
+global: 
+; Initialization and parameter array initialization
+  int seed = 1234567890
+  float incMult = 1.0 + (@percentInc*.01)
+  int pwid = trunc(#width*incMult)
+  int phgt = trunc(#height*incMult)
+  int pix[(trunc(#width*(1.0+(@percentInc*.01)))*@oversample)+40,\
+          (trunc(#height*(1.0+(@percentInc*.01)))*@oversample)+40,4]
+  int pwid = trunc(#width*incMult)
+  int phgt = trunc(#height*incMult)
+                                  ; rgb storage + extra for entire image - BIG
+  float iterbuf[1,3]              ; storage for an iterated point
+  int fuse = 15                   ; skip this many iterations when starting to iterate
+  float prefilter_white = 2^10    ; parameterize?      
+  float xform_density[12]         ; probability of using this xform's coefs when iterating
+  float xform_color[12]           ; if this xform is used, average this val into the color
+  float xform_symmetry[12]        ; skip color coord if this is 1
+  float xform_coefs[12,6]         ; IFS coefficients
+  float xform_vars[12,30]         ; percentage of variance contribution
+
+;   int linear=0
+;   int sinusoidal=1
+;   int spherical=2
+;   int swirl=3
+;   int horseshoe=4
+;   int polar=5
+;   int handkerchief=6
+;   int heart=7
+;   int disc=8
+;   int spiral=9
+;   int hyperbolic=10
+;   int diamond=11
+;   int ex=12
+;   int julia=13
+;   int bent=14
+;   int waves=15
+;   int fisheye=16
+;   int popcorn=17
+;   int exponential=18
+;   int power=19
+;   int cosine=20
+;   int sawtooth=21
+;   int fan=22
+  
+  float sf_gauss[20,20]           ; contains gaussian spatial filter kernel
+  color newcmap[256]              ; modified colormap from gradient
+  int scl_cmap[256,4]             ; white-balanced colormap
+  float eps = 1E-10               ; small number
+
+  float xc = real(#center)        ; Scaling constants
+  float yc = -imag(#center)
+  
+  int gutter_width = 20          ; assume that a 20x20 gaussian is the max
+
+  int num_xforms = @xforms        ; make a variable for random param generation
+
+  int x = 0, int y = 0, int z = 0 ; counter initialization
+
+  ; read specifics from parameters
+  ; we may not use them, but then again, we might
+  xform_density[0] = @xf0_p
+  xform_color[0] = @xf0_c
+  xform_symmetry[0] = @xf0_sym
+  xform_coefs[0,0] = @xf0_cfa
+  xform_coefs[0,1] = @xf0_cfb
+  xform_coefs[0,2] = @xf0_cfc
+  xform_coefs[0,3] = @xf0_cfd
+  xform_coefs[0,4] = @xf0_cfe
+  xform_coefs[0,5] = @xf0_cff
+  xform_vars[0,0] = @xf0_var0
+  xform_vars[0,1] = @xf0_var1
+  xform_vars[0,2] = @xf0_var2
+  xform_vars[0,3] = @xf0_var3
+  xform_vars[0,4] = @xf0_var4
+  xform_vars[0,5] = @xf0_var5
+  xform_vars[0,6] = @xf0_var6
+  xform_vars[0,7] = @xf0_var7
+  xform_vars[0,8] = @xf0_var8
+  xform_vars[0,9] = @xf0_var9
+  xform_vars[0,10] = @xf0_var10
+  xform_vars[0,11] = @xf0_var11
+  xform_vars[0,12] = @xf0_var12
+  xform_vars[0,13] = @xf0_var13
+  xform_vars[0,14] = @xf0_var14
+  xform_vars[0,15] = @xf0_var15
+  xform_vars[0,16] = @xf0_var16
+  xform_vars[0,17] = @xf0_var17
+  xform_vars[0,18] = @xf0_var18
+  xform_vars[0,19] = @xf0_var19
+  xform_vars[0,20] = @xf0_var20
+  xform_vars[0,21] = @xf0_var21
+  xform_vars[0,22] = @xf0_var22
+  xform_vars[0,23] = @xf0_var23
+  xform_vars[0,24] = @xf0_var24
+  xform_vars[0,25] = @xf0_var25
+  xform_vars[0,26] = @xf0_var26
+  xform_vars[0,27] = @xf0_var27
+
+  xform_density[1] = @xf1_p
+  xform_color[1] = @xf1_c
+  xform_symmetry[1] = @xf1_sym
+  xform_coefs[1,0] = @xf1_cfa
+  xform_coefs[1,1] = @xf1_cfb
+  xform_coefs[1,2] = @xf1_cfc
+  xform_coefs[1,3] = @xf1_cfd
+  xform_coefs[1,4] = @xf1_cfe
+  xform_coefs[1,5] = @xf1_cff
+  xform_vars[1,0] = @xf1_var0
+  xform_vars[1,1] = @xf1_var1
+  xform_vars[1,2] = @xf1_var2
+  xform_vars[1,3] = @xf1_var3
+  xform_vars[1,4] = @xf1_var4
+  xform_vars[1,5] = @xf1_var5
+  xform_vars[1,6] = @xf1_var6
+  xform_vars[1,7] = @xf1_var7
+  xform_vars[1,8] = @xf1_var8
+  xform_vars[1,9] = @xf1_var9
+  xform_vars[1,10] = @xf1_var10
+  xform_vars[1,11] = @xf1_var11
+  xform_vars[1,12] = @xf1_var12
+  xform_vars[1,13] = @xf1_var13
+  xform_vars[1,14] = @xf1_var14
+  xform_vars[1,15] = @xf1_var15
+  xform_vars[1,16] = @xf1_var16
+  xform_vars[1,17] = @xf1_var17
+  xform_vars[1,18] = @xf1_var18
+  xform_vars[1,19] = @xf1_var19
+  xform_vars[1,20] = @xf1_var20
+  xform_vars[1,21] = @xf1_var21
+  xform_vars[1,22] = @xf1_var22
+  xform_vars[1,23] = @xf1_var23
+  xform_vars[1,24] = @xf1_var24
+  xform_vars[1,25] = @xf1_var25
+  xform_vars[1,26] = @xf1_var26
+  xform_vars[1,27] = @xf1_var27
+
+  xform_density[2] = @xf2_p
+  xform_color[2] = @xf2_c
+  xform_symmetry[2] = @xf2_sym
+  xform_coefs[2,0] = @xf2_cfa
+  xform_coefs[2,1] = @xf2_cfb
+  xform_coefs[2,2] = @xf2_cfc
+  xform_coefs[2,3] = @xf2_cfd
+  xform_coefs[2,4] = @xf2_cfe
+  xform_coefs[2,5] = @xf2_cff
+  xform_vars[2,0] = @xf2_var0
+  xform_vars[2,1] = @xf2_var1
+  xform_vars[2,2] = @xf2_var2
+  xform_vars[2,3] = @xf2_var3
+  xform_vars[2,4] = @xf2_var4
+  xform_vars[2,5] = @xf2_var5
+  xform_vars[2,6] = @xf2_var6
+  xform_vars[2,7] = @xf2_var7
+  xform_vars[2,8] = @xf2_var8
+  xform_vars[2,9] = @xf2_var9
+  xform_vars[2,10] = @xf2_var10
+  xform_vars[2,11] = @xf2_var11
+  xform_vars[2,12] = @xf2_var12
+  xform_vars[2,13] = @xf2_var13
+  xform_vars[2,14] = @xf2_var14
+  xform_vars[2,15] = @xf2_var15
+  xform_vars[2,16] = @xf2_var16
+  xform_vars[2,17] = @xf2_var17
+  xform_vars[2,18] = @xf2_var18
+  xform_vars[2,19] = @xf2_var19
+  xform_vars[2,20] = @xf2_var20
+  xform_vars[2,21] = @xf2_var21
+  xform_vars[2,22] = @xf2_var22
+  xform_vars[2,23] = @xf2_var23
+  xform_vars[2,24] = @xf2_var24
+  xform_vars[2,25] = @xf2_var25
+  xform_vars[2,26] = @xf2_var26
+  xform_vars[2,27] = @xf2_var27
+
+  xform_density[3] = @xf3_p
+  xform_color[3] = @xf3_c
+  xform_symmetry[3] = @xf3_sym
+  xform_coefs[3,0] = @xf3_cfa
+  xform_coefs[3,1] = @xf3_cfb
+  xform_coefs[3,2] = @xf3_cfc
+  xform_coefs[3,3] = @xf3_cfd
+  xform_coefs[3,4] = @xf3_cfe
+  xform_coefs[3,5] = @xf3_cff
+  xform_vars[3,0] = @xf3_var0
+  xform_vars[3,1] = @xf3_var1
+  xform_vars[3,2] = @xf3_var2
+  xform_vars[3,3] = @xf3_var3
+  xform_vars[3,4] = @xf3_var4
+  xform_vars[3,5] = @xf3_var5
+  xform_vars[3,6] = @xf3_var6
+  xform_vars[3,7] = @xf3_var7
+  xform_vars[3,8] = @xf3_var8
+  xform_vars[3,9] = @xf3_var9
+  xform_vars[3,10] = @xf3_var10
+  xform_vars[3,11] = @xf3_var11
+  xform_vars[3,12] = @xf3_var12
+  xform_vars[3,13] = @xf3_var13
+  xform_vars[3,14] = @xf3_var14
+  xform_vars[3,15] = @xf3_var15
+  xform_vars[3,16] = @xf3_var16
+  xform_vars[3,17] = @xf3_var17
+  xform_vars[3,18] = @xf3_var18
+  xform_vars[3,19] = @xf3_var19
+  xform_vars[3,20] = @xf3_var20
+  xform_vars[3,21] = @xf3_var21
+  xform_vars[3,22] = @xf3_var22
+  xform_vars[3,23] = @xf3_var23
+  xform_vars[3,24] = @xf3_var24
+  xform_vars[3,25] = @xf3_var25
+  xform_vars[3,26] = @xf3_var26
+  xform_vars[3,27] = @xf3_var27
+
+  xform_density[4] = @xf4_p
+  xform_color[4] = @xf4_c
+  xform_symmetry[4] = @xf4_sym
+  xform_coefs[4,0] = @xf4_cfa
+  xform_coefs[4,1] = @xf4_cfb
+  xform_coefs[4,2] = @xf4_cfc
+  xform_coefs[4,3] = @xf4_cfd
+  xform_coefs[4,4] = @xf4_cfe
+  xform_coefs[4,5] = @xf4_cff
+  xform_vars[4,0] = @xf4_var0
+  xform_vars[4,1] = @xf4_var1
+  xform_vars[4,2] = @xf4_var2
+  xform_vars[4,3] = @xf4_var3
+  xform_vars[4,4] = @xf4_var4
+  xform_vars[4,5] = @xf4_var5
+  xform_vars[4,6] = @xf4_var6
+  xform_vars[4,7] = @xf4_var7
+  xform_vars[4,8] = @xf4_var8
+  xform_vars[4,9] = @xf4_var9
+  xform_vars[4,10] = @xf4_var10
+  xform_vars[4,11] = @xf4_var11
+  xform_vars[4,12] = @xf4_var12
+  xform_vars[4,13] = @xf4_var13
+  xform_vars[4,14] = @xf4_var14
+  xform_vars[4,15] = @xf4_var15
+  xform_vars[4,16] = @xf4_var16
+  xform_vars[4,17] = @xf4_var17
+  xform_vars[4,18] = @xf4_var18
+  xform_vars[4,19] = @xf4_var19
+  xform_vars[4,20] = @xf4_var20
+  xform_vars[4,21] = @xf4_var21
+  xform_vars[4,22] = @xf4_var22
+  xform_vars[4,23] = @xf4_var23
+  xform_vars[4,24] = @xf4_var24
+  xform_vars[4,25] = @xf4_var25
+  xform_vars[4,26] = @xf4_var26
+  xform_vars[4,27] = @xf4_var27
+
+  xform_density[5] = @xf5_p
+  xform_color[5] = @xf5_c
+  xform_symmetry[5] = @xf5_sym
+  xform_coefs[5,0] = @xf5_cfa
+  xform_coefs[5,1] = @xf5_cfb
+  xform_coefs[5,2] = @xf5_cfc
+  xform_coefs[5,3] = @xf5_cfd
+  xform_coefs[5,4] = @xf5_cfe
+  xform_coefs[5,5] = @xf5_cff
+  xform_vars[5,0] = @xf5_var0
+  xform_vars[5,1] = @xf5_var1
+  xform_vars[5,2] = @xf5_var2
+  xform_vars[5,3] = @xf5_var3
+  xform_vars[5,4] = @xf5_var4
+  xform_vars[5,5] = @xf5_var5
+  xform_vars[5,6] = @xf5_var6
+  xform_vars[5,7] = @xf5_var7
+  xform_vars[5,8] = @xf5_var8
+  xform_vars[5,9] = @xf5_var9
+  xform_vars[5,10] = @xf5_var10
+  xform_vars[5,11] = @xf5_var11
+  xform_vars[5,12] = @xf5_var12
+  xform_vars[5,13] = @xf5_var13
+  xform_vars[5,14] = @xf5_var14
+  xform_vars[5,15] = @xf5_var15
+  xform_vars[5,16] = @xf5_var16
+  xform_vars[5,17] = @xf5_var17
+  xform_vars[5,18] = @xf5_var18
+  xform_vars[5,19] = @xf5_var19
+  xform_vars[5,20] = @xf5_var20
+  xform_vars[5,21] = @xf5_var21
+  xform_vars[5,22] = @xf5_var22
+  xform_vars[5,23] = @xf5_var23
+  xform_vars[5,24] = @xf5_var24
+  xform_vars[5,25] = @xf5_var25
+  xform_vars[5,26] = @xf5_var26
+  xform_vars[5,27] = @xf5_var27
+
+  xform_density[6] = @xf6_p
+  xform_color[6] = @xf6_c
+  xform_symmetry[6] = @xf6_sym
+  xform_coefs[6,0] = @xf6_cfa
+  xform_coefs[6,1] = @xf6_cfb
+  xform_coefs[6,2] = @xf6_cfc
+  xform_coefs[6,3] = @xf6_cfd
+  xform_coefs[6,4] = @xf6_cfe
+  xform_coefs[6,5] = @xf6_cff
+  xform_vars[6,0] = @xf6_var0
+  xform_vars[6,1] = @xf6_var1
+  xform_vars[6,2] = @xf6_var2
+  xform_vars[6,3] = @xf6_var3
+  xform_vars[6,4] = @xf6_var4
+  xform_vars[6,5] = @xf6_var5
+  xform_vars[6,6] = @xf6_var6
+  xform_vars[6,7] = @xf6_var7
+  xform_vars[6,8] = @xf6_var8
+  xform_vars[6,9] = @xf6_var9
+  xform_vars[6,10] = @xf6_var10
+  xform_vars[6,11] = @xf6_var11
+  xform_vars[6,12] = @xf6_var12
+  xform_vars[6,13] = @xf6_var13
+  xform_vars[6,14] = @xf6_var14
+  xform_vars[6,15] = @xf6_var15
+  xform_vars[6,16] = @xf6_var16
+  xform_vars[6,17] = @xf6_var17
+  xform_vars[6,18] = @xf6_var18
+  xform_vars[6,19] = @xf6_var19
+  xform_vars[6,20] = @xf6_var20
+  xform_vars[6,21] = @xf6_var21
+  xform_vars[6,22] = @xf6_var22
+  xform_vars[6,23] = @xf6_var23
+  xform_vars[6,24] = @xf6_var24
+  xform_vars[6,25] = @xf6_var25
+  xform_vars[6,26] = @xf6_var26
+  xform_vars[6,27] = @xf6_var27
+
+  xform_density[7] = @xf7_p
+  xform_color[7] = @xf7_c
+  xform_symmetry[7] = @xf7_sym
+  xform_coefs[7,0] = @xf7_cfa
+  xform_coefs[7,1] = @xf7_cfb
+  xform_coefs[7,2] = @xf7_cfc
+  xform_coefs[7,3] = @xf7_cfd
+  xform_coefs[7,4] = @xf7_cfe
+  xform_coefs[7,5] = @xf7_cff
+  xform_vars[7,0] = @xf7_var0
+  xform_vars[7,1] = @xf7_var1
+  xform_vars[7,2] = @xf7_var2
+  xform_vars[7,3] = @xf7_var3
+  xform_vars[7,4] = @xf7_var4
+  xform_vars[7,5] = @xf7_var5
+  xform_vars[7,6] = @xf7_var6
+  xform_vars[7,7] = @xf7_var7
+  xform_vars[7,8] = @xf7_var8
+  xform_vars[7,9] = @xf7_var9
+  xform_vars[7,10] = @xf7_var10
+  xform_vars[7,11] = @xf7_var11
+  xform_vars[7,12] = @xf7_var12
+  xform_vars[7,13] = @xf7_var13
+  xform_vars[7,14] = @xf7_var14
+  xform_vars[7,15] = @xf7_var15
+  xform_vars[7,16] = @xf7_var16
+  xform_vars[7,17] = @xf7_var17
+  xform_vars[7,18] = @xf7_var18
+  xform_vars[7,19] = @xf7_var19
+  xform_vars[7,20] = @xf7_var20
+  xform_vars[7,21] = @xf7_var21
+  xform_vars[7,22] = @xf7_var22
+  xform_vars[7,23] = @xf7_var23
+  xform_vars[7,24] = @xf7_var24
+  xform_vars[7,25] = @xf7_var25
+  xform_vars[7,26] = @xf7_var26
+  xform_vars[7,27] = @xf7_var27
+
+  xform_density[8] = @xf8_p
+  xform_color[8] = @xf8_c
+  xform_symmetry[8] = @xf8_sym
+  xform_coefs[8,0] = @xf8_cfa
+  xform_coefs[8,1] = @xf8_cfb
+  xform_coefs[8,2] = @xf8_cfc
+  xform_coefs[8,3] = @xf8_cfd
+  xform_coefs[8,4] = @xf8_cfe
+  xform_coefs[8,5] = @xf8_cff
+  xform_vars[8,0] = @xf8_var0
+  xform_vars[8,1] = @xf8_var1
+  xform_vars[8,2] = @xf8_var2
+  xform_vars[8,3] = @xf8_var3
+  xform_vars[8,4] = @xf8_var4
+  xform_vars[8,5] = @xf8_var5
+  xform_vars[8,6] = @xf8_var6
+  xform_vars[8,7] = @xf8_var7
+  xform_vars[8,8] = @xf8_var8
+  xform_vars[8,9] = @xf8_var9
+  xform_vars[8,10] = @xf8_var10
+  xform_vars[8,11] = @xf8_var11
+  xform_vars[8,12] = @xf8_var12
+  xform_vars[8,13] = @xf8_var13
+  xform_vars[8,14] = @xf8_var14
+  xform_vars[8,15] = @xf8_var15
+  xform_vars[8,16] = @xf8_var16
+  xform_vars[8,17] = @xf8_var17
+  xform_vars[8,18] = @xf8_var18
+  xform_vars[8,19] = @xf8_var19
+  xform_vars[8,20] = @xf8_var20
+  xform_vars[8,21] = @xf8_var21
+  xform_vars[8,22] = @xf8_var22
+  xform_vars[8,23] = @xf8_var23
+  xform_vars[8,24] = @xf8_var24
+  xform_vars[8,25] = @xf8_var25
+  xform_vars[8,26] = @xf8_var26
+  xform_vars[8,27] = @xf8_var27
+
+  xform_density[9] = @xf9_p
+  xform_color[9] = @xf9_c
+  xform_symmetry[9] = @xf9_sym
+  xform_coefs[9,0] = @xf9_cfa
+  xform_coefs[9,1] = @xf9_cfb
+  xform_coefs[9,2] = @xf9_cfc
+  xform_coefs[9,3] = @xf9_cfd
+  xform_coefs[9,4] = @xf9_cfe
+  xform_coefs[9,5] = @xf9_cff
+  xform_vars[9,0] = @xf9_var0
+  xform_vars[9,1] = @xf9_var1
+  xform_vars[9,2] = @xf9_var2
+  xform_vars[9,3] = @xf9_var3
+  xform_vars[9,4] = @xf9_var4
+  xform_vars[9,5] = @xf9_var5
+  xform_vars[9,6] = @xf9_var6
+  xform_vars[9,7] = @xf9_var7
+  xform_vars[9,8] = @xf9_var8
+  xform_vars[9,9] = @xf9_var9
+  xform_vars[9,10] = @xf9_var10
+  xform_vars[9,11] = @xf9_var11
+  xform_vars[9,12] = @xf9_var12
+  xform_vars[9,13] = @xf9_var13
+  xform_vars[9,14] = @xf9_var14
+  xform_vars[9,15] = @xf9_var15
+  xform_vars[9,16] = @xf9_var16
+  xform_vars[9,17] = @xf9_var17
+  xform_vars[9,18] = @xf9_var18
+  xform_vars[9,19] = @xf9_var19
+  xform_vars[9,20] = @xf9_var20
+  xform_vars[9,21] = @xf9_var21
+  xform_vars[9,22] = @xf9_var22
+  xform_vars[9,23] = @xf9_var23
+  xform_vars[9,24] = @xf9_var24
+  xform_vars[9,25] = @xf9_var25
+  xform_vars[9,26] = @xf9_var26
+  xform_vars[9,27] = @xf9_var27
+  
+  xform_density[10] = @xf10_p
+  xform_color[10] = @xf10_c
+  xform_symmetry[10] = @xf10_sym
+  xform_coefs[10,0] = @xf10_cfa
+  xform_coefs[10,1] = @xf10_cfb
+  xform_coefs[10,2] = @xf10_cfc
+  xform_coefs[10,3] = @xf10_cfd
+  xform_coefs[10,4] = @xf10_cfe
+  xform_coefs[10,5] = @xf10_cff
+  xform_vars[10,0] = @xf10_var0
+  xform_vars[10,1] = @xf10_var1
+  xform_vars[10,2] = @xf10_var2
+  xform_vars[10,3] = @xf10_var3
+  xform_vars[10,4] = @xf10_var4
+  xform_vars[10,5] = @xf10_var5
+  xform_vars[10,6] = @xf10_var6
+  xform_vars[10,7] = @xf10_var7
+  xform_vars[10,8] = @xf10_var8
+  xform_vars[10,9] = @xf10_var9
+  xform_vars[10,10] = @xf10_var10
+  xform_vars[10,11] = @xf10_var11
+  xform_vars[10,12] = @xf10_var12
+  xform_vars[10,13] = @xf10_var13
+  xform_vars[10,14] = @xf10_var14
+  xform_vars[10,15] = @xf10_var15
+  xform_vars[10,16] = @xf10_var16
+  xform_vars[10,17] = @xf10_var17
+  xform_vars[10,18] = @xf10_var18
+  xform_vars[10,19] = @xf10_var19
+  xform_vars[10,20] = @xf10_var20
+  xform_vars[10,21] = @xf10_var21
+  xform_vars[10,22] = @xf10_var22
+  xform_vars[10,23] = @xf10_var23
+  xform_vars[10,24] = @xf10_var24
+  xform_vars[10,25] = @xf10_var25
+  xform_vars[10,26] = @xf10_var26
+  xform_vars[10,27] = @xf10_var27
+
+  xform_density[11] = @xf11_p
+  xform_color[11] = @xf11_c
+  xform_symmetry[11] = @xf11_sym
+  xform_coefs[11,0] = @xf11_cfa
+  xform_coefs[11,1] = @xf11_cfb
+  xform_coefs[11,2] = @xf11_cfc
+  xform_coefs[11,3] = @xf11_cfd
+  xform_coefs[11,4] = @xf11_cfe
+  xform_coefs[11,5] = @xf11_cff
+  xform_vars[11,0] = @xf11_var0
+  xform_vars[11,1] = @xf11_var1
+  xform_vars[11,2] = @xf11_var2
+  xform_vars[11,3] = @xf11_var3
+  xform_vars[11,4] = @xf11_var4
+  xform_vars[11,5] = @xf11_var5
+  xform_vars[11,6] = @xf11_var6
+  xform_vars[11,7] = @xf11_var7
+  xform_vars[11,8] = @xf11_var8
+  xform_vars[11,9] = @xf11_var9
+  xform_vars[11,10] = @xf11_var10
+  xform_vars[11,11] = @xf11_var11
+  xform_vars[11,12] = @xf11_var12
+  xform_vars[11,13] = @xf11_var13
+  xform_vars[11,14] = @xf11_var14
+  xform_vars[11,15] = @xf11_var15
+  xform_vars[11,16] = @xf11_var16
+  xform_vars[11,17] = @xf11_var17
+  xform_vars[11,18] = @xf11_var18
+  xform_vars[11,19] = @xf11_var19
+  xform_vars[11,20] = @xf11_var20
+  xform_vars[11,21] = @xf11_var21
+  xform_vars[11,22] = @xf11_var22
+  xform_vars[11,23] = @xf11_var23
+  xform_vars[11,24] = @xf11_var24
+  xform_vars[11,25] = @xf11_var25
+  xform_vars[11,26] = @xf11_var26
+  xform_vars[11,27] = @xf11_var27
+  
+   
+; generate the gaussian kernel for spatial filtration
+  int filter_width = round(2*2.5*@oversample*@spat_filt_rad);
+
+; maintain parity with oversample
+  int chk = filter_width + @oversample
+  if (chk % 2 == 1 && filter_width > 0)
+    filter_width = filter_width + 1
+  endif
+
+; limit to gutter width
+  if (filter_width-@oversample)>(2*gutter_width)
+    filter_width = filter_width - 2
+  endif
+  print(filter_width)
+
+; calculate gaussian
+  float ii, float jj, float tot=0.0
+  x=0
+  while (x<filter_width)
+    y=0
+    while (y<filter_width)
+      ii = ((2.0*x + 1) / filter_width - 1.0) * 2.5
+      jj = ((2.0*y + 1) / filter_width - 1.0) * 2.5
+      sf_gauss[x,y] = exp(-2.0*(ii*ii + jj*jj))
+      tot = tot + sf_gauss[x,y]
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+; normalize the gaussian  
+  x = 0
+  while (x<filter_width)
+    y = 0
+    while (y<filter_width)
+      sf_gauss[x,y] = sf_gauss[x,y] / tot
+      print(sf_gauss[x,y])
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+  
+; create a new colormap based on the current gradient, normalizing to (0-@white_level)
+  int cmidx=0
+  while (cmidx<=255)
+    newcmap[cmidx] = gradient(cmidx/255)
+    ; convert colors to 0-@white_level integer range
+    ; use biggest number you can without overflowing for most accurate color
+    scl_cmap[cmidx,0] = round(red(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,1] = round(green(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,2] = round(blue(newcmap[cmidx])*@white_level)
+    scl_cmap[cmidx,3] = @white_level
+;    scl_cmap[cmidx,3] = round(alpha(newcmap[cmidx])*@white_level)
+    cmidx = cmidx + 1
+  endwhile
+  
+; adjust scaling for aspect ratio  
+  float scale
+  if 3 * #width < 4 * #height     
+    scale = (#width * #magn) / 4
+   else
+    scale = (#height * #magn) / 3
+  endif
+
+; calculate the image boundaries, not forgetting the gutter
+; (the gutter is used to prevent problems with spatial filtering
+; near the edge of the image)
+  float bounds[4]
+  float t0 = gutter_width / (@oversample*scale)
+  bounds[0] = xc - #width/scale/2 - t0
+  bounds[1] = yc - #height/scale/2 - t0
+  bounds[2] = bounds[0] + #width/scale + 2*t0
+  bounds[3] = bounds[1] + #height/scale + 2*t0
+    
+  int ht = @oversample * #height + 2*gutter_width
+  int wd = @oversample * #width + 2*gutter_width
+  
+  float transx = pwid * 0.5
+  float transy = phgt * 0.5
+  
+  float nuscale = wd / (bounds[2] - bounds[0])
+  
+  ht = @oversample * phgt + 2*gutter_width
+  wd = @oversample * pwid + 2*gutter_width
+
+  float wd2 = wd/2, float ht2 = ht/2
+  
+; initialize array
+  x = 0, y = 0, z = 0
+  while x < wd
+    y = 0
+    while y < ht
+      z = 0
+      while z < 4
+        pix[x, y, z] = 0
+        z = z + 1
+      endwhile
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+
+; pre-calculate the cos and sin of #angle, so that
+; it is removed from the iterative binning loop
+; (probably already done by the compiler, but...)
+  float cosan = cos(#angle)
+  float sinan = sin(#angle)
+      
+; start the iteration process
+; Draves code divides by the square of the oversample, but that seems too
+; harsh of a divisor unless an agressive gaussian is used.
+  int nsamples = round(#width*#height*@iter_density/(@oversample*@oversample))
+  if (nsamples<0)
+    nsamples=round(#randomrange-1)
+  endif
+  int fn
+  float tx, float ty
+  int it = -fuse, int clr_index
+
+  float xp, float yp
+
+  ; first, generate the starting point, (-1:1, -1:1, 0:1)
+  seed = random(seed), iterbuf[0,0] = (seed/#randomrange)
+  seed = random(seed), iterbuf[0,1] = (seed/#randomrange)
+  seed = random(seed), iterbuf[0,2] = abs(seed/#randomrange)
+
+; loop through our iterations
+
+  while(it < nsamples)
+  
+
+    seed = random(seed), float rd = abs(seed / #randomrange)
+    int j=0
+    repeat 
+      ; Pick xform to use based on probability
+      rd = rd - xform_density[j]
+      fn = j, j = j + 1
+    until (rd < 0) || (j == num_xforms)
+            
+    ; compute color of next point
+    float s = xform_symmetry[fn]
+    iterbuf[0,2] = (iterbuf[0,2] + xform_color[fn]) * 0.5 * (1 - s) + s * iterbuf[0,2]
+
+    ; affine transformation
+    tx = xform_coefs[fn,0]*iterbuf[0,0] + xform_coefs[fn,1]*iterbuf[0,1] + xform_coefs[fn,4]
+    ty = xform_coefs[fn,2]*iterbuf[0,0] + xform_coefs[fn,3]*iterbuf[0,1] + xform_coefs[fn,5]
+    
+    ; pre calculate some things
+    float r2 = tx*tx + ty*ty    ; radius squared
+    float r = sqrt(r2)          ; radius
+    float a = 0.0               ; angle to point
+    if ( (tx < -EPS) || (tx > EPS) || (ty < -EPS) || (ty > EPS) )
+      a = atan2(ty + flip(tx))
+    endif
+    float cosa = cos(a)
+    float sina = sin(a)
+    
+    ;working variables
+    float c1, float c2, float nx, float ny
+    float dx, float dy
+    
+    ;collector
+    iterbuf[0,0] = 0.0, iterbuf[0,1] = 0.0
+
+    ; add proportional amounts of each variation
+    if (xform_vars[fn,0]!=0.0); linear
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,0]*tx
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,0]*ty
+    endif
+        
+    if (xform_vars[fn,1]!=0.0); sinusoidal
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,1]*sin(tx)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,1]*sin(ty)
+    endif
+
+    if (xform_vars[fn,2]!=0.0); complex
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,2]*tx/(r2+EPS)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,2]*ty/(r2+EPS)
+    endif
+      
+    if (xform_vars[fn,3]!=0.0); swirl
+      c1 = sin(r2), c2 = cos(r2)  
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,3]*(c1*tx - c2*ty)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,3]*(c2*tx + c1*ty)
+    endif
+      
+    if (xform_vars[fn,4]!=0.0); horseshoe
+      c1 = sin(a), c2 = cos(a)  
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,4]*(sina*tx - cosa*ty)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,4]*(cosa*tx + sina*ty)
+    endif
+      
+    if (xform_vars[fn,5]!=0.0); polar
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,5]*a/#pi
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,5]*(r-1.0)
+    endif
+
+    if (xform_vars[fn,6]!=0.0); folded handkerchief 
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,6]*sin(a+r)*r
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,6]*cos(a-r)*r
+    endif
+      
+    if (xform_vars[fn,7]!=0.0) ; heart
+      float a2 = a * r2
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,7]*sin(a2)*r
+      iterbuf[0,1] = iterbuf[0,1] - xform_vars[fn,7]*cos(a2)*r
+    endif
+
+    if (xform_vars[fn,8]!=0.0) ; disk
+      float nx = tx * #pi
+      float ny = ty * #pi
+      float rr = sqrt(nx*nx + ny*ny);
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,8]*sin(rr)*a/PI
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,8]*cos(rr)*a/PI
+    endif
+
+    if (xform_vars[fn,9]!=0.0); spiral
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,9]*(cos(a) + sin(r))/(r+EPS)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,9]*(sin(a) - cos(r))/(r+EPS)
+    endif
+
+    if (xform_vars[fn,10]!=0.0) ; hyperbolic
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,10]*sin(a)/(r+EPS)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,10]*cos(a)*(r+EPS)
+    endif
+
+    if (xform_vars[fn,11]!=0.0)     ; Diamond aka square
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,11]*sin(a) * cos(r)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,11]*cos(a) * sin(r)
+    endif
+
+    if (xform_vars[fn,12]!=0.0) ; Ex
+      float n0 = sin(a+r)
+      float n1 = cos(a-r)
+      float m0 = n0^3 * r
+      float m1 = n1^3 * r
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,12]*(m0+m1)
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,12]*(m0-m1)
+    endif
+  
+    if (xform_vars[fn,13]!=0.0) ; julia
+      float aa = a / 2.0
+      seed = random(seed)
+      ; seed seems to retain the same parity!...but jumps
+      ; between positive and negative randomly
+      if seed > 0 
+        aa = aa + #pi
+      endif
+      float rr = r2^0.25;
+      nx = rr * cos(aa)
+      ny = rr * sin(aa)
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,13]*nx
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,13]*ny
+    endif
+    
+    if (xform_vars[fn,14]!=0.0); bent
+      c1 = tx
+      c2 = ty
+      if (c1 < 0.0)
+        c1 = 2*c1
+      endif  
+      if (c2 < 0.0)
+        c2 = c2 / 2.0
+      endif  
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,14]*c1
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,14]*c2
+    endif
+
+    if (xform_vars[fn,15]!=0.0) ; Waves
+      dx = xform_coefs[fn,4]
+      dy = xform_coefs[fn,5]
+      nx = tx + xform_coefs[fn,1] * sin(ty / ((dx*dx) + EPS))
+      ny = ty + xform_coefs[fn,3] * sin(tx / ((dy*dy) + EPS))
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,15]*nx
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,15]*ny
+    endif
+
+    if (xform_vars[fn,16]!=0.0) ; Fisheye
+      float rr = 2.0 * r / ( r + 1.0 )
+      nx = rr * cos(a)
+      ny = rr * sin(a)
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,16]*nx
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,16]*ny      
+    endif
+
+    if (xform_vars[fn,17]!=0.0) ; Popcorn
+       dx = tan(3.0 * ty)
+       dy = tan(3.0 * tx)
+       nx = tx + xform_coefs[fn,4] * sin(dx)
+       ny = ty + xform_coefs[fn,5] * sin(dy)
+       iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,17]*nx
+       iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,17]*ny              
+    endif
+      
+    if (xform_vars[fn,18]!=0.0) ; Exponential
+       dx = exp(tx) / 2.718281828459045
+       dy = #pi * ty
+       iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,18]*dx*cos(dy)
+       iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,18]*dx*sin(dy)              
+    endif
+    
+    if (xform_vars[fn,19]!=0.0) ; Power
+       float rr = r^sina
+       nx = rr*cosa
+       ny = rr*sina
+       iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,19]*nx
+       iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,19]*ny              
+    endif
+    
+    if (xform_vars[fn,20]!=0.0) ; Cosine
+       nx = cos(tx*#pi) * cosh(ty)
+       ny = -sin(tx*#pi) * sinh(ty)
+       iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,20]*nx
+       iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,20]*ny              
+    endif
+  
+    if (@version < 2.026)  
+      if (xform_vars[fn,21]!=0.0) ; Sawtooth
+         float rr = r + 1.0
+         rr = rr - trunc(rr/2.0)*2.0 - 1.0
+         nx = cosa * rr
+         ny = sina * rr
+         iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,21]*nx
+         iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,21]*ny              
+      endif
+    else
+      if (xform_vars[fn,21]!=0.0) ; Rings
+        dx = xform_coefs[fn,4]
+        dx = dx * dx + EPS
+        rr = ((r + dx) % (2 * dx)) - dx + r * (1 - dx)
+        nx = cosa * rr
+        ny = sina * rr
+        iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,21]*nx
+        iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,21]*ny              
+      endif
+    endif
+    
+    if (xform_vars[fn,22]!=0.0) ; fan
+      dx = xform_coefs[fn,4]
+      dy = xform_coefs[fn,5]
+      dx = #pi * (dx * dx + EPS)
+      float dx2 = dx / 2
+      r2 = sqrt(tx * tx + ty * ty)
+      a = atan2(ty + flip(tx))
+      if ((a + dy) % dx) > dx2
+        aa = a + -dx2
+      else
+        aa = a + dx2
+      endif
+      nx = cos(aa) * r
+      ny = sin(aa) * r
+      iterbuf[0,0] = iterbuf[0,0] + xform_vars[fn,22]*nx
+      iterbuf[0,1] = iterbuf[0,1] + xform_vars[fn,22]*ny              
+    endif
+    
+    ; Bin the point if it's inside the image limits and past the fuse
+    if (it>=0)
+      ; generate the x and y location in the image      
+      xp = (iterbuf[0,0]-xc)
+      yp = (iterbuf[0,1]-yc)
+      
+      x = floor((xp*cosan - yp*sinan)*nuscale + wd2)
+      y = floor((xp*sinan + yp*cosan)*nuscale + ht2)
+                  
+      ; is this in our image?
+      if (x>=0 && x<wd && y>=0 && y<ht)
+        clr_index = round(iterbuf[0,2] * 256.0)
+        if (clr_index<0)
+          clr_index = 0
+        elseif (clr_index>255)
+          clr_index = 255
+        endif
+        
+        ; add the *color* to the accumulator
+        ; check for overflow later
+        pix[x,y,0] = pix[x,y,0] + scl_cmap[clr_index,0]
+        pix[x,y,1] = pix[x,y,1] + scl_cmap[clr_index,1]
+        pix[x,y,2] = pix[x,y,2] + scl_cmap[clr_index,2]
+        pix[x,y,3] = pix[x,y,3] + scl_cmap[clr_index,3]
+        
+      endif
+      
+    endif
+      
+    ; iterate some more
+    it = it + 1
+  endwhile
+  ; Now we do some log magic - calculate the 
+  ; "where did these come from" k1 and k2 values
+  float k1 = @contrast * @brightness * prefilter_white * 268.0 / 256.0
+  float area = #height * #width / (scale * scale * @oversample * @oversample)
+  float k2 = @oversample*@oversample / (@contrast * area * @white_level * @iter_density)
+  
+  ; loop through each pixel and perform log calculation
+  x = 0
+  float ls = 0, float lc[4]
+  while (x < wd)
+    y = 0
+    while (y < ht)
+      if (pix[x,y,3]>0)
+        ; we can break up this calculation as follows:
+        ; normalize each pixel's color by the number of iterations in the bucket * white_level
+        ; this puts each component (R,G,B,Accum) in the range (0-1),
+        ; and the last term is ALWAYS 1.0.
+        ; Now, for each pixel, we have (R,G,B,1.0), and we want to scale the 'Y'
+        ; component of this color by the log of the number of iterations.
+        ; 
+        ; contr*bright* prefilter_white * 268                    iters
+        ; ----------------------------------- * log (1.0 + ----------------)
+        ;                256                               contrast * nsamp
+        ;
+        ; the log term will be bounded by (0-.6931) for contrast values >= 1.0.
+        ; standard values for the first terms lead to
+        ;
+        ; 4288*(0-.6931) or 0-2972 values.  The range doesn't really matter, since
+        ; we re-normalize by prefilter white to give (0-2.902) range, then
+        
+        
+        ; brightness is a multiplier for the color.
+        
+        ; scale by the log of the number of occurrences
+        ls = k1 * log(1.0 + pix[x,y,3]*k2) / pix[x,y,3]
+        lc[0] = pix[x,y,0] * ls
+        lc[1] = pix[x,y,1] * ls
+        lc[2] = pix[x,y,2] * ls
+        lc[3] = pix[x,y,3] * ls
+
+        pix[x,y,0] = round(lc[0] + 0.5)
+        pix[x,y,1] = round(lc[1] + 0.5)
+        pix[x,y,2] = round(lc[2] + 0.5)
+        pix[x,y,3] = round(lc[3] + 0.5)
+      endif
+      y = y + 1
+    endwhile
+    x = x + 1
+  endwhile
+  
+  ; precalculate a gamma term
+  float g = 1/@gamma
+  
+final:
+  
+  float fr, float fg, float fb, float fo
+  float t[4], float lgs
+  int xid, int yid
+  
+  t[0] = 0, t[1] = 0, t[2] = 0, t[3] = 0
+; apply the spatial filter, if necessary
+  int xadj, int yadj
+  int sfadj = gutter_width - floor((filter_width-1)/2)
+  int xcrd = #x*@oversample
+  int ycrd = #y*@oversample
+  bool inside = true
+  if (@applyMapping == true)
+      ; generate the x and y location in the image      
+      float dxx = (real(#pixel)-real(#center))
+      float dyy = (imag(#pixel)-imag(#center))
+      
+      xcrd = floor((transx + (dxx*cosan + dyy*sinan)*scale)*@oversample)
+      ycrd = floor((transy + (dxx*sinan - dyy*cosan)*scale)*@oversample)                 
+                              
+      ; is this in our image?
+      if (xcrd<0 || xcrd>=wd || ycrd<0 || ycrd>=ht)
+        inside = false
+      endif
+  endif
+  if (inside)
+    if (filter_width>0)
+      xid = 0 
+      while (xid<filter_width)
+        xadj = xid + sfadj
+        yid = 0
+        while (yid<filter_width)
+          yadj = yid + sfadj
+          t[0] = t[0] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,0]
+          t[1] = t[1] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,1]
+          t[2] = t[2] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,2]
+          t[3] = t[3] + sf_gauss[xid,yid] * pix[xcrd+xadj,ycrd+yadj,3]
+          yid = yid + 1
+        endwhile
+        xid = xid + 1
+      endwhile
+    else
+      ; average values from each of the @oversample^2 points.
+      xid = 0
+      int ov2 = round(@oversample*@oversample)
+      int myadj = gutter_width - round(@oversample/2)
+      while (xid<@oversample)
+        xadj = xid + myadj
+        yid = 0
+        while (yid<@oversample)
+          yadj = yid + myadj
+          t[0] = t[0] + pix[xcrd+xadj,ycrd+yadj,0]/ov2
+          t[1] = t[1] + pix[xcrd+xadj,ycrd+yadj,1]/ov2
+          t[2] = t[2] + pix[xcrd+xadj,ycrd+yadj,2]/ov2
+          t[3] = t[3] + pix[xcrd+xadj,ycrd+yadj,3]/ov2
+          yid = yid + 1
+        endwhile
+        xid = xid + 1
+      endwhile
+    endif
+    
+    float alpha = t[3]
+    if (alpha > 0.0)
+      lgs = ((alpha/prefilter_white)^(g-1))/prefilter_white
+      alpha = (alpha/prefilter_white)^g
+      if alpha<0.0
+        alpha = 0.0
+      elseif alpha>1.0
+        alpha = 1.0
+      endif
+    else
+      lgs = 0.0
+    endif
+    float invalp = 1.0-alpha
+  
+    ; perhaps we should spatial filter / anti-alias here, in color space,
+    ; instead of doing it in arbitrary space.
+  
+    fr = lgs * t[0]
+    fg = lgs * t[1]
+    fb = lgs * t[2]
+    fo = lgs * t[3]
+  
+    #color = rgba(fr,fg,fb,fo) + @bk_color*invalp
+  else
+    #color = @bk_color
+  endif
+  
+default:
+  
+  title = "Flame Fractals +"
+  
+ ; Pretend this is a normal formula for Ultra Fractal 3, so you can
+ ; attempt to render it -- it will probably not work well!
+ ; May work OK for single flame layer, small image size.
+ ; render = false
+$IFDEF VER40
+ ; Set the render setting to false for Ultra Fractal 4 so it knows that this
+ ; is a flame fractal and has to be treated differently.
+ render = false
+$ENDIF
+
+  helpfile = "flame.chm"
+  
+  float param version
+    default = 2.027
+    visible = false
+  endparam
+
+  int param randomseed
+    caption = "Random Seed"
+    default = 1234567890
+  endparam
+  
+  bool param applyMapping
+    caption = "Apply Mapping"
+    default = true
+    visible = false
+  endparam
+  
+  float param percentInc
+    caption = "Oversize by (%)"
+    default = 0.0
+    visible = @applyMapping == true
+  endparam
+  
+  heading
+    caption = "Render Settings"
+  endheading
+
+  int param iter_density
+    caption = "Sample Density"
+    default = 35
+    min = 1
+    hint = "By default, the number of iterations run by the program \
+            is this value times the total number of pixels in the image. \
+            If the image appears spotty, increase this value."
+  endparam
+  
+  float param spat_filt_rad
+    caption = "Filter Radius"
+    default = 0.7
+    min = 0.0
+    hint = "This radius controls the amount of 'smearing' applied to the \
+            image.  It specifically controls the size of the gaussian \
+            kernel that is convolved with the image. Setting to 0.0 \
+            turns the filter off.  Try values around 0.3, with the \
+            spatial oversample set to 2 or 3 for nice results. "
+  endparam
+  
+  int param oversample
+    caption = "Oversample"
+    default = 3
+    min = 1
+    hint = "Increasing this parameter increases the number of iterations \
+            as well as the number of histogram bins, effectively allowing \
+            anti-aliasing to be performed.  A value of 2 increases the \
+            number of bins by 4x, 3 by 9x, etc."
+  endparam
+   
+  heading
+    caption = "Color Settings"
+  endheading  
+   
+  color param bk_color
+    caption = "Background Color"
+    default = rgba(0,0,0,1.0)
+  endparam
+  
+  float param contrast
+    caption = "Contrast"
+    default = 1.0
+    min = 1.0
+   endparam
+   
+  float param brightness
+    caption = "Brightness"
+    default = 4.0
+
+   endparam
+   
+  float param gamma
+    caption = "Gamma"
+    default = 2.0
+    min = 1.0
+  endparam
+   
+  int param white_level
+    caption = "White Level"
+    default = 200
+    min = 0
+    max = 255
+  endparam
+  
+  heading
+    caption = ""
+  endheading
+
+  int param xforms
+    caption = "No. of Transforms"
+    default = 2
+    max = 12
+    min = 2
+  endparam
+  
+  param visible_xform
+    caption = "Visible Parameters"
+    enum = "Transform 1" "Transform 2" "Transform 3" "Transform 4" "Transform 5" \
+    "Transform 6" "Transform 7" "Transform 8" "Transform 9" "Transform 10" \
+    "Transform 11" "Transform 12" 
+    default = 0
+  endparam
+    
+  heading
+    caption = "Transform 1"
+    visible = @visible_xform == 0
+  endheading
+  float param xf0_p
+    caption = "Probability"
+    default = 1.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_c
+    caption = "Color"
+    default = 1.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 0
+  endparam  
+  float param xf0_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 0
+  endparam  
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 0
+  endheading    
+  float param xf0_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 0
+  endparam  
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 0
+  endheading      
+  float param xf0_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf0_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+
+
+  heading
+    caption = "Transform 2"
+    visible = @visible_xform == 1
+  endheading
+
+  float param xf1_p
+    caption = "Probability"
+    default = 1.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 1
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 1
+  endheading  
+
+  float param xf1_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 1
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 1
+  endheading  
+
+  float param xf1_var0
+    caption = "Linear"
+    default = 1.0
+    max = 1.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+
+  float param xf1_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 1
+  endparam
+  float param xf1_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf1_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf1_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf1_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf1_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 3"
+    visible = @visible_xform == 2
+  endheading
+
+  float param xf2_p
+    caption = "Probability"
+    default = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_c
+    caption = "Color"
+    default = 0.0
+    max = 1.0
+    min = 0.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 2
+  endparam
+  
+ float param xf2_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 2
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 2
+  endheading  
+
+  float param xf2_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 2
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 2
+  endheading  
+
+  float param xf2_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+
+  float param xf2_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 2
+  endparam
+  float param xf2_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf2_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf2_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf2_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf2_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 4"
+    visible = @visible_xform == 3
+  endheading
+
+  float param xf3_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 3
+  endparam
+  
+  float param xf3_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 3
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 3
+  endheading  
+
+  float param xf3_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 3
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 3
+  endheading  
+
+  float param xf3_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+
+  float param xf3_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 3
+  endparam
+  float param xf3_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf3_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf3_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf3_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf3_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+
+  heading
+    caption = "Transform 5"
+    visible = @visible_xform == 4
+  endheading
+
+  float param xf4_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 4
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 4
+  endheading  
+
+  float param xf4_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 4
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 4
+  endheading  
+
+  float param xf4_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+
+  float param xf4_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf4_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf4_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf4_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf4_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf4_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 6"
+    visible = @visible_xform == 5
+  endheading
+
+  float param xf5_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 5
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 5
+  endheading  
+  
+  float param xf5_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 5
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 5
+  endheading  
+
+  float param xf5_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+
+  float param xf5_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+  float param xf5_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+  float param xf5_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+  float param xf5_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 5
+  endparam
+  float param xf5_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf5_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 4
+  endparam
+  float param xf5_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf5_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf5_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf5_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf5_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 7"
+    visible = @visible_xform == 6
+  endheading
+
+  float param xf6_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 6
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 6
+  endheading  
+
+  float param xf6_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 6
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 6
+  endheading  
+
+  float param xf6_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+
+  float param xf6_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 6
+  endparam
+  float param xf6_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf6_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf6_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf6_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf6_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 8"
+    visible = @visible_xform == 7
+  endheading
+
+  float param xf7_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 7
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 7
+  endheading  
+
+  float param xf7_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 7
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 7
+  endheading  
+
+  float param xf7_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+
+  float param xf7_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 7
+  endparam
+  float param xf7_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf7_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf7_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf7_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf7_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 9"
+    visible = @visible_xform == 8
+  endheading
+
+  float param xf8_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 8
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 8
+  endheading  
+
+  float param xf8_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 8
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 8
+  endheading  
+
+  float param xf8_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+
+  float param xf8_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 8
+  endparam
+  float param xf8_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf8_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf8_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf8_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf8_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 10"
+    visible = @visible_xform == 9
+  endheading
+
+  float param xf9_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_c
+    caption = "Color"
+    default = 0.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 9
+  endparam
+  
+  float param xf9_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 9
+  endparam
+
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 9
+  endheading  
+
+  float param xf9_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 9
+  endparam
+
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 9
+  endheading  
+
+  float param xf9_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+
+  float param xf9_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 9
+  endparam
+  float param xf9_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf9_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf9_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf9_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf9_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 11"
+    visible = @visible_xform == 10
+  endheading
+
+  float param xf10_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_c
+    caption = "Color"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 10
+  endparam
+  
+  float param xf10_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 10
+  endparam
+  
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 10
+  endheading  
+  
+  float param xf10_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 10
+  endparam
+  
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 10
+  endheading  
+    
+  float param xf10_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+
+  float param xf10_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 10
+  endparam
+  float param xf10_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf10_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf10_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf10_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf10_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+  heading
+    caption = "Transform 12"
+    visible = @visible_xform == 11
+  endheading
+
+  float param xf11_p
+    caption = "Probability"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control the probability of \
+            this transform's coefficients being used in the \
+            iterative loop."
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_c
+    caption = "Color"
+    default = 1.0
+    min = 0.0
+    max = 1.0    
+    hint = "Use this parameter to control how the fractal is colored.\
+            For best results, set one Xform's color to 1.0, and the rest 0.0."
+    visible = @visible_xform == 11
+  endparam
+  
+  float param xf11_sym
+    caption = "Symmetry"
+    default = 0
+    max = 1
+    min = 0
+    hint = "Determines whether the color coordinate is calculated \
+            for this transform"
+    visible = @visible_xform == 11
+  endparam
+  
+  heading
+    caption = "Coefficients"
+    visible = @visible_xform == 11
+  endheading  
+  
+  float param xf11_cfa
+    caption = "a"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_cfb
+    caption = "b"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_cfc
+    caption = "c"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_cfd
+    caption = "d"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_cfe
+    caption = "e"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_cff
+    caption = "f"
+    default = 0.5
+    visible = @visible_xform == 11
+  endparam
+  
+  heading 
+    caption = "Variations"
+    visible = @visible_xform == 11
+  endheading  
+    
+  float param xf11_var0
+    caption = "Linear"
+    default = 1.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var1
+    caption = "Sinusoidal"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var2
+    caption = "Spherical"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var3
+    caption = "Swirl"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var4
+    caption = "Horseshoe"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var5
+    caption = "Polar"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var6
+    caption = "Handkerchief"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var7
+    caption = "Heart"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var8
+    caption = "Disc"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var9
+    caption = "Spiral"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var10
+    caption = "Hyperbolic"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var11
+    caption = "Diamond"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var12
+    caption = "Ex"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var13
+    caption = "Julia"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var14
+    caption = "Bent"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var15
+    caption = "Waves"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var16
+    caption = "Fisheye"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+
+  float param xf11_var17
+    caption = "Popcorn"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var18
+    caption = "Exponential"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var19
+    caption = "Power"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var20
+    caption = "Cosine"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var21
+    caption = "Rings"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var22
+    caption = "Fan"
+    default = 0.0
+    visible = @visible_xform == 11
+  endparam
+  float param xf11_var23
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf11_var24
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf11_var25
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf11_var26
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+  float param xf11_var27
+    caption = "Future Use"
+    default = 0.0
+    visible = @visible_xform == 0
+  endparam
+
+}
+
+sdc-disk-plasma {
+; Slope and rotation options suggested by Gilles Nadeau, April, 2008
+;
+; revised Susan Chambless 2 March 2003
+;
+; Mark Townsend, 1 June 2000
+;
+; Based on an idea from Earl Hinrich
+;
+init:
+  complex w = (0,0)
+  complex z = (0,0)
+  complex r1 = (0,1) ^ (@angle / 90.0)
+  complex r2 = (0,1) ^ (@anglestep / 90.0)
+  float e1 = 0.0
+  float e2 = 0.0
+  float e3 = 0.0
+  float vx = 0.0
+  float vy = 0.0
+  float vz = 0.0
+  float vd = 0.0
+  float dr = 0.0
+  float fx = 0.0
+  float fy = 0.0
+  float fz = 0.0
+  float h = 0.0
+  float d = 0.0
+  int i = 0
+  int j = 0
+  int iter = 0
+  int max_iter = 0
+  bool mask = false
+loop:
+  iter = iter + 1
+  if cabs(#z - @doffset) < @r
+    d = (@r - cabs(#z - @doffset)) / @r
+    w = w + d * #z
+    max_iter = iter
+  endif
+final:
+  if @solid
+    if w == 0
+      mask = true
+    endif
+  endif
+  if mask
+    #solid = true
+  else
+    if @coloring == 0                      ; Magnitude
+      #index = 0.1 * cabs(w)
+    elseif @coloring == 1                  ; Real
+      #index = 0.1 * abs(real(w))
+    elseif @coloring == 2                  ; Imaginary
+      #index = 0.1 * abs(imag(w))
+    elseif @coloring == 3                  ; Angle
+      float b = atan2(w) + atan2(@aoffset)
+      if b < 0
+        b = b + 2 * #pi
+      endif
+      if b > 2 * #pi
+        b = b - 2 * #pi
+      endif
+      b = 1 / (2 * #pi) * b
+      #index = b
+    elseif @coloring == 4                  ; Iteration
+      #index = 0.1 * max_iter
+    elseif @coloring == 5                  ; Plasma
+    if (@slope == false)
+      int i = 0
+      float sum = 0
+      float amplitude = 1.0
+      complex p = w * @scale * r1 + @offset
+      while i < @octaves
+        float bx0 = floor(real(p))
+        float bx1 = bx0 + 1
+        float rx0 = real(p) - floor(real(p))
+        float rx1 = rx0 - 1
+        float by0 = floor(imag(p))
+        float by1 = by0 + 1
+        float ry0 = imag(p) - floor(imag(p))
+        float ry1 = ry0 - 1
+        ; Positive offset to stop reflection
+        if bx0 < 0
+          bx0 = bx0 + 8192
+        endif
+        if bx1 < 0
+          bx1 = bx1 + 8192
+        endif
+        if by0 < 0
+          by0 = by0 + 8192
+        endif
+        if by1 < 0
+          by1 = by1 + 8192
+        endif
+        float sx = rx0 * rx0 * (3 - 2 * rx0)
+        float sy = ry0 * ry0 * (3 - 2 * ry0)
+        float b00 = (bx0^2 * 2473 % 65536 + by0)^2 % 65536
+        float b01 = (bx0^2 * 2473 % 65536 + by1)^2 % 65536
+        float b10 = (bx1^2 * 2473 % 65536 + by0)^2 % 65536
+        float b11 = (bx1^2 * 2473 % 65536 + by1)^2 % 65536
+        float g_b00_0 = b00^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b01_0 = b01^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b10_0 = b10^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b11_0 = b11^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b00_1 = (b00 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b01_1 = (b01 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b10_1 = (b10 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b11_1 = (b11 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float s = sqrt(g_b00_0^2 + g_b00_1^2)
+        g_b00_0 = g_b00_0 / s
+        g_b00_1 = g_b00_1 / s
+        s = sqrt(g_b01_0^2 + g_b01_1^2)
+        g_b01_0 = g_b01_0 / s
+        g_b01_1 = g_b01_1 / s
+        s = sqrt(g_b10_0^2 + g_b10_1^2)
+        g_b10_0 = g_b10_0 / s
+        g_b10_1 = g_b10_1 / s
+        s = sqrt(g_b11_0^2 + g_b11_1^2)
+        g_b11_0 = g_b11_0 / s
+        g_b11_1 = g_b11_1 / s
+        float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+        float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+        float a = u1 + sx * (v1 - u1)
+        float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+        float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+        float b = u2 + sx * (v2 - u2)
+        sum = sum + real(@fn1(a + sy * (b - a))) * amplitude
+        amplitude = amplitude * @persistence
+        p = p * r2 / 0.5
+        i = i + 1
+      endwhile
+      #index = (sum + 1) * 0.5
+    else
+     while j < 3
+       if j == 0
+        z = w * @scale
+       elseif j == 1
+        z = w * @scale + @dist
+       elseif j == 2
+        z = w * @scale + flip(@dist)
+       endif
+
+      float sum = 0
+      float amplitude = 1.0
+      complex p = z * r1 + @offset
+      while i < @octaves
+        float bx0 = floor(real(p))
+        float bx1 = bx0 + 1
+        float rx0 = real(p) - floor(real(p))
+        float rx1 = rx0 - 1
+        float by0 = floor(imag(p))
+        float by1 = by0 + 1
+        float ry0 = imag(p) - floor(imag(p))
+        float ry1 = ry0 - 1
+        ; Positive offset to stop reflection
+        if bx0 < 0
+          bx0 = bx0 + 8192
+        endif
+        if bx1 < 0
+          bx1 = bx1 + 8192
+        endif
+        if by0 < 0
+          by0 = by0 + 8192
+        endif
+        if by1 < 0
+          by1 = by1 + 8192
+        endif
+        float sx = rx0 * rx0 * (3 - 2 * rx0)
+        float sy = ry0 * ry0 * (3 - 2 * ry0)
+        float b00 = (bx0^2 * 2473 % 65536 + by0)^2 % 65536
+        float b01 = (bx0^2 * 2473 % 65536 + by1)^2 % 65536
+        float b10 = (bx1^2 * 2473 % 65536 + by0)^2 % 65536
+        float b11 = (bx1^2 * 2473 % 65536 + by1)^2 % 65536
+        float g_b00_0 = b00^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b01_0 = b01^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b10_0 = b10^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b11_0 = b11^2 * 5381 % 65536 / 4 % 16384 - 8192
+        float g_b00_1 = (b00 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b01_1 = (b01 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b10_1 = (b10 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float g_b11_1 = (b11 + 1)^2 * 79997 % 65536 / 4 % 16384 - 8192
+        float s = sqrt(g_b00_0^2 + g_b00_1^2)
+        g_b00_0 = g_b00_0 / s
+        g_b00_1 = g_b00_1 / s
+        s = sqrt(g_b01_0^2 + g_b01_1^2)
+        g_b01_0 = g_b01_0 / s
+        g_b01_1 = g_b01_1 / s
+        s = sqrt(g_b10_0^2 + g_b10_1^2)
+        g_b10_0 = g_b10_0 / s
+        g_b10_1 = g_b10_1 / s
+        s = sqrt(g_b11_0^2 + g_b11_1^2)
+        g_b11_0 = g_b11_0 / s
+        g_b11_1 = g_b11_1 / s
+        float u1 = rx0 * g_b00_0 + ry0 * g_b00_1
+        float v1 = rx1 * g_b10_0 + ry0 * g_b10_1
+        float a = u1 + sx * (v1 - u1)
+        float u2 = rx0 * g_b01_0 + ry1 * g_b01_1
+        float v2 = rx1 * g_b11_0 + ry1 * g_b11_1
+        float b = u2 + sx * (v2 - u2)
+        sum = sum + real(@fn1(a + sy * (b - a))) * amplitude
+        amplitude = amplitude * @persistence
+        p = p * r2 / 0.5
+        i = i + 1
+      endwhile
+        h = (sum + 1) * 0.5
+
+      if j == 0
+        e1 = h
+      elseif j == 1
+        e2 = h
+      elseif j == 2
+        e3 = h
+      endif
+        i = 0
+        j = j + 1
+     endwhile
+
+        e1 = e1 * @zscale
+        e2 = e2 * @zscale
+        e3 = e3 * @zscale
+
+      if (@xfer == 1); log
+        e1 = log(e1)
+        e2 = log(e2)
+        e3 = log(e3)
+      elseif (@xfer == 2); sqrt
+        e1 = sqrt(e1)
+        e2 = sqrt(e2)
+        e3 = sqrt(e3)
+      elseif (@xfer == 3); cuberoot
+        e1 = (e1)^(1/3)
+        e2 = (e2)^(1/3)
+        e3 = (e3)^(1/3)
+      elseif (@xfer == 4); exp
+        e1 = exp(e1)
+        e2 = exp(e2)
+        e3 = exp(e3)
+      elseif (@xfer == 5); sqr
+        e1 = sqr(e1)
+        e2 = sqr(e2)
+        e3 = sqr(e3)
+      elseif (@xfer == 6); cube
+        e1 = (e1)^3
+        e2 = (e2)^3
+        e3 = (e3)^3
+      elseif (@xfer == 7); sin
+        e1 = sin(e1)
+        e2 = sin(e2)
+        e3 = sin(e3)
+      elseif (@xfer == 8); cos
+        e1 = cos(e1)
+        e2 = cos(e2)
+        e3 = cos(e3)
+      elseif (@xfer == 9); tan
+        e1 = tan(e1)
+        e2 = tan(e2)
+        e3 = tan(e3)
+      endif
+
+        e1 = e1 * @zscale2
+        e2 = e2 * @zscale2
+        e3 = e3 * @zscale2
+
+        vx = e2 - e1
+        vy = e3 - e1
+        vz = -@dist
+        vd = recip(sqrt(sqr(vx) + sqr(vy) + sqr(vz)))
+        vx = vx * vd
+        vy = vy * vd
+        vz = vz * vd
+        dr = #pi / 180
+        fx = cos(@langle*dr)*cos(@elevation*dr)
+        fy = sin(@langle*dr)*cos(@elevation*dr)
+        fz = -sin(@elevation*dr)
+        #index = fx*vx + fy*vy + fz*vz + 2.5
+    endif
+    endif
+  endif
+default:
+  title = "Disk Plasma"
+  param version
+    caption = "Version"
+    default = 1.0
+    visible = false
+  endparam
+  param coloring
+    caption = "Coloring Mode"
+    enum = "Magnitude" "Real" "Imaginary" "Angle" "Iteration" "Plasma"
+    default = 5
+  endparam
+  param solid
+    caption = "Solid Background"
+    default = false
+  endparam
+  param r
+    caption = "Disk Radius"
+    default = 2.0
+    min = 0
+  endparam
+  param doffset
+    caption = "Disk Offset"
+    default = (0,0)
+  endparam
+  param aoffset
+    caption = "Angle Offset"
+    default = (0,0)
+    visible = @coloring == 3
+    enabled = @coloring == 3
+   endparam
+  param octaves
+    caption = "Octaves"
+    default = 7
+    min = 1
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param persistence
+    caption = "Persistence"
+    default = 0.5
+    visible = @coloring == 5
+    enabled = @coloring == 5
+ endparam
+  param scale
+    caption = "Noise Scale"
+    default = 1.0
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param offset
+    caption = "Noise Offset"
+    default = (0,0)
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param angle
+    caption = "Rotation"
+    default = 0
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param anglestep
+    caption = "Rotation Step"
+    default = 0
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  func fn1
+    caption = "Noise Function"
+    default = ident()
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endfunc
+  bool param slope
+    caption = "Slope"
+    default = false
+    visible = @coloring == 5
+    enabled = @coloring == 5
+  endparam
+
+  heading
+    caption = "Slope Parameters"
+    visible = @coloring==5 && @slope==true
+    enabled = @coloring==5 && @slope==true
+  endheading
+
+  param xfer
+    caption = "Height Transfer"
+    default = 0
+    enum = "linear" "log" "sqrt" "cuberoot" "exp" "sqr" "cube" \
+    "sin" "cos" "tan"
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param zscale
+    caption = "Height Pre-Scale"
+    default = 1.0
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param zscale2
+    caption = "Height Post-Scale"
+    default = 0.2
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param langle
+    caption = "Light Rotation"
+    default = 90
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param elevation
+    caption = "Light Elevation"
+    default = 0
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+  param dist
+    caption = "Orbit Separation"
+    default = 0.0001
+    visible = @slope == true && @coloring == 5
+    enabled = @coloring == 5
+  endparam
+}

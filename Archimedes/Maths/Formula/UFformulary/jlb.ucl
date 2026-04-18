@@ -1,0 +1,1753 @@
+JLB_GradientColoring {
+; Same as GenericGradientColoring, "Plug-In Coloring (Gradient)"
+; in Standard.ucl, except plug-in JLB_DColoring2 can't be changed
+; new 250902
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  import "jlb.ulb"
+
+  GradientColoring c = new @coloringClass(0)
+
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #index = c.ResultIndex(#z)
+  #solid = c.IsSolid()
+default:
+  title = "Gradient Coloring"
+  rating = recommended
+
+  GradientColoring param coloringClass
+    ; caption invisible
+    default = JLB_DColoring2
+    selectable = false
+  endparam
+}
+
+Color_3D_Mapping {
+; Coloring for general 3D perspective mapping. This is designed to provide
+; lighting highlights to go with the 3D mapping transformation in jlb.uxf
+; and a pixel formula. This is based on fs-3d-map in fs.uxf.
+; Thanks to Frederik Slijkerman.
+;
+;
+; The 3D transformations/formulas use the left-handed coordinate
+; system, where X points to the right, Y points up, and Z points
+; into the screen. To determine the direction of a rotation,
+; hold your left hand such that your thumb points into the direction
+; of the axis around which the rotation takes place, and then your
+; curled fingers point into the direction of positive rotation.
+;
+; Rotation is performed first around the X axis, then around the
+; Y axis, and finally around the Z axis. Scaling must be done using
+; UF's zooming feature. Translation is performed after the rotation.
+;
+global:
+  ; Normalize the incident ray
+  float xi = @x_src
+  float yi = @y_src
+  float zi = @z_src
+  float tmp = sqrt(sqr(xi) + sqr(yi) + sqr(zi))
+  xi = xi/tmp
+  yi = yi/tmp
+  zi = zi/tmp
+  ; Convert angles from degrees to radians.
+  float angx = (@rotx * #pi) / 180
+  float angy = (@roty * #pi) / 180
+  float angz = (@rotz * #pi) / 180
+  
+init:
+  float tt
+  float sx = -@transx
+  float sy = -@transy
+  float sz = -@transz
+  float dx = real(#pixel)
+  float dy = imag(#pixel)
+  float dz = 4
+
+  ; Rotate the line according to the (rotx, roty, rotz) angle.
+
+  ; Apply rotation around Z axis
+  tt = cos(angz) * sy - sin(angz) * sx
+  sx = cos(angz) * sx + sin(angz) * sy
+  sy = tt
+  tt = cos(angz) * dy - sin(angz) * dx
+  dx = cos(angz) * dx + sin(angz) * dy
+  dy = tt
+
+  ; Apply rotation around Y axis
+  tt = cos(angy) * sx - sin(angy) * sz
+  sz = cos(angy) * sz + sin(angy) * sx
+  sx = tt
+  tt = cos(angy) * dx - sin(angy) * dz
+  dz = cos(angy) * dz + sin(angy) * dx
+  dx = tt
+
+  ; Apply rotation around X axis
+  tt = cos(angx) * sz - sin(angx) * sy
+  sy = cos(angx) * sy + sin(angx) * sz
+  sz = tt
+  tt = cos(angx) * dz - sin(angx) * dy
+  dy = cos(angx) * dy + sin(angx) * dz
+  dz = tt
+
+loop:
+
+final:
+  float lambda = 0
+  float x = 0, float y = 0, float z = 0
+  float a = 0, float b = 0, float c = 0
+  float xn = 0, float yn = 0, float zn = 0
+  bool okay = true
+
+  ; Construct a line from the current pixel on the screen through 3D space.
+  ; The line is defined by (sx, sy, sz) + lambda * (dx, dy, dz) where
+  ; lambda can be any real value > 0. So the line does not extend behind
+  ; the screen.
+  ; Now compute the intersection of the line with the shape, and return
+  ; the intersection point in #pixel (texture coordinates).
+  ; This is the only shape-dependent part.
+  ; Solve:
+  ; [ sx ]          [ dx ]   [ x ]
+  ; [ sy ] + lambda [ dy ] = [ y ]
+  ; [ sz ]          [ dz ]   [ z ]
+  ; together with the formula of shape.
+;
+  if (@shape == "Sphere")
+
+    ; The shape's formula is
+    ; x^2 + y^2 + z^2 = radius^2
+
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    lambda = quad(a, b, c)
+    
+  elseif (@shape == "Egg")
+
+    ; The shape's formula is
+    ;    for y >= 0)
+    ; x^2 + (p_top * y)^2 + z^2 = radius^2
+    ;    (for y <= 0)
+    ; x^2 + (p_bot * y)^2 + z^2 = radius^2
+    ;
+    ; Get intersections for each and see which half, if any, intersects.
+
+    sy = sy * @p_bot
+    dy = dy * @p_bot
+
+    ; solve a*lambda^2 + b*lambda +c = 0
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    float xbot = 0, float ybot = +1, float zbot = 0
+    lambda = quad(a, b, c)
+    if (lambda >= 0)
+      xbot = sx + lambda * dx
+      ybot = sy + lambda * dy
+      zbot = sz + lambda * dz
+    endif
+
+    sy = sy * @p_top/@p_bot
+    dy = dy * @p_top/@p_bot
+
+    a = sqr(dx) + sqr(dy) + sqr(dz)
+    b = 2*sx*dx + 2*sy*dy + 2*sz*dz
+    c = sqr(sx) + sqr(sy) + sqr(sz) - sqr(@radius)
+
+    float xtop = 0, float ytop = -1, float ztop = 0
+    lambda = quad(a, b, c)
+    if (lambda >= 0)
+      xtop = sx + lambda * dx
+      ytop = sy + lambda * dy
+      ztop = sz + lambda * dz
+    endif
+
+    if (ytop >= 0)
+      x = xtop, y = ytop, z = ztop
+      xn = x, yn = @p_top*y, zn = z
+    elseif (ybot <= 0)
+      x = xbot, y = ybot, z = zbot
+      xn = x, yn = @p_bot*y, zn = z
+    else
+      okay = false
+    endif
+    
+  elseif (@shape == "Cylinder")
+
+    ; The shape's formula is
+    ; x^2 + (p_cyl * z)^2 = radius^2
+
+    sz = sz * @p_cyl
+    dz = dz * @p_cyl
+
+    ; solve a*lambda^2 + b*lambda +c = 0
+    a = sqr(dx) + sqr(dz)
+    b = 2*sx*dx + 2*sz*dz
+    c = sqr(sx) + sqr(sz)- sqr(@radius)
+
+    lambda = quad(a, b, c)
+
+  elseif (@shape == "Hyperboloid")
+
+    ; The shape's formula is
+    ; x^2 - (p_hyp * y)^2 + z^2 = radius^2
+
+    sy = sy * @p_hyp
+    dy = dy * @p_hyp
+    a = sqr(dx) - sqr(dy) + sqr(dz)
+    b = 2*sx*dx - 2*sy*dy + 2*sz*dz
+    c = sqr(sx) - sqr(sy) + sqr(sz)
+    if (@b_hyp)
+      c = c - sqr(@radius)
+    else
+      c = c + sqr(@radius)
+    endif
+    lambda = quad(a, b, c)
+
+   elseif (@shape == "Paraboloid")
+
+     ; The shape's formula is
+     ; x^2 - p_par * y + z^2 = 0
+
+     a = sqr(dx) + sqr(dz)
+     b = 2*sx*dx - @p_par*dy + 2*sz*dz
+     c = sqr(sx) - @p_par*sy + sqr(sz)
+
+     lambda = quad(a, b, c)
+
+  endif
+
+  if (@shape != "Egg")
+    okay = (lambda > 0)
+    if (okay)
+      x = sx + lambda * dx
+      y = sy + lambda * dy
+      z = sz + lambda * dz
+    endif
+    if (@shape == "Sphere")
+      xn = x, yn = y, zn = z
+    elseif (@shape == "Cylinder")
+      xn = x, yn = 0, zn = z
+    elseif (@shape == "Hyperboloid")
+      xn = x, yn = -@p_hyp*y, zn = z
+     elseif (@shape == "Paraboloid")
+       xn = 2*x, yn = -@p_par, zn = 2*z
+    endif
+  endif
+  
+  float dotproduct = 0
+  if (okay)
+    dotproduct = (xi*xn + yi*yn + zi*zn) / sqrt(sqr(xn) + sqr(yn) + sqr(zn))
+  endif
+  if (dotproduct <= 0)
+    #index = 0
+  else
+    #index= dotproduct^@pow
+  endif
+  
+; These functions are copied from jlb.uxf
+
+; Functions used for several shapes
+;
+; Solve a*U^2 + b*U + c = 0 for smaller positive real root
+; return -1 if no real positive root exists
+; -b/a is the sum of the two roots; c/a is the product of the two roots.
+float func quad(float a, float b, float c)
+  if (a == 0.0)
+    float u = -c/b
+    if (u >= 0)
+      return u
+    else
+      return -1
+    endif
+  endif
+  b = b/a
+  c = c/a
+  float d = b*b - 4*c
+  if (d < 0)
+    return -1
+  endif
+  d = sqrt(d)
+  float u1
+  ; Do carefully to avoid loss of precision
+  if (b >= 0)             ; sum of roots is negative, so at least one is negative
+    u1 = (-b - d)/2     ; t is negative
+    ; u1 is negative
+    ; u2 = c/u1
+    if (c < 0)
+      return c/u1
+    else
+      return -1
+    endif
+  else  ; (b < 0)        sum of roots is positive, so at least one is positive
+    u1 = (-b+d)/2    ; u1 is positive
+    if (c <= 0)
+      return u1
+    endif
+    float u2 = c/u1        ; positive
+    if (u2 < u1)
+      return u2
+    endif
+    return u1
+  endif
+endfunc
+
+default:
+  title="Color 3D Mapping"
+  
+  heading
+    caption = "Light source"
+    text = "The light source is a plane wave from (X,Y,Z) towards (0,0,0)."
+  endheading
+  float param x_src
+    caption = "X (+x is to the right)"
+    default = -5
+  endparam
+  float param y_src
+    caption = "Y (+y is up)"
+    default = 3
+  endparam
+  float param z_src
+    caption = "Z (+z is into the screen)"
+    default = -8
+  endparam
+  float param pow
+    caption = "Reflection power"
+    hint = "Larger numbers make the highlight more concentrated."
+    min = 0.1
+    default = 5
+  endparam
+
+  heading
+    caption = "Shape parameters"
+    text = "To generate an appropriate highlight, these parameters should match \
+            those of the 3D mapping transformation. The Location parameters \
+            also should match."
+  endheading
+  
+  param shape
+    caption = "Shape"
+    enum = "Plane" "Sphere" "Egg" "Cylinder" "Hyperboloid" "Paraboloid"
+    hint = "The fractal is mapped onto this shape."
+  endparam
+
+  float param radius
+    caption = "Radius"
+    default = 0.5
+    hint = "For sphere and cylinder, it's the only radius. For egg, it's the \
+           maximum radius. For hyperboloid, it's the minimum radius."
+    min = 0.1
+;     max = 1
+    visible = (@shape > 0) && (@shape < 5)
+  endparam
+
+  float param p_top
+    caption = "Egg top parameter"
+    default = 0.6     ; 24/35
+    hint = "Smaller numbers mean more pointy; 1 is circular."
+    min = 0.1
+    max = 10
+    visible = (@shape == 2)
+  endparam
+
+  float param p_bot
+    caption = "Egg bottom parameter"
+    default = 0.9    ; 6/7
+    hint = "Smaller numbers mean more pointy; 1 is circular."
+    min = 0.1
+    max = 10
+    visible = (@shape == 2)
+  endparam
+
+  float param p_cyl
+    caption = "Cylinder radius"
+    default = 1
+    min = 0.1
+    max = 10
+    visible = (@shape == 3)
+  endparam
+
+  float param p_hyp
+    caption = "Hyperboloid parameter"
+    default = 1
+    hint = "Smaller numbers give a thinner ahape."
+    min = 0.1
+    max = 10
+    visible = (@shape == 4)
+  endparam
+  bool param b_hyp
+    caption = "One sheet"
+    default = true
+    visible = (@shape == 4)
+  endparam
+
+  float param p_par
+    caption = "Parabola parameter"
+    default = 1
+   ;hint = "Smaller numbers give a thinner ahape."
+;     min = 0.1
+;     max = 10
+    visible = (@shape == 5)
+  endparam
+
+  param rotx
+    caption = "X rotation"
+    default = 0.0
+    hint = "Rotation around the x-axis, in degrees. The x-axis points to \
+            the right. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing to \
+            the right. Your (curled) fingers now indicate the direction of \
+            positive X rotation."
+  endparam
+
+  param roty
+    caption = "Y rotation"
+    default = 0.0
+    hint = "Rotation around the y-axis, in degrees. The y-axis points \
+            upwards. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing \
+            upwards. Your (curled) fingers now indicate the direction of \
+            positive Y rotation."
+  endparam
+
+  param rotz
+    caption = "Z rotation"
+    default = 0.0
+    hint = "Rotation around the z-axis, in degrees. The z-axis points into \
+            the screen. To determine the direction in which the rotation will \
+            take place, hold up your left hand with your thumb pointing into \
+            the screen. Your (curled) fingers now indicate the direction of \
+            positive Z rotation."
+  endparam
+
+  param transx
+    caption = "X Translation"
+    default = 0.0
+    hint = "Translation along the x-axis. The x-axis points to the right, \
+            so increasing this value will move the fractal to the right, too."
+  endparam
+
+  param transy
+    caption = "Y Translation"
+    default = 0.0
+    hint = "Translation along the y-axis. The y-axis points upwards, \
+            so increasing this value will move the fractal upwards, too."
+  endparam
+
+  param transz
+    caption = "Z Translation"
+    default = 2.0
+    hint = "Translation along the z-axis. The z-axis points into the screen, \
+            so increasing this value will move the fractal away."
+  endparam
+
+  param fraccenter
+    caption = "Fractal Center"
+    default = (0,0)
+    hint = "Center of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracmagn
+    caption = "Fractal Magnification"
+    default = 1.0
+    hint = "Magnification of the fractal image. Use here what you would \
+            normally enter in the Location tab."
+  endparam
+
+  param fracangle
+    caption = "Fractal Rotation"
+    default = 0.0
+    hint = "Rotation angle (in degrees) of the fractal image. Use here \
+            what you would normally enter in the Location tab."
+  endparam
+}
+
+Shapes {
+; this is a direct coloring method  that uses objects.
+
+global:
+	import "common.ulb"
+	import "jlb-orig.ulb"
+
+	JLB_ShapesDirect f = new @f_class(0)
+	
+init:
+	f.Init(#pixel,#pixel)
+
+loop:
+	f.Iterate(#z)
+	
+final:
+	#color = f.Result(#z)
+	if (f.IsSolid())
+		#solid = true
+	endif
+
+default:
+	title = "ShapesDirect"
+	int param v_Shapes
+		caption = "Version (Shapes)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+    been made to the formula that is incompatible with the previous version. \
+    When that happens, this field will reflect the old version number to \
+    alert you to the fact that an alternate rendering is being used."
+		visible = @v_Shapes < 100
+	endparam
+	JLB_ShapesDirect param f_class
+		caption = "Object"
+		selectable = false
+	endparam
+}
+
+Shapes2 {
+; this is a direct coloring method that uses objects.
+; Version 100 of 03 November 2012
+
+global:
+	import "common.ulb"
+	import "jlb.ulb"
+
+	JLB_ShapesDirect2 f = new @f_class(0)
+	
+init:
+	f.Init(#pixel,#pixel)
+
+loop:
+	f.Iterate(#z)
+	
+final:
+	#color = f.Result(#z)
+	if (f.IsSolid())
+		#solid = true
+	endif
+
+default:
+	title = "ShapesDirect2"
+  ;rating = Recommended
+	int param v_Shapes
+		caption = "Version (Shapes)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+    been made to the formula that is incompatible with the previous version. \
+    When that happens, this field will reflect the old version number to \
+    alert you to the fact that an alternate rendering is being used."
+		visible = @v_Shapes < 100
+	endparam
+	JLB_ShapesDirect2 param f_class
+		caption = "Object"
+		selectable = false
+	endparam
+}
+
+Vignette {
+; this is a direct coloring method that uses objects.
+; put a vignette shape on a layer; use it as the top layer to modify the image
+; it should multiply the lower layer
+; Version 100 of 30 May 2020
+
+global:
+	import "common.ulb"
+	import "jlb.ulb"
+
+	JLB_Vignette f = new @f_class(0)
+
+init:
+	f.Init(#pixel,#pixel)
+
+loop:
+	f.Iterate(#z)
+
+final:
+	#color = f.Result(#z)
+	if (f.IsSolid())
+		#solid = true
+	endif
+
+default:
+	title = "Vignette"
+  rating = NotRecommended
+	int param v_Vignette
+		caption = "Version (Vignette)"
+		default = 100
+		hint = "This version parameter is used to detect when a change has \
+    been made to the formula that is incompatible with the previous version. \
+    When that happens, this field will reflect the old version number to \
+    alert you to the fact that an alternate rendering is being used."
+		visible = @v_Vignette < 100
+	endparam
+	JLB_Vignette param f_class
+		caption = "Object"
+		selectable = false
+	endparam
+}
+
+Simple(BOTH) {
+;
+; Simple ways to color a fractal.
+; Useful as a diagnostic.
+;
+global:
+	import "common.ulb"
+
+  UtilityTransform fc = new @f_class(0)
+
+init:
+  float aa = asinh(@scale)
+final:
+  complex zz = #z
+  if @subz
+    zz = zz - fc.Iterate(#z)
+  endif
+  float f
+  if @type == "Real"
+    f = real(zz)
+  elseif @type == "Imaginary"
+    f = imag(zz)
+  else ; "Cabs"
+    f = cabs(zz)
+  endif
+  if f >= @scale
+    #index = 1.0
+  elseif f <= -@scale
+    #index = 0.0
+  else
+    if @type == "Cabs"                 ; zero at left of gradient
+      if @interp == "linear"
+        #index = f/@scale
+      else
+        #index = asinh(f)/aa
+      endif
+    else                               ; zero in center of gradient
+      if @interp == "linear"
+        #index = 0.5*(1.0 + f/@scale)
+      else
+        #index = 0.5*(1.0 + asinh(f)/aa)
+      endif
+    endif
+  endif
+default:
+  title = "Simple"
+  param type
+    caption = "Coloring Type"
+    enum = "Real" "Imaginary" "Cabs"
+    hint = "Specifies how the fractal is colored. Most options work best \
+            with low bail-out values for the fractal formula, like 4. \
+            The Iteration option is the classic way to color fractals."
+  endparam
+  float param scale
+    caption = "Scale"
+    default = 1.0
+    hint = "Maximum value for full gradient"
+  endparam
+  param interp
+    caption = "Interpolation method"
+    enum = "linear" "log"
+  endparam
+  bool param subz
+    caption = "Subtract z value?"
+    default = false
+  endparam
+	FractalCoordinate param f_class
+		selectable = false
+	endparam
+
+}
+
+ExponentialSmoothing(BOTH) {
+;
+; This coloring method provides smooth iteration
+; colors for all fractal types, convergent or
+; divergent (or both).  It combines the two methods
+; developed by Ron Barnett.  It doesn't map
+; precisely to iterations, but it's close.
+;
+; Written by Damien M. Jones
+; Slightly modified by jlb 12 December 2020
+; (added parameter a)
+;
+init:
+  float sum = 0.0
+  float sum2 = 0.0
+  complex zold = (0,0)
+  float t = @a
+  int iter = 0
+
+loop:
+  iter = iter + 1
+  if iter > @skip
+    if (@diverge)
+      sum = sum + exp(-t*cabs(#z))
+    endif
+    if (@converge)
+      sum2 = sum2 + exp(-t/cabs(zold-#z))
+    endif
+    zold = #z
+    t = t * @r
+  endif
+
+final:
+  if (|#z - zold| < 0.5)	; convergent bailout.
+    if (@converge)
+      #index = sum2
+    else
+      #index = 0
+    endif
+
+  else				; divergent bailout.
+    if (@diverge)
+      #index = sum * @divergescale
+    else
+      #index = 0
+    endif
+  endif
+
+default:
+  title = "Exponential Smoothing Plus"
+;   helpfile = "Uf*.chm"
+;   helptopic = "Html/coloring/standard/exponentialsmoothing.html"
+;   rating = recommended
+  int param skip
+    caption = "skip first iterations"
+    default = 0
+    min = 0
+  endparam
+  float param a
+    caption = "a = exponential factor"
+    default = 1
+    min = 0
+  endparam
+  float param r
+    caption = "factor to change a"
+    default = 1
+  endparam
+  param diverge
+    caption = "Color Divergent"
+    default = true              ; 22 August 2021 changed from false
+    hint = "if checked, points which escape to infinity will be \
+            colored."
+  endparam
+  param converge
+    caption = "Color Convergent"
+    default = true
+    hint = "if checked, points which collapse to one value will be \
+            colored."
+  endparam
+  param divergescale
+    caption = "Divergent Density"
+    default = 1.0
+    exponential = true
+    hint = "Sets the divergent coloring density, relative to the \
+            convergent coloring. if set to 1.0, they will use \
+       	    the same color density."
+    visible = @diverge
+  endparam
+}
+
+Smooth-func { ; adapted from Kerry Mitchell's smooth-tanh
+; experimental
+;
+init:
+  float il=1/log(@power)        ; reciprocal log (power)
+  float lp=log(log(@bailout))     ; log(log bailout)
+final:
+  if(#numiter<@minskip)
+    #index=0                      ; skip low iterations
+  else
+    lp=0.05*real(#numiter+il*lp-il*log(log(cabs(#z))))
+    #index=@mult*real(@f(@density*lp))
+  endif
+default:
+  title="Smooth Func"
+  float param power
+    caption="Exponent"
+    default=2
+    hint="This should be set to match the exponent of the \
+      formula you are using. For Mandelbrot, this is 2."
+  endparam
+  float param bailout
+    caption="Bail-out value"
+    default=1000
+    min=1
+    hint="This should be set to match the bail-out value in \
+      the Formula tab. This formula works best with bail-out \
+      values higher than 100."
+  endparam
+  func f
+    caption="function"
+    default=ident()
+  endfunc
+  float param mult
+    caption = "multiplier"
+    default = 1
+  endparam
+  float param density
+    caption="Density"
+    default=0.1
+    hint="Change this to vary how the function is applied \
+      to the gradient."
+  endparam
+  int param minskip
+    caption="Iterations to skip"
+    default=0
+    hint="Iterations less than this amount are colored with \
+      color 0 from the gradient."
+  endparam
+}
+
+Vignette2 {
+; this is a direct coloring method.
+; put a vignette shape on a layer; use it as the top layer to modify the image
+; Version 210515 of 15 May 2021
+
+$define direct
+global:
+	import "jlb.ulb"
+
+init:
+  float xscale =  #width/2
+  float yscale = #height/2
+  if #width > #height
+    xscale =  (#width/2 - (1-@radius)* #height/2) / @radius
+  elseif #height > #width
+    yscale = (#height/2  - (1-@radius)* #width/2) / @radius
+  endif
+  float xctr = 0
+  float yctr = 0
+  if !@screen_ctr
+    xctr = real(@ctr) * xscale
+    yctr = imag(@ctr) * yscale
+  endif
+
+loop:
+
+final:
+    ; screen relative coordinates go from -1 to +1, symmetric in x and y
+    ; zero at screen center
+;     float x = abs(real(#screenpixel) / (0.5*#width )) - 1
+;     float y = abs(imag(#screenpixel) / (0.5*#height)) - 1
+  float x = abs(real(#screenpixel) - 0.5*#width  - xctr) /xscale
+  float y = abs(imag(#screenpixel) - 0.5*#height - yctr) /yscale
+  float r = x^@shape + y^@shape
+  float r0 =  @radius^@shape
+
+  #solid = false
+  if r <= r0 ;&& !@invert
+    #solid = true
+  else
+    ; t = 0 at inner radius, 1 at corners
+    float t= (r - r0) / (2 - r0)
+    float luminance = 1 - (1-@dark) * t^@power
+
+    float rr = luminance *   red(gradient(0))
+    float gg = luminance * green(gradient(0))
+    float bb = luminance *  blue(gradient(0))
+    float opac = 1
+;     if @invert
+;       opac = (1-t)^@power
+;     else
+;       opac = t^@power
+;     endif
+    color c = rgba(rr, gg, bb, opac)
+    #color = c
+  endif
+
+
+default:
+  title = "Vignette2"
+  ;rating = Recommended
+	int param version
+		caption = "Version"
+		default = 210515
+		visible = @version < 210515
+	endparam
+;   bool param invert
+;     caption = "Invert?"
+;     default = false
+;   endparam
+;   heading
+;     text="The outside gets the solid color; the inside gets shades of the gradient at position 0."
+;     visible = @invert
+;   endheading
+
+  heading
+    text="The inside gets the solid color; the outside gets shades of the gradient at position 0."
+;     visible = !@invert
+  endheading
+  bool param screen_ctr
+    caption = "Use screen center"
+    default = true
+  endparam
+  complex param ctr
+    caption = "Center (-1..+1)"
+    default = (0,0)
+    min = (-1,-1)
+    max = (+1,+1)
+    visible = !@screen_ctr
+  endparam
+
+  float param radius
+    caption = "Radius"
+    min = 0.1
+;     max = 2
+    default = 0.9
+  endparam
+;
+  float param shape
+    caption = "Shape of vignette"
+    min = 0
+    max = 2000
+    default = 3
+    hint = "Use 2 for circle/ellipse shape, >2 for squarer, 1 for diamond, <1 for astroid"
+  endparam
+
+  float param power
+    caption = "Abruptness"
+    min = 0
+    default = 1
+    hint = "Small values make more abrupt inner edge."
+    visible = @dark < 1
+  endparam
+
+  float param dark
+    caption = "Brightness at corners"
+    default = 0.25
+    hint = "0 for solid black, 1 for no effect"
+    min = 0
+    max = 1
+  endparam
+}
+
+Vignette3 {
+; this is a direct coloring method.
+; 241025 modification of Vignette2
+
+$define direct
+global:
+	;import "jlb.ulb"
+
+init:
+  float xscale =  #width/2
+  float yscale = #height/2
+  if #width > #height
+    xscale =  (#width/2 - (1-@radius)* #height/2) / @radius
+  elseif #height > #width
+    yscale = (#height/2  - (1-@radius)* #width/2) / @radius
+  endif
+  float xctr = 0
+  float yctr = 0
+  if !@screen_ctr
+    xctr = real(@ctr) * xscale
+    yctr = imag(@ctr) * yscale
+  endif
+
+loop:
+
+final:
+    ; screen relative coordinates go from -1 to +1, symmetric in x and y
+    ; zero at screen center
+;     float x = abs(real(#screenpixel) / (0.5*#width )) - 1
+;     float y = abs(imag(#screenpixel) / (0.5*#height)) - 1
+  float x = abs(real(#screenpixel) - 0.5*#width  - xctr) /xscale
+  float y = abs(imag(#screenpixel) - 0.5*#height - yctr) /yscale
+  float r = x^@shape + y^@shape
+  float r0 =  @radius^@shape
+
+  #solid = false
+  if r <= r0 ;&& !@invert
+    #solid = true
+  else
+    #color = gradient(0)
+  endif
+
+default:
+  title = "Vignette3"
+  ;rating = Recommended
+	int param version
+		caption = "Version"
+		default = 241025
+		visible = @version < 241025
+	endparam
+
+  heading
+    text="The inside gets the solid color; the outside gets the gradient at position 0."
+  endheading
+  bool param screen_ctr
+    caption = "Use screen center"
+    default = true
+  endparam
+  complex param ctr
+    caption = "Center (-1..+1)"
+    default = (0,0)
+    min = (-1,-1)
+    max = (+1,+1)
+    visible = !@screen_ctr
+  endparam
+
+  float param radius
+    caption = "Radius"
+    min = 0
+    max = 1
+    default = 0.9
+  endparam
+;
+  float param shape
+    caption = "Shape power"
+    min = 0
+    max = 2000
+    default = 3
+    hint = "Use 2 for circle/ellipse shape, >2 for squarer, 1 for diamond, <1 for astroid"
+  endparam}
+
+
+;
+; Demo {
+;
+; $define direct
+;
+; global:
+;
+; init:
+;
+; loop:
+;
+; final:
+;   float lum = 1
+;
+;   if real(#screenpixel) < #width/2              ; left half
+;     if imag(#screenpixel) < #height/2
+;       #color = gradient(0) * @lum               ; upper left quarter
+;     else
+;       #color = gradient(0)                      ; lower left quarter
+;     endif
+;   else                                          ; right half
+;     float rr =    red(gradient(0)) * @lum
+;     float gg =  green(gradient(0)) * @lum
+;     float bb =   blue(gradient(0)) * @lum
+;     #color   = rgba(rr, gg, bb, 1)
+;   endif
+;
+; default:
+;   title = "Demo"
+;   rating = NotRecommended
+;   float param lum
+;     default = 0.75
+;   endparam
+; }
+}
+
+Disk {
+; Inspired by mt-disk-plasma in mt.ucl by Mark Townsend,
+; but skipping all the plasma part, and much generaized.
+;
+; Color based on whether a function of #z or F(a*#z) is inside or outside a circle.
+; June 2021
+
+init:
+  float mult = 0.1       ; final multiplication. arbitrary but historical.
+  complex w = 0
+  complex z_old = #pixel
+  int iter = 0
+  int First_iter = -1
+  int Last_iter = 0
+  int count = 0
+  int istart = 0
+  if @type == "average" && @some_all == "some"
+    istart = @start
+  endif
+  complex dctr
+  if @screen_center
+    dctr = #center
+  else
+    dctr = @dcenter
+  endif
+
+loop:
+  iter = iter + 1
+  if @type == "last one" || @some_all == "all" || (iter >= istart && count < @howmany)
+    complex zz = #z
+    if @zdz == 1
+      zz = zz - z_old
+      z_old = #z
+    endif
+    if @fz == 1
+      zz = @f(@a*#z)
+    endif
+    float d = 0
+    float dist = cabs(zz - dctr)
+    if @in_out == "Inside"
+      if dist < @r
+        count = count + 1
+        d = (1 - dist/@r)^@p
+        Last_iter = iter
+        if count == 1
+          First_iter = iter
+        endif
+      endif
+    else   ;outside
+      if dist > @r
+        count = count + 1
+        d = (1 - @r/dist)^@p
+        Last_iter = iter
+        if count == 1
+          First_iter = iter
+        endif
+      endif
+    endif
+    complex delta = d * #z
+    if @type == "last one"
+      w = delta
+    elseif  @some_all == "all" || count <= @howmany
+      w = w + delta
+    endif
+  endif
+
+final:
+  if @type != "last one" && count > 0
+    w = w / count
+  endif
+  float rr = abs(real(w))
+  float ii = abs(imag(w))
+
+  if @solid && count == 0
+    #solid = true
+  else
+    float ans
+    if @coloring == "Mod"
+      ans = sqrt(rr^2 + ii^2)
+    elseif @coloring == "Manh"
+      ans = rr + ii
+    elseif @coloring == "Real"
+      ans = rr
+    elseif @coloring == "Imag"
+      ans = ii
+    elseif @coloring == "Real+Imag"
+      ans = abs(real(w)+imag(w))
+    elseif @coloring == "Real-Imag"
+      ans = abs(real(w)-imag(w))
+    elseif @coloring == "Real*Imag"
+      ans = abs(real(w)*imag(w))
+    elseif @coloring == "Real/Imag"
+      ans = abs(real(w)/imag(w))
+    elseif @coloring == "Real^Imag"
+      ans = abs(real(w)^imag(w))
+    elseif @coloring == "Imag/Real"
+      ans = abs(imag(w)/real(w))
+    elseif @coloring == "Imag^Real"
+      ans = abs(imag(w)^real(w))
+    elseif @coloring == "Max(Real,Imag)"
+      ans = rr
+      if imag(w) > real(w), ans = ii, endif
+    elseif @coloring == "Min(Real,Imag)"
+      ans = rr
+      if imag(w) < real(w), ans = ii, endif
+    elseif @coloring == "Max(|Real|,|Imag|)"
+      ans = rr
+      if ii > rr, ans = ii, endif
+    elseif @coloring == "Min(|Real|,|Imag|)"
+      ans = rr
+      if ii < rr, ans = ii, endif
+    elseif @coloring == "Angle"
+      float b = atan2(w)
+      if b < 0
+        b = b + 2 * #pi
+      endif
+      ans = b / (mult * 2 * #pi)
+    elseif @coloring == "Count"
+      ans = count
+    elseif @coloring == "First Iteration"
+      ans = First_iter
+    else;if @coloring == "Last Iteration"
+      ans = Last_iter
+    endif
+    if @recip && ans != 0
+      ans = 1/ans
+    endif
+    #index = mult * ans
+  endif
+default:
+  ;rating = recommended
+  title = "Disk"
+  heading
+    text = "Color based on a function of z inside or outside a circle."
+  endheading
+	int param version
+		caption = "Version"
+		default = 210611
+		visible = @version < 210611
+	endparam
+  param zdz
+    caption = "z or change in z"
+    enum = "z" "change"
+    default = 0
+  endparam
+  param fz
+    caption = "z or F(a*z)"
+    enum = "z" "F(a*z)"
+    default = 0
+  endparam
+  func f
+    caption = "F"
+    default = sin()
+    visible = @fz == 1
+  endfunc
+  complex param a
+    caption = "a"
+    default = 1
+    visible = @fz == 1
+  endparam
+  param coloring
+    caption = "Coloring Mode"
+    enum = "Mod" "Manh" "Real" "Imag" "Real+Imag" "Real-Imag" "Real*Imag" \
+           "Real/Imag" "Imag/Real" "Real^Imag" "Imag^Real" \
+           "Max(|Real|,|Imag|)" "Max(Real,Imag)"  "Min(|Real|,|Imag|)" "Min(Real,Imag)"\
+           "Angle" "Count" "First Iteration" "Last Iteration"
+  endparam
+  bool param recip
+    caption = "Use reciprocal?"
+    default = false
+    hint = "Color based on, for examplel, 1/Mod(z) instead of Mod(z)."
+  endparam
+  float param r
+    caption = "Circle Radius"
+    default = 2.0
+    min = 0
+  endparam
+  bool param screen_center
+    caption = "Use screen center?"
+    default = true
+  endparam
+  param dcenter
+    caption = "circle center"
+    default = (0,0)
+    visible = !@screen_center
+  endparam
+  param in_out
+    caption = "Inside or outside the circle?"
+    enum = "Inside" "Outside"
+    default = 0
+  endparam
+  float param p
+    caption = "Awayness"
+    default = 1
+    min = 0
+    hint = "Higher values emphasize iterations with z away from the circle edge."
+  endparam
+  param type
+    caption = "What to color"
+    enum = "last one" "average"
+    default = 1
+  endparam
+  param some_all
+    enum = "some" "all"
+    default = 1
+    caption = "Use some or all?"
+    visible = @type > 0
+  endparam
+  int param howmany
+    caption = "How many to use?"
+    default = 1
+    min = 1
+    visible = @type > 0 && @some_all == 0
+  endparam
+  int param start
+    caption = "Starting with iteration"
+    default = 1
+    min = 1
+    visible = @type > 0 && @some_all == 0
+  endparam
+  bool param solid
+    caption = "Use solid background?"
+  endparam
+}
+
+Decomposition2 {
+;
+; Original Decomposition coloring in Standard.ucl is by Damien M. Jones.
+; This generalizes by adding the F(a*#z) and averaging possibilities.
+; May-June 2021
+
+init:
+  float sum = 0
+  complex zz
+  complex z_old = #pixel
+  int iter = 0
+  int count = 0
+  int istart = 0
+  if @type == "average" && @some_all == "some"
+    istart = @start
+  endif
+
+loop:
+  iter = iter + 1
+  if @type == "last one" || (iter >= istart)
+    float d
+    zz = #z
+    if @zdz == 2
+      complex v1 = zz / cabs(zz)            ;unit vectors
+      complex v2 = z_old / cabs(z_old)
+      d = real(v1)*real(v2) + imag(v1)*imag(v2)   ; dot product = cos(angle)
+                                                  ; range (-1, +1)
+    else
+      if @zdz == 1
+        zz = zz - z_old
+      endif
+      if @fz == "F(a*z)"
+        zz = @F(@a*#z)
+      endif
+      d = atan2(zz)	 ; get angle of zz
+      if (d < 0)			     ; it's negative
+        d = d + 2*#pi 		 ; make it positive
+      endif
+    endif
+    z_old = #z
+    if @type == "last one"
+      sum = d
+      count = 1
+    else  ; "average"
+      if @some_all == "all" || count < @howmany
+        sum = sum + d
+        count = count + 1
+      endif
+    endif
+  endif
+
+final:
+  if @solid && count == 0
+    #solid = true
+  else
+    if @type == "average" && count > 0
+      sum = sum / count
+    endif
+    if @zdz == 2
+      #index = 0.5 * (1 + sum)    ; range is (0,  1)
+    else
+      #index = sum / (2*#pi)      ; range is (0,  1)
+    endif
+  endif
+
+default:
+  title = "Decomposition2"
+  ;rating = Recommended
+
+  heading
+    text = "Color according to the angle of z, of z-z_prev, or between z and z_prev, \
+             or a function of it."
+  endheading
+	int param version
+		caption = "Version"
+		default = 210611
+		visible = @version < 210611
+	endparam
+  param zdz
+    caption = "z, change, or angle?"
+    enum = "z" "change" "angle between z, z_prev"
+    default = 0
+  endparam
+  param fz
+    caption = "z or F(a*z)"
+    enum = "z" "F(a*z)"
+    default = 0
+    visible = @zdz != 2
+  endparam
+  func f
+    caption = "F"
+    default = sin()
+    visible = @fz == 1
+  endfunc
+  complex param a
+    caption = "a"
+    default = 1
+    visible = @fz == 1
+  endparam
+  param type
+    caption = "Which iteration(s)?"
+    enum = "last one" "average"
+    default = 0
+  endparam
+  param some_all
+    enum = "some" "all"
+    default = 1
+    caption = "Use some or all?"
+    visible = @type > 0
+  endparam
+  int param howmany
+    caption = "How many to use?"
+    default = 1
+    min = 1
+    visible = @type > 0 && @some_all == 0
+  endparam
+  int param start
+    caption = "Starting with iteration"
+    default = 1
+    min = 1
+    visible = @type > 0 && @some_all == 0
+  endparam
+  bool param solid
+    caption = "Use solid background?"
+  endparam
+}
+
+Statistics2 {
+; A generalization of Statistics by Kerry Mitchell, in lkm.ucl,
+; using some concepts from my Disk coloring.
+;
+; Colors according to various statistical properties of the iterate.
+; June 2021
+
+init:
+  int iter = 0
+  int count = 0
+  int istart = 0
+  if @some_all == "some"
+    istart = @start
+  endif
+  float r = 0
+  float rmin =  1e30
+  float rmax = -1e30
+  float sumsq = 0.0
+  float sum = 0.0
+loop:
+  iter=iter+1
+  if iter >= istart
+    if @some_all == "all" || count < @howmany
+      count = count + 1
+      complex zz = #z
+      if @fz == 1
+        zz = @f(@a*#z)
+      endif
+      float x = real(zz)
+      float y = imag(zz)
+      if @which == "Mod"
+        r = sqrt(x^2 + y^2)
+      elseif @which == "Manh"
+        r = abs(x) + abs(y)
+      elseif @which == "Real"
+        r = x
+      elseif @which == "Imag"
+        r = y
+      elseif @which == "Real+Imag"
+        r = x + y
+      elseif @which == "Real-Imag"
+        r = x - y
+      elseif @which == "Real*Imag"
+        r = x * y
+      elseif @which == "Real/Imag"
+        r = x / y
+      elseif @which == "Real^Imag"
+        r = x ^ y
+      elseif @which == "Imag/Real"
+        r = y / x
+      elseif @which == "Imag^Real"
+        r = y ^ x
+      elseif @which == "Max(Real,Imag)"
+        r = x
+        if y > x, r = y, endif
+      elseif @which == "Min(Real,Imag)"
+        r = x
+        if y < x, r = y, endif
+      elseif @which == "Max(|Real|,|Imag|)"
+        r = abs(x)
+        if abs(y) > abs(x), r = abs(y), endif
+      elseif @which == "Min(|Real|,|Imag|)"
+        r = abs(x)
+        if abs(y) < abs(x), r = abs(y), endif
+      else;if @which == "Angle"
+        r = atan2(zz)
+      endif
+      if @recip
+        r = 1/r
+      endif
+      sum = sum + r
+      sumsq = sumsq + r*r
+      if (r < rmin)
+        rmin = r
+      endif
+      if (r > rmax)
+        rmax = r
+      endif
+    endif
+  endif
+
+final:
+  if @solid && count == 0
+    #solid = true
+  else
+    if count == 0
+      #index = 0
+    elseif(@stattype == 0)           ; minimum
+      #index = rmin
+    elseif (@stattype == 1)          ; maximum
+      #index = rmax
+    elseif (@stattype == 2)          ; mean
+      #index = sum/count
+    elseif (@stattype == 3)          ; range
+      #index = rmax - rmin
+    elseif (@stattype == 4)          ; standard deviation ignoring the -1 of n-1
+      #index = sqrt(sumsq-sum*sum/count)
+    elseif (@stattype == 5)          ; coefficient of variation
+      #index = sqrt(sumsq-sum*sum/count)/(sum/count)
+    else                             ; fractal dimension
+      if rmax == rmin
+        #index = 0
+      else
+        #index=sqrt(sumsq-sum*sum/count)/(rmax-rmin)
+      endif
+    endif
+  endif
+
+default:
+  ;rating = recommended
+  title="Statistics2"
+  heading
+    text = "Color based on statistics of z or a function of z."
+  endheading
+	int param version
+		caption = "Version"
+		default = 210611
+		visible = @version < 210611
+	endparam
+  param fz
+    caption = "z or F(a*z)"
+    enum = "z" "F(a*z)"
+    default = 0
+  endparam
+  func f
+    caption = "F"
+    default = sin()
+    visible = @fz == 1
+  endfunc
+  complex param a
+    caption = "a"
+    default = 1
+    visible = @fz == 1
+  endparam
+  param which
+    caption = "Which function of z?"
+    enum = "Mod" "Manh" "Real" "Imag" "Real+Imag" "Real-Imag" "Real*Imag" \
+           "Real/Imag" "Imag/Real" "Real^Imag" "Imag^Real" \
+           "Max(|Real|,|Imag|)" "Max(Real,Imag)"  "Min(|Real|,|Imag|)" "Min(Real,Imag)"\
+           "Angle"
+  endparam
+  bool param recip
+    caption = "Use reciprocal?"
+    default = false
+    hint = "Color based on, for examplel, 1/Mod(z) instead of Mod(z)."
+  endparam
+  param stattype
+    caption="Which statistic?"
+    default=5
+    enum = "Maximum" "Minimum" "Average" "Range" \
+      "Std. Deviation" "Variation" "Fractal Dimension"
+    hint="statistic that will be calculated"
+  endparam
+  param some_all
+    enum = "some" "all"
+    default = 1
+    caption = "Use some or all iterations?"
+  endparam
+  int param howmany
+    caption = "How many to use?"
+    default = 1
+    min = 1
+    visible =  @some_all == 0
+  endparam
+  int param start
+    caption = "Starting with iteration"
+    default = 1
+    min = 1
+    visible = @some_all == 0
+  endparam
+
+  bool param solid
+    caption = "Use solid background?"
+  endparam
+}
+
+Grid {
+; Show a grid of lines using screen relative coordinates
+
+final:
+
+  ; x and y are screen relative, in [0,1]
+  float x = real(#screenpixel)/real(#screenmax)
+  float y = imag(#screenpixel)/imag(#screenmax)
+  ; nearest scaled integers
+  int kx = round(@nx * x)
+  int ky = round(@ny * y)
+  ; scaled distance to nearest scaled integer
+  float dx = abs(@nx * x - kx)
+  float dy = abs(@ny * y - ky)
+  ; scaled tolerances for line half-widths
+  float tx = @nx * @xthick * 0.5
+  float ty = @ny * @ythick * 0.5
+  bool sx
+  ; edge lines
+  if kx == 0  || kx == @nx
+    if @edge == "No"
+      sx = false
+    elseif @edge == "Half width"
+      sx = abs(dx) < tx
+    else;if @edge == "Full width"
+      sx = abs(dx) < 2 * tx
+    endif
+  else
+    sx = abs(dx) < tx
+  endif
+  bool sy
+  ; edge lines
+  if ky == 0  || ky == @ny
+    if @edge == "No"
+      sy = false
+    elseif @edge == "Half width"
+      sy = abs(dy) < ty
+    else;if @edge == "Full width"
+      sy = abs(dy) < 2 * ty
+    endif
+  else
+    sy = abs(dy) < ty
+  endif
+  #solid = sx || sy
+  #color = gradient(0)
+
+default:
+  ;rating = Recommended
+  title = "Grid"
+  heading
+    text = "The lines are in the solid color; the background is \
+                 in the color of the gradient at position zero. \
+                 The formula is ignored."
+  endheading
+  int param nx
+    caption = "X grid lines"
+    default =4
+    min = 0
+    hint = "For example, set this to 3 to divide X into thirds."
+  endparam
+  int param ny
+    caption = "Y grid lines"
+    default = 3
+    min = 0
+    hint = "For example, set this to 3 to divide Y into thirds."
+  endparam
+  float param xthick
+    caption = "X line thickness"
+    default = 0.005
+    min = 0
+  endparam
+  float param ythick
+    caption = "Y line thickness"
+    default = 0.005
+    min = 0
+  endparam
+  param edge
+    caption = "Add edge lines?"
+    enum = "No" "Half width" "Full width"
+    default = 1
+  endparam
+}
+
+JLB_Gradient {
+; Similar to Gradient in Standard.ucl, minus the Radial and Cone versions
+; 220906 added angle
+
+init:
+  float denom = real(#screenmax)
+  if imag(#screenmax) > denom
+    denom = imag(#screenmax)
+  endif
+  complex rot = exp((0,1)*@angle*#pi/180)
+
+final:
+  ; #index will be between 0 and 2
+  #index = 1 + real( (rot * #screenpixel)/denom )
+
+default:
+  title = "Gradient"
+  float param angle
+    caption = "Angle in degrees"
+    default = 0
+  endparam
+}
+
+GenericGradientColoring {
+;
+; Exactly the same as Plug-In Coloring (Gradient) in Standard.ucl
+; except for the added line, "render = false"
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  GradientColoring c = new @coloringClass(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #index = c.ResultIndex(#z)
+  #solid = c.IsSolid()
+default:
+  title = "Plug-In Coloring (Gradient)"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/plugincoloring.html"
+  ;rating = recommended
+  render = false
+  heading
+    text = "[Plug-In Coloring (Gradient), render = false version]"
+  endheading
+  GradientColoring param coloringClass
+    caption = "Coloring Algorithm"
+    default = Standard_Smooth
+    hint = "Selects the coloring algorithm to be used."
+  endparam
+}
+
+GenericDirectColoring {
+;
+; Exactly the same as Plug-In Coloring (Direct) in Standard.ucl
+; except for the added line, "render = false"
+;
+; Plug-In Coloring (Direct) is a skeleton coloring algorithm that accepts
+; Coloring objects. This includes both gradient and direct coloring objects,
+; but gradient coloring objects are better used with the Plug-In Coloring
+; (Gradient) algorithm because in that case, modifying the gradient will not
+; trigger a recalculation. All coloring algorithms in this file are implemented
+; as either GradientColoring or DirectColoring objects in Standard.ulb to use
+; with Plug-In Coloring (Direct).
+;
+global:
+  import "common.ulb"
+  import "Standard.ulb"
+  Coloring c = new @coloringClass(0)
+init:
+  c.Init(#z, #pixel)
+loop:
+  c.Iterate(#z)
+final:
+  #color = c.Result(#z)
+  #solid = c.IsSolid()
+default:
+  title = "Plug-In Coloring (Direct)"
+  helpfile = "Uf*.chm"
+  helptopic = "Html/coloring/standard/plugincoloring.html"
+  ;rating = recommended
+  render = false
+  heading
+    text = "Tip: You have selected a gradient coloring object that will work \
+            better with the Plug-In Coloring (Gradient) coloring algorithm."
+    visible = (@coloringClass == GradientColoring)
+  endheading
+  Coloring param coloringClass
+    caption = "Coloring Algorithm"
+    default = Standard_DirectOrbitTraps
+    hint = "Selects the coloring algorithm to be used."
+  endparam
+}
+

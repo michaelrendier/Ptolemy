@@ -1,0 +1,299 @@
+pgd_UnrollCardioid {
+  ; Unrolls the cardioid of the M-set into a straight line.
+  transform:
+    #pixel = (1 - sqr((0,1)*(4/(#pixel-(0,2))-(0,1))-1))/4
+  default:
+    title = "Unroll Cardioid"
+}
+
+pgd_ComponentCenter {
+  ; Centers the fractal on a root of (((c^2+c)^2+c)^2+c ... = 0.
+  ; This will be the middle of a bud or minibrot if the fractal
+  ; is the default Mandelbrot fractal.
+  ; Newton's method is used to locate the root. If it fails to
+  ; converge, the fractal will end up centered on the origin.
+  ; The component centered will have a period that divides the
+  ; "Order of component" parameter.
+  global:
+    complex s = @seed
+    complex os
+    bool found = false
+    float p = 0.1
+    int i = 0    
+    WHILE (i < @numi)
+      p = p * 0.1
+      i = i + 1
+    ENDWHILE
+    float q = 1/p
+    i = 0
+    WHILE ((i < @maxi) && (!found))
+      i = i + 1
+      os = s
+      complex sd = 1
+      int j = 1
+      bool far = false
+      WHILE ((j < @numi) && !far)
+        j = j + 1
+        sd = 2*sd*s + 1
+        s = sqr(s) + os
+        IF (@trap)
+          IF (|sd| > q)
+            far = true
+          ENDIF
+        ENDIF
+      ENDWHILE
+      ; s is now m(s) and sd is m'(s), with m(x) = (x^2+x)^2+x...
+      s = os - (s/sd) ; Apply Newton's method once
+      found = (|s - os| < p)
+    ENDWHILE
+    IF (!found)
+      s = 0
+    ENDIF
+  transform:
+    #pixel = #pixel + s
+  default:
+    title = "M-Set Component Centers"
+    param numi
+      caption = "Order of component"
+      default = 6
+      min = 1
+    endparam
+    param seed
+      caption = "Seed"
+      hint = "Determines which component is selected."
+      default = (4,7)
+    endparam
+    param maxi
+      caption = "Maximum iterations"
+      default = 1000
+      min = 1
+    endparam
+    param trap
+      caption = "Trap points"
+      default = false
+    endparam
+}
+
+pgd_RiemannSphere {
+  ; Riemann sphere visualizations and mapping projections
+  ; Treats the Riemann sphere as an actual globe in 3-space,
+  ; and visualizes the globe with map projections like
+  ; Mercator, etc.
+  ;
+  ; Spherical metric:
+  ;           ds = 2|dw|/(1 + |w|^2)
+  ;            s = 2atan |w|
+  ; The distance from 0 to w with the spherical metric is
+  ; 2atan |w|.
+  ; Given x, y, z = sqrt(1 - x^2 - y^2) on the unit
+  ; sphere in R^3, the arc length from (0,0,1) to (x,y,z)
+  ; on the sphere is the fraction s of a complete circle
+  ; traversed (with a complete circle being s = 2pi). In
+  ; this case, put r = sqrt(x^2 + y^2) so
+  ; z = sqrt(1 - r^2) and we have z = cos(s), r = sin(s).
+  ; Thus |w| = tan(s/2) = sin(s/2)/cos(s/2) and
+  ; r = sin(s) = 2sin(s/2)cos(s/2).
+  ; To send (x, y, z) to w is thus to send (x , y) to
+  ; (x , y)|w|/r. |w|/r = sin(s/2)/2sin(s/2)cos^2(s/2)
+  ;                      = 1/2cos^2(s/2)
+  ; z = cos(s) = 2cos^2(s/2) - 1 and
+  ; 2cos^2(s/2) = 1 + z, so
+  ; |w|/r = 1/(1 + z) = 1/(1 + sqrt(1 - r^2).
+  ;
+  ; Thus the upper half of a sphere in R^3 is mapped to
+  ; the unit disk by taking the (x, y) coordinates of the
+  ; point projected from the sphere onto the unit disk
+  ; and then scale by 1/(1 + sqrt(1 - r^2)). The lower
+  ; half is mapped similarly, with the scale factor now
+  ; 1/(1 - sqrt(1 - r^2)), which notably sends r = 0 (the
+  ; sphere's south pole) to the point at infinity.
+  ;
+  ; To turn a projection of that sphere into w is our
+  ; task here. We'll use a conformal projection, since
+  ; conformal mappings best preserve the form of
+  ; Mandelbrot and Julia fractals. Mercator is a good
+  ; choice. The x-axis is simply equal to longitude, so
+  ; using (u, v) as the map coordinates, u = atan2(x + iy)
+  ; = atan2(w); the other axis (v) is modified latitide.
+  ; The latitude l = pi/2 - s. In the southern hemisphere
+  ; v = -ln(tan(pi/4 - l/2)) = -ln(tan(s/2)). To invert
+  ; these, we use (x + iy) = re^(iu) so we simply need to
+  ; determine r or even |w| in terms of v. Since
+  ; |w| = tan(s/2) this is easy: v = -ln|w| and therefore
+  ; w = e^(iu)/e^v. If v = 0 this lies on the unit
+  ; circle. Increasing v gives increasing |w|. In the
+  ; northern hemisphere, v = ln(tan(pi/4 + l/2)) which is
+  ; ln(tan(pi/2 - s)), but our tan(x - y) trig identity
+  ; is useless for evaluating this because of all the
+  ; tan(pi/2)s that come up. But the mapping w -> 1/w is
+  ; an isometry for the spherical metric, so replacing w
+  ; with 1/w replaces |w| with 1/|w| and exchanges
+  ; hemispheres as though the sphere were rotated about
+  ; the line through (1,0,0) and (-1,0,0). We can then
+  ; use the southern hemisphere formula -- s is now the
+  ; distance from the north pole for 1/w, which is (as
+  ; w -> 1/w is an isometry) the distance from the south
+  ; pole for w. Swapping hemispheres negates our
+  ; v-coordinate, so we get |1/w| = 1/e^-v, or |w| = 1/e^v
+  ; meaning that our equation w = e^(iu)/e^v is in fact
+  ; valid for both hemispheres.
+  ; Collapsing the exponentials gives w = e^(-v + iu),
+  ; which means our Mercator projection ends up simply
+  ; being (u + iv) = iln(w), the complex logarithm rotated
+  ; 90 degrees.
+  ;
+  ; The Lambert conformal conic projection of a sphere
+  ; seems interesting at first, as well, but when the sphere's
+  ; north pole is used, it turns out to simply turn the
+  ; sphere back into the complex plane -- u + iv = w.
+  ; Using it at the south pole gives u + iv = 1/w.
+  ;
+  ; Maps that show the whole sphere in a finite region
+  ; are also desirable. These cannot be conformal, since
+  ; conformal mappings are complex analytic so a conformal
+  ; map from w to u + iv that omits more than 2 points
+  ; of the (u,v) plane is constant, i.e. one point u + iv
+  ; corresponds to all w values! To get a feel for the
+  ; Riemann sphere's geometry we will probably want
+  ; orthographic projection and at least one equal-area
+  ; projection. Mollweide, which maps a sphere to an
+  ; ellipse, seems a good bet.
+  ;
+  ; The orthographic projection about the north pole is
+  ; easy: u = x, v = y, and thus
+  ; w = (u + iv)/(1 + sqrt(1 - r^2))
+  ;   = (u + iv)/(1 + sqrt(1 - u^2 - v^2))
+  ; To get the south pole, change w above to 1/w.
+  ;
+  ; Mollweide:
+  ; If we set t = sin^-1(v/sqrt(2)), we get
+  ; l = sin^-1[(2t + sin(2t))/pi] and
+  ; atan2(w) = pi*u/(2sqrt(2)cos(t))
+  ; We have |w| = tan(s/2)
+  ;             = tan(pi/4 - l/2)
+  ;             = (tan(pi/4) - tan(l/2))/(1 + tan(pi/4)tan(l/2))
+  ;             = (1 - tan(l/2))/(1 + tan(l/2))
+  ;             = (1 - sin(l/2)/cos(l/2))/(1 + sin(l/2)/cos(l/2))
+  ;             = (cos(l/2) - sin(l/2))/(cos(l/2) + sin(l/2))
+  ;             = (2cos^2(l/2) - 2sin(l/2)cos(l/2))/(2cos^2(l/2) + 2sin(l/2)cos(l/2))
+  ;             = (cos^2(l/2) - 2cos(l/2)sin(l/2) + sin^2(l/2))/(cos^2(l/2) - sin^2(l/2))
+  ;             = (1 - sin(l))/cos(l)
+  ;             = (1 - sin(l))/sqrt(1 - sin^2(l))
+  ; |w|^2 = (1 - sin(l))^2/(1 - sin^2(l))
+  ;       = (1 - sin(l))(1 - sin(l))/(1 - sin(l))(1 + sin(l))
+  ;       = (1 - sin(l))/(1 + sin(l))
+  ;       = (pi - 2t - sin(2t))/(pi + 2t + sin(2t))
+  ; sin(2t) = 2sin(t)cos(t) = sqrt(2)cos(t)v
+  ; cos^2(t) = 1 - sin^2(t) = 1 - v^2/2 so
+  ; sin(2t) = sqrt(2)sqrt(1 - v^2/2)v
+  ;         = sqrt(2 - v^2)v
+  ; |w|^2 = (pi - 2sin^-1(v/sqrt(2)) - sqrt(2 - v^2)v)/(pi + 2sin^-1(v/sqrt(2)) + sqrt(2 - v^2)v)
+  ; atan2(w) = (pi*u)/2sqrt(2 - v^2)
+  ; w = sqrt((pi - 2sin^-1(v/sqrt(2)) - sqrt(2 - v^2)v)/(pi + 2sin^-1(v/sqrt(2)) + sqrt(2 - v^2)v))e^(pi*ui/2sqrt(2 - v^2))
+  ; 2 - v^2 must not become negative so v^2 <= 2 and
+  ; -sqrt(2) <= v <= sqrt(2). pi*ui/2sqrt(2 - v^2) is
+  ; periodic, with -1 <= u/2sqrt(2 - v^2) <= 1 giving
+  ; one repetition. The ellipse we are interested in
+  ; thus satisfies u^2 <= 4(2 - v^2), or u^2 + 4v^2 <= 8.
+  ; u^2 + 4v^2 > 8 can thus be made #solid.
+  ; The extent of the ellipse ranges from -sqrt(2) to
+  ; sqrt(2) in the v direction; the maximum extent in the
+  ; u direction occurs for v = 0, and is then from
+  ; -2sqrt(2) 2sqrt(2). It seems sensible to reduce all
+  ; coordinates by sqrt(2), which gives a new equation:
+  ; w = sqrt((pi - 2sin^-1(v) - 2sqrt(1 - v^2)v)/(pi + 2sin^-1(v) + 2sqrt(1 - v^2)v))e^(pi*ui/2sqrt(1 - v^2))
+  ; which gives an ellipse with -2 <= u <= 2, -1 <= v <= 1.
+  ; u^2 + 4v^2 > 4 is the solid region outside the
+  ; ellipse now.
+  ;
+  ; NOTE: The code below all reverses this so that the
+  ; point at infinity is the north pole, not the south!
+transform:
+  complex p = 0
+  IF (@type == 0)
+    ; Mercator is just a rotated complex exp.
+    IF (abs(real(#pixel)) > #pi/2)
+      #solid = true
+    ELSE
+      p = exp((0,-2)*#pixel)
+    ENDIF
+  ELSEIF (@type == 1)
+    IF (|#pixel - 1| <= 1)
+      ; Northern hemisphere
+      p = -(1 + sqrt(1 - |#pixel - 1|))/(#pixel - 1)
+    ELSEIF (|#pixel + 1| <= 1)
+      ; Southern hemisphere
+      p = (#pixel + 1)/(1 + sqrt(1 - |#pixel + 1|))
+    ELSE
+      #solid = true
+    ENDIF
+  ELSEIF (@type == 2)
+    float u = -real(#pixel)
+    float v = -imag(#pixel)
+    IF (sqr(u) + 4*sqr(v) > 4)
+      #solid = true
+    ELSE
+      p = sqrt((#pi - 2*asin(v) - 2*v*sqrt(1 - sqr(v)))/(#pi + 2*asin(v) + 2*v*sqrt(1 - sqr(v))))*exp(#pi*(0,1)*u/(2*sqrt(1 - sqr(v))))
+    ENDIF
+  ENDIF
+  p = p*@scale*exp((0,1)*pi*@zmer/180)
+  IF (@turn)
+    p = 1/(p + 1) - 1/2
+  ENDIF
+  #pixel = p
+default:
+  title = "Riemann Sphere Map Projections"
+  param type
+    caption = "Projection type"
+    enum = "Mercator" "Orthographic" "Mollweide"
+    default = 0
+  endparam
+  param zmer
+    caption = "Zero Meridian"
+    default = 0.0
+    hint = "Change this to change the center meridian in \
+            Mercator and Mollweide projections and the \
+            horizontal meridian in orthographic. Angle is \
+            in degrees."
+  endparam
+  param turn
+    caption = "Turn sphere"
+    default = false
+    hint = "Turning this on rotates the sphere to put 1 \
+            and -1 at the poles instead of 0 and infinity."
+  endparam
+  param scale
+    caption = "Scale fractal"
+    default = 1.0
+    hint = "Turning this on scales the fractal being \
+            mapped to the sphere."
+  endparam
+}
+
+pgd_MandelSpeedup {
+  ; Obliterates the cardioid and largest disk of the
+  ; standard M-set, making seahorse valley and other
+  ; areas compute faster.
+  ; Don't use in layers that are inside-coloring these
+  ; areas.
+  ; Example: parameter set Elephant in pdf.upr uses this
+  ; transformation. Switch to guessing and disable the
+  ; MandelSpeedup transformation and it takes a 1.5GHz
+  ; Athlon 30 seconds to generate. Enable MandelSpeedup and
+  ; switch back to 1-pass and the fractal comes up in 10
+  ; seconds on the same hardware AND IS MORE ACCURATE.
+  ; Three-fold speedups are possible for Mandelbrot zooms on
+  ; the boundary of the cardioid or largest disk.
+transform:
+  IF (|1 + sqrt(1 - 4*#pixel)| <= 1)
+    #solid = true
+  ELSEIF (|1 - sqrt(1 - 4*#pixel)| <= 1)
+    #solid = true
+  ELSEIF (|#pixel + 1| <= 0.0625)
+    #solid = true
+  ELSE
+    #pixel = #pixel
+  ENDIF
+default:
+  title = "Mandelbrot Masking Speedup"
+}

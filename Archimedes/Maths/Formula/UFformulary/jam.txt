@@ -1,0 +1,664 @@
+HELP FILE FOR JAM.UCL CURVE-TRAP COLORING FORMULAS:
+
+Formulas covered are Cardiod Trap, Circle Trap, Ellipse Trap 2,
+Nephroid Trap, Oscillator Traps, Parabola Trap, Rose Trap,
+and SemicubicalParabola1 Trap.
+
+Excluded for now are the various Tangent- and Bubble-style
+formulas, as well as the Hip, Surreal, and Whimsical formulas,
+though these latter three have many parameters and modes in
+common with the curve-trap types. 
+
+Please let me know (maddry@sri.org) if any of the descriptions are
+unclear, and I will do my best to be more lucid!  I would also be
+happy to hear about bugs, unexpected behavior, or inefficiencies
+in the formulas.  I hope you enjoy using the formulas as much as
+I have enjoyed writing and learning from them.
+
+This text file will present an overview of the formula logic,
+followed by descriptions of the parameters common to all the formulas,
+then finally descriptions of those parameters unique to a particular
+formula.
+
+OVERVIEW
+
+Each of the eight curve-trap formulas employs the identical program
+flow.  The idea behind each formula is to use a single curve as a
+scaffold on which to hang a wide variety of coloring options.  Because
+the number of parameters is potentially quite large, for clarity and
+coding efficiency I decided early on to restrict each formula to just
+one, or a small number of related, trap curves, and to replicate the
+formula for different curve types.
+
+The overall flow is depicted in the schematic below:
+(Best to use Courier or some other font with fixed spacing in
+order to make sense of my crude flow chart!)
+
+
+
+         |LOOP
+Fractal  |       Ensure that current iteration             Execute
+Iterate  | --->  satisfies 'Iterations to Skip' and  --->  'Z Initialization'
+Input (z)|       'Iterations to Watch' parameters          if set
+         |
+
+      Execute 'Trap Variants'            Execute arithmetic 
+--->  if set AND IF 'Swap Order?'  --->  operation if               --->
+      is enabled                         'Enable Operator?' is set
+
+
+Execute 'Trap Variants'            Apply 'Center', 'Rotation
+if set AND IF 'Swap Order?'  --->  Angle', and sometimes      --->
+is NOT enabled                     'Scale' if set
+
+
+Execute curvature               Execute curve-specific           'Scale' if
+transformation if         --->  options and determine       ---> not done   -->
+'Enable History?' is set        corresponding point of trap      earlier
+
+
+Execute coordinate transform          Execute                 Apply
+if needed according to state    --->  'Trap Transmute'  --->  'New Flavor?'
+of 'Polar Coordinates?' toggle        if set                  choice if set
+
+
+      Find test value        Trap values if test        Vary parameters if
+--->  determined by    --->  value meets 'Trap    --->  any of the feedback
+      'Trap Flavor'          What?' criteria            options are set
+                                                        (e.g. 'Vary Scale?')
+
+END LOOP|FINAL
+        |     Execute any set        Calculate color based         Apply 'Color
+--->    |     'Turbulence'     --->  on 'Color By?' setting   -->  Spread'
+        |     texture options        and 'Turbulence' options      transfer
+        |                                                          func if set
+
+
+
+
+PARAMETERS COMMON TO ALL OR MOST FORMULAS
+In the following discussion, "transformed z" refers to any of the optional
+modulations (coordinate transformations, history, rotations, initializations,
+etc.) that may be applied to the original fractal iterate #z that is passed
+to the coloring formula; similarly, "transformed t" refers to the corresponding
+point on the trapping curve.
+
+
+'Trap Flavor'
+-------------
+This setting specifies what value is to be examined for potential trapping.
+It is generally based on a comparison of some component of the [possibly
+transformed] z with some compnent of the corresponding [potentially transformed]
+point t on the trapping curve.  Default is 'distance'.  The options are:
+
+FLAVOR            CALCULATED TEST VALUE   FLAVOR            CALCULATED TEST VALUE
+distance          cabs(z-t)               angle3            atan(z+t)
+angle             atan(z)                 angle4            atan(z*t)
+trap angle        atan(t)                 angle5            atan(z/t)
+difference angle  abs(atan(z)-atan(t))    angle6            atan(t/z)
+magnitude         cabs(z)                 angle7            atan(z^t)
+trap magnitude    cabs(t)                 angle8            atan(t^z)
+real              real(z)                 real2             real(z-t)
+imaginary         imag(z)                 real3             real(z+t)
+trap real         real(t)                 real4             real(z*t)
+trap imag         imag(t)                 real5             real(z/t)
+sum               cabs(z+t)               real6             real(t/z)
+difference        cabs(z-t)               real7             real(z^t)
+product           cabs(z*t)               real8             real(t^z)
+quotient1         cabs(z/t)               imag2             imag(z-t)
+quotient2         cabs(t/z)               imag3             imag(z+t)
+power1            cabs(z^t)               imag4             imag(z*t)
+power2            cabs(t^z)               imag5             imag(z/t)
+arithmetic mean   cabs(z+t)/2             imag6             imag(t/z)
+geometric mean    cabs(sqrt(z*t))         imag7             imag(z^t)
+angle2            atan(z-t)               imag8             imag(t^z)
+
+
+'New Flavor?'
+-------------
+This parameter alters the value calculated by the 'Trap Flavor' selection.
+Default is FALSE.  When FALSE, 'Trap Flavor' options 11 and higher (sum,
+difference, etc.) compute their value using the raw (untransformed) fractal
+iterate, #z; when 'New Flavor?' is enabled (TRUE), those calculations utilize
+the fully initialized/rotated/centered/transformed value of z.
+
+
+'Trap What?'
+------------
+This parameter specifies how the previously calculated values are to be trapped.
+The current test value is compared to any previously trapped values to determine
+if the current value constitutes a new minimum, maximum, etc.  If so, the iteration
+number, z coordinates, etc. are stored for later use in coloring.
+Default is 'minimum'.  General options:
+minimum --- the z iterate producing the smallest test value according 
+            to 'Trap Flavor' is trapped (stored)
+maximum --- the z producing largest test value is trapped
+2nd, 3rd, 4th minimum --- the z producing the second lowest, third lowest,
+            fourth lowest test values are trapped
+2nd, 3rd, 4th maximum --- the z producing the second greatest, third greatest,
+            fourth greatest test values are trapped
+1st threshold --- the first z that produces a test value that dips below a
+            critical maximum threshold value is trapped; the threshold value
+            (upper trap bound) is set by parameter 'Threshold Value'
+2nd threshold --- traps the second z to dip below the threshold value
+last threshold --- the last z that dips below the 'Threshold Value' upper
+            bound is trapped
+threshold count --- same as 'last threshold', except that all trapped values
+            (iteration, magnitude, trap magnitude, etc.) are multiplied by
+            the iteration count when the trap occurred, spreading out the
+            resulting color values
+1st limit --- the first z that produces a test value that exceeds a
+            critical minimum threshold value (lower bound) is trapped;
+            the lower bound threshold is set by parameter 'Threshold Value'
+2nd limit --- traps the second z to exceed the threshold value
+last threshold --- the last z that exceeds in value the 'Threshold Value'
+            minimum is trapped
+            
+The four 'threshold' options and the three 'limit' options also work in
+'Enable Rings?' mode (see below) for trapping ring/string things.
+
+
+'Color By?'
+-----------
+This parameter specifies how the trapped value of z (determined by 'Trap What?')
+is used to compute a value for the color index.  Default is 'distance'.
+Options are:
+distance --- color index is based on distance between the [possibly transformed]
+        trapped value of z and the corresponding [possibly transformed] trapping
+        point t (cabs(z-t))
+iteration --- index is based on the iteration count when the trapping occurred
+magnitude --- index is based on size of untransformed z (cabs(#z))
+test --- index is based on the size of the actual test value determined by
+        'Trap Flavor'
+trap magnitude --- index is based on size of cabs([possibly transformed] t)
+angle --- index is based on size of atan([untransformed] #z)
+trap angle --- index is based on atan([possibly transformed] t)
+mod magnitude --- index is based on the modulated magnitude, i.e.,
+        cabs([possibly transformed] z)
+mod angle --- index is based on atan([possibly transformed] z)
+real --- index is based on size of the real component of z (abs(real(#z)))
+trap real --- index is based on real([possibly transformed] t)
+mod real --- index is based on real([possibly transformed] z)
+imag --- index is based on size of imag(#z)
+trap imag --- index is based on imag([possibly transformed] t)
+mod imag --- index is based on imag([possibly transformed] z)
+raw distance --- index is based on distance between t and the untransformed #z
+        (cabs(#z-t))
+
+
+'Color Spread'
+--------------
+This parameter is an optional transfer function that can be applied to
+linearly expand or compress the range of the color index.  It can be used in
+conjunction with the UF transfer function to fine tune the color range, and is
+useful to reduce excessive banding, shift colors, or expand the palette of
+monochrome images.  The default value of 1.0 leaves the calculated index unchanged.
+
+
+'Color Ranges'
+--------------
+This parameter can be used to move the starting point for the color index
+to different parts of the palette.  The iteration count when the trapping
+occurred is used to map the 'Color By?' result to the approporiate index
+position in the palette.
+
+
+'Z Initialization'
+------------------
+A series of 74 functions is provided that can be used to warp the initial
+input (#z) to the coloring formula.  This transformation occurs prior to
+any other.  Default is 'z', that is, no z initialization.
+
+
+'Z Power'
+---------
+If the previous parameter 'Z Initialization' is set to 'z^power', then this
+is the exponent that is used in the initialization; otherwise, it has
+no effect.
+
+
+'Trap Transmute'
+----------------
+A series of 74 functions is provided that can be used to warp the point on the
+trapping function initially determined by z.  This transformation occurs after all
+other coloring formula transforms, and is one of only two applied to the trap
+point t.  (The other is set by 'Polar Coordinates?')  Default is 't', i.e.,
+no t initialization.
+
+IMPORTANT NOTE:  Due to a programming error, previous versions of these formulas
+that had the default 'Trap Transmute' choice 't' selected, actually calculated and
+displayed 'Trap Transmute' function 'acosech(t)' (second option from the end of
+the list).  For compatibility, in order to properly display any old images that
+were saved with the default 't' selection for 'Trap Tranmute', just reset this
+parameter to 'acosech(t)'.  Sorry about that!
+
+
+'Trap Power'
+------------
+If the previous parameter 'Trap Transmute' is set to 't^power', then this
+is the exponent that is used in the initialization; otherwise, it has
+no effect.
+
+
+'Polar Coordinates?'
+--------------------
+This transformation can be applied to the trap point, t.  The trap formula is
+generally naturally executed in either cartesian or polar coordinates.  Toggling
+this option forces the coloring formula to interpret the coordinates of the
+trap point using the other ("unnatural") coordinate system, warping the trap.
+The default value depends on the particular trap curve.
+
+
+'Threshold Value'
+-----------------
+If the 'Trap What?' parameter is set to '1st threshold', '2nd threshold',
+'last threshold', or 'threshold count', then this parameter sets the threshold
+value (upper bound); a value above this limit will be masked, not trapped.
+If 'Enable Rings?' is set also, then 'Threshold Value' determines the upper bound,
+while the lower bound is calculated using the value of parameter 'Ring Width'.
+(Just the band of values below 'Threshold Value' are trapped.)
+
+If the 'Trap What?' parameter is set to '1st limit', '2nd limit',
+or 'last limit', then the 'Threshold Value' parameter sets the limit value
+(lower bound); a value below this limit will be masked, not trapped.
+If 'Enable Rings?' is set also, then 'Threshold Value' determines the lower
+bound, i.e., the lowermost value that will be trapped, and the uppermost value
+is calculated using parameter 'Ring Width'.
+
+The default value, 0.5, is fine for threshold traps but may be too low for
+limit traps.
+
+
+'Enable Rings?'
+---------------
+If enabled, transforms threshold- and limit-type traps to ring-type traps,
+i.e., one in which the test value must fall within a narrow range of values
+in order to be trapped.  Only active if 'Trap What?' is set to one of these
+options:  '1st threshold', '2nd threshold', 'last threshold', 'threshold count',
+'1st limit', '2nd limit', or 'last limit'.  Default is inacitve.
+
+The upper and lower ranges are set using parameters 'Threshold Value' and
+'Ring Width'.
+
+
+'Ring Width'
+------------
+Determines the range of values trapped by the ring-type traps.  Active
+only if 'Trap What?' is set to a threshold or limit option AND 'Enable
+Rings?' is enabled (TRUE).
+
+If 'Trap What?' is set to a threshold option and 'Enable Rings?' is set TRUE,
+then the UPPER limit of the trap range is set by 'Threshold Value', and the
+LOWER limit is determined by parameter 'Ring Width':
+lower limit = 'Threshold Value' - 'Ring Width'
+
+If 'Trap What?' is set to a limit option and 'Enable Rings?' is set TRUE,
+then the LOWER limit of the trap range is set by 'Threshold Value', and the
+UPPER limit is determined by parameter 'Ring Width':
+upper limit = 'Threshold Value' + 'Ring Width'
+
+
+'Iterations to Skip'
+--------------------
+This parameter is used to ignore a number of early iterations of the fractal
+formula before monitoring the values of #z for potential trapping.
+Default is 0 (no iterations are skipped).
+
+
+'Iterations to Watch'
+---------------------
+The monitoring of the fractal for potential trapping can be restricted to
+a certain number of iterations by setting this parameter.  The count of
+iterations to watch does not begin until after the 'Iterations to Skip'
+iterations have occurred.  The default, 0, means to monitor all iterations
+(except for those that are ignored as a result of parameter 'Iterations
+to Skip').
+
+
+'Enable Operator?'
+------------------
+If set, then a user-specified real or complex number (w) can be arbitrarily
+applied to z immediately after 'Z Initialization'.  Ten arithmetic operations
+are available to transform z:  z*w, z+w, z-w, z/w, z^w, w-z, w/z, w^z,
+logw(z), and logz(w).
+
+
+'Operation Constant'
+--------------------
+This parameter sets the constant employed for the arithmetic operation
+specified by 'Enable Operator?', if enabled; unused otherwise.
+
+
+'Trap Variants'
+---------------
+If set, these seven options are available for manipulating the real and imaginary
+components of z.  Normally, 'Trap Variants' is executed immediately after the
+'Enable Operator?' arithmetic operation (unless 'Swap Order?' is set).
+The various choices yield all combinations of commuting and/or negating the
+components of z.
+
+
+'Swap Order?'
+-------------
+Normally, the arithmetic operation specified by 'Enable Operator?' is executed
+before the transformation specified by 'Trap Variants'.  If 'Swap Order?'
+is enabled, then the order is reversed and 'Trap Variants' is executed before
+the arithmetic operation.  This setting is functionless unless BOTH 'Trap
+Variants' AND 'Enable Operator?' are activated.
+
+
+'Enable History?'
+-----------------
+If this parameter is activated, then the trap point t is determined not by
+the current [possibly transformed] z, but by a combination of z with previous
+values of z, resulting in a curvature-based coloring.  The combination is
+specified by parameter 'History Type'.  Default is FALSE (disabled).
+
+
+'History Type'
+--------------
+If 'Enable History?' is set, this parameter determines the curvature method
+invoked.  Choices 'middle aged' and 'old' combine z with the previous
+(next-to-last) z to determine the trap point t, whereas 'very old' uses the
+value of z from the 2nd-to-last iteration to determine t.  Unused if
+'Enable History?' is not set.
+
+
+'Tubulence 1' thru 'Turbulence 6' and related parameters
+--------------------------------------------------------
+These six toggles, off by default, turn on various texturizers.  The textures
+produced are additive:  each of the enabled turbulence options are computed
+separately and added together, with the overall level of texture determined by
+parameter 'Turbulence Amount' (only 'Turbulence 3' has independent control
+of texture amount).
+
+'Turbulence 3' is based on the fractal Brownian motion algorithm, and has six
+independent control parameters:  'fBm Scale', 'fBm Rotation', 'fBm Stepsize',
+'fBm Rotation Step', 'fBm Octaves', and 'fBm Exponent'.  These parameters
+serve no function if 'Turbulence 3' is not set.
+
+Turbulence is disabled by default.  Furthermore, FUTURE COMPATIBILITY OF THE
+TURBULENCE OPTIONS IF NOT GUARANTEED:  there will be future tweaks, though
+given the random nature of the turbulence options, there is little likelihood
+that the overall character of the texturizers will change too much.  In
+particular, the fBm code has been borrowed (plagerized?) pretty much wholesale
+from other formulas, and I fully intend to customize it at some point, but for
+now I thought it would be useful to have it in there as is.  I especially
+acknowledge fBm code examples from the coloring formulas of dmj, mt, and sam.
+
+
+'Feedback Mode'
+---------------
+This parameter determines how feedback variation of parameters is implemented.
+Feedback variation uses the value of the currently calculated, fully transformed z
+to nudge (increase or decrease) the current value of selected parameters.
+Possible feedback modes are:
+trapped --- nudge variation-enabled parameters only when a new value has been
+        actually trapped
+not trapped --- nudge variation-enabled parameters only on iterations when
+        nothing was trapped
+always --- nudge variation-enabled parameters on each iteration
+
+Feedback variation occurs only for those parameters that have been specifically
+variation-enabled by setting the appropriate 'Vary Scale?', 'Vary Threshold?',
+'Vary Center?', etc. parameter toggles.
+
+
+'Oldstyle Feedback?'
+--------------------
+This parameter enables an alternate feedback variation method that generally
+results in an overall lower amount of feedback.  Default is FALSE.  It is
+inactive if none of the individual 'Vary XXX?' toggles are enabled.  'Feedback
+Mode' is still available with this option.
+
+
+'Vary XXX?' and 'XXXFeedback' parameters
+----------------------------------------
+The various 'Vary XXX?' (XXX = Scale, Center, Ring Width, etc.) switches toggle
+feedback variation of the individual parameters on and off.  Off by default.
+For each parameter that has feedback variation enabled, a corresponding parameter
+'XXXFeedback' can be adjusted to affect the overall level of feedback variation
+produced.
+
+
+
+
+PARAMETERS SPECIFIC TO PARTICULAR FORMULAS
+
+
+1.  CARDIOID TRAP
+-----------------
+-----------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+2.  CIRCLE TRAP
+---------------
+---------------
+
+
+'Circle Center'
+---------------
+The trap curve can be positioned on the complex plane using these options.
+'Custom' allows free positioning using parameter 'Custom Center', whereas
+'Screen Center' moves the circle as the fractal is zoomed or translated.
+
+
+'Custom Center'
+---------------
+Specifies the circle center if param 'Circle Center' is set to 'Custom'.
+
+
+'Radius'
+--------
+Sets circle size.
+
+
+3.  ELLIPSE TRAP
+----------------
+----------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+'Ellipse Exponent'
+------------------
+Determines the precise shape of the trapping curve.  Default is 2.0,
+yielding an ellipse.  Exponents < 1.0 produce sharp-pointed curves,
+(such as astroids for 0.67); exponents between 1 and 2 produce subellipses
+(football-shaped, pointy-ended ellipses); and exponents > 2 generate
+superellipses (rounded squares or rectangles).
+
+
+'Ellipse Width', 'Ellipse Height'
+---------------------------------
+Controls trap elongation; circles if height = width and exponent = 2.
+
+
+'Enable Mutant?', 'Mutant Type'
+-------------------------------
+'Enable Mutant?' selects any of three alternative, related curves that are
+not really ellipses, but nonetheless interesting.  If 'Enable Mutant?' is
+activated, then 'Mutant Type' determines which alternative trap is employed.
+
+
+4.  NEPHROID TRAP
+-----------------
+-----------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+5.  OSCILLATOR TRAPS
+--------------------
+--------------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+'Osc Combination'
+-----------------
+The oscillator trap curve consists of 1-4 independent oscillator functions
+that can be combined is various ways to produce a multitude of curve traps.
+This parameter determines both the number of oscillators used, as well as how
+they are combined to generate a single trap function using addition,
+multiplication, and division.
+
+To use just a single oscillator, choose 'sin'.  To use two oscillators, choose
+one of the single-character choices (+, *, /).  For example, if the desired
+oscillator was sin(z)* sin(z), choose '*'; choosing '+' would result in the
+curve sin(z) + sin(z), or 2*sin(z).
+
+Similarly, to employ three oscillators, choose a 2-character choice such as
+'*+', which would generate the trap function sin(z) * sin(z) + sin(z)
+(but see below, param 'Combination Style').  Choosing a 3-character option
+would engage all four oscillators.
+
+
+'Combination Style'
+-------------------
+Some choices of 'Osc Combination' are ambiguous without specifying which
+operations (addition, multiplication) are to be performed first.  Rather than
+listing all permutations of operations, which would be a lengthy list, param
+'Combination Style' is provided to permit different interpretations of the
+'Osc Combination' characters.  The options are:
+
+'multiply first' --- the operation priority is * then / then +
+
+'add first' --- the operation priority is + then * then /
+
+'linear left-to-right' --- the operations are performed in exactly the order
+      in which they are written.
+
+For example, using the 4-oscillator selection *+* the three 'Combination Style'
+options would yield:
+(1) (sin(z) * sin(z)) + (sin(z) * sin(z)) = 2sin(z)sin(z)
+(2) sin(z) * (sin(z) + sin(z)) * sin(z) = 2sin(z)sin(z)sin(z)
+(3) ((sin(z) * sin(z)) + sin(z)) * sin(z) = sin(z)sin(z)sin(z) + sin(z)sin(z)
+
+You obviously don't really need to know all this to use the different options,
+but there is a lot of flexibility, at the price of some redundancy!
+
+
+'OscX Frequency', 'OscX Amplitude', 'OscX Offset' (X = 1, 2, 3, and 4)
+-------------------------------------------------
+This set of three parameters is replicated for each individual oscillator.
+Each oscillator has the form  (amplitude) * sin( (frequency * z) + offset ),
+which are controlled by these parameters.  Only as many parameters are used that
+the current 'Osc Combination' requires, i.e., if using only one oscillator,
+then only 'Osc1 Frequency', 'Osc1 Amplitude', and 'Osc1 Offset' are used.
+For example, using 'Osc Combination' = '**' and setting 'Osc1 Frequency' = 1,
+'Osc2 Frequency' = 2, and 'Osc3 Frequency' = 5 generates the trap
+sin(z)*sin(2z)*sin(5z).
+
+
+'Reciprocal OscX'
+-----------------
+These four parameter toggles allow the input to each individual oscillator
+to be replaced by its reciprocal.  For example, if the current oscillator is
+sin(z) + sin(2z) and 'Reciprocal Osc2' was enabled, the new oscillator function
+is sin(z) + sin(1/2z).
+
+
+'Square OscX'
+-------------
+This setting works similarly to 'Reciprocal OscX' except that it squares the
+input to the given oscilator.  In the previous example, if 'Square Osc2' is
+also enabled, the oscillator function becomes sin(z) + sin(1/(4z^2)).
+
+
+'Pretreat OscX'
+---------------
+Each individual oscillator can be multiplied by any of ten provided functions
+before combination to generate more exotic oscillators.  For example, if 'Osc
+Combination' is '*' and 'Pretreat Osc2' is set to '1/z', then the resulting
+oscillator function is sin(z)*sin(z)/z.
+
+
+'Enable Mutant?'
+----------------
+Normally, the input to the oscillator is atan(#z), the azimuth angle of the
+fractal iterate.  If this param is enabled, then #z is fed directly to the
+oscillator function, rather than atan(#z).
+
+
+6.  PARABOLA TRAP
+-----------------
+-----------------
+
+
+'Focus of Parabola', 'Vertex of Parabola'
+-----------------------------------------
+The parabola can be positioned on the complex plane using these parameters.
+The curve itself passes between these two points and curves toward the
+focus.
+
+
+'Rotation Angle'
+----------------
+The curve can be oriented using this parameter.
+
+
+'Focus Mode'
+------------
+Determines whether the parabola focus follows the screen center upon zoom/
+translation, or remains fixed (default).
+
+
+'Restrict Angle?'
+-----------------
+The fractal z is trapped along the ray from the focus to z.  Consequently,
+many points "above" the parabola are not trapped.  This option artificially
+restricts atan(z) to lie "below" the parabola, so more points are trapped.
+
+
+7.  ROSE TRAP
+-------------
+-------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+'Rose Leaves'
+-------------
+The rose curve can have any number of leaves greater than 1 (default is 4).
+
+
+8.  SEMICUBICAL PARABOLA1 TRAP
+------------------------------
+------------------------------
+
+
+'Center', 'Rotation Angle', 'Scale'
+-----------------------------------
+The curve can be positioned, oriented, and sized using these parameters.
+
+
+'Restrict Angle?'
+-----------------
+The fractal z is trapped along the ray from the center to z.  Consequently,
+many points "below" the parabola are not trapped.  This option artificially
+restricts atan(z) to lie "above" the parabola, so more points are trapped.
+Default is FALSE.
+
+
+'Fix Bug?'
+----------
+This option implements an alternative curve that resulted from incorrect
+coding, but produces an interesting coloring so was retained.

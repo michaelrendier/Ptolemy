@@ -1,0 +1,1007 @@
+comment {
+Thank you Dan for your kind permission.
+It was great fun to play with your formulas.
+SierpinskiPlane did not like my enhancements,
+therefore it is not to be found here.
+}
+
+sierpinskid {
+; Written by Luke Plant
+; Modified by Frederik Slijkerman
+; Generalized by Marcelo Anelli
+; Caracas, Marzo de 1999
+; Tweaked by Dan Kuzmenka 2000
+; Bailout test courtesy of Ron Barnett
+; Tweaked by Andreas Lober 2000
+; published with kind permission of DJK
+
+init:
+  complex z = @startFkt(#pixel+@epsilon/#pixel)
+  int iter = 0
+  int IMC  = 0
+loop:
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) - 1i*iter)
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z + iter)  - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z - iter)   - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  IF      (imag(z)>0.5)
+    z = @factor*real(z)       + flip(@factor*imag(z)-1-IMC)
+
+  ELSEIF (real(z)>0.5)
+    z = @factor*real(z)-1-IMC + flip(@factor*imag(z))
+
+  ELSE
+    z = @factor*real(z)+IMC   + flip(@factor*imag(z))
+    z = @fn1(1/z^@factor)
+  ENDIF
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+bailout:
+
+  (@test == 0 && \
+      |z| <= @bailout) || \
+  (@test == 1 && \
+      sqr(real(z)) <= @bailout) || \
+  (@test == 2 && \
+      sqr(imag(z)) <= @bailout) || \
+  (@test == 3 && \
+      (sqr(real(z)) <= @bailout && \
+       sqr(imag(z)) < @bailout)) || \
+  (@test == 4 && \
+      (sqr(real(z)) <= @bailout || \
+       sqr(imag(z)) < @bailout)) || \
+  (@test == 5 && \
+      (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) || \
+  (@test == 6 && \
+      (sqr(real(z) + imag(z)) <= @bailout)) || \
+  (@test == 7 && \
+      (real(z)) <= @bailout) || \
+  (@test == 8 && \
+      (imag(z)) <= @bailout)
+
+
+default:
+  title = "Sierpinksi Triangle distorted +"
+  center = (0.4, 0.4)
+  magn = 1.1538
+  maxiter = 149
+
+  param bailout
+    caption = "Bailout value"
+    default = 127
+    min = 1
+  endparam
+
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" \
+           "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param factor
+    caption = "Factor Transformation"
+  default = 2.0
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None"  \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (0.1,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (0.5,0.0)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.0,0.0)
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = ident()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func fn1
+    caption = "Function applied"
+  default = ident()
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the loop: section"
+  endfunc
+
+}
+
+Polynomial1 {
+; Modified from a formula in The Beauty of Fractals
+; Bailout test courtesy of Ron Barnett
+; Tweaked by Andreas Lober 2000
+; published with kind permission of DJK
+init:
+  int iter = 0
+  int IMC  = 0
+
+  complex z = @startFkt(#pixel+@epsilon/#pixel)
+
+loop:
+
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z)) + 1i*iter
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z + 1i*iter))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z + iter)  - \
+      @lattFac2*sqrt(real(z)*imag(z)) - 1i*iter
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z - iter)   - \
+      @lattFac2*sqrt(real(z)*imag(z - 1i*iter))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  z=(z^@power1/(1+z^@power1)) + IMC
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||  \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||  \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||         \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) || \
+  (@test == 7 && (real(z)) <= @bailout) || \
+  (@test == 8 && (imag(z)) <= @bailout)
+
+default:
+  title = "Polynomial1 +"
+
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+
+  param power1
+    caption = "Degree of the Polynomial"
+    default = (2,0)
+    hint = "This is the power that z is raised"
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None"  \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (0.1,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (0.5,0.0)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 8
+    min     = 2
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = TRUE
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.0,0.0)
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = ident()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = zero()
+    hint = "End of the loop: section"
+  endfunc
+
+}
+
+
+Polynomial2 {
+; Modified from a formula in The Beauty of Fractals
+; Bailout test courtesy of Ron Barnett
+; Tweaked by Andreas Lober 2000
+; published with kind permission of DJK
+init:
+  int iter = 0
+  int IMC  = 0
+
+  complex z = @startFkt(#pixel+@epsilon/#pixel)
+
+loop:
+
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z)) + 1i*iter
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z + 1i*iter))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z + iter)  - \
+      @lattFac2*sqrt(real(z)*imag(z)) - 1i*iter
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z - iter)   - \
+      @lattFac2*sqrt(real(z)*imag(z - 1i*iter))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  z=(z^@power1/(1-z^@power1))+ IMC
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||  \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||  \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||         \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) || \
+  (@test == 7 && (real(z)) <= @bailout) || \
+  (@test == 8 && (imag(z)) <= @bailout)
+
+default:
+  title = "Polynomial2 +"
+
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+
+  param test
+      caption = "Bailout Test"
+      default = 0
+      enum = "mod" "real" "imag" "or" "and" "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param power1
+    caption = "Degree of Polynomial"
+    default = (2,0)
+    hint = "This is the power that z is raised"
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None"  \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 12
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 2
+    min     = 2
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.01,0.0)
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = sqrt()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the loop: section"
+  endfunc
+
+}
+
+
+Polynomial3 {
+; Modified from a formula in The Beauty of Fractals
+; Bailout test courtesy of Ron Barnett
+; Tweaked by Andreas Lober 2000
+; published with kind permission of DJK
+init:
+  int iter = 0
+  int IMC  = 0
+
+  complex z = @startFkt(#pixel+@epsilon/#pixel)
+
+loop:
+
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z)) + 1i*iter
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z + 1i*iter))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z + iter)  - \
+      @lattFac2*sqrt(real(z)*imag(z)) - 1i*iter
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z - iter)   - \
+      @lattFac2*sqrt(real(z)*imag(z - 1i*iter))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  z=(1+z^@power2)/(1-z^@power2)+z^@power1 + IMC
+
+  if (z != 0 && @epsilon != 0)
+    z = z + @epsilon/z
+  endif
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||  \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||  \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||         \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) || \
+  (@test == 7 && (real(z)) <= @bailout) || \
+  (@test == 8 && (imag(z)) <= @bailout)
+
+
+
+default:
+  title = "Polynomial3 +"
+
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param power2
+    caption = "Degree of first term in Polynomial"
+    default = (2,0)
+  endparam
+
+  param power1
+    caption = "Degree of second term in Polynomial"
+    default = (2,0)
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None"  \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 2
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 2
+    min     = 2
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.0,0.1)
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = log()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the loop: section"
+  endfunc
+
+}
+
+
+Polynomial4 {
+; Modification of formula by Bob Margolis
+; Bailout test courtesy of Ron Barnett
+; Tweaked by Andreas Lober 2000
+; published with kind permission of DJK
+init:
+  int iter = 0
+  int IMC  = 0
+
+  complex z = @startFkt(#pixel+@epsilon/#pixel)
+
+loop:
+
+  iter = iter + 1
+
+  if (@withIterMod)
+    IMC = iter%@iterMod
+  endif
+
+  ;
+  ; Start with the lattices
+  ;
+  if     (@lattice == 1)
+    z = round(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 2)
+    z = trunc(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 3)
+    z = floor(@lattFac1*z) - @lattFac2*z
+  elseif (@lattice == 4)
+    z = ceil(@lattFac1*z)  - @lattFac2*z
+  elseif (@lattice == 5)
+    z = abs(@lattFac1*z)   - @lattFac2*z^2
+
+  elseif (@lattice == 6)
+    z = round(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z)) + 1i*iter
+  elseif (@lattice == 7)
+    z = trunc(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z + 1i*iter))
+  elseif (@lattice == 8)
+    z = floor(@lattFac1*z + iter) - \
+      @lattFac2*sqrt(real(z)*imag(z) + 1i*iter)
+  elseif (@lattice == 9)
+    z = ceil(@lattFac1*z + iter)  - \
+      @lattFac2*sqrt(real(z)*imag(z)) - 1i*iter
+  elseif (@lattice == 10)
+    z = abs(@lattFac1*z - iter)   - \
+      @lattFac2*sqrt(real(z)*imag(z - 1i*iter))
+
+  elseif (@lattice == 11)
+    z = round((round(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 12)
+    z = trunc((trunc(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 13)
+    z = floor((floor(@lattFac1*z) - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 14)
+    z = ceil((ceil(@lattFac1*z)   - @lattFac1*z)^2)   \
+      - @lattFac2*z^2
+  elseif (@lattice == 15)
+    z = abs((abs(@lattFac1*z)     - @lattFac1*z^2)^2) \
+      - @lattFac2*z^2
+
+  elseif (@lattice == 16)
+    z = round((round(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 17)
+    z = trunc((trunc(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 18)
+    z = floor((floor(@lattFac1*z)                     \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 19)
+    z = ceil((ceil(@lattFac1*z)                       \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+  elseif (@lattice == 20)
+    z = abs((abs(@lattFac1*z)                         \
+               - @lattFac1*sqrt(real(z)*imag(z)))^2)  \
+      - @lattFac2*z^2
+
+  endif
+
+  z=z^@power1 - z + IMC
+
+  if (z != 0 && @epsilon != 0)
+    z = z + @epsilon/z
+  endif
+
+  ;
+  ; with or without pixel addition
+  ;
+  if (@pure)
+    z = z + #pixel
+  endif
+
+  ;
+  ; additional function
+  ;
+  z = @addFkt(z)
+
+bailout:
+  (@test == 0 && |z| <= @bailout) ||                                         \
+  (@test == 1 && sqr(real(z)) <= @bailout) ||                                \
+  (@test == 2 && sqr(imag(z)) <= @bailout) ||                                \
+  (@test == 3 && (sqr(real(z)) <= @bailout && sqr(imag(z)) < @bailout)) ||  \
+  (@test == 4 && (sqr(real(z)) <= @bailout || sqr(imag(z)) < @bailout)) ||  \
+  (@test == 5 && (sqr(abs(real(z)) + abs(imag(z))) <= @bailout)) ||         \
+  (@test == 6 && (sqr(real(z) + imag(z)) <= @bailout)) || \
+  (@test == 7 && (real(z)) <= @bailout) || \
+  (@test == 8 && (imag(z)) <= @bailout)
+
+default:
+  title = "Polynomial4 +"
+
+  param bailout
+    caption = "Bailout value"
+    default = 4.0
+    min = 1.0
+    hint = "Defines how soon an orbit bails out, i.e. doesn't belong \
+            to the set anymore."
+  endparam
+
+  param test
+    caption = "Bailout Test"
+    default = 0
+    enum = "mod" "real" "imag" "or" "and" "manh" "manr" "modreal" "modimag"
+  endparam
+
+  param power1
+    caption = "Number of arms"
+    default = (2,0)
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None"  \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 2
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (1.0,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (1.0,0.0)
+  endparam
+
+  param withIterMod
+    caption = "i: IterMod? Y/N"
+    default = FALSE
+  endparam
+
+  param IterMod
+    caption = "i: IterMod Constant"
+    default = 2
+    min     = 2
+  endparam
+
+  param pure
+    caption = "f: With Pixel Addition"
+    default = FALSE
+  endparam
+
+  param epsilon
+    caption = "i: J-Coeff. for 1/z"
+    default = (0.7,0.0)
+  endparam
+
+  func startFkt
+    caption = "init: Start function"
+    default = asin()
+    hint = "In the start of the init: section"
+  endfunc
+
+  func addFkt
+    caption = "Additional Loop Function"
+    default = ident()
+    hint = "End of the loop: section"
+  endfunc
+
+}

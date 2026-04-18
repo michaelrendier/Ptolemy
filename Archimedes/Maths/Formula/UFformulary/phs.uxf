@@ -1,0 +1,125 @@
+phs-jitter {
+;
+; This randomizes the complex coordinate within the pixel
+; can be used to remove moiré at the cost of a noisier look
+; High res renders and downscaling can get rid of that noise
+;
+; Rychveldir/Phillip - 2021-07-02
+;
+; 2024-04-20 Added offset of -0.5 to center the jitter
+;
+transform:
+  if (4 * #height < 3 * #width)
+      pixeldim = 3/#magn/#height
+  else
+      pixeldim = 4/#magn/#width
+  endif
+  #pixel = #pixel + @jitter_level*pixeldim*(#random - (0.5, 0.5))
+default:
+  title = "Jitter"
+  ;helpfile = ""
+  float param jitter_level
+    default = 0.1
+  endparam
+}
+
+phs-jitter-const-amp {
+;
+; This randomizes the complex coordinate using a given amplitude,
+; it allows to achieve the jitter look, but will remain consistent
+; while resizing/zooming.
+;
+; Rychveldir/Phillip - 2024-03-20
+;
+transform:
+  #pixel = #pixel + @jitter_amplitude * (#random - @jitter_offset)
+default:
+  title = "Jitter Const Aplitude"
+  ;helpfile = ""
+  float param jitter_amplitude
+    default = 0.1
+  endparam
+  complex param jitter_offset
+    default = (-0.5, -0.5)
+  endparam
+}
+
+phs-test {
+;
+; julia like in chaotica
+;
+; Rychveldir/Phillip - 2021-07-02
+;
+transform:
+  #pixel = (#pixel-1.)/(-#pixel/2.+1.)
+default:
+  title = "Julia"
+  ;helpfile = ""
+  param exp
+    default = (2,0)
+  endparam
+  param offset
+    default = (0,0)
+  endparam
+  int param niter
+    default = 1
+    caption = "Iterations"
+  endparam
+}
+
+phs-julia {
+;
+; julia like in chaotica
+;
+; Rychveldir/Phillip - 2021-07-02
+;
+transform:
+  int ii = 0
+  while ii < @niter
+    #pixel = (#pixel)^@exp+@offset
+    ii = ii + 1
+  endwhile
+default:
+  title = "Julia"
+  ;helpfile = ""
+  param exp
+    default = (2,0)
+  endparam
+  param offset
+    default = (0,0)
+  endparam
+  int param niter
+    default = 1
+    caption = "Iterations"
+  endparam
+}
+
+phs-mb {
+;
+; julia like in chaotica
+;
+; Rychveldir/Phillip - 2021-07-02
+;
+transform:
+  int ii = 0
+  if ii == 0
+    init_pixel = #pixel
+  endif
+  while ii < @niter
+    #pixel = (#pixel)^@exp+init_pixel
+    ii = ii + 1
+  endwhile
+default:
+  title = "Mandelbrot Iterations"
+  ;helpfile = ""
+  param exp
+    default = (2,0)
+  endparam
+  param offset
+    default = (0,0)
+  endparam
+  int param niter
+    default = 1
+    caption = "Iterations"
+  endparam
+}

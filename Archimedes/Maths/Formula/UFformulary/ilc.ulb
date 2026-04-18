@@ -1,0 +1,453 @@
+
+
+
+
+class ilc_Kleinhuis'Method(common.ulb:DirectColoring) {
+; 2025-12-02
+; --------------------
+; Christian Kleinhuis's Coloring Method Based on "Smooth" coloring utilizing hue rotate.
+;
+; Christian Kleinhuis was administrator of the Fractalforums.com Website from 2005 until 2015 during that time the Mandelbulb and Mandelbox have been discovered.
+;
+; History:
+; --------------------
+; In 2020 when Christian Kleinhuis started to work on the Book "Popular Guide to the Mandelbrot Set"(ISBN: 9-783982-340418)
+;  for the brand I-Love-Chaos (i-love-chaos.org), he wanted to have colors for deep zoom, but every color on the way should
+;  be unique so that each color for all images use the same coloring scheme, and each color reflects a certain calculation depth.
+;
+; So, when talking about colors one has to mention complementary colors, and when one talks about complementary colors and is a chaos theoretist or
+;   at least a mathematician the sunflower modular arithmetic came to the mind of Christian,
+;   and this was the birth of this - quite trivial :D indeeed! just took 50 years - method.
+;
+; Hints for using it:
+; --------------------
+;
+; Hue Increment -360...360, Sat and Val plain Cosine Waves Frequencies with full range 0..1
+;   - when hue rot is 0 then normal repeated coloring
+;   - when hue rot is 3 flipflop
+;   - the more irrational the number is the more variants created,
+;   - modular arithmetic rules apply
+;   - primes produce the longest periods, the more irrational the better, try golden ratio
+;   - for constant sat and lum given by palette use 0 for sat/lum frequencies because its using cosine as wave function
+;   - for nulling a sat or lum value one would have to use 1/2 PI which would be 1.57079632679 but since uf can handle any precision this is just a float representation
+;   - irrational numbers cannot be aproximated nicely, but uf6 can have quite big floats so when desired make use of golden ratio with more floats
+;
+; Greetings:
+;
+; Frederik Slijkerman what a great program ultrafractal still is!
+; Sergio CT for giving the urge to release this method
+; fractalforums.com Love you very much, we had a great time!
+; fractalforums.org love you very much although not much around
+; fractalchats.discord love your very much as well but never on discord
+;
+
+
+public:
+       color func Result(complex pz)
+
+       ; From/for smooth coloring
+       complex il    = 1/log(@power)		; Inverse log (power).
+       float   lp    = log(log(@bailout))		; log(log bailout).
+
+       ; res contains the value that we work with from now on
+       float   res   = 0;
+       float res1 = 0.05 * real(m_Iterations+ il*lp - il*log(log(cabs(#z))))
+
+       res1=  (log(1.0+(res1^(1.0/6.0))))
+       res = (@offset+res1)  *           @density
+
+       ; we want 2 segments
+       ; segment1 normal palette as of rotation hue for the current index
+       ; segment2 transition current to next hue rotated palette using cross blend, with inverse indexes, the first comes inverted, the second as well
+
+       int index=floor(res) ; index taken from smooth floored
+
+
+       float interpoli= res-index           ; position in palette
+       float interpoli_inversed=  1.0-interpoli        ; inverse position in palette
+
+       ; Prepare the values for each component
+
+       ; hue rotation for the current and next steps
+       float huerotate=(floor(index/2)*@incrementrotatehue /360)*6
+       float huerotateNext=((floor(index/2)+1)*@incrementrotatehue/360)*6
+
+       ; declare result variable
+       color result=rgb(0,0,0)
+
+       if index%2 ==0
+          ; Current Gradient
+          color gradient_= gradient(interpoli)
+          ; rotate hue
+          result=hsl( ( hue(gradient_)+huerotate)%6.0,sat(gradient_),lum(gradient_))
+       else
+           ; Second gradient is constructed from inversed palette:
+          color gradient=gradient(interpoli_inversed)
+
+           ;  - Current Gradient rotated by hue, but inversed ( to be the mirror of itself on the right )
+           color result_a=hsl( ( hue(gradient)+huerotate)%6.0   ,sat(gradient),lum(gradient) )
+           ;  - Next Gradient rotated by hue, but inverted ( to be the mirror of itself on the left )
+           color result_b=hsl( ( hue(gradient)+huerotateNext)%6.0,sat(gradient),lum(gradient) )
+           ; blend them as best we can
+           result=blend(result_a,result_b,interpoli)
+       endif
+
+       return result
+endfunc
+
+default:
+  title = "Kleinhuis's Method"
+
+  heading
+    text = "Reference Implementation."
+    visible=@showHelp
+  endheading
+
+  heading
+    text = "For Alpha transparency use the extended version."
+    visible=@showHelp
+  endheading
+
+  heading
+    text = "This implemetation uses saturation and luminance values from the given palette, this can be distinguisehd in the extended version as well."
+    visible=@showHelp
+  endheading
+
+
+
+  heading
+    text = "The gamma value is used for gamma normalizing and gamma correction of the interpolation."
+    visible=@showHelp
+  endheading
+
+
+ float param gamma
+    caption = "Gamma"
+    default= 2.0
+    hint    = "used for natural gamma blending and gamma correction"
+  endparam
+
+
+
+  heading
+    caption = "Fractal Parameters"
+  endheading
+
+  heading
+    text = "The bailout should be aligned manually with the current fractal settings, it is used for the distance estimation. When one encounters visible cracks in the image this might be the reason."
+    visible=@showHelp
+  endheading
+
+  float param bailout
+
+    caption = "Bailout"
+    default = 4
+    hint    = "The [Bailout] value from your Formula, from Smooth Coloring algorithm."
+    min     = 0.0000000000000000000000000001
+  endparam
+
+  heading
+    text = "The power from the fractal formula, this should be aligned as well."
+    visible=@showHelp
+  endheading
+  float param power
+    caption = "Power"
+    default = 2
+    hint    = "The [Power] value from your Formula, from Smooth Coloring algorithm."
+  endparam
+  heading
+    caption = "Method Control"
+  endheading
+
+  heading
+    text = "The hue increment is the angle added for the next palette, 180° is flip flop loop (length 2), a little bit off like 181° takes 360 rounds for a new loop (length 360)."
+    visible=@showHelp
+  endheading
+  float param incrementrotatehue
+    caption = "Hue° Increment"
+    default= 137.5
+    min =0
+    max=360
+    hint = "0 is normal, 180 is zebra, primes take long and irrationals take longest. "
+  endparam
+
+  heading
+    text = "This density is multiplied with distance, one should be like normal, it might get quite large. "
+    visible=@showHelp
+  endheading
+  float param density
+    caption = "Density"
+    default= 10
+    hint = "Density from coloring formula is ignored, this serves as replacement with same functionality."
+  endparam
+
+  heading
+    text = "The offset is added, even integers are full palettes, a non even numbers are the transition palettes, at the start."
+    visible=@showHelp
+  endheading
+ float param offset
+    caption = "Offset"
+    default = 0
+    hint    = "Manually set the starting offset."
+  endparam
+
+  heading
+    text = "© 2025 Christian Kleinhuis (i-love-chaos.org)"
+  endheading
+
+
+  bool param showHelp
+    default=false
+    hint    = "Display/Hide textual information for eachg parameter."
+  endparam
+
+
+}
+
+
+
+
+class ilc_Kleinhuis'Method_ExtendedClass(common.ulb:DirectColoring) {
+; 2025-12-02
+; --------------------
+; Christian Kleinhuis's Coloring Method Based on "Smooth" coloring utilizing hue rotate.
+;
+; Christian Kleinhuis was administrator of the Fractalforums.com Website from 2005 until 2015 during that time the Mandelbulb and Mandelbox have been discovered.
+;
+; History:
+; --------------------
+; In 2020 when Christian Kleinhuis started to work on the Book "Popular Guide to the Mandelbrot Set"(ISBN: 9-783982-340418)
+;  for the brand I-Love-Chaos (i-love-chaos.org), he wanted to have colors for deep zoom, but every color on the way should
+;  be unique so that each color for all images use the same coloring scheme, and each color reflects a certain calculation depth.
+;
+; So, when talking about colors one has to mention complementary colors, and when one talks about complementary colors and is a chaos theoretist or
+;   at least a mathematician the sunflower modular arithmetic came to the mind of Christian,
+;   and this was the birth of this - quite trivial :D indeeed! just took 50 years - method.
+;
+; Hints for using it:
+; --------------------
+;
+; Hue Increment -360...360, Sat and Val plain Cosine Waves Frequencies with full range 0..1
+;   - when hue rot is 0 then normal repeated coloring
+;   - when hue rot is 3 flipflop
+;   - the more irrational the number is the more variants created,
+;   - modular arithmetic rules apply
+;   - primes produce the longest periods, the more irrational the better, try golden ratio
+;   - for constant sat and lum given by palette use 0 for sat/lum frequencies because its using cosine as wave function
+;   - for nulling a sat or lum value one would have to use 1/2 PI which would be 1.57079632679 but since uf can handle any precision this is just a float representation
+;   - irrational numbers cannot be aproximated nicely, but uf6 can have quite big floats so when desired make use of golden ratio with more floats
+;
+; Greetings:
+;
+; Frederik Slijkerman what a great program ultrafractal still is!
+; Sergio CT for giving the urge to release this method
+; fractalforums.com Love you very much, we had a great time!
+; fractalforums.org love you very much although not much around
+; fractalchats.discord love your very much as well but never on discord
+;
+
+
+public:
+       color func Result(complex pz)
+
+
+       ; From/for smooth coloring
+       complex il    = 1/log(@power)		; Inverse log (power).
+       float   lp    = log(log(@bailout))		; log(log bailout).
+
+       ; res contains the value that we work with from now on
+       float   res   = 0.0;
+       float res1 = 0.05 * real(m_Iterations+ il*lp - il*log(log(cabs(#z))))
+
+
+       res1=  (log(1.0+(res1^(1.0/6.0))))
+       res = @offset+res1  *        @density
+       ;res=res*(cos(res*@densityFrequency)*@densityCenter+@densityCenter)
+
+       ; debug palette>
+       ; explanation> it sets res to screen x which results in a fine rendering of palette
+       ; wether you want to check sacles or whatever, use offset and densitiy accordingly
+
+       ; res=real(#screenpixel) /#width*@density   +@offset
+
+       ; we want 2 segments
+       ; segment1 normal palette as of rotation hue for the current index
+       ; segment2 transition current to next hue rotated palette using cross blend, with inverse indexes, the first comes inverted, the second as well
+
+       int index=floor(res) ; index taken from smooth floored
+
+       float interpoli= res-index           ; position in palette
+       float interpoli_inversed=  1.0-interpoli        ; inverse position in palette
+
+
+       ; Prepare the values for each component
+
+       ; hue rotation for the current and next steps
+
+
+       float huerotate=(floor(index/2)*@incrementrotatehue /360)*6
+       float huerotateNext=(floor(index/2+1)*@incrementrotatehue/360)*6
+
+
+       ; declare result variable
+       color result=rgba(0.0,0.0,0,0.0)
+
+       if index % 2 == 0
+          ; Current Gradient rotated by hue
+          color gradient_= gradient(interpoli)
+          result=hsl( ( hue(gradient_)+huerotate)%6.0,   sat(gradient_),lum(gradient_) )
+          result=rgba(red(result),green(result),blue(result),alpha(gradient_))
+       else
+           ; Second gradient is constructed as follows:
+
+          color gradient= gradient(interpoli_inversed)
+           ;  - Current Gradient rotated by hue, but inversed ( to be the mirror of itself on the right )
+           color result_a=hsl( ( hue(gradient)+huerotate)%6.0   ,sat(gradient),lum(gradient) )
+           ;  - Next Gradient rotated by hue, but inverted ( to be the mirror of itself on the left )
+           color result_b=hsl( ( hue(gradient)+huerotateNext)%6.0,sat(gradient),lum(gradient) )
+           ; blend them as best we can
+           result=gammaBlend(rgba(red(result_a),green(result_a),blue(result_a),alpha(gradient)),rgba(red(result_b),green(result_b),blue(result_b),alpha(gradient)),interpoli)
+
+       endif
+
+       ; apply nice sat and lum variances
+       color result2=hsl( hue(result), sat(result)*(sin((@satPhase/360.0)*2*pi+@satFrequency*res*2.0*pi)*@satAmplitude+@satCenter), lum(result)*(sin((@lumCosPhase/360.)*2.0*pi+@lumCosFrequency*res*2.0*pi)*@lumCosAmplitude+@lumCosCenter));
+
+       return  rgba(red(result2),green(result2),blue(result2),alpha(result));
+
+endfunc
+
+private:
+
+
+    color func gammaBlend(color color1,color color2, float blend)
+
+  float gamma=@gamma;
+   ; normalize gamma
+   color col1_linear = rgba(red(color1)^gamma,green(color1)^gamma,blue(color1)^gamma,alpha(color1))
+   color col2_linear = rgba(red(color2)^gamma,green(color2)^gamma,blue(color2)^gamma,alpha(color2))
+
+    ; lerp
+    color blended_linear = rgba( red(col1_linear)*(1-blend)+red(col2_linear)*blend,  green(col1_linear)*(1-blend)+green(col2_linear)*blend,   blue(col1_linear)*(1-blend)+blue(col2_linear)*blend   ,   alpha(col1_linear)*(1-blend)+alpha(col2_linear)*blend      )
+
+    ;  (Gamma Correction)
+    return    rgba(red(blended_linear)^(1/gamma), green(blended_linear)^(1/gamma), blue(blended_linear)^(1/gamma), alpha(blended_linear))
+
+  endfunc
+
+default:
+  title = "Kleinhuis's Method Extended"
+  heading
+    text = "© 2025 Christian Kleinhuis (i-love-chaos.org) extension for additional saturation and luminance control"
+  endheading
+
+  heading
+    text = "Fractal Parameters"
+  endheading
+  float param bailout
+    caption = "Bailout"
+    default = 128
+    hint    = "The [Bailout] value from your Formula"
+    min     = 0.0000000000000000000000000001
+  endparam
+  float param power
+    caption = "Power"
+    default = 2
+    hint    = "The [Power] value from your Formula"
+  endparam
+
+  heading
+    text = "Method Control"
+  endheading
+
+  float param density
+    caption = "Density"
+    default= 10
+    hint = "Density from coloring formula is ignored, this serves as replacement with same functionality."
+  endparam
+
+
+  float param offset
+    caption = "Offset"
+    default = 0
+    hint    = "Manually set the starting offset."
+  endparam
+
+
+ float param gamma
+    caption = "Gamma"
+    default= 2.0
+    hint    = "used for natural gamma blending and gamma correction"
+  endparam
+
+
+
+
+  heading
+    text = "Hue"
+  endheading
+
+  float param incrementrotatehue
+    caption = "Hue° Increment"
+    default= 137.5
+    min =0
+    max=360
+    hint = "0 is normal, 180 is zebra, primes take long and irrationals take longest. "
+  endparam
+
+
+  heading
+    text = "Saturation"
+  endheading
+  float param satFrequency
+    caption = "Sat. Frequency"
+    default = 0
+    hint    = "Frequency for saturation changes"
+  endparam
+ float param satAmplitude
+    caption = "Sat. Amplitude"
+    default= .0
+    hint    = "Amplitude of the luminance wave"
+  endparam
+ float param satCenter
+    caption = "Sat. Center"
+    default= 1.0
+    hint    = "Center of the Luminance wave"
+  endparam
+ float param satPhase
+    caption = "Sat. Phase"
+    default= 0
+    max=360
+    hint    = "Phase of the Saturation wave"
+  endparam
+
+
+  heading
+    text = "Luminance"
+  endheading
+  float param lumCosFrequency
+    caption = "Luminance Frequency"
+    default= 0
+    hint    = "Frequency for luminance changes"
+  endparam
+ float param lumCosAmplitude
+    caption = "Lum. Amplitude"
+    default= 0.0
+    hint    = "Amplitude of the luminance wave"
+  endparam
+ float param lumCosCenter
+    caption = "Lum. Center"
+    default= 1.0
+    hint    = "Center of the luminance wave"
+  endparam
+ float param lumCosPhase
+    caption = "Lum, Phase"
+    default= 0.0
+    max=360.0
+    hint    = "Phase of the luminance wave"
+  endparam
+
+}
+
+
+

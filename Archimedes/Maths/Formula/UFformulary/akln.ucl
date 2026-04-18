@@ -1,0 +1,781 @@
+comment { ;
+
+  Coloring methods by Andreas Lober
+
+  Last update on March 02, 2000
+
+  Status: experimental
+
+  For the latest version of this file go to:
+  http://wizzle.simplenet.com/fractals/ufresources
+
+  About some of the metrics:
+  * Dazzle is taken from daz.ucl.
+  * Lucille is taken from AKLucille (kpk.ucl)
+    which was written by K-Peter Kubik and
+    enlarged by Andreas K Lober
+
+  About some of the transformations:
+  * Joukowskij and Elliptic are taken from akl.ucl
+  * Harlequin 1+2 are derived from Mark Townsend's
+    Harlequin
+  * Hevia 1-4 are taken from akl.ucl as fixed versions
+  * MT-Sine is taken from Mark Townsend's Sine
+  * MT-*Sine* are derived from MT-Sine by replacing
+    sin,cos by [a,]sin,cos[,h].
+  * MT-Cardioid is taken from Mark Townsend's Cardioid
+  * ArcDroid, CardioHype, ArDioidHype are derived from
+    MT-Cardioid by replacing
+    sin,cos by [a,]sin,cos[,h].
+
+  "Metrics and Watches" serves as a template for
+  a modernisation of all the AKL distance method
+  colourings.
+
+}
+
+metrics { ; Metrics and Watches
+;
+; Fully combinational parameters:
+; # metrics:                         14  -------------->  14
+; # watches:                         16  ------------->  224
+; # trap modes:                       7  ----------->  1,568
+; # skip modes:                       4  ----------->  6,272
+; # start types:                      3  ---------->  18,816
+; # transformations + fcts: 18*29+1=523  ------->  9,840,768
+; # lattices:                        21  ------> 206,656,126
+; Pixel Addition Y/N:                 2  ----->  413,312,256
+; Pure Method Y/N:                    2  ----->  826,624,512
+; # Add. Functions:                  29  -->  23,972,110,848
+; # constants ignored!
+;
+; The problem is: what are the good combinations?
+;
+; About some of the metrics:
+; * Dazzle is taken from daz.ucl.
+; * Lucille is taken from AKLucille (kpk.ucl)
+;   which was written by K-Peter Kubik and
+;   enlarged by Andreas K Lober.
+;   AKLucille was inspired by daz.ucl.
+;
+init:
+  complex zStart = 0
+  complex _zz = 0
+
+  complex ctest = 0
+  complex compare = 0
+  float   rtest = 0
+  float   itest = 0
+
+  float   dist = 0
+  float  cdist = 0
+  float  rdist = 0
+  float  idist = 0
+  float  dist1 = 0
+  float  dist2 = 0
+
+  float  temp = 0
+  int    iter = 0
+
+  float logp = 1/log(2)
+  float logb = log(log(1e20))
+
+  if     (@watch == 1) ; Min
+    temp = 1e20
+  elseif (@watch == 2) ; Max
+    temp = 0
+  endif
+
+  float dmin = 1e20
+  float dmax = -1
+
+  if (@startType == 0)     ; Zero
+    _zz = 0
+  elseif (@startType == 1) ; pixel
+    _zz = #pixel
+  elseif (@startType == 2) ; z
+    _zz = @startValue
+  endif
+
+  if (@i_randomness != 0)
+    _zz = _zz + @i_randomness * #random
+  endif
+
+  bool do_loop = TRUE
+  bool no_trap = TRUE
+
+loop:
+  iter = iter + 1
+
+  if (no_trap)
+    if (@skipMode > 0)
+      if     (@skipMode == 1) ; skip first n
+        if (iter > @skipConst)
+          do_loop = TRUE
+        else
+          do_loop = FALSE
+        endif
+
+      elseif (@skipMode == 2) ; skip after n
+        if (iter > @skipConst)
+          do_loop = FALSE
+        else
+          do_loop = TRUE
+        endif
+
+      elseif (@skipMode == 3) ; skip every nth
+        if (iter%@skipConst == 0)
+          do_loop = FALSE
+        else
+          do_loop = TRUE
+        endif
+
+      elseif (@skipMode == 4) ; skip but the nth
+        if (iter%@skipConst == 0)
+          do_loop = TRUE
+        else
+          do_loop = FALSE
+        endif
+
+      endif
+
+    endif ; skipMode > 0
+  else
+    do_loop = FALSE
+  endif ; no_trap
+
+  if (do_loop)
+
+    if (@trapMode > 0)
+      if (@trapMode == 1)
+        if (dist > @lowerTrap && dist < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      elseif (@trapMode == 2)
+        if (cabs(compare) > @lowerTrap && cabs(compare) < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      elseif (@trapMode == 3)
+        if (real(compare) > @lowerTrap && real(compare) < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      elseif (@trapMode == 4)
+        if (imag(compare) > @lowerTrap && imag(compare) < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      elseif (@trapMode == 5)
+        if (|real(compare)| > @lowerTrap && |real(compare)| < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      elseif (@trapMode == 6)
+        if (|imag(compare)| > @lowerTrap && |imag(compare)| < @upperTrap)
+          no_trap = FALSE
+        endif
+
+      endif
+    endif
+
+    zStart = #z
+
+
+    ;
+    ; Start with the lattices
+    ;
+    if     (@lattice == 1)
+      zStart = round(@lattFac1*zStart) - @lattFac2*zStart
+    elseif (@lattice == 2)
+      zStart = trunc(@lattFac1*zStart) - @lattFac2*zStart
+    elseif (@lattice == 3)
+      zStart = floor(@lattFac1*zStart) - @lattFac2*zStart
+    elseif (@lattice == 4)
+      zStart = ceil(@lattFac1*zStart)  - @lattFac2*zStart
+    elseif (@lattice == 5)
+      zStart = abs(@lattFac1*zStart)   - @lattFac2*zStart^2
+
+    elseif (@lattice == 6)
+      zStart = round(@lattFac1*zStart) \
+             - @lattFac2*sqrt(real(zStart)*imag(zStart))
+    elseif (@lattice == 7)
+      zStart = trunc(@lattFac1*zStart) \
+             - @lattFac2*sqrt(real(zStart)*imag(zStart))
+    elseif (@lattice == 8)
+      zStart = floor(@lattFac1*zStart) \
+             - @lattFac2*sqrt(real(zStart)*imag(zStart))
+    elseif (@lattice == 9)
+      zStart = ceil(@lattFac1*zStart)  \
+             - @lattFac2*sqrt(real(zStart)*imag(zStart))
+    elseif (@lattice == 10)
+      zStart = abs(@lattFac1*zStart)   \
+             - @lattFac2*sqrt(real(zStart)*imag(zStart))
+
+    elseif (@lattice == 11)
+      zStart = round((round(@lattFac1*zStart) \
+             - @lattFac1*zStart)^2)           \
+             - @lattFac2*zStart^2
+    elseif (@lattice == 12)
+      zStart = trunc((trunc(@lattFac1*zStart) \
+             - @lattFac1*zStart)^2)           \
+             - @lattFac2*zStart^2
+    elseif (@lattice == 13)
+      zStart = floor((floor(@lattFac1*zStart) \
+             - @lattFac1*zStart)^2)           \
+             - @lattFac2*zStart^2
+    elseif (@lattice == 14)
+      zStart = ceil((ceil(@lattFac1*zStart)   \
+             - @lattFac1*zStart)^2)           \
+             - @lattFac2*zStart^2
+    elseif (@lattice == 15)
+      zStart = abs((abs(@lattFac1*zStart)     \
+             - @lattFac1*zStart^2)^2)         \
+             - @lattFac2*zStart^2
+
+    elseif (@lattice == 16)
+      zStart = round((round(@lattFac1*zStart)                     \
+                 - @lattFac1*sqrt(real(zStart)*imag(zStart)))^2)  \
+                 - @lattFac2*zStart^2
+    elseif (@lattice == 17)
+      zStart = trunc((trunc(@lattFac1*zStart)                     \
+                 - @lattFac1*sqrt(real(zStart)*imag(zStart)))^2)  \
+        -         @lattFac2*zStart^2
+    elseif (@lattice == 18)
+      zStart = floor((floor(@lattFac1*zStart)                     \
+                 - @lattFac1*sqrt(real(zStart)*imag(zStart)))^2)  \
+                 - @lattFac2*zStart^2
+    elseif (@lattice == 19)
+      zStart = ceil((ceil(@lattFac1*zStart)                       \
+                 - @lattFac1*sqrt(real(zStart)*imag(zStart)))^2)  \
+                 - @lattFac2*zStart^2
+    elseif (@lattice == 20)
+      zStart = abs((abs(@lattFac1*zStart)                         \
+                 - @lattFac1*sqrt(real(zStart)*imag(zStart)))^2)  \
+                 - @lattFac2*zStart^2
+
+    endif
+
+    if (@pureMethod)
+      compare = zStart
+    else
+      compare = (#z+zStart)/2
+    endif ; @pureMethod
+
+    if (compare != 0)
+      if     (@transformation == 0) ; None
+        compare = compare ; Never ask why these lines are necessary...
+                          ; If I delete them,
+                          ; Transformation "None" does not work!!!
+
+      elseif (@transformation == 1) ; Joukowskij
+        compare = @HarlFkt(compare + @transfConst/compare)
+
+      elseif (@transformation == 2) ; Elliptic
+        compare = -(compare+@transfConst)/@HarlFkt(compare)
+
+      elseif (@transformation == 3 || @transformation == 4) ; Harlequin1+2
+        if (@transformation == 3) ; Harlequin1
+          if (@townsend == 0)
+            compare = 2*atan(imag(compare)/real(compare))
+          else
+            compare = 2*atan2(imag(compare)/real(compare))
+          endif
+        else                      ; Harlequin2
+          if (@townsend == 0)
+            compare = 2*atan(compare)
+          else
+            compare = 2*atan2(compare)
+          endif
+        endif
+
+        compare = @HarlFkt(1-compare^(@transfConst*4))
+
+      elseif (@transformation >= 5 && @transformation <= 8) ; Hevia1-4
+        compare = @HarlFkt(compare)
+
+        x = real(compare)
+        y = imag(compare)
+
+        xf = @transfConst*round(x)
+        yf = @transfConst*round(y)
+        xc = xf+@transfConst
+        yc = yf+@transfConst
+
+        a = xf + 1i*yc
+        b = xc + 1i*yc
+        c = xf + 1i*yf
+        d = xc + 1i*yf
+
+        if     (@transformation == 5)
+          compare = a*x + b*y + 1i*(c*x+d*y)
+        elseif (@transformation == 6)
+          compare = a*compare^2 + (b+c)*compare*conj(compare) + d*conj(compare)^2
+        elseif (@transformation == 7)
+          compare = a*x^2 + (b+c)*x*y + d*y^2
+        elseif (@transformation == 8)
+          compare = a*x^2 + b*x*y + 1i*(c*x*y + d*y^2)
+        endif
+
+      elseif (@transformation == 9 || @transformation == 10) ; Lissajous
+        a = sin (2*compare)
+        b = cos (3*compare)
+        c = @HarlFkt(a+1i*b)
+
+        if (c == 0)
+          c = compare
+        endif
+
+        if (@transformation == 9)
+          compare = c^@transfConst
+        else
+          compare = @HarlFkt(compare^@transfConst) + c
+        endif
+        ; compare = 1/c^@transfConst
+
+      elseif (@transformation >= 11 && @transformation <= 14) ; MT-Sine*
+        x = |compare|      ; MT: r
+        if (@townsend == 0)
+          y = atan(compare) ; MT: theta
+        else
+          y = atan2(compare) ; MT: theta
+        endif
+
+        if (y > 0)
+          y = y + 2*#pi
+        endif
+
+        if     (@transformation == 11) ; MT-Sine
+          compare = x*( cos(y)  + 1i* sin(y))
+
+        elseif (@transformation == 12) ; MT-ArcSine
+          compare = x*(acos(y)  + 1i*asin(y))
+
+        elseif (@transformation == 13) ; MT-SineHyp
+          compare = x*( cosh(y) + 1i* sinh(y))
+
+        elseif (@transformation == 14) ; MT-ArSineHyp
+          compare = x*(acosh(y) + 1i*asinh(y))
+        endif
+        compare = @HarlFkt(compare)
+
+      elseif (@transformation >= 15 && @transformation <= 18) ; Cardioid
+        if (@townsend == 0)
+          y = atan(compare) ; MT: theta and atan2
+        else
+          y = atan2(compare) ; MT: theta and atan2
+        endif
+        x = 1-cos(y)      ; MT: radius
+
+        if     (@transformation == 15) ; MT-Cardioid
+          compare = x*( cos(y)  + 1i* sin(y))
+
+        elseif (@transformation == 16) ; ArcDroid
+          compare = x*(acos(y)  + 1i*asin(y))
+
+        elseif (@transformation == 17) ; CardioHype
+          compare = x*( cosh(y) + 1i* sinh(y))
+
+        elseif (@transformation == 18) ; ArDioidHype
+          compare = x*(acosh(y) + 1i*asinh(y))
+        endif ; @transformation == 15,16,17,18
+
+        compare = @HarlFkt(compare)
+
+      elseif (@transformation >= 19 || @transformation <= 21) ; Sam's Julia
+
+        complex zz = (compare+#z+#pixel)/4
+        compare = exp(-1i*#pi/180)*compare
+
+        float samsBail = 1000
+
+        if (@transformation == 20)
+          samsBail = samsBail + iter*100000
+        elseif(@transformation == 21)
+          samsBail = 1e20
+        endif ; @transformation == 20
+
+        x = 1/sqrt(2)*real(compare)
+        y =   sqrt(2)*imag(compare)
+        complex start = x+1i*y ; compare ; (-1.745,.01)
+
+        int i = 0
+        while (i < 10 && |zz| < samsBail)
+          i=i+1
+          zz = zz^2/@transfConst + start
+        endwhile
+
+        compare = @HarlFkt(zz)
+
+      endif ; @transformation == xx
+    endif ; compare != 0
+
+    if (@withPixelAdd)
+       _zz = _zz + #pixel
+    endif
+
+    ctest = _zz - compare
+    rtest = real(ctest)
+    itest = imag(ctest)
+
+    cdist = |ctest|
+    rdist = |rtest|
+    idist = |itest|
+
+    dist1 = |_zz|
+    dist2 = |compare|
+
+    if     (@metric ==  0) ; Euklid
+      dist = cdist
+
+    elseif (@metric ==  1) ; Fuzz Diff
+      dist = |dist1 - dist2|*iter
+
+    elseif (@metric ==  2) ; Subway in Paris
+      int r1 = round(real(_zz))
+      int r2 = round(real(compare))
+      int i1 = round(imag(_zz))
+      int i2 = round(imag(compare))
+
+      if ((i1==0&&i2!=0) || (i1!=0&&i2==0) || \
+          (r1*i2==r2*i1 && i1+i2+r1+r2>0 && i1+i2+r1+r2 < 2))
+        dist = |dist1 - dist2|*iter
+      else
+        dist = cdist
+      endif
+
+    elseif (@metric ==  3) ; Min
+      if rdist < idist
+        dist = rdist
+      else
+        dist = idist
+      endif
+
+    elseif (@metric ==  4) ; Max
+      if rdist > idist
+        dist = rdist
+      else
+        dist = idist
+      endif
+
+    elseif (@metric ==  5) ; Real
+      dist = rdist
+
+    elseif (@metric ==  6) ; Imag
+      dist = idist
+
+    elseif (@metric ==  7) ; Fuzz Diff 2
+      dist = |rdist - idist|/iter
+
+    elseif (@metric ==  8) ; Area
+      dist = rdist*idist
+
+    elseif (@metric ==  9) ; Angle
+      if (rdist != 0)
+        dist = atan(idist/rdist)
+      else
+        dist = atan(idist)
+      endif
+
+    elseif (@metric == 10) ; MinQuot
+      if (rdist < idist)
+        if (idist == 0)
+          dist = rdist
+        else
+          dist = rdist/idist
+        endif
+      else
+        if (rdist == 0)
+          dist = idist
+        else
+          dist = idist/rdist
+        endif
+      endif
+      dist = 400*dist ; range of dist: 0...400
+
+    elseif (@metric == 11) ; MaxQuot
+      if (rdist > idist)
+        if (idist == 0)
+          dist = rdist
+        else
+          dist = rdist/idist
+        endif
+      else
+        if (rdist == 0)
+          dist = idist
+        else
+          dist = idist/rdist
+        endif
+      endif
+
+    elseif (@metric == 12) ; Dazzle
+      if (dist == 0)
+        dist = 1
+      endif
+
+      zp = @luciFkt(compare/dist)
+
+      if (real(zp) < 0)
+        zp = zp + 1
+      endif
+      if (real(zp) > 5)
+        zp = zp - 1
+      endif
+      if (imag(zp) < 0)
+        zp = zp + 1i
+      endif
+      if (imag(zp) > 5)
+        zp = zp - 1i
+      endif
+
+      zc = compare-(zp*dist)
+
+      dist = |zc|/|dist|
+
+    elseif (@metric == 13) ; Lucille
+      if (dist == 0)
+        dist = 1
+      endif
+
+      zp = @luciFkt(compare/dist)
+
+      if (real(zp) < 0)
+        zp = -real(zp) + 1i*imag(zp)
+      endif
+      if (imag(zp) < 0)
+        zp = real(zp) - 1i*imag(zp)
+      endif
+      if (real(zp) > 5 || imag(zp) > 5)
+        zp = flip(zp)
+      endif
+
+      zc = compare-(zp*dist)
+
+      dist = |zc|/|dist|
+    endif
+    ; End of the Metrics
+
+
+    ; Begin of the Watching
+    if     (@watch == 0) ; Last
+      temp = dist
+    elseif (@watch == 1) ; Min
+      if (temp > dist)
+        temp = dist
+      endif
+    elseif (@watch == 2) ; Max
+      if (temp < dist)
+        temp = dist
+      endif
+    elseif (@watch == 3) ; Sum
+      temp = temp + dist
+    elseif (@watch == 4) ; W1 Sum
+      temp = temp + dist/iter
+    elseif (@watch == 5) ; W2 Sum
+      temp = temp/iter + dist
+    elseif (@watch == 6) ; W+- Sum
+      temp = temp + ((-1)^iter)*dist/iter
+    elseif (@watch == 7) ; W^2 Sum
+      temp = temp + dist/iter^2
+    elseif (@watch == 8) ; Mod Sum
+      temp = temp + dist%iter
+    elseif (@watch == 9) ; MiniMax
+      if (temp < dist)
+        temp = temp + dist + iter/dist
+      else
+        temp = temp + dist/iter
+      endif
+    elseif (@watch == 10) ; z Sum
+      temp = temp + |zStart|/dist
+    elseif (@watch == 11) ; 1/z Sum
+      temp = temp + dist/|zStart|
+    elseif (@watch == 12) ; z
+      temp = |zStart|/dist
+    elseif (@watch == 13) ; Pixel Sum
+      temp = temp + |#pixel|/dist
+    elseif (@watch == 14) ; 1/Pixel Sum
+      temp = temp + dist/|#pixel|
+    elseif (@watch == 15) ; Pixel
+      temp = |#pixel|/dist
+    elseif (@watch >= 16 || @watch <= 20) ; Sam1
+      dist = real(iter + logp*logb - logp*log(log(dist)))
+
+      if (@watch == 16) ; Sam1
+        temp = dist
+
+      elseif (@watch == 17) ; Sam2
+        if (iter == 1 || dist > temp)
+          temp = dist
+        endif
+
+      elseif (@watch == 18) ; Sam Sum
+        temp = temp + dist*iter/|#pixel|
+      elseif (@watch == 19) ; Sam+-Sum
+        temp = temp + ((-1)^iter)*exp(|#z|)/dist
+      elseif (@watch == 20) ; Sam Sum 1/z
+        temp = temp + dist/|#z|
+      endif
+    elseif (@watch == 21)
+      if (dist < dmin)
+        dmin = dist
+      endif
+      if (dist > dmax)
+        dmax = dist
+      endif
+      temp = |dmax-dmin|*4000
+    endif
+
+  endif ; do_loop
+
+final:
+
+  #index = real(@fkt(temp)) + real(@f_randomness * #random)
+
+default:
+  title = "Metrics and Watches"
+
+  param metric
+    caption = "Metric"
+    enum    = "Euklid" "Fuzz Diff" "Subway in Paris" \
+              "Min" "Max" "Real" "Imag"         \
+              "Diff Use" "Area" "Angle"              \
+              "MinQuot" "MaxQuot" "Dazzle" "Lucille"
+  endparam
+
+  param watch
+    caption = "Watch"
+    enum    = "Last" "Min" "Max" "Sum" \
+              "W1 Sum" "W2 Sum" "W+- Sum" "W^2 Sum" "Mod Sum" \
+              "MiniMax" \
+              "z Sum" "1/z Sum" "z" \
+              "Pixel Sum" "1/Pixel Sum" "Pixel" \
+              "Sam Direct" "Sam Closest" "Sam Sum" "Sam+-Sum" "Sam Sum 1/z" \
+              "Max-Min"
+  endparam
+
+  param trapMode
+    caption = "Trap Mode"
+    enum    = "None" "Distance" "Cabs" "Real" "Imag" "|Real|" "|Imag|"
+  endparam
+
+  param lowerTrap
+    caption = "lower border for trap"
+    default = 1.0
+    min = 0.0
+    hint = "Only usefull with Traps"
+  endparam
+
+  param upperTrap
+    caption = "upper border for trap"
+    default = 2.0
+    min = 0.0
+    hint = "Only usefull with Traps"
+  endparam
+
+  param skipMode
+    caption = "Skip Mode: Skip..."
+    enum    = "None" \
+              "...first n" "...after n" \
+              "...every nth" "...but the nth"
+  endparam
+
+  param skipConst
+    caption = "Skip Constant"
+    default = 3
+    min     = 2
+  endparam
+
+  param startType
+    caption = "Start Type"
+    enum    = "Zero" "Pixel" "StartValue"
+  endparam
+
+  param startValue
+    caption = "Start Value"
+    default = (-1.0,33.0)
+  endparam
+
+  param transformation
+    caption = "Transformation"
+    enum    = "None" \
+              "Joukowskij" "Elliptic" \
+              "Harlequin 1" "Harlequin 2"    \
+              "Hevia 1" "Hevia 2" "Hevia 3" "Hevia 4" \
+              "Lissajous" "Lissajous+" \
+              "MT-Sine" "MT-ArcSine" "MT-SineHyp" "MT-ArSineHyp" \
+              "MT-Cardioid" "ArcDroid" "CardioHype" "ArDioidHype" \
+              "Sam's Julia small" "Sam's Julia grow" "Sam's Julia big"
+  endparam
+
+  param transfConst
+    caption = "Transf. Constant"
+    default = 1.0
+    min     = 0.01
+  endparam
+
+  param lattice
+    caption = "Lattice Type"
+    enum = "None" \
+             "round"     "trunc"     "floor"     "ceil"     "abs"   \
+           "r-round"   "r-trunc"   "r-floor"   "r-ceil"   "r-abs"   \
+             "round^2"   "trunc^2"   "floor^2"   "ceil^2"   "abs^2" \
+           "r-round^2" "r-trunc^2" "r-floor^2" "r-ceil^2" "r-abs^2"
+    default = 0
+  endparam
+
+  param lattFac1
+    caption = "Lattice Factor 1"
+    default = (0.1,0.0)
+  endparam
+
+  param lattFac2
+    caption = "Lattice Factor 2"
+    default = (0.1,0.0)
+  endparam
+
+  param withPixelAdd
+    caption = "With Pixel Add. Y/N"
+    default = false
+  endparam
+
+  param pureMethod
+    caption = "Pure Method Y/N"
+    default = TRUE
+  endparam
+
+  param townsend
+    caption = "For MT-Transforms"
+    enum = "atan" "atan2"
+    default = 0
+  endparam
+
+  param i_randomness
+    caption = "i: Randomness"
+    hint = "This adds a random texture the the coloring."
+    default = (0.0,0.0)
+  endparam
+
+  param f_randomness
+    caption = "f: Randomness"
+    hint = "This adds a random texture the the coloring."
+    default = (0.0,0.0)
+  endparam
+
+
+  func fkt
+    caption = "Additional Function"
+    default = ident()
+  endfunc
+
+  func luciFkt
+    caption = "Lucille Function"
+    default = cos()
+  endfunc
+
+  func HarlFkt
+    caption = "Transform. Function"
+    default = log()
+  endfunc
+
+} ; metrics

@@ -1,0 +1,630 @@
+Dual { ; Dennis Magar, March 21, 2000 
+; adapted from Sylvie Gallet's Triptych, Feb 19, 2000
+; Mirror parameter adapted from Damien Jones' Mirror transformation
+transform:
+
+  bool use_c = @uc
+  bool rotate = @rot
+  bool mirror = @mir
+  float ss = #width/#height*.75
+  float w = #width/2
+  float h = #height/2
+  float x = real(#screenpixel)
+  float y = imag(#screenpixel)
+  float rp = real(#pixel)
+  float ip = imag(#pixel)
+  complex r = (0,1) ^ ((360-#angle*180/pi)/ 90.0)
+  if @orient == 1
+    if trunc(x/w) != @part
+      #solid = true
+    elseif (use_c == true)
+      if ss < 1 
+        rp = rp + (.5-@part)/#magn*2*cos(#angle)
+        ip = ip + (.5-@part)/#magn*2*sin(#angle)
+      else
+        rp = rp + (.5-@part)/#magn*2*cos(#angle)*ss
+        ip = ip + (.5-@part)/#magn*2*sin(#angle)*ss
+      endif
+      if (rotate == true)
+        rp = -rp + 2*(real(#center))
+        ip = -ip + 2*(imag(#center))
+      endif
+      #pixel = rp + flip(ip)
+      if (rotate == true) && (mirror == true)
+        #pixel = (#pixel-#center) * r
+        #pixel = conj(#pixel)
+        #pixel = #pixel * conj(r) + #center
+      endif
+    endif
+  endif
+  if @orient == 0
+    if trunc(y/h) != @part
+      #solid = true
+    elseif (use_c == true)
+      if ss > 1 
+        rp = rp + (.5-@part)/#magn*1.5*sin(#angle)
+        ip = ip - (.5-@part)/#magn*1.5*cos(#angle)
+      else
+        rp = rp + (.5-@part)/#magn*1.5*sin(#angle)/ss
+        ip = ip - (.5-@part)/#magn*1.5*cos(#angle)/ss
+      endif
+      if (rotate == true)
+        rp = -rp + 2*(real(#center))
+        ip = -ip + 2*(imag(#center))
+      endif
+      #pixel = rp + flip(ip)
+      if (rotate == true) && (mirror == true)
+        #pixel = (#pixel-#center) * r
+        #pixel = conj(#pixel)
+        #pixel = #pixel * conj(r) + #center
+      endif
+    endif
+  endif
+default:
+  title = "Dual"
+param part
+  caption = "Part"
+  enum = "Left or Top" "Right or Bottom"
+endparam
+param uc
+  caption = "Use Fractal Center"
+  default = false
+endparam
+param rot
+  caption = "Rotate 180°"
+  hint = "Works only when 'Use Fractal Center' is enabled"
+  default = false
+endparam
+param mir
+  caption = "Mirror"
+  hint = "Works only when 'Use Fractal Center' \
+          and 'Rotate 180°' are enabled"
+  default = false
+endparam
+param orient
+  caption = "Orientation"
+  enum = "Vertical" "Horizontal" 
+  default = 1
+endparam
+}
+
+EdgeNibbler { ; Dennis Magar , April 22, 2001
+  ; Rectangular to Polar and Polar to Rectangular
+  ; routines 'borrowed' from Damien Jones
+  ; Reverse Mask parameter suggested by Andreas Lober
+  ; Description may be found at:   
+  ; http://saturn.spaceports.com/~dennism/edge.htm
+transform:
+  bool masking = false
+  float rn = real(#random)*@r
+  float w = #width
+  float h = #height
+  float di = @dv*w/480+1e-20
+  float wi = @wd/100
+  float wy = wi
+  float x1 = real(#screenpixel)
+  float y1 = imag(#screenpixel)
+  float x2 = w - x1 
+  float y2 = h - y1
+  float sp = 1-(@ps+1)/100
+  if @es == true
+    wy = wi*w/h
+  endif
+  complex pc = cabs(#pixel-#center) + flip(atan2(#pixel-#center))
+  pc = real(pc) + flip(imag(pc)-#angle)
+  pc = real(pc) + flip(@an/180*pi+imag(pc))
+  pc = real(pc)*cos(imag(pc))+flip(real(pc)*sin(imag(pc)))+#center
+  float tmp = @a*#magn/17.3
+  if @sf == false
+    float rr = cabs(@fn3(abs(real(pc)-real(#center))*tmp))
+    float ii = cabs(@fn3(abs(imag(pc)-imag(#center))*tmp))
+    float ya = @sd*|@fn1(@fn2(x1/di-rn)-rr)|%sp - @of
+    float yb = @sd*|@fn1(@fn2(x2/di-rn)-rr)|%sp - @of
+  else
+    float rr = abs(real(pc)-real(#center))*tmp
+    float ii = abs(imag(pc)-imag(#center))*tmp
+    float ya = @sd*|@fn1(@fn3(x1/di-rn)-rr)|%sp - @of
+    float yb = @sd*|@fn1(@fn3(x2/di-rn)-rr)|%sp - @of
+  endif
+  float xa = @sd*|@fn1(@fn2(y1/di-rn)-ii)|%sp - @of
+  float xb = @sd*|@fn1(@fn2(y2/di-rn)-ii)|%sp - @of
+  if @sy == true
+    xb = xa
+    yb = ya
+  endif
+  if (x1/w < wi - xa*wi) || (x1/w > 1 - wi + xb*wi)
+    masking = true
+  endif
+  if (y1/h < wy - ya*wy) || (y1/h > 1 - wy + yb*wy)
+    masking = true
+  endif
+  if @si && x1/w>wi && x1/w<1-wi && y1/h>wy && y1/h<1-wy
+    masking = true
+  endif
+  if @cs > 0
+    float r = @cs*w/100 + rn*20
+    if x1 < r && y1 < r && sqrt(sqr(r-x1)+sqr(r-y1)) > r
+      masking = true
+    endif
+    if x2 < r && y1 < r && sqrt(sqr(r-x2)+sqr(r-y1)) > r
+      masking = true
+    endif
+    if x1 < r && y2 < r && sqrt(sqr(r-x1)+sqr(r-y2)) > r
+      masking = true
+    endif
+    if x2 < r && y2 < r && sqrt(sqr(r-x2)+sqr(r-y2)) > r
+      masking = true
+    endif
+  endif
+  if (@reverseMask)
+    masking = !masking
+  endif
+  if (masking)
+    #solid = true
+  endif
+default:
+title = "Edge Nibbler"
+helpfile = "ldm-help/ldm-help.htm"
+helptopic = "Edge"
+param sd
+  caption = "'Amplitude'"
+  hint = "'Amplitude', 'Frequency', Scale, and Angle \
+         work together to determine the appearance of \
+         the 'edge'.  Useful values for 'Amplitude range \
+         from .1 to 1000"
+  default = 0.5
+endparam
+param a
+  caption = "'Frequency'"
+  hint = "Higher value generally produce greater complexity. \
+         Good ranges are about 5 to 10000."
+  default = 500.0
+endparam
+param dv
+  caption = "Scale"
+  hint = "Higher values increase the scale of the designs. \
+         Try 2 to 100 for this parameter."
+  default = 30.0
+endparam
+param an
+  caption = "Angle"
+  hint = "'Rotates' the edge pattern. Values around 90° \
+         to work best."
+  default = 87.0
+endparam
+param wd
+  caption = "Width"
+  hint = "Varies the width of the edge measured as a \
+         percentage of the width of the image."
+  default = 5.0
+endparam
+param ps
+  caption = "'Compression'"
+  hint = "'Compresses' the pattern away from the edge \
+         of the fractal, among other things. Negative \
+         numbers 'expand' the pattern. Values -100 to 100"
+  default = 10.0
+endparam
+param of
+  caption = "Offset"
+  hint = "Works a little like 'Compression' to move the \
+         pattern away from the edge, but also reduces the \
+         width of 'filaments' of the pattern. Negative \
+         numbers work here also. Range: -0.5 to around 0.5"
+  default = 0.0
+endparam
+param cs
+  caption = "Corner Size"
+  hint = "'Rounds' the corners. Useful for 'cleaning up'."
+  default = 0.0
+endparam
+param r
+  caption = "Randomness"
+  default = 0.0
+endparam
+param sf
+  caption = "Separate Functions"
+  hint = "Unchecked - all three functions work together to \
+         calculate the patterns for the top, bottom, and sides. \
+         Checked - Function 2 works on the sides; Function 3 \
+         works on top and bottom."
+  default = false
+endparam
+param sy
+  caption = "Flip Right, Bottom"
+  hint = "Unchecked = diagonal symmetry of patterns. \
+         Checked = 'flips' Right and Bottom edges to \
+         mirror Left and Top."
+  default = false
+endparam
+param si
+  caption = "Solid Interior"
+  hint = "Turns everything inside the edge to the Solid Color."
+  default = false
+endparam
+param reverseMask
+  caption = "Reverse Mask"
+  hint = "Reverses the Solid colored area"
+  default = false
+endparam
+param es
+  caption = "Equal Width Edges"
+  hint = "Unchecked: Edges are proportional. \
+         Checked: Edges are equal."
+  default = false
+endparam
+func fn1
+  caption  = "Function 1"
+  default = sqrt()
+endfunc
+func fn2
+  caption  = "Function 2"
+  default = sin()
+endfunc
+func fn3
+  caption  = "Function 3"
+  default = ident()
+endfunc
+}
+
+ldm-ThingamajigsMask { ; Dennis Magar,     November 29, 2001
+  ; Masking Transformation for use with the standard Julia,
+  ; Samuel Monnier's Tube J, or Mark Townsend's 990625a Julia
+  ; formula and is based on Thingamajigs coloring.
+  ; Several parameters added 1/05/02
+transform:
+  int i = 0
+  int sn = 1
+  if @m % 2 == 1
+    sn = -1
+  endif
+  float vsa = sn*@sa/10
+  float vsb = @sb/10
+  float rsy = (real(@syc)-1)
+  float isy = imag(@syc)
+  float zz = 0
+  float md = 0
+  float dist = 1e20
+  float tmp = 0
+  float trl = trunc(@is)
+  if trl == 0
+    trl = 1e20
+  endif
+  float dis = (@is - trunc(@is))*10
+  if dis == 0
+    dis = 1
+  endif
+  float x = 0
+  float y = 0
+  float tst2 = 0
+  float tst4 = 0
+  complex fc = (0,0)
+  float a2 = 0
+  float g1 = 0
+  complex gc = (0,0)
+  float ang = 0
+  z = #pixel
+  if !(@msk == 0)
+   repeat
+    if @f == 0
+      z = z^@nc + @c
+    elseif @f == 1
+      z = z*@p + @c
+    else
+      z = z - z^real(@nc) + @c
+    endif
+    zc = @fn8(z)
+    float s1 = cabs(z)
+    if (@m > 3 && @m < 12) || @m > 16 || @fl == 4 \
+       || @fl == 6 || @fl > 8
+      gc = @fn3(@fn1(@fn2(z)))
+      a2 = atan2(gc)
+      g1 = cabs(gc)
+    endif
+    if @fl == 4 || @fl > 8 || @m == 20 \
+       || (@m > 7 && @m < 12)
+      fc = @fn3(@fn1(real(z))+@fn2(imag(z)))
+      tst4 = abs((cabs(fc)-g1)/s1) 
+    endif
+    if @m == 17 || @m == 22
+      tst2 = abs((a2-s1)/g1)
+      tst4 = abs((cabs(fc)-g1)/s1) 
+    endif
+    float zr = real(zc)
+    float zi = imag(zc)
+    if @pc == true
+      float d = sqrt(sqr(zr)+sqr(zi))
+      float a = atan2(zi/zr)
+      if a < 0
+        a = a + 2 * #pi
+      endif
+      zr = d
+      zi = a
+    endif
+    if @fl == 3 || @fl == 7 || @m == 16
+      ang = atan(zi/zr)
+    endif
+    int ii = i
+    if @is < 0
+      ii = -ii
+    endif
+    if (@fl == 0)       ;a
+      zz = sqrt(|@fn3(abs(@fn1(zr)) \
+           +(@fn3(abs(@fn2(zi)))))+@vc|)
+    elseif (@fl == 1)   ;b
+      zz = cabs(@fn8(@fn3(@fn1(real(z))) \
+           +@vc+@fn3(flip(@fn2(imag(z))))))
+    elseif (@fl == 2)   ;c
+      zz = sqrt(|@fn3(@vc+abs(@fn1(zr)) \
+           + recip(@fn3(abs(@fn2(zi)))))|)^.33
+    elseif (@fl == 3)   ;d
+      zz = real(@fn3(abs(@fn1(zr)) \
+           /(@fn3(abs(@fn2(zi)))))+@vc)*i*ang
+    elseif (@fl == 4)   ;e
+      zz = abs(cabs(@fn8(fc+gc)/zc+@vc))
+    elseif (@fl == 5)   ;f
+      zz = abs(cabs(recip(@fn3(zc+@vc))))
+    elseif (@fl == 6)   ;g
+      zz = cabs(@fn3(@fn1(abs((g1-zr) \
+           /(g1-zi))+@vc)))
+    elseif (@fl == 7)   ;h
+      zz =(cabs(@fn8(atan(@fn3(abs(@fn1(zr)+@vc) \
+          /(@fn3(abs(@fn2(zi^2))))))))*ang)
+    elseif (@fl == 8)   ;i
+      zz = real(@fn3(abs(@fn1(zr) \
+           -@fn2(zi)+@vc)))^.33
+    elseif (@fl == 9)   ;j
+      zz = cabs(@fn8(abs(fc-gc+@vc)))^.33
+    elseif (@fl == 10)   ;k
+      zz = cabs(@fn8(@fn3(abs(@fn1(g1) \
+           +@vc - @fn2(a2)))))
+    elseif (@fl == 11)   ;l
+      zz = abs(cabs(@fn8(fc-gc)/fc+@vc))
+    elseif (@fl == 12)   ;m
+      zz = cabs(@fn8(acos(@fn3(abs(@fn1(zr) \
+           +@vc - @fn2(g1))))))
+    endif
+    if @m == 19
+      if (zz > md) && ii < trl
+        md = zz
+      endif
+    endif
+    if @m < 14 || @m > 22     ;1-E, O,P
+      if @m < 2
+        y = zr
+      elseif @m == 2 || @m == 3
+        y = zi
+      elseif @m == 4 || @m == 5
+        y = g1^2
+      elseif @m == 6 || @m == 7
+        y = (a2-s1)/(g1*2)
+      elseif @m == 12 || @m == 13
+        y = @tc/2
+      elseif @m == 23 || @m == 24
+        y = s1
+      else
+        y = g1-tst4
+      endif
+;*****************************
+      if @sa < 0 && sn == -1
+        y = y * (-@sa+5)/5
+        vsa = sn*@sa/20
+      endif
+      if isy > 0
+        if @wfl == false
+          y = y*(y - isy)/(y + isy)
+        else
+          y = (y - isy)/(y + isy)
+        endif
+      elseif isy < 0
+        if @wfl == false
+          y = y * (isy+1)
+        else
+          y = y + isy
+        endif
+      endif
+      if rsy < -1
+        y = y + (rsy + 1)/2
+      endif
+      if @sb < 0
+        y = y % vsb
+      endif
+      tmp = @ni*(real(@fn1(y+sn*@fn2(y)*-rsy)))
+      if @sb > 0
+        tmp = tmp % vsb
+      endif
+      x = zz - tmp + vsa
+;*****************************
+      xb = @fn9(x + flip(y))
+      if @m == 10 || @m == 11
+        xb = -xb
+      endif
+      zz = cabs(z - xb)^.1
+      if zz < dist && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 14)  ;F
+      if zz < dist || zz < 1 && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 15)    ;G  
+      if zz < dist && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 16)      ;H 
+      if  zz < ang && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 17)      ;I
+      if  zz < tst2 && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 18)      ;J  
+      if  zz > g1 && dist > g1 && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 19)      ;K
+      if zz < md && ii < trl
+        md = zz
+        dist = zz * dis 
+      endif
+    elseif (@m == 20)      ;L
+      if  zz < tst4^2 && ii < trl
+        dist = zz * dis
+      endif
+    elseif (@m == 21)      ;M
+      if  zz > s1^2 && ii < trl
+        dist = zz * dis
+      endif  
+    elseif (@m == 22)      ;N
+      if tst2 > tst4 && ii < trl
+        dist = zz * dis
+      endif
+    endif
+    i = i + 1
+   until (i == @mi) || (|z| > @bo)
+   if @im == false && dist > @msk && !(@msk == 0)
+     #solid = true
+   endif
+   if @im == true && dist <= @msk && !(@msk == 0)
+     #solid = true
+   endif
+  endif
+default:
+  title = "Thingamajigs Mask"
+  param f
+    caption = "Formula"
+    hint = "This transformation is for use with \
+            the standard Julia, Sam's Tube J \
+            formula, or Mark T's 990625a Julia"
+    enum = "Julia" "Tube J (sam.ufm)" \
+           "990625a Julia(mt.ufm)"
+    default = 0
+  endparam
+  param c
+    caption = "Julia Seed/Start"
+    hint = "Julia Seed or Tube J Starting Point. \
+            This and three of the next four parameters \
+            should be copied from the Formula Tab"
+    default = (0.0,-0.8)
+  endparam
+  param nc
+    caption = "Julia Power"
+    hint = "Not used with Tube J"
+    default = (2.0,0)
+  endparam
+  param bo
+    caption = "Julia Bailout"
+    default = 4.0
+  endparam
+  param mi
+    caption = "Julia Max Iterations"
+    default = 100
+  endparam
+  param p
+    caption = "Tube J param 'p'"
+    default = (1,.5)
+  endparam  
+  param m
+    caption = "Trap Mode"
+    hint = "This and following parameters should \
+            be copied from a layer containing \
+            Thingamajigs coloring."
+    enum = "1" "2" "3" "4" "5" "6" "7" "8" \
+           "9" "A" "B" "C" "D" "E" "F" "G" \
+           "H" "I" "J" "K" "L" "M" "N"
+    default = 0
+  endparam
+  param fl
+    caption = "'Flavor'"
+    enum = "A" "B" "C" "D" "E" "F" "G" "H" \
+           "I" "J" "K" "L" "M"
+    default = 0
+  endparam
+  param pc
+    caption = "Polar Coordinates"
+    hint = "Rectangular Coordinates is the default."
+    default = false
+  endparam
+  param vc
+    caption = "Fractal Offset"
+    hint = "Changes the appearance of the fractal. \
+            Try values from -1.5 to 1.5."
+    default = (0,0)
+  endparam
+  param tc
+    caption = "Trap Modes D-E Mod"
+    hint = "The Real component of 'Texture Offset'.  \
+            Used only for Trap Modes D and E"
+    default = 1.0
+  endparam
+  param sa
+    caption = "Expand+|-Contract"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is around -10 to 10"
+    default = 0.0
+  endparam
+  param syc
+    caption = "Warp Factor"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is around -1.5 to 1.5 \
+            Try 'Eyedropper' at low magnifications."
+    default = (0,0)
+  endparam
+  param wfl
+    caption = "Warp Set 2"
+    hint = "Changes the way the Warp Factor works."
+    default = false
+  endparam
+  param sb
+    caption = "'Ripple' Control"
+    hint = "Used with Trap Modes 1 through D. \
+            A few Trap Modes are unaffected by this \
+            parameter. Useful Range is -50 to 50"
+    default = 0.0
+  endparam
+  param ni
+    caption = "Multiplier"
+    hint = "Used with Trap Modes 1 through E. \
+            Useful Range is about 1 to 9."
+    default = 3.0
+  endparam
+  param is
+    caption = "Iters to Skip"
+    hint = "Trapping is discontinued after this \
+            (non-zero) number of iterations."
+    default = 0.0
+  endparam
+  param msk
+    caption = "Mask Threshold"
+    default = 0.0
+  endparam
+  param im
+    caption = "Reverse Mask"
+    hint = "Reverses the areas drawn in the Solid Color \
+            with those areas drawn normally."
+    default = false
+  endparam
+  func fn8
+    caption = "Initial Function"
+    default = abs()
+  endfunc
+  func fn1
+    caption  = "Real function"
+    default = ident()
+  endfunc  
+  func fn2
+    caption  = "Imag function"
+    default = abs()
+  endfunc
+  func fn3
+    caption  = "Overall function"
+    default = abs()
+  endfunc
+  func fn9
+    caption = "Trap Mode 1-E Fn"
+    default = sqr()
+  endfunc
+}
+
+

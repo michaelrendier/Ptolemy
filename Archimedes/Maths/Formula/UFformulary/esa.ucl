@@ -1,0 +1,193 @@
+AttractorBasinsColoring {
+; by Etienne Saint-Amant, july 2009
+; intended to be used with either, Dubeau Phi 0, Dubeau Phi 1,
+; Dubeau Phi Mixture, Dubeau Phi Mixture With Functions, Dubeau Psi,
+; Dubeau Psi With Functions or Newton's method.
+global:
+  ;$define DEBUG
+final:
+  float angle;
+  angle = atan2(#z);
+  ;print(angle);
+  if @noIter
+    #index = (angle + #pi)/(2*#pi)
+  else
+    #index = 0.01 * #numiter + (angle + #pi)/(2*#pi)
+  endif
+default:
+  title = "Attractor Basins Coloring"
+  bool param noIter
+    caption = "Don't use iteration number"
+    default = false
+  endparam
+}
+
+ESAFractalTree() {
+;
+; version 1.0
+; By Etienne Saint-Amant, 2002/07/02
+;
+; Go to http://ESAfractal.com for examples and tutorial
+;
+; Based on FractalTree
+; By Samuel Monnier, 11.1.00
+; Modified with his kind permission
+;
+init:
+  z = 0
+  float arg = 0
+  int i = 0
+  float j = 0
+  float d = 0
+  float dist = 1e5
+  float x = 0
+  float y = 0
+  float imagCof = @imaginaryCoefficient
+  if @mode == 0
+    z = #pixel
+  endif
+
+  float dr = pi/@rotincrCoefficient*@rotincr/@altitudeTree
+  
+loop:
+  if @mode == 1
+    i = i + 1
+    if i == @itertr
+      z = #z
+    endif
+  endif 
+final:
+  ; Performs translation, rotation
+  ; and magnification
+  z = z - @center
+  z = z*exp(-1i*@rot*pi/@rotationchange)
+  z = z/@size
+  i = 0
+
+  while i < @niter
+    i = i + 1
+    
+    imagCof = imagCof + @alterimaginary
+
+    x = abs(real(z))
+    y = imag(z)
+    z = x + imagCof * 1i * y
+    arg = -atan2(z) + pi/@weirdness            
+    ; Estimate distance
+    if y >= -1 && y <= 0
+      d = x^@power
+    elseif y < -1
+      d = cabs(z + imagCof * 1i)^@power
+    elseif y > 0
+      d = cabs(z)^@power
+    endif
+    
+    if d < dist
+      dist = d
+    endif
+    
+    ; Computes the rotation to apply 
+    j = @order-1
+    rotincr = j*dr
+    while j > 0
+      j = j - 2
+      if arg < (j+1)*dr
+        rotincr = j*dr
+      endif
+    endwhile
+    
+    ; Performs transformation
+    z = z*exp(imagCof*1i*rotincr)
+    z = z*@magnincr
+    z = z - imagCof*1i
+    
+  endwhile
+  
+  #index = dist 
+   
+default:
+  title = "ESA Fractal Tree"
+  param mode
+    caption = "Mode"
+    default = 0
+    enum = "Pixel" "Distance Estimator"
+  endparam
+  param power
+    caption = "Dist. Est. Power"
+    default = 1.0
+  endparam
+  param order
+    caption = "Tree Order"
+    default = 4.0
+  endparam
+  param rotincr
+    caption = "Angle Between Branches"
+    default = 40.0
+  endparam
+  param magnincr
+    caption = "Tree Magnification Increment"
+    default = 1.9
+  endparam
+  param center
+    caption = "Center"
+    default = (0,0)
+  endparam
+  param rot
+    caption = "Rotation"
+    default = 0.0
+  endparam
+  param size
+    caption = "Size"
+    default = 1.0
+  endparam
+  param niter
+    caption = "Number of Iteration"
+    default = 10
+  endparam
+  param itertr
+    caption = "Iteration to observe"
+    default = 1
+  endparam
+ 
+  ;parameter added by ESA
+  param imaginaryCoefficient
+    caption = "Imaginary Coefficient"
+    default = 0.75
+    hint = "Imaginary Coefficient to change the shape of the branches (default .75)"
+  endparam
+
+  ;parameter added by ESA
+  param alterimaginary
+    caption = "Alter Imaginary Coefficient"
+    default = 0.1
+    hint = "Alter the Imaginary Coefficient for each iteration (default 0.1)"
+  endparam
+
+  ;parameter added by ESA
+  param altitudeTree
+    caption = "Altitude Tree"
+    default = 2.0
+    hint = "Create a tree developing more vertically (default 2.0)"
+  endparam
+  
+  ;parameter added by ESA
+  param weirdness
+    caption = "Weirdness"
+    default = 2.2
+    hint = "Weirdness (default 2.2)"
+   endparam
+   
+  ;parameter added by ESA
+  param rotincrCoefficient
+    caption = "Rotation Incrementation"
+    default = 120
+    hint = "Rotation Incrementation Coefficient (default 120)"
+   endparam
+   
+  ;parameter added by ESA
+  param rotationchange
+    caption = "Rotation Change"
+    default = 50
+    hint = "Rotation Change (default 50)"
+   endparam
+}
