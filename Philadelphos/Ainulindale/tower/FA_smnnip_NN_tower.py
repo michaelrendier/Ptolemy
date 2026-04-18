@@ -47,7 +47,7 @@ from typing import List, Tuple, Optional, Dict, Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from FA_smnnip_hyperindex import (
+from Philadelphos.Ainulindale.first_age.FA_smnnip_hyperindex import (
     TextHyperIndex, ImageHyperIndex, MultiChannelTupper,
     SphericalColor, BlockchainLedger,
     layer_to_r, r_to_layer, alpha_nn_from_r, polar_lagrangian,

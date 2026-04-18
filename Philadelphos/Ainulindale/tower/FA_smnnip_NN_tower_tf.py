@@ -43,7 +43,7 @@ from typing import List, Tuple, Optional, Dict, Any
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Pure Python index system (no TF needed for indices)
-from FA_smnnip_hyperindex import (
+from Philadelphos.Ainulindale.first_age.FA_smnnip_hyperindex import (
     TextHyperIndex, ImageHyperIndex, MultiChannelTupper,
     SphericalColor, BlockchainLedger,
     layer_to_r, alpha_nn_from_r, polar_lagrangian,
