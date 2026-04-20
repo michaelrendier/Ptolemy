@@ -6,18 +6,23 @@ __author__ = 'rendier'
 Ptolemy3.py — Integration Kernel v3.0
 ======================================
 Architecture:
-    Ptolemy          — QMainWindow shell, singletons, scene substrate
-    PtolBus          — Face registry, thread lifecycle, suspend/resume
-    PGui (external)  — PWindow chrome, QGraphicsProxyWidget management
-    PtolKVM          — Fake KVM: UDP mouse/kb stream to remote host (stub)
-    PtolHolePunch    — UDP NAT traversal rendezvous (stub, Tesla-integrated)
+    Ptolemy   — QMainWindow shell, singletons, scene substrate
+    PtolBus   — Face registry, thread lifecycle, suspend/resume
+    PGui      — PWindow chrome, QGraphicsProxyWidget management (Pharos/PGui.py)
+    PtolVispy — VisPy GL canvas helper (defined below)
+
+    All networking and device interfacing lives in Tesla:
+        Tesla.HolePunch  — UDP NAT traversal, rendezvous relay, GPS data channel
+        Tesla.KVM        — Fake KVM: mouse/kb structs over punched UDP socket
+        Tesla.Sockets    — Base UDP/TCP layer
+        Tesla.KVMServer  — Remote receiver (python-xlib / uinput application)
 
 Render strategy:
-    QGraphicsScene   — primary desktop, all PWindows live here
-    VisPy canvas     — injected as QGraphicsProxyWidget for GL-accelerated
-                       faces (Alexandria, Archimedes spectrograph, etc.)
-                       Bypasses Qt item overhead: 10^6+ objects GPU-side
-                       while QGraphicsScene handles window chrome/WM only
+    QGraphicsScene   — primary desktop, all PWindows live here (~10^3 items)
+    VisPy/OpenGL     — injected as QGraphicsProxyWidget for data-dense faces
+                       (Alexandria, Archimedes spectrograph, Noether plots)
+                       GPU-side VBO rendering: 10^6+ primitives at 60fps
+                       QGraphicsScene handles chrome only; VisPy handles pixels
 
 Threading contract:
     Each Face launched through PtolBus gets:
@@ -26,17 +31,7 @@ Threading contract:
     PtolBus.suspend(id)  → thread.quit() + timer.stop() for each
     PtolBus.resume(id)   → thread.start() + timer.start() for each
     PtolBus.terminate(id)→ suspend + thread.wait() + del
-    Faces that are not visible are NOT processing. No exceptions.
-
-Network topology:
-    Tesla.Sockets    — base UDP/TCP layer (existing)
-    PtolHolePunch    — rendezvous server model, punches through NAT
-                       Registers (public_ip, public_port) with relay,
-                       peers exchange endpoints, then direct UDP
-    PtolKVM          — sends (dx, dy, button, key) structs over punched
-                       UDP channel. Server side applies via python-xlib
-                       or uinput. No VNC overhead.
-    Fallback         — TreasureHunt tab loads VNC web client if KVM down
+    Faces not visible are NOT processing. No exceptions.
 """
 
 # ── Standard library ──────────────────────────────────────────────────────────
@@ -64,6 +59,10 @@ from Pharos.UtilityFunctions   import cmdline
 from Pharos.Menu               import Menu
 from Pharos.Interface          import User
 from urllib.request            import build_opener
+
+# ── Tesla — all interfacing ────────────────────────────────────────────────────
+from Tesla.HolePunch           import HolePunch
+from Tesla.KVM                 import KVMClient
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -241,290 +240,57 @@ class PtolBus(QObject):
                 for fid, r in self._registry.items()}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  PtolHolePunch — NAT traversal (stub, Tesla-integrated)
-# ══════════════════════════════════════════════════════════════════════════════
-
-class PtolHolePunch(QObject):
-    """
-    UDP hole punch via shared rendezvous relay.
-
-    Protocol (3-way):
-        1. Both peers send REGISTER packets to relay with (peer_id, secret)
-        2. Relay replies with each peer's (public_ip, public_port)
-        3. Peers simultaneously send to each other's public endpoint
-           → NAT tables open in both directions → direct UDP channel
-
-    Relay can be a minimal Python socket server (50 lines) on any VPS.
-    No STUN/TURN infrastructure needed.
-
-    Ports:
-        23232  — Ptolemy primary (from existing Tesla code)
-        32323  — House/relay
-        5555   — Local LAN
-
-    KVM channel uses this punched socket.
-    VNC fallback runs over same channel or separate TCP tunnel.
-    """
-
-    punch_ready    = pyqtSignal(str, int)     # (peer_ip, peer_port)
-    punch_failed   = pyqtSignal(str)
-
-    # Known endpoints (from existing Tesla config — update as IPs change)
-    RELAY_HOST  = '80.255.11.139'
-    RELAY_PORT  = 23232
-    HOUSE_HOST  = '72.211.113.6'
-    HOUSE_PORT  = 32323
-    LOCAL_PORT  = 5555
-
-    def __init__(self, ptolemy, peer_id='ptolemy'):
-        super().__init__(ptolemy)
-        self.Ptolemy  = ptolemy
-        self.peer_id  = peer_id
-        self.sock     = None
-        self._thread  = None
-        self.peer_endpoint = None       # (ip, port) once punched
-
-    def punch(self, peer_id_remote, relay_host=None, relay_port=None):
-        """
-        Begin hole punch to peer_id_remote via relay.
-        Emits punch_ready(ip, port) on success.
-        Non-blocking — runs in PtolHolePunchThread.
-        STUB: wire to Tesla.GpsHolePunch when network config is live.
-        """
-        relay_host = relay_host or self.RELAY_HOST
-        relay_port = relay_port or self.RELAY_PORT
-        self._thread = PtolHolePunchThread(
-            self, peer_id_remote, relay_host, relay_port)
-        self._thread.punch_ready.connect(self._on_punch_ready)
-        self._thread.punch_failed.connect(self.punch_failed)
-        self._thread.start()
-
-    def _on_punch_ready(self, ip, port):
-        self.peer_endpoint = (ip, port)
-        self.punch_ready.emit(ip, port)
-
-    def close(self):
-        if self._thread:
-            self._thread.quit()
-            self._thread.wait(1000)
-        if self.sock:
-            try:
-                self.sock.close()
-            except Exception:
-                pass
-
-
-class PtolHolePunchThread(QThread):
-    punch_ready  = pyqtSignal(str, int)
-    punch_failed = pyqtSignal(str)
-
-    def __init__(self, punch, peer_id_remote, relay_host, relay_port):
-        super().__init__()
-        self.punch           = punch
-        self.peer_id_remote  = peer_id_remote
-        self.relay_host      = relay_host
-        self.relay_port      = relay_port
-
-    def run(self):
-        """
-        STUB implementation — replace body with real punch logic.
-        Real implementation:
-            1. sock.sendto(REGISTER:<peer_id>:<secret>, relay)
-            2. recv relay reply → parse (remote_ip, remote_port)
-            3. simultaneous punch packets to remote_ip:remote_port
-            4. recv first packet back → channel open
-        """
-        import socket, time
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(10.0)
-            self.punch.sock = sock
-
-            # Step 1: Register with relay
-            register_msg = f"REGISTER:{self.punch.peer_id}:{self.peer_id_remote}".encode()
-            sock.sendto(register_msg, (self.relay_host, self.relay_port))
-
-            # Step 2: Wait for relay to return remote peer endpoint
-            data, _ = sock.recvfrom(256)
-            parts = data.decode().split(':')
-            if parts[0] == 'PEER' and len(parts) == 3:
-                remote_ip   = parts[1]
-                remote_port = int(parts[2])
-                # Step 3: Simultaneous punch
-                for _ in range(5):
-                    sock.sendto(b'PUNCH', (remote_ip, remote_port))
-                    time.sleep(0.1)
-                # Step 4: Confirm
-                sock.settimeout(5.0)
-                sock.recvfrom(64)
-                self.punch_ready.emit(remote_ip, remote_port)
-            else:
-                self.punch_failed.emit('Relay response malformed')
-
-        except socket.timeout:
-            self.punch_failed.emit('Hole punch timed out')
-        except Exception as e:
-            self.punch_failed.emit(str(e))
-
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  PtolKVM — Fake KVM over punched UDP channel (stub)
-# ══════════════════════════════════════════════════════════════════════════════
-
-class PtolKVM(QObject):
-    """
-    Transmits local mouse movements and keypresses to a remote Ptolemy node
-    over the punched UDP channel. No VNC overhead — raw input events only.
-
-    Packet format (12 bytes, struct):
-        type   : uint8  (0=mouse_move, 1=mouse_btn, 2=key, 3=ping)
-        flags  : uint8  (button mask, key modifiers)
-        x      : int16  (dx for move, absolute x for btn)
-        y      : int16  (dy for move, absolute y for btn)
-        key    : uint16 (Qt key code)
-        seq    : uint32 (sequence number, for ordering)
-
-    Server side (remote Ptolemy):
-        Receives packets, applies via python-xlib or uinput.
-        Drops out-of-order packets (seq comparison).
-        Heartbeat ping every 5s to keep NAT hole open.
-
-    VNC fallback:
-        If KVM channel fails or remote is unreachable,
-        Ptolemy opens a TreasureHunt tab to the VNC web client URL.
-        Can be pre-configured: self.vnc_url = 'http://host:6080/vnc.html'
-    """
-
-    KVM_PACKET = struct.Struct('!BBhhHI')    # network byte order, 12 bytes
-    HEARTBEAT_INTERVAL_MS = 5000
-
-    connected    = pyqtSignal()
-    disconnected = pyqtSignal()
-
-    def __init__(self, ptolemy):
-        super().__init__(ptolemy)
-        self.Ptolemy      = ptolemy
-        self.sock         = None
-        self.remote       = None        # (ip, port)
-        self.seq          = 0
-        self.enabled      = False
-        self.vnc_url      = None        # set to fallback VNC web URL
-
-        self._heartbeat   = QTimer(self)
-        self._heartbeat.setInterval(self.HEARTBEAT_INTERVAL_MS)
-        self._heartbeat.timeout.connect(self._ping)
-
-    def connect(self, remote_ip, remote_port, sock=None):
-        """
-        Activate KVM stream to remote_ip:remote_port.
-        sock is the already-punched UDP socket from PtolHolePunch.
-        """
-        import socket as _socket
-        self.remote  = (remote_ip, remote_port)
-        self.sock    = sock or _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-        self.enabled = True
-        self._heartbeat.start()
-        self.connected.emit()
-
-    def disconnect(self):
-        self.enabled = False
-        self._heartbeat.stop()
-        self.remote = None
-        self.disconnected.emit()
-
-    def send_mouse_move(self, dx, dy):
-        if not self.enabled: return
-        self._send(0, 0, dx, dy, 0)
-
-    def send_mouse_button(self, x, y, button, pressed):
-        if not self.enabled: return
-        flags = (button & 0x0F) | (0x80 if pressed else 0)
-        self._send(1, flags, x, y, 0)
-
-    def send_key(self, qt_key, modifiers, pressed):
-        if not self.enabled: return
-        flags = int(modifiers) & 0xFF
-        self._send(2, flags | (0x80 if pressed else 0), 0, 0, qt_key & 0xFFFF)
-
-    def _ping(self):
-        self._send(3, 0, 0, 0, 0)
-
-    def _send(self, ptype, flags, x, y, key):
-        self.seq = (self.seq + 1) & 0xFFFFFFFF
-        try:
-            pkt = self.KVM_PACKET.pack(ptype, flags, x, y, key, self.seq)
-            self.sock.sendto(pkt, self.remote)
-        except Exception:
-            pass
-
-    def open_vnc_fallback(self):
-        """Open VNC web client in a TreasureHunt browser tab."""
-        if not self.vnc_url:
-            return
-        # Emit to whatever face is registered as the browser
-        # PtolBus will route this to TreasureHunt if open
-        th_record = next(
-            (r for r in self.Ptolemy.bus._registry.values()
-             if r['cls'] == 'TreasureHunt' and r['state'] == 'running'),
-            None
-        )
-        if th_record and th_record['face']:
-            face = th_record['face']
-            if hasattr(face, 'add_new_tab'):
-                face.add_new_tab(self.vnc_url, 'VNC Fallback')
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  VisPy integration helper
+#  PtolVispy — VisPy GL canvas integration helper
 # ══════════════════════════════════════════════════════════════════════════════
 
 class PtolVispy:
     """
-    Mixin/helper for faces that use VisPy for rendering.
-    VisPy canvas renders via OpenGL — bypasses Qt item overhead entirely.
-    QGraphicsScene handles the chrome (PWindow); VisPy handles the pixels.
+    Mixin/helper for faces that use VisPy for GPU-accelerated rendering.
 
-    3 orders of magnitude object improvement:
-        QGraphicsScene: ~10^3 items before frame rate degrades
-        VisPy/GPU:      10^6+ primitives at 60fps (VBO-driven)
-                        The vispy-test-2.py in working/ shows 16x20=320
-                        signals × 1000 samples = 320,000 vertices realtime.
+    Why VisPy for data-dense faces:
+        QGraphicsScene handles ~10^3 items before frame rate degrades.
+        VisPy renders directly to OpenGL via VBO — 10^6+ primitives at 60fps.
+        Working proof: working/vispy-test-2.py renders 320,000 vertices
+        (16×20 signals × 1000 samples) in real time with GLSL clipping.
+
+    Architecture:
+        VisPy canvas → renders data/geometry to OpenGL surface
+        canvas.native → the underlying Qt widget
+        QGraphicsProxyWidget(canvas.native) → sits on QGraphicsScene
+        PWindow wraps the proxy → chrome, suspend, close
+
+    Faces that benefit: Alexandria (Earth/Core), Archimedes (spectrograph,
+    Noether current plots), Mouseion (GLViewer), any future graph-dense UI.
 
     Usage in a Face:
-        class Alexandria(QWidget, PtolVispy):
+        class AlexandriaGl(QWidget, PtolVispy):
             def __init__(self, parent):
                 super().__init__(parent)
-                self.canvas = self.make_vispy_canvas(size=(800,600))
-                # canvas.native is the Qt widget — embed in layout
+                self.canvas = self.make_vispy_canvas(size=(800, 600))
                 layout = QVBoxLayout(self)
                 layout.addWidget(self.canvas.native)
+                # Implement on_draw, on_resize on self.canvas
 
-    Or for full-window GL face:
-        pwin = self.bus.launch(AlexandriaGl, use_vispy=True)
-        # PtolBus.launch with use_vispy=True proxies canvas.native directly
+    Or full-GL face launched via bus:
+        pwin = ptolemy.bus.launch(AlexandriaGl, use_vispy=True)
+        # bus.launch with use_vispy=True proxies canvas.native directly
     """
 
     @staticmethod
     def make_vispy_canvas(size=(800, 600), title='', keys='interactive'):
-        """
-        Return a VisPy canvas configured for Qt5 backend embedding.
-        Import is lazy — only faces that need GL pay the import cost.
-        """
+        """Return a VisPy canvas configured for Qt5 backend embedding."""
         try:
             import vispy
             vispy.use('PyQt5')
-            from vispy import app, gloo
-            canvas = app.Canvas(
-                size=size,
-                title=title,
-                keys=keys,
-                show=False
-            )
+            from vispy import app
+            canvas = app.Canvas(size=size, title=title, keys=keys, show=False)
             return canvas
         except ImportError:
             raise RuntimeError(
-                "VisPy not installed. pip install vispy --break-system-packages")
+                'VisPy not installed. '
+                'pip install vispy --break-system-packages')
 
     @staticmethod
     def add_vispy_to_scene(scene, canvas, x=0, y=0):
@@ -718,10 +484,23 @@ class Ptolemy(QMainWindow):
 
     def _on_punch_ready(self, ip, port):
         self.kvm.connect(ip, port, sock=self.hole_punch.sock)
+        # TreasureHunt VNC fallback URL (configure per deployment)
+        self.kvm.vnc_url = None   # e.g. 'http://host:6080/vnc.html'
 
     def _on_punch_failed(self, reason):
-        print(f'[PtolKVM] Hole punch failed: {reason}')
-        self.kvm.open_vnc_fallback()
+        print(f'[Tesla/KVM] Hole punch failed: {reason}')
+        vnc_url = self.kvm.open_vnc_fallback()
+        if vnc_url:
+            self._open_vnc_in_browser(vnc_url)
+
+    def _open_vnc_in_browser(self, url):
+        """Route VNC fallback URL to TreasureHunt tab via bus."""
+        for rec in self.bus._registry.values():
+            if rec['cls'] == 'TreasureHunt' and rec['state'] == 'running':
+                face = rec.get('face')
+                if face and hasattr(face, 'add_new_tab'):
+                    face.add_new_tab(url, 'VNC Fallback')
+                    return
 
     # ── Qt primitives ─────────────────────────────────────────────────────────
 
