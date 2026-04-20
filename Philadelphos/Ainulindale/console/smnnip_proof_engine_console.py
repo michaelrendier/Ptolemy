@@ -31,7 +31,7 @@ from typing import List, Dict, Tuple, Optional, Any
 
 # ── Import derivation engine ──────────────────────────────────────────────────
 try:
-    from Philadelphos.Ainulindale.core.smnnip_derivation_pure import (
+    from Ainulindale.core.smnnip_derivation_pure import (
         SMNNIPDerivationEngine, FieldState, Algebra,
         make_element, RenormalizationGroup
     )

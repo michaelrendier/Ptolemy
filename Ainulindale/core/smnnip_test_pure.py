@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 # ── Engine import ─────────────────────────────────────────────────────────────
-from Philadelphos.Ainulindale.core.smnnip_lagrangian_pure import (
+from Ainulindale.core.smnnip_lagrangian_pure import (
     SMNNIPTower, CharacterEncoder, PhysicalConstants,
     build_training_data, train_epoch, generate_text,
     NoetherMonitor, AlgebraLayer, LKinetic, LBias,

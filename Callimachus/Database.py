@@ -2,16 +2,34 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import QObject
-import os, sys
-import MySQLdb
-import urllib
-from PIL import Image
-from PIL import ExifTags as Exif
-# from ast import literal_eval
+import os, sys, urllib, inspect
 
-from formlayout import fedit
-import inspect
+try:
+    from PyQt5.QtCore import QObject
+    _QT = True
+except ImportError:
+    class QObject: pass  # fallback stub
+    _QT = False
+
+try:
+    import MySQLdb
+    _MYSQL = True
+except ImportError:
+    MySQLdb = None
+    _MYSQL = False
+
+try:
+    from PIL import Image
+    from PIL import ExifTags as Exif
+    _PIL = True
+except ImportError:
+    Image = None; Exif = None
+    _PIL = False
+
+try:
+    from formlayout import fedit
+except ImportError:
+    fedit = None
 
 
 

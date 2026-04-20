@@ -63,7 +63,7 @@ try:
     sys.path.insert(0, os.environ.get("PTOLEMY_ROOT", str(
         __import__("pathlib").Path(__file__).resolve().parent.parent
     )))
-    from Philadelphos.Ainulindale.core.smnnip_derivation_pure import (
+    from Ainulindale.core.smnnip_derivation_pure import (
         Algebra, FieldState, NoetherCalculus, EulerLagrange,
         RGFlow, make_element, LagrangianDensity
     )
@@ -404,7 +404,10 @@ class SignalBuffer:
 
 # ── Qt Display ────────────────────────────────────────────────────────────────
 
-class NoetherSpectrographWindow(QMainWindow):
+# Guard: provide stub base if Qt not available
+_WindowBase = QMainWindow if QT_AVAILABLE else object  # type: ignore
+
+class NoetherSpectrographWindow(_WindowBase):
     """
     Main display window.
 

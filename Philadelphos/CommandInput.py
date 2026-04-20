@@ -14,7 +14,7 @@ Previous implementation archived as CommandInput.py.bak
 """
 
 import curses
-from Philadelphos.Ainulindale.console.smnnip_proof_engine_console import main
+from Ainulindale.console.smnnip_proof_engine_console import main
 
 def launch():
     curses.wrapper(main)

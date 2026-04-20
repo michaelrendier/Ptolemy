@@ -27,7 +27,7 @@ import anthropic
 
 # ── SMNNIP engine (optional) ──────────────────────────────────────────────────
 try:
-    from Philadelphos.Ainulindale.core.smnnip_derivation_pure import (
+    from Ainulindale.core.smnnip_derivation_pure import (
         SMNNIPDerivationEngine, FieldState,
     )
     _ENGINE = SMNNIPDerivationEngine()

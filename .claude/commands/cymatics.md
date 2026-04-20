@@ -1,25 +1,45 @@
-# /cymatics — Ainulindale Sonification Engine
+---
+description: Launch the Ainulindalë sonification engine — maps SMNNIP physics to sound
+allowed-tools: Bash(python3 Ainulindale/sonification/*:*), Bash(python3 -m Ainulindale.sonification.*:*)
+---
 
-Launches the Ainulindale sonification pipeline.
+# /cymatics — Ainulindalë Sonification Engine
+
+Launches the Ainulindalë sonification pipeline. Maps the SMNNIP Cayley-Dickson
+algebra tower to a particle-instrument orchestration (no floating point in signal chain).
 
 ## Usage
+
+```bash
+# Movement I — Introduction (particles introduced solo, Peter and the Wolf structure)
+python3 Ainulindale/sonification/ainulindale_sonification_mv1.py
+
+# Mars sonification
+python3 Ainulindale/sonification/ainulindale_mars.py
+
+# Electron orbitals
+python3 Ainulindale/sonification/ainulindale_electron_orbitals.py
+
+# Beginning of light
+python3 Ainulindale/sonification/ainulindale_beginning_of_light.py
 ```
-/cymatics [movement] [--output path] [--demo]
-```
 
-## Arguments
-- `movement` : mv1 (intro), mars, electron_orbitals, beginning_of_light (default: mv1)
-- `--output` : WAV output path (default: ./output.wav)
-- `--demo`   : run with synthetic demo data
+## Architecture
 
-## Invokes
-- `Ainulindale/sonification/ainulindale_sonification_mv1.py`   — Movement I: Introduction
-- `Ainulindale/sonification/ainulindale_mars.py`               — Mars sonification
-- `Ainulindale/sonification/ainulindale_electron_orbitals.py`  — Electron orbitals
-- `Ainulindale/sonification/ainulindale_beginning_of_light.py` — Beginning of light
+All frequencies: exact rational arithmetic (fractions.Fraction)
+All durations: exact integer sample counts
+WAV output: pure PCM 16-bit signed integer — NO floating point in signal chain
 
-## SMNNIP integration
-The sonification engine maps the Cayley-Dickson algebra tower to instrument families:
-  ℝ → Higgs (cello), ℂ → Photon (flute), ℍ → W/Z bosons (brass), 𝕆 → Gluons (percussion)
+## Algebra → Instrument mapping
 
-Noether current violations → amplitude anomalies in the output waveform.
+| Stratum | Gauge | Particle | Instrument |
+|---------|-------|----------|------------|
+| ℝ | trivial | Higgs | Cello (low, sustained) |
+| ℂ | U(1) | Photon | Flute (high, pure) |
+| ℍ | SU(2) | W±, Z⁰ | French Horn / Tuba |
+| 𝕆 | SU(3) | Gluons (8) | Percussion (8 voices) |
+
+## Noether integration
+
+Conservation violation events → amplitude anomalies in output WAV.
+Quasi-particle rests follow Fibonacci ratios (Gravinon = 144/89 beats).
