@@ -277,6 +277,7 @@ class Agora:
 
 def _repl() -> None:
     """Interactive Agora REPL — queries both models, prints labeled results."""
+    from Philadelphos.data_input import parse_and_run as _data_input
     print("=" * 70)
     agora = Agora()
     if not agora._ready_claude and not agora._ready_gemini:
@@ -303,6 +304,9 @@ def _repl() -> None:
             continue
         if user_input.lower() == "last" and last_result:
             print(last_result)
+            continue
+        if user_input.lower().startswith("/datainput"):
+            _data_input(user_input, ainur_instance=agora.claude)
             continue
 
         print()

@@ -697,6 +697,7 @@ class Ainur:
 
 def _repl() -> None:
     """Simple interactive REPL for testing Ainur from the terminal."""
+    from Philadelphos.data_input import parse_and_run as _data_input
     print("=" * 60)
     ainur = Ainur()
     if not ainur.status.ready:
@@ -718,6 +719,9 @@ def _repl() -> None:
         if user_input.lower() == "clear":
             ainur.clear_history()
             print("[History cleared]")
+            continue
+        if user_input.lower().startswith("/datainput"):
+            _data_input(user_input, ainur_instance=ainur)
             continue
         print(f"\nClaude: ", end="", flush=True)
         for chunk in ainur.stream(user_input):
