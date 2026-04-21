@@ -288,13 +288,30 @@ class _ContextBuffer:
     """
     Layer 1: raw FIFO, 2x Claude context capacity. Prompts only.
     Layer 2: evicted prompts compressed.
-    Layer 3: HyperWebster indexing stub.
+    Layer 3: HyperWebster index — word_key + context_snippet written
+             together as a paired record to the Vast Repository.
+             The context snippet and repository entry always live adjacent.
     """
     def __init__(self):
         self._l1: deque = deque()
         self._l1_tokens: int = 0
-        self._l3: queue.Queue = queue.Queue()
+        self._l3: queue.Queue = queue.Queue()  # (word_key, snippet) pairs
         self.last: Optional[str] = None
+        self._repo = None   # VastRepository instance, lazily loaded
+
+    def _get_repo(self):
+        if self._repo is None:
+            try:
+                import os as _os
+                from Callimachus.vast_repository import VastRepository
+                _repo_root = _os.path.join(
+                    _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                    "Callimachus", "VastRepository"
+                )
+                self._repo = VastRepository(_repo_root)
+            except Exception:
+                self._repo = False   # mark as unavailable, don't retry
+        return self._repo if self._repo is not False else None
 
     def push(self, text: str, se: _SedenionElement):
         self.last = text
@@ -303,12 +320,47 @@ class _ContextBuffer:
             ev, et = self._l1.popleft()
             self._l1_tokens -= et
             ct = _compress(ev)
+            snippet = ct[:128]
             for w in ct.split():
                 k = w.lower().strip(".,!?;:\"'")
                 if k:
-                    self._l3.put(k)
+                    self._l3.put((k, snippet))   # word + context always paired
         self._l1.append((text, tc))
         self._l1_tokens += tc
+        # Drain immediately on each push — keeps repo in sync
+        self._drain()
+
+    def _drain(self):
+        """
+        Write all pending Layer 3 entries to the Vast Repository.
+        Each record: word_key + context_snippet, always written together.
+        """
+        import datetime as _dt, hashlib as _hl
+        repo = self._get_repo()
+        if repo is None:
+            return
+        from Callimachus.vast_repository import Entry
+        while not self._l3.empty():
+            try:
+                word_key, snippet = self._l3.get_nowait()
+            except Exception:
+                break
+            eid = _hl.sha256(f"ctx:{word_key}:{snippet[:32]}".encode()).hexdigest()
+            entry = Entry(
+                id        = eid,
+                url       = f"context://buffer/{word_key}",
+                fetcher   = "context_buffer",
+                timestamp = _dt.datetime.utcnow().isoformat() + "Z",
+                title     = word_key,
+                text      = snippet,
+                category  = "context_buffer",
+                subject   = word_key,
+                tags      = ["context_buffer", "layer3", word_key],
+            )
+            try:
+                repo.store(entry)
+            except Exception:
+                pass   # non-fatal — context drain never blocks inference
 
     def snapshot(self):
         return [t for t, _ in self._l1]
