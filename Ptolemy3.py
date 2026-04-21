@@ -416,20 +416,43 @@ class Ptolemy(QMainWindow):
 
     def _launch_philadelphos(self):
         """
-        Philadelphos is the AI/command layer. Launch inline if available,
-        subprocess fallback otherwise.
+        Philadelphos is the AI/command layer.
+
+        Primary:  philadelphos_console — Noether Information Current terminal
+        Fallback: legacy Phila slot → CommandInput → None
         """
+        # Primary: Noether Current console (subprocess terminal)
+        try:
+            console_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'Philadelphos', 'philadelphos_console.py'
+            )
+            if os.path.exists(console_path):
+                self._philadelphos_proc = self.bus.launch_subprocess(console_path)
+                self.Philadelphos = None   # subprocess — no Qt widget
+                return
+        except Exception as _e:
+            print(f'[Philadelphos] Console subprocess failed: {_e}')
+
+        # Fallback: inline Phila slot
         try:
             from Philadelphos.Phila import Phila
             self.Philadelphos = Phila(self)
             self.scene.addWidget(self.Philadelphos)
+            return
         except ImportError:
-            try:
-                from Pharos.Philadelphos.CommandInput import Command
-                self.Philadelphos = Command(self)
-                self.scene.addWidget(self.Philadelphos)
-            except ImportError:
-                self.Philadelphos = None
+            pass
+
+        # Fallback: legacy CommandInput
+        try:
+            from Pharos.Philadelphos.CommandInput import Command
+            self.Philadelphos = Command(self)
+            self.scene.addWidget(self.Philadelphos)
+            return
+        except ImportError:
+            pass
+
+        self.Philadelphos = None
 
     # ── Face launchers (bus delegates) ────────────────────────────────────────
 
