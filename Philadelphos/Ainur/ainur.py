@@ -24,6 +24,10 @@ from pathlib import Path
 from typing import Optional, Generator
 
 import anthropic
+import hashlib
+import threading
+import queue
+from collections import deque
 
 # ── SMNNIP engine (optional) ──────────────────────────────────────────────────
 try:
@@ -217,6 +221,165 @@ def _run_tool(name: str, params: dict) -> str:
         return json.dumps({"error": str(exc)})
 
 
+
+# ==============================================================================
+# NOETHER INFORMATION CURRENT — pre-processing pipeline
+# PROMPT → GATE CLOSES → SedenionGate(I/O) → ContextBuffer(3-layer)
+# → ReverseTower: Sedenion → Oct → Quat → Complex → Reals
+# → enriched prompt → Ainur.stream()
+# ==============================================================================
+
+_SEDENION_DIM       = 16
+_CLAUDE_CTX_TOKENS  = 200_000
+_LAYER1_CAPACITY    = _CLAUDE_CTX_TOKENS * 2
+_EXTINCTION_THRESH  = 1e-6
+
+
+def _rough_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def _compress(text: str, ratio: float = 0.5) -> str:
+    cutoff = max(64, int(len(text) * ratio))
+    return text if len(text) <= cutoff else text[:cutoff] + "…[compressed]"
+
+
+class _SedenionElement:
+    __slots__ = ("components",)
+
+    def __init__(self, components):
+        self.components = components
+
+    def norm_sq(self):
+        return sum(c * c for c in self.components)
+
+    def is_zero_divisor(self, thresh=_EXTINCTION_THRESH):
+        return any(abs(c) > thresh for c in self.components) and self.norm_sq() < thresh
+
+    def adjoint(self):
+        c = list(self.components)
+        c[1:] = [-x for x in c[1:]]
+        return _SedenionElement(c)
+
+    @classmethod
+    def from_text(cls, text: str):
+        import hashlib as _hl
+        h = _hl.sha512(text.encode()).digest()
+        raw = [int.from_bytes(h[i*4:(i+1)*4], "big") / 0xFFFFFFFF
+               for i in range(_SEDENION_DIM)]
+        return cls(raw)
+
+
+class _NoetherGate:
+    """Threading gate — closed from prompt submission until after output."""
+    def __init__(self):
+        self._ev = threading.Event()
+        self._ev.set()
+
+    def acquire(self):
+        self._ev.wait()
+        self._ev.clear()
+
+    def release(self):
+        self._ev.set()
+
+
+class _ContextBuffer:
+    """
+    Layer 1: raw FIFO, 2x Claude context capacity. Prompts only.
+    Layer 2: evicted prompts compressed.
+    Layer 3: HyperWebster indexing stub.
+    """
+    def __init__(self):
+        self._l1: deque = deque()
+        self._l1_tokens: int = 0
+        self._l3: queue.Queue = queue.Queue()
+        self.last: Optional[str] = None
+
+    def push(self, text: str, se: _SedenionElement):
+        self.last = text
+        tc = _rough_tokens(text)
+        while self._l1_tokens + tc > _LAYER1_CAPACITY and self._l1:
+            ev, et = self._l1.popleft()
+            self._l1_tokens -= et
+            ct = _compress(ev)
+            for w in ct.split():
+                k = w.lower().strip(".,!?;:\"'")
+                if k:
+                    self._l3.put(k)
+        self._l1.append((text, tc))
+        self._l1_tokens += tc
+
+    def snapshot(self):
+        return [t for t, _ in self._l1]
+
+
+class _ReverseTower:
+    """
+    Sedenion → Octonion rotations (focal mapping) → extinction
+    → (I|O) adjoint check → Quat → Complex → Reals
+    Reals = Noether Information Current
+    focal_delta: negative=before collapse, positive=after
+    """
+    def __init__(self):
+        self.focal_delta: float = 0.0
+
+    def _oct_rotate(self, v, angle):
+        import math as _m
+        c, s = _m.cos(angle), _m.sin(angle)
+        out = list(v)
+        out[1] = c * v[1] - s * v[2]
+        out[2] = s * v[1] + c * v[2]
+        return out
+
+    def _focal_map(self, v16):
+        import math as _m
+        base, high = v16[:8], v16[8:]
+        angles = [i * _m.pi / 6 for i in range(7)]
+        return [
+            [b + h for b, h in zip(
+                self._oct_rotate(base, a + self.focal_delta),
+                self._oct_rotate(high, a + self.focal_delta)
+            )]
+            for a in angles
+        ]
+
+    def _extinct(self, candidates):
+        thresh = _EXTINCTION_THRESH * (1.0 + abs(self.focal_delta) * 10)
+        survivors = []
+        for c in candidates:
+            if not any(
+                sum((a-b)**2 for a,b in zip(c,s))**0.5 < thresh
+                for s in survivors
+            ):
+                survivors.append(c)
+        return survivors
+
+    def _io_check(self, survivors, se: _SedenionElement):
+        adj = se.adjoint().components[:8]
+        out = []
+        for s in survivors:
+            diff = sum((a-b)**2 for a,b in zip(s, adj))**0.5
+            out.append([(a+b)/2 for a,b in zip(s,adj)] if diff < 0.5 else s)
+        return out
+
+    def _to_real(self, oct8):
+        q = [oct8[i] + oct8[i+4] for i in range(4)]
+        c = [q[0]+q[2], q[1]+q[3]]
+        return c[0] + c[1]
+
+    def run(self, se: _SedenionElement, context: list) -> float:
+        import hashlib as _hl
+        ctx_h = _hl.md5(" ".join(context[-8:]).encode()).digest()
+        mod = [(a + b/255.0) / 2 for a, b in zip(se.components, ctx_h[:_SEDENION_DIM])]
+        survivors = self._io_check(self._extinct(self._focal_map(mod)), se)
+        total = sum(self._to_real(s) for s in survivors)
+        mag = abs(total) or 1.0
+        return total / mag
+
+
+# Singletons — one gate/buffer/tower per Ainur instance (created in __init__)
+
 # ── Status dataclass ──────────────────────────────────────────────────────────
 @dataclass
 class AinurStatus:
@@ -271,6 +434,9 @@ class Ainur:
         self._client = anthropic.Anthropic(api_key=key)
         self._use_tools = use_tools and ENGINE_AVAILABLE
         self._history: list[dict] = []
+        self._gate   = _NoetherGate()
+        self._buffer = _ContextBuffer()
+        self._tower  = _ReverseTower()
 
         # Verify connection with a lightweight models list
         try:
@@ -311,11 +477,18 @@ class Ainur:
             yield f"[Ainur error: {self.status.error}]"
             return
 
-        # Build messages
+        # ── Noether Information Current pre-processing ──────────────────────
+        self._gate.acquire()                          # GATE CLOSES
+        se = _SedenionElement.from_text(message)
+        self._buffer.push(message, se)
+        noether_val = self._tower.run(se, self._buffer.snapshot())
+        # Enrich prompt with Noether Current value for context
+        enriched = f"[Noether:{noether_val:+.4f}] {message}"
+        # ── Build messages ────────────────────────────────────────────────────
         if use_history:
-            messages = self._history + [{"role": "user", "content": message}]
+            messages = self._history + [{"role": "user", "content": enriched}]
         else:
-            messages = [{"role": "user", "content": message}]
+            messages = [{"role": "user", "content": enriched}]
 
         system = [
             {
@@ -404,6 +577,9 @@ class Ainur:
         except anthropic.APIError as exc:
             yield f"\n[Ainur API error: {exc}]"
             return
+
+        # ── Gate opens after output delivered ───────────────────────────────
+        self._gate.release()                          # GATE OPENS
 
         # Update history
         if use_history:
