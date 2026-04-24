@@ -184,17 +184,55 @@ class ContextBuffer:
 
     def _layer3_index(self, prompt: BufferedPrompt):
         """
-        Layer 3: HyperWebster indexing stub.
-        Tokenizes prompt into words, emits (word, prompt_ref) for
-        JSON placement in the Vast Repository.
-        Full HyperWebster addressing (Horner/Cayley-Dickson) wired
-        externally via Callimachus.
+        Layer 3: HyperWebster indexing.
+        Tokenizes prompt into words, queues (word, timestamp, snippet) for
+        ingestion via Callimachus/hyperwebster_layer3.py → JSON word shards.
+        Full addressing (Horner bijection / Cayley-Dickson) handled by bridge.
+        Bridge lazy-loaded: Ainulindale boots cleanly without Callimachus.
         """
-        words = prompt.text.split()
+        words   = prompt.text.split()
+        snippet = prompt.text[:128]
         for word in words:
             key = word.lower().strip(".,!?;:\"'")
             if key:
-                self._layer3_queue.put((key, prompt.timestamp, prompt.text[:128]))
+                self._layer3_queue.put((key, prompt.timestamp, snippet))
+
+        # Opportunistic drain to HyperWebster bridge
+        self._try_drain_to_hw()
+
+    # -- HyperWebster bridge (lazy) ----------------------------------------
+
+    _hw_bridge = None          # class-level singleton, set on first successful import
+    _hw_tried  = False
+
+    def _try_drain_to_hw(self):
+        """
+        Drain Layer 3 queue to HyperWebster bridge when available.
+        Silently no-ops if Callimachus is not on the path.
+        """
+        if not ContextBuffer._hw_tried:
+            ContextBuffer._hw_tried = True
+            try:
+                import importlib, sys, os
+                # Allow callimachus to be found from Ptolemy root
+                ptol_root = os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                if ptol_root not in sys.path:
+                    sys.path.insert(0, ptol_root)
+                from Callimachus.hyperwebster_layer3 import HyperWebsterLayer3
+                ContextBuffer._hw_bridge = HyperWebsterLayer3()
+            except Exception:
+                pass  # Callimachus unavailable — Layer 3 queue holds entries
+
+        bridge = ContextBuffer._hw_bridge
+        if bridge is None:
+            return
+        entries = self.layer3_drain()
+        if entries:
+            try:
+                bridge.ingest(entries)
+            except Exception:
+                pass  # non-fatal — entries lost but pipeline continues
 
     def layer3_drain(self) -> List[Tuple[str, float, str]]:
         """Drain all pending Layer 3 index entries."""

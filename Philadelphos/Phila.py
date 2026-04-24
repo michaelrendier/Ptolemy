@@ -219,3 +219,83 @@ if __name__ == "__main__":
     print("Philadelphos neural architecture slot — status:")
     print(architecture_info())
     print(f"Registered faces: {list_faces()}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PHILA — Qt face widget
+# Ptolemy3.py imports: from Philadelphos.Phila import Phila
+# ─────────────────────────────────────────────────────────────────────────────
+
+try:
+    from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel,
+                                  QTextEdit, QSizePolicy)
+    from PyQt5.QtCore    import Qt
+    from PyQt5.QtGui     import QFont, QColor
+
+    class Phila(QWidget):
+        """
+        Philadelphos face widget — AI/command layer for the Ptolemy desktop.
+
+        Embeds PtolemyEars (input) and a response display area.
+        Wires ptolemy_tongue as the last output filter.
+
+        Layout:
+            ┌─────────────────────────────────────┐
+            │  response_display (QTextEdit, r/o)  │
+            ├─────────────────────────────────────┤
+            │  PtolemyEars  [input ──────────] [→]│
+            └─────────────────────────────────────┘
+        """
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setMinimumSize(480, 200)
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self._build_ui()
+
+        def _build_ui(self):
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(4, 4, 4, 4)
+            layout.setSpacing(4)
+
+            # Response display
+            self.response_display = QTextEdit(self)
+            self.response_display.setReadOnly(True)
+            self.response_display.setFont(QFont('Ubuntu Mono', 10))
+            self.response_display.setStyleSheet(
+                'background:#050d0d; color:#00dddd; border:1px solid #005555;')
+            layout.addWidget(self.response_display, stretch=1)
+
+            # Ears (input + gate indicator)
+            try:
+                from Philadelphos.ptolemy_ears import PtolemyEars
+                self.ears = PtolemyEars(self)
+                self.ears.set_response_handler(self._on_response)
+                layout.addWidget(self.ears)
+            except Exception as e:
+                fallback = QLabel(f"[ears unavailable: {e}]", self)
+                fallback.setFont(QFont('Ubuntu Mono', 9))
+                layout.addWidget(fallback)
+                self.ears = None
+
+        def _on_response(self, text: str):
+            """Append response to display widget."""
+            self.response_display.append(text)
+            # Scroll to bottom
+            sb = self.response_display.verticalScrollBar()
+            sb.setValue(sb.maximum())
+
+        def setOutput(self, text: str, speak: bool = False):
+            """
+            Ptolemy3.py calls this on scene item click.
+            Displays item information in the response pane.
+            """
+            self.response_display.append(f"[item] {text}")
+
+except ImportError:
+    # Headless / non-Qt environment — stub
+    class Phila:  # type: ignore[no-redef]
+        def __init__(self, parent=None):
+            pass
+        def setOutput(self, text, speak=False):
+            pass

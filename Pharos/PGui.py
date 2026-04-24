@@ -295,9 +295,41 @@ class PWindow(QGraphicsItem):
     MINIMIZED = 0
     NORMAL    = 1
 
-    def __init__(self, scene, widget, title='Ptolemy',
+    def __init__(self, scene_or_widget, widget=None, title='Ptolemy',
                  thread=None, timers=None,
-                 x=60, y=60, w=640, h=480):
+                 x=60, y=60, w=640, h=480,
+                 face_id=None, bus=None, ptolemy=None):
+        """
+        Two call signatures are supported:
+
+        Legacy / direct:
+            PWindow(scene, widget, title=..., thread=..., timers=..., x, y, w, h)
+
+        PtolBus.launch() style:
+            PWindow(face_widget, title=..., face_id=..., bus=..., ptolemy=...)
+            — scene is inferred from ptolemy.scene
+            — thread/timers are pulled from face_widget._ptol_thread / ._ptol_timers
+        """
+        # ── resolve overloaded first arg ──────────────────────────────────
+        if widget is None:
+            # PtolBus call: first arg IS the widget; scene comes from ptolemy
+            widget = scene_or_widget
+            if ptolemy is not None:
+                scene = ptolemy.scene
+            else:
+                raise ValueError("PWindow: scene or ptolemy required")
+        else:
+            scene = scene_or_widget
+
+        # pull thread/timers from face if not explicitly supplied
+        if thread is None:
+            thread = getattr(widget, '_ptol_thread', None)
+        if not timers:
+            timers = getattr(widget, '_ptol_timers', [])
+
+        self._face_id = face_id
+        self._bus     = bus
+        self._ptolemy = ptolemy
 
         super().__init__()
 
@@ -307,6 +339,7 @@ class PWindow(QGraphicsItem):
         self._thread  = thread
         self._timers  = timers or []
         self._state   = self.NORMAL
+        # face_id/bus/ptolemy already set above in overload block
 
         # geometry
         self._x       = x
@@ -610,19 +643,25 @@ class PWindow(QGraphicsItem):
         self.update()
 
     def _close(self):
-        """Terminate thread, remove from scene."""
-        # stop thread cleanly
+        """Terminate thread, remove from scene.
+        Delegates to PtolBus.terminate() when available so registry stays clean.
+        """
+        if self._bus is not None and self._face_id is not None:
+            # Bus handles full teardown including scene removal
+            self._bus.terminate(self._face_id)
+            return
+
+        # standalone path — no bus
         if self._thread is not None:
             if self._thread.isRunning():
                 self._thread.quit()
                 self._thread.wait()
 
-        # stop timers
         for t in self._timers:
             t.stop()
 
-        # detach and remove
-        self._scene.removeItem(self)
+        if self._scene.items().__contains__(self) if hasattr(self._scene, 'items') else True:
+            self._scene.removeItem(self)
 
     # ── public API ─────────────────────────────────────────────────────────
 
