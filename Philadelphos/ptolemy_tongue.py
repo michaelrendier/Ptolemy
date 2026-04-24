@@ -125,15 +125,16 @@ class FoldGeometry:
         self.reset()
 
     def reset(self):
-        self.pentagons      : int   = 0
-        self.hexagons       : int   = 0
-        self.repeat_offsets : List  = []
-        self.punct_offsets  : List  = []
-        self.bracket_depth  : int   = 0
-        self.unclosed       : List  = []
-        self.long_lines     : List  = []
-        self.pentagon_ratio : float = 0.0
-        self._total_chars   : int   = 0
+        self.pentagons            : int   = 0
+        self.hexagons             : int   = 0
+        self.repeat_offsets       : List  = []
+        self.punct_offsets        : List  = []
+        self.word_repeat_offsets  : List  = []   # (word, count) pairs
+        self.bracket_depth        : int   = 0
+        self.unclosed             : List  = []
+        self.long_lines           : List  = []
+        self.pentagon_ratio       : float = 0.0
+        self._total_chars         : int   = 0
 
     def analyse(self, text: str) -> 'FoldGeometry':
         self.reset()
@@ -208,7 +209,32 @@ class FoldGeometry:
         self.bracket_depth = max_bracket_depth
         self.unclosed      = [ch for ch, _ in bracket_stack]
         self.pentagon_ratio = self.pentagons / max(1, n)
+
+        # Word-level run detection (sequence of same word >MAX_WORD_RUN times)
+        self._detect_word_runs(text)
+
         return self
+
+    # Maximum consecutive identical words (case-insensitive) before pathological
+    _MAX_WORD_RUN = 5
+
+    def _detect_word_runs(self, text: str):
+        """Find repeated word runs exceeding _MAX_WORD_RUN."""
+        words = text.lower().split()
+        if not words:
+            return
+        run_word  = words[0]
+        run_count = 1
+        for w in words[1:]:
+            if w == run_word:
+                run_count += 1
+                if run_count > self._MAX_WORD_RUN:
+                    if (not self.word_repeat_offsets or
+                            self.word_repeat_offsets[-1][0] != run_word):
+                        self.word_repeat_offsets.append((run_word, run_count))
+            else:
+                run_word  = w
+                run_count = 1
 
     def is_pathological(self) -> Tuple[bool, List[str]]:
         """
@@ -227,6 +253,9 @@ class FoldGeometry:
         if self.pentagon_ratio > MAX_PENTAGON_RATIO:
             reasons.append(
                 f"pentagon_ratio:{self.pentagon_ratio:.3f}>{MAX_PENTAGON_RATIO}")
+        if self.word_repeat_offsets:
+            reasons.append(
+                f"word_run:{len(self.word_repeat_offsets)}_sites")
         return bool(reasons), reasons
 
 
@@ -277,6 +306,7 @@ class PtolemyTongue:
         text = self._strip_controls(text)
         text = self._normalise_unicode(text)
         text = self._collapse_repeats(text)
+        text = self._collapse_word_runs(text)
         text = self._reduce_punct_storms(text)
         text = self._wrap_long_lines(text)
 
@@ -305,6 +335,33 @@ class PtolemyTongue:
     def _normalise_unicode(text: str) -> str:
         """NFC normalisation — canonical composed form."""
         return unicodedata.normalize('NFC', text)
+
+    def _collapse_word_runs(self, text: str) -> str:
+        """
+        Collapse runs of >5 identical consecutive words (case-insensitive)
+        to exactly 5. Preserves surrounding whitespace structure.
+        Applied word-by-word across the whole text as a flat token stream.
+        """
+        MAX_WORD_RUN = 5
+        tokens  = re.split(r'(\s+)', text)    # alternating [word, ws, word, ws…]
+        result  = []
+        run_word  = None
+        run_count = 0
+        for tok in tokens:
+            if tok.strip() == '':             # whitespace token — pass through
+                result.append(tok)
+                continue
+            lower = tok.lower()
+            if lower == run_word:
+                run_count += 1
+                if run_count <= MAX_WORD_RUN:
+                    result.append(tok)
+                # else: silently drop — the word run is already at max
+            else:
+                run_word  = lower
+                run_count = 1
+                result.append(tok)
+        return ''.join(result)
 
     def _collapse_repeats(self, text: str) -> str:
         """
