@@ -1,53 +1,84 @@
-# Ptolemy Context Primer — 2026-04-20
+# PTOLEMY CONTEXT PRIMER
+# Generated: 2026-04-24 | Commit: 51da51d
+# Push this file to repo root as CONTEXT_PRIMER.md
 
-## Architecture: Noether Information Current
+## STRICT PROTOCOLS (do not relist, acknowledge only at entry)
+- Least token/context intensive responses
+- Signature every response: [timestamp | context% | repo commit | cache path]
+- Alert at 50% context remaining, ask about new primer at 85%
+- No unqualified medical/psych determinations, no time-passage assumptions
+- Never re-clone repo if /home/claude/Ptolemy exists this session
+- GitHub PAT: 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
 
-- Sedenion is the (I|O) of the Noether Information Current
-- Based on catastrophic light dumping from a waveform entering a spherical medium
-- Non-isotropic shape has multiple focal points
-- Focal points tested: if they map onto a single point, they are relevant
-- (I|O) finds different descriptions of the same thing and maps multiple focal points into a single non-extinct data collection
-- Whole is then catastrophically collapsed to a single focal point
-- Tuning: move focal point slightly before or slightly after the catastrophic waveform collapse
-- THE CURRENT SELECTS THE RESPONSE
-- Data input is gated when a prompt is sent — buffered, queued, thread paused
+## HARDWARE
+- HP Elitebook 820 G3 i7 HD520 Skylake / Linux Mint Xia + UbuntuStudioInstaller
+- Microsoft Surface Go 1824 / Ubuntu 24.04 linux-surface kernel — PRIMARY REPO DEVICE
 
-## Multiple Focal Points
-- SOLVED
+## REPO STATE (commit 51da51d)
+Files changed this session:
+- Pharos/PGui.py — PWindow.__init__ overloaded for face_id/bus/ptolemy (PtolBus.launch() compatible)
+- Philadelphos/ptolemy_ears.py — NEW: PtolemyEars QWidget, SedenionGate off-thread, speak_text()
+- Philadelphos/ptolemy_tongue.py — NEW: fold-geometry output filter (pentagon/hex chromatography)
+  - char-level repeat collapse (MAX_REPEAT=8)
+  - word-level run collapse (MAX_WORD_RUN=5) — added after smoke test caught word repeat gap
+  - punct storm reduction, bracket depth check, control char strip, unicode NFC
+  - FoldGeometry analyser, pentagon_ratio advisory flag
+- Philadelphos/Phila.py — Phila QWidget face class added (response display + ears embedded)
+- Callimachus/hyperwebster_layer3.py — NEW: ContextBuffer Layer3 → HyperWebster JSON shard bridge
+  - WordRecord with Rabies Principle (first_encountered immutable)
+  - Atomic file writes (tmp+rename), shard dirs words_a/..z/+other
+- Ainulindale/core/noether_chain_input.py — Layer3 stub replaced with live bridge + lazy import
 
-## Pipeline Order
-[PROMPT INPUT] → [GATE: pause ingestion thread] → [CONTEXT BUFFER] → [RESPONSE] → [THREAD RESUMES]
+## IMMEDIATE NEXT TASK
+Patch smnnip_inversion_engine.py from Drive:
+  Drive file: 1IEX5S5j7LNUwvYauOxEVrJxP98_-EUpn (patched, 43654 bytes)
+  Repo file:  Ainulindale/core/smnnip_inversion_engine.py (currently 39501 bytes)
+  Key addition: two-Noether-current docstring clarification (geometric vs gauge)
+  NoetherMonitor docstring now explicitly labels which current lives in which file
 
-## Gate
-- Triggered by prompt submission
-- Pauses data ingestion thread
-- Queues it
-- Thread resumes AFTER response
+Steps:
+  1. base64-decode Drive blob → write to Ainulindale/core/smnnip_inversion_engine.py
+  2. python3 -c "import ast; ast.parse(...)" smoke test
+  3. Run smnnip_test_pure.py
+  4. git add + commit + push
 
-## Context Buffer (3 Layers)
-- Layer 1: 2x Claude context size — history of prompts without responses — FIFO cycle
-- Layer 2: FIFO overflow prompt gets reduced in size to maintain proper context depth
-- Layer 3: Indexing through HyperWebster → JSON file + Vast Repository = persistent memory
+## AINULINDALE DRIVE FOLDER (read-only prefilter)
+Root:        18O-dD-_giAeUdCeyv8kylzyukIB0VFTO
+Code folder: 1ZkistnAFGj-anUfJNoHQ2zc8CkP9drIl
+Patched:     1LUsMeZVVdMKs3cRsXRBvuOHQnFGqNkgJ
+  - derivation:  12dPP0yCC47ZnrCr3mV9Pcej1LF0tTKGG (71386 bytes = repo, no update needed)
+  - inversion:   1IEX5S5j7LNUwvYauOxEVrJxP98_-EUpn (43654 bytes > repo 39501, NEEDS PATCH)
+Noether:     1NlLgjbx6nYglSThXnXFcTULA1b5Wuqom
+Synth:       1wnGBolQp2F4gUnV4UMduiBsNLHQ5nfv3
+Sonification: 1SkD8Jpg88P69aITN6pTqZ7AwOhynaL0M
 
-## Context Buffer Notes
-- Not continuous — it is a handler for every prompt
-- Prompt processed Everett Many Worlds style by Lagrangian of SMNNIP
-- Rotations happen in octonion layer by attempting to map multiple focal points into single focal point
-- Those that can't map are extinct
-- If multiple focal points remain after extinction mapping, (I|O) determines which are the same object from different angles
-- Response remains, may need tuning
+## BUILD PHASES (active)
+Phase 2 — DONE: PWindow bus/face_id wiring
+Phase 3 — DONE: ptolemy_ears + Phila QWidget face
+Phase 4 — DONE: HyperWebster Layer3 bridge (hyperwebster_layer3.py)
+Phase 5 (tongue) — DONE: ptolemy_tongue fold geometry filter
+Pending: inversion engine patch from Drive
 
-## TITO
-- Text In Text Out — the entire model operates on this principle
-- Analogous to I/O, 1 and 0
+## KEY ARCHITECTURE NOTES
+- PtolBus.launch() → PWindow(face, title=..., face_id=..., bus=..., ptolemy=...)
+- ptolemy_ears pipeline: text/speech → SedenionGate (off-thread) → _generate_response() → tongue → display
+- _generate_response() is a stub: wire to NEURAL_ARCHITECTURE.infer() when model loaded
+- tongue filter order: strip_controls → normalise_unicode → collapse_repeats → collapse_word_runs → reduce_punct_storms → wrap_long_lines → pentagon_ratio advisory
+- Layer3 bridge: lazy import, non-fatal if Callimachus absent, atomic writes
+- Rabies Principle: first_encountered in WordRecord is PERMANENTLY IMMUTABLE
 
-## Ptolemy's Ears — Prompt Input
-- Text input function is the entry point
-- Speech recognition is separate — it outputs text — feeds same input function
-- Single normalized text stream regardless of source
-- Event-driven: submission event (Enter/Send) triggers the Gate
-- Not polled — system waits
+## SMNNIP STATE
+- derivation engine: ACTIVE, all 7 ops pass, conserved=True
+- inversion engine: PATCHED in Drive, needs repo update
+- gap: 0.00070 (real, open — no closed form yet)
+- D_STAR_SPEC = 0.24600 (BK spectral, ACTIVE)
+- D_STAR_TAUT = Omega/ln(10) — REFERENCE ONLY, NOT d*
 
-## Current Task
-- Build prompt input function (ptolemy_ears)
-- Chain: ptolemy_ears → gate → context buffer → response → thread resume
+## PTOLEMY3.py
+All top-level imports verified present. PtolBus + PWindow + Phila scope resolved.
+Philadelphos: inline Phila() preferred, fallback to Pharos.Philadelphos.CommandInput
+
+## HYPERWEBSTER
+acquire.py exists. 180k dict ready to split → 26 files.
+words_a/..z/ shard structure defined in hyperwebster_layer3.py.
+Layer3 bridge wired but HyperWebster root needs to exist on local machine.
