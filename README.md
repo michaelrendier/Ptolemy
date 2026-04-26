@@ -7,7 +7,7 @@ Author: michaelrendier | Branch: `main` | Status: Active development — private
 
 ## Overview
 
-Ptolemy is a personal software system built around the Library of Alexandria as an organizational metaphor. Each major capability is called a **Face**, named after a historical figure associated with the Library. The system has been in active development since 2019.
+Ptolemy is a personal software system built around the Library of Alexandria as an organizational metaphor. Each major capability is called a **Face**, named after a historical figure associated with the Library. The system has been in active development since 2010.
 
 Current focus areas:
 - **HyperWebster** — a 180,000-word lexical acquisition and addressing pipeline (Callimachus)
