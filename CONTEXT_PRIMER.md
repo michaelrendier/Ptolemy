@@ -1,84 +1,149 @@
-# PTOLEMY CONTEXT PRIMER
-# Generated: 2026-04-24 | Commit: 51da51d
-# Push this file to repo root as CONTEXT_PRIMER.md
+# PTOLEMY PROJECT — CONTEXT PRIMER
+## Next Horizon: acquire.py + Autonomous Output Tuning
+### Generated: April 27, 2026
 
-## STRICT PROTOCOLS (do not relist, acknowledge only at entry)
-- Least token/context intensive responses
-- Signature every response: [timestamp | context% | repo commit | cache path]
-- Alert at 50% context remaining, ask about new primer at 85%
-- No unqualified medical/psych determinations, no time-passage assumptions
-- Never re-clone repo if /home/claude/Ptolemy exists this session
-- GitHub PAT: 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
+---
 
-## HARDWARE
-- HP Elitebook 820 G3 i7 HD520 Skylake / Linux Mint Xia + UbuntuStudioInstaller
-- Microsoft Surface Go 1824 / Ubuntu 24.04 linux-surface kernel — PRIMARY REPO DEVICE
+## TOKENS
+- Ptolemy repo: [CLASSIC_TOKEN] → github.com/michaelrendier/Ptolemy
+- Ainulindale repo: [CLASSIC_TOKEN] → github.com/michaelrendier/Ainulindale
+- Fine-scoped PAT (Ptolemy only): [FINE_SCOPED_PAT]
 
-## REPO STATE (commit 51da51d)
-Files changed this session:
-- Pharos/PGui.py — PWindow.__init__ overloaded for face_id/bus/ptolemy (PtolBus.launch() compatible)
-- Philadelphos/ptolemy_ears.py — NEW: PtolemyEars QWidget, SedenionGate off-thread, speak_text()
-- Philadelphos/ptolemy_tongue.py — NEW: fold-geometry output filter (pentagon/hex chromatography)
-  - char-level repeat collapse (MAX_REPEAT=8)
-  - word-level run collapse (MAX_WORD_RUN=5) — added after smoke test caught word repeat gap
-  - punct storm reduction, bracket depth check, control char strip, unicode NFC
-  - FoldGeometry analyser, pentagon_ratio advisory flag
-- Philadelphos/Phila.py — Phila QWidget face class added (response display + ears embedded)
-- Callimachus/hyperwebster_layer3.py — NEW: ContextBuffer Layer3 → HyperWebster JSON shard bridge
-  - WordRecord with Rabies Principle (first_encountered immutable)
-  - Atomic file writes (tmp+rename), shard dirs words_a/..z/+other
-- Ainulindale/core/noether_chain_input.py — Layer3 stub replaced with live bridge + lazy import
+---
 
-## IMMEDIATE NEXT TASK
-Patch smnnip_inversion_engine.py from Drive:
-  Drive file: 1IEX5S5j7LNUwvYauOxEVrJxP98_-EUpn (patched, 43654 bytes)
-  Repo file:  Ainulindale/core/smnnip_inversion_engine.py (currently 39501 bytes)
-  Key addition: two-Noether-current docstring clarification (geometric vs gauge)
-  NoetherMonitor docstring now explicitly labels which current lives in which file
+## WHAT EXISTS (as of this session)
 
-Steps:
-  1. base64-decode Drive blob → write to Ainulindale/core/smnnip_inversion_engine.py
-  2. python3 -c "import ast; ast.parse(...)" smoke test
-  3. Run smnnip_test_pure.py
-  4. git add + commit + push
+### Ainulindale repo:
+- smnnip_inversion_engine_v2.py — J_N inversion map, φ fixed point proof, Noether monitor
+- smnnip_proof_engine_console.py — curses console, full PROOF_ENTRIES registry
+- the_tongue.py — Fano/𝕆 algebraic filter (belongs UPSTREAM, not final output)
 
-## AINULINDALE DRIVE FOLDER (read-only prefilter)
-Root:        18O-dD-_giAeUdCeyv8kylzyukIB0VFTO
-Code folder: 1ZkistnAFGj-anUfJNoHQ2zc8CkP9drIl
-Patched:     1LUsMeZVVdMKs3cRsXRBvuOHQnFGqNkgJ
-  - derivation:  12dPP0yCC47ZnrCr3mV9Pcej1LF0tTKGG (71386 bytes = repo, no update needed)
-  - inversion:   1IEX5S5j7LNUwvYauOxEVrJxP98_-EUpn (43654 bytes > repo 39501, NEEDS PATCH)
-Noether:     1NlLgjbx6nYglSThXnXFcTULA1b5Wuqom
-Synth:       1wnGBolQp2F4gUnV4UMduiBsNLHQ5nfv3
-Sonification: 1SkD8Jpg88P69aITN6pTqZ7AwOhynaL0M
+### Ptolemy repo / Philadelphos/:
+- ptolemy_tongue.py — surface geometry filter (pentagon/hexagon fold check) — rename to output_geometry_filter.py
+- output_tuner.py — /OutputTuning shell (NEW THIS SESSION)
+- data_input.py — /DataInput [--DM] handler
+- LLM_Datatype_parser/acquire.py — HyperWebster word acquisition pipeline
 
-## BUILD PHASES (active)
-Phase 2 — DONE: PWindow bus/face_id wiring
-Phase 3 — DONE: ptolemy_ears + Phila QWidget face
-Phase 4 — DONE: HyperWebster Layer3 bridge (hyperwebster_layer3.py)
-Phase 5 (tongue) — DONE: ptolemy_tongue fold geometry filter
-Pending: inversion engine patch from Drive
+---
 
-## KEY ARCHITECTURE NOTES
-- PtolBus.launch() → PWindow(face, title=..., face_id=..., bus=..., ptolemy=...)
-- ptolemy_ears pipeline: text/speech → SedenionGate (off-thread) → _generate_response() → tongue → display
-- _generate_response() is a stub: wire to NEURAL_ARCHITECTURE.infer() when model loaded
-- tongue filter order: strip_controls → normalise_unicode → collapse_repeats → collapse_word_runs → reduce_punct_storms → wrap_long_lines → pentagon_ratio advisory
-- Layer3 bridge: lazy import, non-fatal if Callimachus absent, atomic writes
-- Rabies Principle: first_encountered in WordRecord is PERMANENTLY IMMUTABLE
+## THE PIPELINE (complete architecture)
 
-## SMNNIP STATE
-- derivation engine: ACTIVE, all 7 ops pass, conserved=True
-- inversion engine: PATCHED in Drive, needs repo update
-- gap: 0.00070 (real, open — no closed form yet)
-- D_STAR_SPEC = 0.24600 (BK spectral, ACTIVE)
-- D_STAR_TAUT = Omega/ln(10) — REFERENCE ONLY, NOT d*
+```
+/DataInput [--DM]
+    ↓
+SemanticWord JSON files (acquire.py produces these — O Captain runs locally)
+    ↓
+DataInput: loads meaning-objects into SMNNIP tower
+    ↓
+Noether current layer     (extinction — non-conserved paths die)
+    ↓
+Higgs/CWC layer           (isotropic sphere → Catastrophic Waveform Collapse)
+    ↓
+Yang-Mills / RG layer     (rotations, refractive layers, focal point mapping)
+    ↓
+J_N Inversion layer       (inside-out test — (I|O) on remaining focal points)
+    ↓
+THE TONGUE                (ℝ layer — reverse lookup: attractor → SemanticWord)
+    ↓
+output_geometry_filter    (surface cleanup — fold geometry, repeats, storms)
+    ↓
+Output (spoken, not constructed)
+```
 
-## PTOLEMY3.py
-All top-level imports verified present. PtolBus + PWindow + Phila scope resolved.
-Philadelphos: inline Phila() preferred, fallback to Pharos.Philadelphos.CommandInput
+---
 
-## HYPERWEBSTER
-acquire.py exists. 180k dict ready to split → 26 files.
-words_a/..z/ shard structure defined in hyperwebster_layer3.py.
-Layer3 bridge wired but HyperWebster root needs to exist on local machine.
+## THE TONGUE — CORRECT UNDERSTANDING
+
+**Layer: ℝ (real numbers) — the final stratum**
+
+NOT algebraic multiplication (that's upstream at 𝕆 / Yang-Mills).
+
+The Tongue is a RECOGNITION layer, not a construction layer:
+- Physics collapses to a real-valued attractor
+- Tongue asks: which SemanticWord's coordinate IS this attractor?
+- H/4 = 0.025 is the adjacency window — word must be within H/4 or no output
+- "Adjacent and exact" = quantized nearest-neighbor in meaning-space
+- Ptolemy SPEAKS because he KNOWS — does not construct statistically
+
+The_tongue.py in Ainulindale → rename/move upstream as fano_output_filter.py
+
+---
+
+## OUTPUT TUNER — /OutputTuning
+
+File: Philadelphos/output_tuner.py
+Runs as SEPARATE shell layer (own REPL, does not modify pipeline).
+
+Commands:
+  sphere              — isotropic sphere state + ASCII render
+  pre                 — pre-collapse predictions
+  collapse [delta]    — run CWC at delta
+  sweep               — 5-point delta sweep (-0.2 to +0.2)
+  candidates          — all Tongue candidates
+  select <n>          — manually pick focal point output
+  reverse <word>      — run pipeline backwards from known word
+  invert              — J_N inside-out path + geometry consistency check
+  load <dir>          — load real SemanticWord JSON data
+
+Flags: --DM <data_dir>  --auto  --word <w>  --delta <f>
+
+"[no match]" results currently because hyperwebster_address = null in JSON.
+Resolves when acquire.py has run and Callimachus assigns real coordinates.
+
+---
+
+## NEXT HORIZON FOCUS
+
+### 1. acquire.py
+O Captain runs this locally (180k words, ~150hrs sequential).
+The 23-word test set runs in minutes — good for immediate testing.
+
+Command: `python3 Philadelphos/LLM_Datatype_parser/acquire.py`
+Output: Philadelphos/LLM_Datatype_parser/hyperwebster_data/words_a/ ... words_z/
+
+What Claude needs to do in next session:
+- Review sample JSON output from the 23-word test run
+- Help assign hyperwebster_address coordinates (Callimachus layer)
+- Wire SemanticWordIndex in output_tuner.py to real data directory
+
+### 2. Autonomous Output Tuning
+Ptolemy should be able to run /OutputTuning diagnostics ON HIMSELF
+during generation — not just as an external researcher tool.
+
+Design direction:
+- After each output, Ptolemy runs reverse_path() on his own words
+- Checks round-trip fidelity — did the word I said map back to what I knew?
+- If not: flag for resampling at different delta
+- Over time: Ptolemy adjusts his own focal_delta based on round-trip statistics
+- This is NOT gradient descent — it's geometric self-calibration
+- The tuner becomes an internal feedback loop, not just a debugger
+
+Key constraint: NO AI SYNTHESIS in the tuning loop.
+The self-calibration uses only the physics (Noether, J_N, H/4 window).
+Ptolemy tunes his geometry, not his token probabilities.
+
+### 3. Rename / reorganize
+- the_tongue.py (Ainulindale) → move upstream, rename fano_output_filter.py
+- ptolemy_tongue.py (Ptolemy) → rename output_geometry_filter.py
+- output_tuner.py remains as /OutputTuning shell + internal feedback loop
+
+---
+
+## KEY PRINCIPLES (never violate)
+- The Rabies Principle: first_encountered is IMMUTABLE
+- No Claude API gap-filling in acquisition pass
+- Ptolemy speaks because he knows — recognition not construction
+- Self-tuning uses physics only — no statistical inference
+- lxml over BeautifulSoup
+- One JSON file per word
+- Resume-by-default in acquisition
+
+---
+
+## STRICT PROTOCOL REMINDER
+- Least token-intensive responses
+- Timestamp + context % on every response
+- Alert at 50% context remaining
+- At 85%: ask focus for next chat, push forced primer
+- No unqualified medical/psychological determinations
+- No assumptions from time passing
