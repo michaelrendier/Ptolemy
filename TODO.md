@@ -208,6 +208,35 @@ Hexagon NPU (45 TOPS on-device inference)
 
 ---
 
+## LuthSpell / LSH — Stub Hooks Needing Real Implementation
+
+- [ ] `HaltingMonitor._evaluate()` — stub → real inference coord evaluation
+- [ ] `PtolBusStub` → real `PtolBus` with queue + rotary semaphore
+- [ ] Blockchain backend for halt record commits
+- [ ] `cyclic_context_buffer.py` compression model: stub → Philadelphos/Ainur NLP
+- [ ] `cyclic_context_buffer.py` hyperindex method: stub → full octonion/Cayley-Dickson
+- [ ] `cyclic_context_buffer.py` blockchain backend: stub → real branch chain
+- [ ] `ErrorHandler._emit()`: stdout stub → real log backend
+- [ ] `GarbageCollector`: Python stub → C++ RAII mirror in Ptolemy++ (deferred)
+
+## Settings Tabs Needed (one per module hook)
+
+- [ ] `buffer_size_lines` · `compression_model` · `hyperindex_method` · `blockchain_backend`
+- [ ] `priority_scheme` · `gc_on_fatal` / `gc_on_error` · `log_backend`
+- [ ] `report_to_ptolemy_severity` · `halt_evaluation_logic`
+- [ ] Ptolemy Settings system — **PRIORITY after working prototype + desktop**
+
+## LSH / Architecture Design
+
+- [ ] Design single-chip processor based on Ptolemy + Cayley-Dickson Tower (own repo when ready)
+- [ ] Full blockchain architecture: master chain + Face branch chains
+- [ ] `philadelphos_console.py`: instantiate LuthSpell as BUS controller in `main()`
+- [ ] Wire `CyclicContextBuffer` into Philadelphos Face
+- [ ] LSH Model: full Lagrange Self-Adjoint Hyperindexing implementation
+- [ ] GrammarNeuron layer (resolves "it" pronoun structural problem)
+- [ ] WordMonad isolation enforcement
+- [ ] `acquire.py` → `WordAcquisitionRecord` dataclass (Option C: thin + `to_semantic_word()` bridge)
+
 ## Processor Architecture Research
 
 **Status:** Concept — separate project, not Ptolemy

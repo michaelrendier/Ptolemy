@@ -100,6 +100,70 @@ Claude Code sessions: read [CONTEXT.md](CONTEXT.md) at session start to restore 
 
 ---
 
+## LSH Model — Lagrange Self-Adjoint Hyperindexing
+
+The neural model powering Philadelphos is designated **LSH** — Lagrange Self-Adjoint Hyperindexing Model.
+
+| Component | Description |
+|---|---|
+| **Lagrangian** | Variational path optimization through semantic space — inference finds its own optimal path |
+| **Self-Adjoint** | Model is its own measurement. No external validator — output is self-consistent under adjoint check. Maps to blockchain-as-truth-source principle |
+| **Hyperindexing** | The emergent layer. Not engineered — recognized during structure constant experimentation. 8-component octonion addresses derived from Cayley-Dickson construction |
+
+Hyperindexing is the feature, not a component. The self-adjoint property ties directly to the octonion algebra used in hyperindex addresses.
+
+---
+
+## LuthSpell — BUS Controller
+
+`luthspell.py` lives at the root layer above all Faces. It is not a Face.
+
+| Component | Role |
+|---|---|
+| **LuthSpell** | Ptolemy's BUS controller — T0/T1 priority arbitration, rotary semaphore (traffic circle, not binary gate) |
+| **HaltingMonitor** | Internal sensing organ of LuthSpell — watches inference coordinates for halt conditions |
+| **ErrorHandler** | Catches, classifies, routes all Ptolemy errors — 27 typed errors across 8 subsystems |
+| **GarbageCollector** | Triggered by ErrorHandler on gc_trigger errors — C++ RAII mirror deferred to Ptolemy++ |
+
+Bus math: `Priority` is `IntEnum` — ordering is lexicographic `(priority, timestamp)`. T0 always before T1, FIFO within tier.
+
+### Error Catalog
+
+| Range | Subsystem |
+|---|---|
+| PTL_1xx | BUS |
+| PTL_2xx | LuthSpell / Halting |
+| PTL_3xx | Cyclic Context Buffer |
+| PTL_4xx | Blockchain |
+| PTL_5xx | Acquisition / HyperWebster |
+| PTL_6xx | LSH Model |
+| PTL_7xx | Module / Settings |
+| PTL_9xx | System / Root |
+
+`RabiesViolation` (PTL_504): FATAL, **no GC** — `first_encountered` is permanently immutable. Violation is logical, not memory-based. Audit, do not clean up.
+
+---
+
+## Cyclic Context Buffer
+
+`Philadelphos/cyclic_context_buffer.py` — FIFO sliding window context management.
+
+- Unit: **lines** (one `EntryObject` = one `PromptObject` + one `ResponseObject`)
+- **Confirmed eviction**: Entry stays in buffer until compress → octonion hyperindex → blockchain commit all succeed. No index manipulation during iteration.
+- Evicted entries compressed to L2, hyperindexed (8-component octonion address), committed to branch blockchain
+- All backends modular — swappable via Settings tab
+
+---
+
+## Modular Architecture Principle
+
+**Modular EVERYTHING.** Every component is a swappable module. Every hole left by modularity gets a Settings page/tab under a Modules parent category. This is a load-bearing design principle, not a preference.
+
+Current Settings hooks (all stub → real implementation pending):
+`buffer_size_lines` · `compression_model` · `hyperindex_method` · `blockchain_backend` · `priority_scheme` · `gc_on_fatal` · `gc_on_error` · `log_backend` · `report_to_ptolemy_severity` · `halt_evaluation_logic`
+
+---
+
 ## Related Repositories
 
 | Repo | Description |
