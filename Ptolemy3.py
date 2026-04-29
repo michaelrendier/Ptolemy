@@ -474,6 +474,17 @@ class Ptolemy(QMainWindow):
         from Archimedes.Maths.GraphPlot import GraphPlot
         return self.bus.launch(GraphPlot)
 
+    def openStanDev(self, event=None):
+        # Stub: StandardDeviation face not yet implemented.
+        # Replace with: return self.open_face('Archimedes.Maths.StandardDeviation', 'StandardDeviation')
+        try:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(self, 'Standard Deviation',
+                'StandardDeviation face is not implemented yet.')
+        except Exception as e:
+            print(f'[openStanDev stub] {e}')
+        return None
+
     # ── Network launchers ─────────────────────────────────────────────────────
 
     def punch_to(self, peer_id, relay_host=None, relay_port=None):
