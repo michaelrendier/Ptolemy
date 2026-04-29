@@ -77,7 +77,8 @@ class UserDisplay(QGraphicsItem):
 
 		self.setAcceptHoverEvents(True)
 
-		self.output = self.Ptolemy.Philadelphos.setOutput
+		phila = self.Ptolemy.Philadelphos
+		self.output = phila.setOutput if phila and hasattr(phila, "setOutput") else None
 		self.interfaceimgs = self.Ptolemy.pharosImg
 		self.media = self.Ptolemy.mediaDir
 		self.scene = self.Ptolemy.scene
@@ -545,12 +546,13 @@ class User(QWidget):
 		self.centerx = self.x + self.w / 2
 		self.centery = self.y + self.h / 2
 
-		self.setGeometry(self.x, self.y, self.w, self.h)
+		self.setGeometry(int(self.x), int(self.y), self.w, self.h)
 
 		self.setStyleSheet(self.styles)
 		self.setStyleSheet("QWidget { background-color: transparent; } ")
 
-		self.output = self.Ptolemy.Philadelphos.setOutput
+		phila = self.Ptolemy.Philadelphos
+		self.output = phila.setOutput if phila and hasattr(phila, "setOutput") else None
 		self.interfaceImg = self.Ptolemy.pharosImg
 		print("PATH:", self.interfaceImg)
 		self.mediaDir = self.Ptolemy.mediaDir

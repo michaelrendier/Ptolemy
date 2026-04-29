@@ -356,8 +356,8 @@ class Ptolemy(QMainWindow):
         self.bus = PtolBus(self)
 
         # ── Network layer ─────────────────────────────────────────────────────
-        self.hole_punch = PtolHolePunch(self)
-        self.kvm        = PtolKVM(self)
+        self.hole_punch = HolePunch(self)
+        self.kvm        = KVMClient(self)
 
         # ── System tray ───────────────────────────────────────────────────────
         self.sysTrayIcon = SystemTrayIcon(
@@ -403,6 +403,9 @@ class Ptolemy(QMainWindow):
     def _init_ui(self):
         self.setStyleSheet(self.stylesheet)
 
+        # Philadelphos must exist before Interface tries to bind setOutput
+        self._launch_philadelphos()
+
         # Pharos nav interface (always present)
         self.Interface = User(self)
         self.scene.addWidget(self.Interface)
@@ -410,9 +413,6 @@ class Ptolemy(QMainWindow):
         # Menu (always present)
         self.Menu = Menu(parent=self)
         self.scene.addWidget(self.Menu)
-
-        # Philadelphos command input — lazy import, subprocess/inline toggle
-        self._launch_philadelphos()
 
     def _launch_philadelphos(self):
         """
