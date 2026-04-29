@@ -18,7 +18,7 @@ from collections import deque
 from typing import Optional, Callable
 
 
-# ─── Settings (all modular — each gets a Settings tab entry) ──────────────────
+# ─── Settings (all modular — each gets a Settings tab entry) ─────────────────
 
 BUFFER_SIZE_LINES = 100          # configurable: number of Entry lines
 COMPRESSION_MODEL = "stub"       # module hook: swap in Philadelphos/Ainur call
@@ -26,7 +26,7 @@ HYPERINDEX_METHOD = "octonion"   # module hook: octonion hyperindexing
 BLOCKCHAIN_BACKEND = "branch"    # module hook: branch blockchain
 
 
-# ─── Objects ──────────────────────────────────────────────────────────────────
+# ─── Objects ────────────────────────────────────────────────────────────────
 
 class PromptObject:
     def __init__(self, text: str, timestamp: Optional[float] = None):
@@ -68,7 +68,7 @@ class EntryObject:
             "t": self.timestamp
         }, separators=(',', ':'))
 
-    # ── Module hooks ──────────────────────────────────────────────────────────
+    # ── Module hooks ───────────────────────────────────────────────────────────
 
     def compress(self, model: str = COMPRESSION_MODEL) -> str:
         """
@@ -132,11 +132,11 @@ class EntryObject:
             self.commit(chain)
             return True
         except Exception as e:
-            print(f"[CyclicBuffer] Eviction failed, entry retained: {e}")
+            print(f"[CyclibBuffer] Eviction failed, entry retained: {e}")
             return False
 
 
-# ─── Branch Blockchain (stub) ─────────────────────────────────────────────────
+# ─── Branch Blockchain (stub) ────────────────────────────────────────────────
 
 class BranchBlock:
     def __init__(self, data: dict, prev_hash: str):
