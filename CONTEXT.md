@@ -25,7 +25,7 @@
 | Mouseion | OpenGL GUI |
 | Phaleron | browser / web tools |
 | Pharos | main shell UI |
-| **Philadelphos** | **AI / LLM layer — Claude (Ainur), Gemini (Gemini), Agora (dual-chat)** |
+| **Philadelphos** | **LSH inference layer — Claude (Ainur), Gemini, Agora dual-chat** |
 | Tesla | networking / sockets |
 | Ptolemy++ | C++ companion (Gemini-ncurses) |
 
@@ -83,7 +83,7 @@
 
 ---
 
-## SMNNIP — Ainulindale
+## LSH — Ainulindale
 
 **Standard Model of Neural Network Information Propagation**
 - Repo: github.com/michaelrendier/Ainulindale
@@ -92,7 +92,7 @@
 - Gauge group: U(1) × SU(2) × SU(3)
 - Noether conservation: empirically verified — `violation=0.0, conserved=True`
 - Console: `python3 derivation.py` or `/derivation`
-- Engine: `SMNNIPDerivationEngine` in `Philadelphos/Ainulindale/core/smnnip_derivation_pure.py`
+- Engine: `LSHDerivationEngine` in `Philadelphos/Ainulindale/core/smnnip_derivation_pure.py`
 
 ---
 
@@ -102,8 +102,8 @@ Persistent JSON memory stores — loaded on session start, updated on session en
 
 | File | Scope |
 |---|---|
-| `Philadelphos/context/claude_context.json` | Claude identity, SMNNIP knowledge, session memory, I/O log |
-| `Philadelphos/context/gemini_context.json` | Gemini identity, SMNNIP knowledge, session memory, I/O log |
+| `Philadelphos/context/claude_context.json` | Claude identity, LSH knowledge, session memory, I/O log |
+| `Philadelphos/context/gemini_context.json` | Gemini identity, LSH knowledge, session memory, I/O log |
 | `Philadelphos/context/ptolemy_context.json` | Master index — aggregates both + runtime I/O stream + event log |
 
 Manager: `from Philadelphos.context.context_manager import PtolemyContext`
@@ -123,10 +123,10 @@ Manager: `from Philadelphos.context.context_manager import PtolemyContext`
 ## What Was Built (2026-04-18 session)
 
 - `.gitignore` — comprehensive, cleaned repo
-- `Philadelphos/Ainulindale/` — SMNNIP neural network integrated from Ainulindale repo
+- `Philadelphos/Ainulindale/` — LSH model integrated from Ainulindale repo
 - `Philadelphos/CommandInput.py` — Qt stack retired, replaced with curses launcher
 - `.claude/commands/derivation.md` — `/derivation` slash command
-- `derivation.py` — standalone root launcher for SMNNIP console
+- `derivation.py` — standalone root launcher for LSH console
 - `Philadelphos/Ainur/` — Claude API module (anthropic SDK)
 - `Philadelphos/Gemini/` — Gemini API module (google-genai SDK)
 - `Philadelphos/Agora/` — dual-AI parallel chat with sigma valuation

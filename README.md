@@ -11,11 +11,11 @@ Ptolemy is a personal software system built around the Library of Alexandria as 
 
 Current focus areas:
 - **HyperWebster** — a 180,000-word lexical acquisition and addressing pipeline (Callimachus)
-- **LLM model experimentation** — Julius Caesar, Cicero, Cato corpus (Philadelphos / SMNNIP)
+- **LSH corpus experimentation** — Julius Caesar, Cicero, Cato corpus (Philadelphos / LSH)
 - **Kryptos addressing** — Horner bijection + octonion addresses via Cayley-Dickson construction
 - **Aulë** — diagnostic forge / sandbox face for live stream monitoring and experimental code
 
-The neural architecture (SMNNIP — Standard Model of Neural Network Information Propagation) is referenced here by name and links to the [Ainulindalë Conjecture](https://github.com/michaelrendier/Ainulindale) repository for structural/mathematical history. The model itself is withheld pending publication and peer review.
+The LSH model (Lagrange Self-Adjoint Hyperindexing) is referenced here by name and links to the [Ainulindalë Conjecture](https://github.com/michaelrendier/Ainulindale) repository for structural/mathematical history. The model itself is withheld pending publication and peer review.
 
 ---
 
@@ -32,7 +32,7 @@ The neural architecture (SMNNIP — Standard Model of Neural Network Information
 | [Mouseion](Mouseion/) | The Mouseion | Flask website — thewanderinggod.tech |
 | [Phaleron](Phaleron/) | Port of Phaleron | Internal search |
 | [Pharos](Pharos/) | Pharos Lighthouse | Core functions, main shell UI |
-| [Philadelphos](Philadelphos/) | Ptolemy II Philadelphos | AI / LLM layer — Claude (Ainur), Gemini, Agora dual-chat |
+| [Philadelphos](Philadelphos/) | Ptolemy II Philadelphos | LSH inference layer — Claude (Ainur), Gemini, Agora dual-chat |
 | [Tesla](Tesla/) | Nikola Tesla | Device interfacing |
 | [Ptolemy++](Ptolemy++/) | — | C++ port for performance-critical components |
 
@@ -168,11 +168,11 @@ Current Settings hooks (all stub → real implementation pending):
 
 | Repo | Description |
 |---|---|
-| [Ainulindalë](https://github.com/michaelrendier/Ainulindale) | Structural and mathematical history of the SMNNIP development. The naming system (Valar, Ainulindalë) originates here. |
+| [Ainulindalë](https://github.com/michaelrendier/Ainulindale) | Structural and mathematical history of LSH development. The naming system (Valar, Ainulindalë) originates here. |
 
 ---
 
 ## License
 
-Private pre-release. Open source publication planned following SMNNIP peer review.  
-Neural architecture (SMNNIP) excluded from open-source release pending publication.
+Private pre-release. Open source publication planned following LSH peer review.  
+LSH model excluded from open-source release pending publication.

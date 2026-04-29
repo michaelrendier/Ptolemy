@@ -22,7 +22,7 @@
 - ptolemy_tongue.py — surface geometry filter (pentagon/hexagon fold check) — rename to output_geometry_filter.py
 - output_tuner.py — /OutputTuning shell (NEW THIS SESSION)
 - data_input.py — /DataInput [--DM] handler
-- LLM_Datatype_parser/acquire.py — HyperWebster word acquisition pipeline
+- Callimachus/acquire.py — HyperWebster word acquisition pipeline
 
 ---
 
@@ -33,7 +33,7 @@
     ↓
 SemanticWord JSON files (acquire.py produces these — O Captain runs locally)
     ↓
-DataInput: loads meaning-objects into SMNNIP tower
+DataInput: loads meaning-objects into LSH tower
     ↓
 Noether current layer     (extinction — non-conserved paths die)
     ↓
@@ -98,8 +98,8 @@ Resolves when acquire.py has run and Callimachus assigns real coordinates.
 O Captain runs this locally (180k words, ~150hrs sequential).
 The 23-word test set runs in minutes — good for immediate testing.
 
-Command: `python3 Philadelphos/LLM_Datatype_parser/acquire.py`
-Output: Philadelphos/LLM_Datatype_parser/hyperwebster_data/words_a/ ... words_z/
+Command: `python3 Philadelphos/Callimachus/acquire.py`
+Output: Callimachus/hyperwebster_data/words_a/ ... words_z/
 
 What Claude needs to do in next session:
 - Review sample JSON output from the 23-word test run
