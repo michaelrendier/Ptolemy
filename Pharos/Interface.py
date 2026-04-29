@@ -539,14 +539,14 @@ class User(QWidget):
 
 		self.styles = self.Ptolemy.stylesheet
 
-		self.x = self.Ptolemy.scene.width() / 2 - 76
-		self.y = self.Ptolemy.scene.height() / 2 - 175
+		self.x = int(self.Ptolemy.scene.width() / 2) - 76
+		self.y = int(self.Ptolemy.scene.height() / 2) - 175
 		self.w = 225
 		self.h = 350
-		self.centerx = self.x + self.w / 2
-		self.centery = self.y + self.h / 2
+		self.centerx = self.x + self.w // 2
+		self.centery = self.y + self.h // 2
 
-		self.setGeometry(int(self.x), int(self.y), self.w, self.h)
+		self.setGeometry(self.x, self.y, self.w, self.h)
 
 		self.setStyleSheet(self.styles)
 		self.setStyleSheet("QWidget { background-color: transparent; } ")
@@ -696,7 +696,7 @@ class User(QWidget):
 		interval = self.FS / self.CHUNKSZ
 		t = QTimer(self)
 		t.timeout.connect(self.mic.read)
-		t.start(1000 / interval)  # QTimer takes ms
+		t.start(int(1000 / interval))  # QTimer takes ms
 
 		self.indicator = QLabel(parent=self)
 		self.indicatorIcon = QPixmap(self.interfaceImg + 'indicator-ball.gif')
