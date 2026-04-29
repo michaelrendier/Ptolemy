@@ -532,7 +532,9 @@ class Ptolemy(QMainWindow):
 
     def cronJob(self, interval_ms, job):
         cron = QTimer(self)
-        cron.setInterval(interval_ms)
+        # Accept seconds (float) or milliseconds (int) — normalize to int ms
+        ms = int(interval_ms * 1000) if interval_ms < 1 else int(interval_ms)
+        cron.setInterval(ms)
         try:
             cron.timeout.connect(job)
         except TypeError:
