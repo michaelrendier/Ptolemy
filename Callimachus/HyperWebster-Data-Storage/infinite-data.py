@@ -86,7 +86,8 @@ class UniversalCoordinateSystem:
 # print(f"The coordinate for 'cody' is: {coord}")
 # print(f"Regenerating from {coord}: {engine.locate_text(coord)}")
 
-text = open("/home/rendier/Ptolemy/TESTdb-struct.sql").read()
+# TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+text = open(PTOL_ROOT + "/TESTdb-struct.sql").read()
 text_length = len(text)
 print(text_length)
 HW = HyperWebster()

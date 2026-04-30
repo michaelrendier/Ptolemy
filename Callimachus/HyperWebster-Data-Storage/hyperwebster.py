@@ -165,7 +165,7 @@ class HyperWebster:
 
 
 
-# ~ text = open("/home/rendier/Ptolemy/TESTdb-struct.sql").read()
+# ~ text = open(PTOL_ROOT + "/TESTdb-struct.sql").read()
 # ~ text_length = len(text)
 # ~ print("Length of Data Set", text_length)
 # ~ HW = HyperWebster()
@@ -186,7 +186,8 @@ if __name__ == "__main__":
         # ~ "`~!@#",
     # ~ ]
 
-    sample = open("/home/rendier/Ptolemy/TESTdb-struct.sql").read()
+    # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+    sample = open(PTOL_ROOT + "/TESTdb-struct.sql").read()
 
     print("=" * 72)
     print(f"{'HyperWebster  —  Infinite Permutation Indexer':^72}")

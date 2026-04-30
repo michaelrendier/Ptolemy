@@ -24,6 +24,7 @@ class ThreadIndicator(QGraphicsItem):
 	
 	def paint(self, painter, option, widget):
 		
-		self.indicator = QIcon("/home/rendier/Ptolemy/images/Pharos/indicator-ball.png", parent=self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.indicator = QIcon(PTOL_ROOT + "/images/Pharos/indicator-ball.png", parent=self)
 		
 	

@@ -74,7 +74,8 @@ class CodeBrowser(QMainWindow):
 
 		else:
 			self.dialogs = Dialogs(parent=self)
-			self.homeDir = "/home/rendier/Ptolemy/"
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			self.homeDir = PTOL_ROOT + "/"
 			self.styles = "QWidget { border: 1px solid white; background-color: black; color: white } " \
 						  "QMenuBar::item { background-color: black; color: white } " \
 						  "QStatusBar { background-color: black; color: white } " \

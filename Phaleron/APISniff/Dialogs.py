@@ -5,7 +5,7 @@ __author__ = 'rendier'
 from PyQt5.QtCore import QObject
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QMessageBox
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from ast import literal_eval
 import datetime
 
@@ -47,7 +47,8 @@ class Dialogs(QObject):
 		
 		dataList = [('Note Name', ''), ('Note', '\n\n\n\n\n'), ('Note Date', str(datetime.datetime.now().date())), ('Note Regarding', self.noteRe), ('Note Group', ''), ('Note Favorite', False)]
 		title = "Add Note"
-		self.icon = QIcon('/home/rendier/Ptolemy/images/ptol.svg')
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.icon = QIcon(PTOL_ROOT + '/images/ptol.svg')
 		results = fedit(dataList, title, icon=self.icon)
 
 		if results == None:

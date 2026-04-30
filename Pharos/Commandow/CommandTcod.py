@@ -14,7 +14,8 @@ def main():
 	player_x = int(screen_width / 2)
 	player_y = int(screen_height / 2)
 	
-	libtcod.console_set_custom_font('/home/rendier/Ptolemy/Pharos/Commandow/arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
+ # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+	libtcod.console_set_custom_font(PTOL_ROOT + '/Pharos/Commandow/arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 	
 	libtcod.console_init_root(screen_width, screen_height, 'libtcod tutorial revised', False)
 	

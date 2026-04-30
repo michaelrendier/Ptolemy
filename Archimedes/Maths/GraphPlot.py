@@ -33,7 +33,8 @@ class Graphing(object):  # ADD GLSCALE TO THIS TODO
         print("GRAPHPLOT PARENT: ", self.GraphPlot)
         print("GRAPHPLOT EQUATION: ", equation)
 
-        self.imgDir = '/home/rendier/Ptolemy/images/Alexandria/'
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        self.imgDir = PTOL_ROOT + '/images/Alexandria/'
 
         # if center:
 

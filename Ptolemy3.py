@@ -328,10 +328,12 @@ class Ptolemy(QMainWindow):
         super().__init__(parent)
 
         # ── Paths ─────────────────────────────────────────────────────────────
-        self.homeDir   = '/home/rendier/Ptolemy/'
-        self.mediaDir  = self.homeDir + 'media/'
-        self.imgDir    = self.homeDir + 'images/'
-        self.pharosImg = self.imgDir  + 'Pharos/'
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        # PTOL_ROOT — derived from kernel location, not hardcoded
+        self.homeDir   = os.path.dirname(os.path.abspath(__file__)) + os.sep
+        self.mediaDir  = os.path.join(self.homeDir, 'media', '')
+        self.imgDir    = os.path.join(self.homeDir, 'images', '')
+        self.pharosImg = os.path.join(self.imgDir, 'Pharos', '')
         self.screen    = QDesktopWidget().screenGeometry()
 
         # ── Scene / View ──────────────────────────────────────────────────────

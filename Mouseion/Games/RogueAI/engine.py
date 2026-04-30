@@ -273,7 +273,8 @@ def play_game(player, entities, game_map, message_log, game_state, con, panel, c
 def main():
 	constants = get_constants()
 	
-	libtcod.console_set_custom_font('/home/rendier/Ptolemy/Pharos/Commandow/RogueAI/fonts/terminal10x10_gs_tc.png',
+ # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+	libtcod.console_set_custom_font(PTOL_ROOT + '/Pharos/Commandow/RogueAI/fonts/terminal10x10_gs_tc.png',
 									libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
 	
 	libtcod.console_init_root(constants['screen_width'], constants['screen_height'], constants['window_title'], False)

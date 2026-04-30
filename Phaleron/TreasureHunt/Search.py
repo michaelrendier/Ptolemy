@@ -16,7 +16,7 @@ from PIL import Image
 from ast import literal_eval
 from urllib.request import build_opener
 from urllib.error import HTTPError, URLError
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 
 import os, urllib, string, bleach
 
@@ -206,7 +206,8 @@ class Search(QWidget):
 		isosHtml = bleach.clean(self.element[3], tags=these, strip=True)
 		isosHtml = isosHtml.replace('<table', "<table width=\"100%\" cellspacing=\"0\" border=\"1\"")
 		isosHtml = isosHtml.replace('<title>',
-									"<link rel=\"stylesheet\" type=\"text/css\" href=\"/home/rendier/Ptolemy/stylesheet.css\"><title>")
+         # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+									"<link rel=\"stylesheet\" type=\"text/css\" href=\PTOL_ROOT + "/stylesheet.css\"><title>")
 		# isosHtml = isosHtml.replace('')
 		
 		self.isosWeb = QTextBrowser()
@@ -457,7 +458,8 @@ class SearchThread(QThread):
 		# print 'i.attrs.src after', i.attrs['src']
 		# print "TRYING THIS SOUP", unicode(soup)
 		print(os.getcwd())
-		os.chdir('/home/rendier/Ptolemy/')
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		os.chdir(PTOL_ROOT + '/')
 		# print "cwd =", os.getcwd()
 		return soup
 	

@@ -57,7 +57,8 @@ class PennyWatch(QMainWindow):#Mainwindow TODO
 	def __init__(self, parent=None):
 		super(PennyWatch, self).__init__(parent)
 		QMainWindow.__init__(self)
-		self.setWindowIcon(QIcon("/home/rendier/Ptolemy/images/ptol.svg"))
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.setWindowIcon(QIcon(PTOL_ROOT + "/images/ptol.svg"))
 		self.setWindowTitle("Phaleron - PennyWatcher")
 		
 		self.parent = parent
@@ -179,7 +180,8 @@ if __name__ == "__main__":
 
 	Watcher = PennyWatch()
 	
-	Watcher.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+ # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+	Watcher.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
 
 	Watcher.show()
 

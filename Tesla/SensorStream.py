@@ -396,7 +396,8 @@ class SensorRecorder(QObject):
     Optional: attach to a SensorStream to log all raw packets to JSONL.
     One line per packet. Gzip optional.
     Usage:
-        rec = SensorRecorder('/home/rendier/Ptolemy/media/sensors/')
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        rec = SensorRecorder(PTOL_ROOT + '/media/sensors/')
         rec.attach(stream)
         rec.start('session_01')
         rec.stop()
@@ -452,6 +453,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
 
+    # TODO:SETTINGS — hardcoded port → Tesla/settings tab
     port = 5556
     if '--port' in sys.argv:
         port = int(sys.argv[sys.argv.index('--port') + 1])

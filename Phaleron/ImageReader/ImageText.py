@@ -15,7 +15,8 @@ from PIL import Image
 from pytesseract import image_to_string
 
 
-src = '/home/rendier/Ptolemy/Phaleron/ImageReader'
+# TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+src = PTOL_ROOT + '/Phaleron/ImageReader'
 
 # class ImageReader(QMainWindow):
 #

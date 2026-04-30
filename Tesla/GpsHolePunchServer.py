@@ -8,7 +8,7 @@ import socket, os, time
 from subprocess import Popen, PIPE
 from ast import literal_eval
 from threading import Thread
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from socketserver import ThreadingMixIn
 
 
@@ -18,8 +18,11 @@ from socketserver import ThreadingMixIn
 UDP_IP = "192.168.0.2"
 HOUSE_IP = "72.211.113.6"
 PTOL_IP = '80.255.11.139'
+# TODO:SETTINGS — hardcoded port → Tesla/settings tab
 PTOL_PORT = 23232
+# TODO:SETTINGS — hardcoded port → Tesla/settings tab
 HOUSE_PORT = 32323
+# TODO:SETTINGS — hardcoded port → Tesla/settings tab
 UDP_PORT = 5555
 dataList = []
 dataDict = {}
@@ -50,11 +53,13 @@ class Sockets(object):
 
                     self.LOCAL_IP = self.getLocalIP()
                     print(self.LOCAL_IP)
+                    # TODO:SETTINGS — hardcoded port → Tesla/settings tab
                     self.LOCAL_PORT = 5555
 
                 elif face == 'public':
                     self.PUBLIC_IP = self.getPublicIP()
                     print(self.PUBLIC_IP)
+                    # TODO:SETTINGS — hardcoded port → Tesla/settings tab
                     self.PUBLIC_PORT = 32323
 
             except IndexError:
@@ -72,14 +77,17 @@ class Sockets(object):
 
             elif face == 'jarvis':
                 self.ip = '216.155.155.108'
+                # TODO:SETTINGS — hardcoded port → Tesla/settings tab
                 self.port = 23232
 
             elif face == 'ptolemy':
                 self.ip = '80.255.11.139'
+                # TODO:SETTINGS — hardcoded port → Tesla/settings tab
                 self.port = 32323
 
             elif face == 'phonewifi':
                 self.ip = self.PHONE_USB_IP
+                # TODO:SETTINGS — hardcoded port → Tesla/settings tab
                 self.port = 32323
 
         else:

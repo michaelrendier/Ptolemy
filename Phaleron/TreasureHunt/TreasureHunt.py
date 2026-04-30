@@ -17,7 +17,7 @@ from lxml import html as HTML
 from ast import literal_eval
 from urllib.request import build_opener
 from urllib.error import HTTPError, URLError
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 import pdfkit
 import articleDateExtractor as ADE
 # from webkit2png import WebkitRenderer
@@ -548,7 +548,7 @@ class ResearchThread(QThread):
 		# 		for i in sourceSet:
 		# 			html = html.replace(i, "")
 		#
-		# 	# withThis = '/home/rendier/Ptolemy/media/images/' + str(self.domain) + "/" + str(fileName)
+		# 	# withThis = PTOL_ROOT + '/media/images/' + str(self.domain) + "/" + str(fileName)
 		# 	withThis = IP.image
 		# 	html = html.replace(findThis, withThis)
 		self.articleText = html.encode()
@@ -710,7 +710,8 @@ class ResearchThread(QThread):
 			for i in sourceSet:
 				html = html.replace(i, "")
 
-			withThis = '/home/rendier/Ptolemy/media/images/' + str(self.domain) + "/" + str(fileName)
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			withThis = PTOL_ROOT + '/media/images/' + str(self.domain) + "/" + str(fileName)
 
 			html = html.replace(findThis, withThis)
 
@@ -806,9 +807,12 @@ class ThreadIndicator(QWidget):
 		self.label.resize(8, 8)
 
 		# Make these with painter for actions todo
-		self.blue = QPixmap("/home/rendier/Ptolemy/images/Phaleron/blue-indicator.png")
-		self.green = QPixmap("/home/rendier/Ptolemy/images/Phaleron/green-indicator.png")
-		self.red = QPixmap("/home/rendier/Ptolemy/images/Phaleron/red-indicator.png")
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.blue = QPixmap(PTOL_ROOT + "/images/Phaleron/blue-indicator.png")
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.green = QPixmap(PTOL_ROOT + "/images/Phaleron/green-indicator.png")
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.red = QPixmap(PTOL_ROOT + "/images/Phaleron/red-indicator.png")
 		self.label.setPixmap(self.blue.scaled(self.label.width(), self.label.height(), Qt.KeepAspectRatio))
 		self.layout.addWidget(self.label)
 		self.setLayout(self.layout)
@@ -834,7 +838,8 @@ class TreasureHunt(QMainWindow, PtolFace):
 		# self.setWindowTitle('Phaleron - Ptolemy')
 
 		# Phaleron References
-		self.homeDir = '/home/rendier/Ptolemy/'
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.homeDir = PTOL_ROOT + '/'
 		os.chdir(self.homeDir)
 		self.win = self.frameGeometry()
 		self.imgDir = self.homeDir + 'images/Phaleron/'
@@ -847,7 +852,8 @@ class TreasureHunt(QMainWindow, PtolFace):
 		self.TABNUMBER = 0
 		self.tabList = []
 
-		self.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
 		self.styles = "QMainWindow { border: 1px solid white; background-color: black; color: white } " \
 					  "QWidget { background-color: black; color: white } " \
 					  "QMenuBar { border: 1px solid white; background-color: black; color: white } " \
@@ -930,10 +936,14 @@ class TreasureHunt(QMainWindow, PtolFace):
 
 		#Temp Clearing
 		clean = [
-			'/home/rendier/Ptolemy/temp/harvest/article/',
-			'/home/rendier/Ptolemy/temp/harvest/infobox/',
-			'/home/rendier/Ptolemy/temp/latex/',
-			'/home/rendier/Ptolemy/temp/ocr/'
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			PTOL_ROOT + '/temp/harvest/article/',
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			PTOL_ROOT + '/temp/harvest/infobox/',
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			PTOL_ROOT + '/temp/latex/',
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			PTOL_ROOT + '/temp/ocr/'
 		]
 		for i in clean:
 			os.chdir(i)
@@ -944,27 +954,32 @@ class TreasureHunt(QMainWindow, PtolFace):
 
 	def createActions(self):
 		#Actions
-		self.exitAction = QAction(QIcon('/home/rendier/Ptolemy/images/Phaleron/power.svg'), 'Exit', self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.exitAction = QAction(QIcon(PTOL_ROOT + '/images/Phaleron/power.svg'), 'Exit', self)
 		self.exitAction.setShortcut('Ctrl+X')
 		self.exitAction.setStatusTip('Exit Application')
 		self.exitAction.triggered.connect(self.closeEvent)
 
-		self.searchAction = QAction(QIcon('/home/rendier/Ptolemy/images/Phaleron/search.svg'), 'Search', self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.searchAction = QAction(QIcon(PTOL_ROOT + '/images/Phaleron/search.svg'), 'Search', self)
 		self.searchAction.setShortcut('Ctrl+S')
 		self.searchAction.setStatusTip('Open Search Dock')
 		self.searchAction.triggered.connect(self.searchOpen)
 
-		self.ocrAction = QAction(QIcon('/home/rendier/Ptolemy/images/Phaleron/ocr.svg'), "OCR", self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.ocrAction = QAction(QIcon(PTOL_ROOT + '/images/Phaleron/ocr.svg'), "OCR", self)
 		self.ocrAction.setShortcut('Ctrl+R')
 		self.ocrAction.setStatusTip('Optical Character Recognition')
 		self.ocrAction.triggered.connect(self.ocrOpen)
 
-		self.libraryAction = QAction(QIcon('/home/rendier/Ptolemy/images/Phaleron/library.svg'), 'Library', self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.libraryAction = QAction(QIcon(PTOL_ROOT + '/images/Phaleron/library.svg'), 'Library', self)
 		self.libraryAction.setShortcut('Ctrl+L')
 		self.libraryAction.setStatusTip('Reference Library')
 		self.libraryAction.triggered.connect(self.libraryOpen)
 
-		self.researchAction = QAction(QIcon('/home/rendier/Ptolemy/images/Phaleron/research.svg'), 'Research', self)
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.researchAction = QAction(QIcon(PTOL_ROOT + '/images/Phaleron/research.svg'), 'Research', self)
 		self.researchAction.setShortcut('Ctrl+A')
 		self.researchAction.setStatusTip('Research Dock')
 		self.researchAction.triggered.connect(self.researchOpen)

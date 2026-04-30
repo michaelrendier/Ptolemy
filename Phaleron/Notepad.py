@@ -60,7 +60,8 @@ class Notepad(QMainWindow, PtolFace):
                           "QTableWidget { background-color: black; color: white } " \
                           "QTableWidget::item:focus { border: 1px solid white; background-color: blue; color: white } " \
                           "QHeaderView::section { background-color: darkblue; color: white }"
-            self.imgDir = "/home/rendier/Ptolemy/images/Phaleron/"
+            # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+            self.imgDir = PTOL_ROOT + "/images/Phaleron/"
             
         self.setStyleSheet(self.styles)
 
@@ -214,7 +215,8 @@ if __name__ == '__main__':
     # w.resize(250, 150)
     w.move(300, 300)
     w.setWindowTitle('Phaleron - Ptolemy')
-    w.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+    # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+    w.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
     w.show()
 
     sys.exit(app.exec_())

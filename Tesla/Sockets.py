@@ -7,7 +7,7 @@ from PyQt5.QtCore import QObject, QThread
 import socket
 from subprocess import Popen, PIPE
 from threading import Thread
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from socketserver import ThreadingMixIn
 
 
@@ -58,8 +58,10 @@ class Sockets(QObject):
         object.__init__(self)
 
         self.LOCAL_IP = self.getLocalIP()
+        # TODO:SETTINGS — hardcoded port → Tesla/settings tab
         self.LOCAL_PORT = 5555
         self.PUBLIC_IP = self.getPublicIP()
+        # TODO:SETTINGS — hardcoded port → Tesla/settings tab
         self.PUBLIC_PORT = 32323
         self.PHONE_IP = '174.235.132.59'
         self.BUFFER_SIZE = 1024

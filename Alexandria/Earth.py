@@ -38,10 +38,12 @@ class Earth(object):  # FIX ROTATING THING AGAIN
         os.system("python /home/rendier/Ptolemy/Alexandria/GoogleEarth.py")
         print('Places Updated')
 
-        with open('/home/rendier/Ptolemy/Alexandria/citylist.txt', 'r') as f:
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        with open(PTOL_ROOT + '/Alexandria/citylist.txt', 'r') as f:
             self.citylist = ast.literal_eval(f.read())
 
-        with open('/home/rendier/Ptolemy/Alexandria/locations.txt', 'r') as nf:
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        with open(PTOL_ROOT + '/Alexandria/locations.txt', 'r') as nf:
             self.locations = ast.literal_eval(nf.read())
 
         # self.show(self, self.id)

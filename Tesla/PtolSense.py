@@ -47,6 +47,7 @@ import struct
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 HOST       = '192.168.1.100'    # Ptolemy machine IP — change this
+# TODO:SETTINGS — hardcoded port → Tesla/settings tab
 PORT       = 5556
 DEVICE_ID  = 'ptolsense_ios_01'
 MOTION_HZ  = 20                 # samples/sec for IMU

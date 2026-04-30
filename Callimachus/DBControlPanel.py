@@ -34,7 +34,8 @@ class DBControlPanel(QMainWindow, PtolFace):
 			self.database = self.Ptolemy.db
 			
 		else:
-			self.imageDir = '/home/rendier/Ptolemy/images/Callimachus/'
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			self.imageDir = PTOL_ROOT + '/images/Callimachus/'
 			self.styles = "QMainWindow { border: 1px solid white; background-color: black; color: white } " \
 						  "QWidget { background-color: black; color: white } " \
 						  "QMenuBar { border: 1px solid white; background-color: black; color: white } " \
@@ -176,7 +177,8 @@ def main():
 	# sys.setrecursionlimit(10000)
 	CPanel = DBControlPanel()
 	
-	CPanel.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+ # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+	CPanel.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
 	CPanel.setWindowTitle('Callimachus DB CPanel - Ptolemy')
 	CPanel.show()
 

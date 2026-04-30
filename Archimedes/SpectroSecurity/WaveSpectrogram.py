@@ -100,4 +100,5 @@ def plotstft(audiopath, binsize=2**10, plotpath=None, colormap="jet"):
 
     return ims
 
-ims = plotstft('/home/rendier/Ptolemy/Pharos/audio/demo3.wav')
+# TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+ims = plotstft(PTOL_ROOT + '/Pharos/audio/demo3.wav')

@@ -166,7 +166,7 @@ class processImage(QObject):
 # url3 = "http://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Pythagoras-proof-anim.svg/220px-Pythagoras-proof-anim.svg.png"
 # file1 = "/home/rendier/Desktop/neworleans.jpg"
 # file2 = "/home/rendier/Desktop/battleaxe.png"
-# file3 = '/home/rendier/Ptolemy/Callimachus/ptol.svg'
+# file3 = PTOL_ROOT + '/Callimachus/ptol.svg'
 
 # IP = processImage()
 # print(IP.process('ptol.svg'))

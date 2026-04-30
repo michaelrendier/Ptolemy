@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-file = open('/home/rendier/Ptolemy/Kryptos/TheCodeBook/data/words/clivebarker_weaveworld.txt', 'r')
+# TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+file = open(PTOL_ROOT + '/Kryptos/TheCodeBook/data/words/clivebarker_weaveworld.txt', 'r')
 text = file.read()
 
 

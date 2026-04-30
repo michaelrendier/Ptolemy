@@ -12,10 +12,13 @@ import googlemaps, MySQLdb, socket, sys
 
 from subprocess import PIPE, Popen
 from datetime import datetime
-from html2text import html2text as h2t
-from formlayout import fedit
+try:
+    from html2text import html2text as h2t
+except ImportError:
+    h2t = lambda x: x  # TODO:BUILD — install html2text
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from urllib.request import build_opener
-from espeak import espeak
+# TODO:BUILD — replace espeak with Philadelphos.ptolemy_tongue
 from Pharos.PtolFace import PtolFace
 
 
@@ -1013,8 +1016,10 @@ class Navigation(QMainWindow, PtolFace):
 
         self.setWindowTitle("Anaximander - Ptolemy")
 
+        # TODO:SETTINGS — API key → env var or Kryptos/settings
         self.API_KEY = "AIzaSyCLPZ-AR5SEinJ5GOMFDoWtS3HUu46i68c"
         self.UDP_IP = "192.168.0.7"
+        # TODO:SETTINGS — hardcoded port → Tesla/settings tab
         self.UDP_PORT = 5555
 
         self.gmaps = googlemaps.Client(self.API_KEY)
@@ -1031,8 +1036,10 @@ class Navigation(QMainWindow, PtolFace):
         self.address = str(self.addyList[0]) + "\n" + str(self.addyList[1]) + "\n" + str(self.addyList[2]) + ", " + str(self.addyList[3])
         # print(self.address)
 
-        self.homeDir = "/home/rendier/Ptolemy/"
-        self.imgDir = "/home/rendier/Ptolemy/images/Anaximander/"
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        self.homeDir = PTOL_ROOT + "/"
+        # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+        self.imgDir = PTOL_ROOT + "/images/Anaximander/"
         self.styles = "QMainWindow { border: 1px solid white; background-color: black; color: white } " \
                       "QWidget { background-color: black; color: white } " \
                       "QMenuBar { border: 1px solid white; background-color: black; color: white } " \

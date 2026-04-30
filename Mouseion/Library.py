@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import *
 from PIL import Image
 from urllib.request import build_opener
 from urllib.error import HTTPError, URLError
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 
 import sys, os, string, math, pdfkit
 from Pharos.PtolFace import PtolFace
@@ -34,7 +34,8 @@ class Library(QMainWindow, PtolFace):
 						  "n": u"\u207F", u'[': u'\u207D', u']': u'\u207E', 'm': u'\u1d50'}
 		# self.setFixedSize(150, 250)
 		self.setAutoFillBackground(True)
-		self.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
 		self.resize(int(QDesktopWidget().geometry().width() * 0.8), int(QDesktopWidget().geometry().height() * 0.8))
 		self.setWindowTitle('Mouseion Library - Ptolemy')
 		
@@ -52,7 +53,8 @@ class Library(QMainWindow, PtolFace):
 			from Pharos.Dialogs import Dialogs
 			self.database = Database(self)
 			self.dialogs = Dialogs(self)
-			self.homeDir = "/home/rendier/Ptolemy/"
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			self.homeDir = PTOL_ROOT + "/"
 			self.styles = "QMainWindow { border: 1px solid white; background-color: black; color: white } " \
 						  "QWidget { background-color: black; color: white } " \
 						  "QMenuBar { border: 1px solid white; background-color: black; color: white } " \
@@ -361,7 +363,8 @@ class LibraryThread(QThread):
 		os.chdir(bookImgs)
 		# fix home directory thing TODO
 		for i in sorted(os.listdir(".")):
-			pages.append("/home/rendier/Ptolemy/include/flipbookjs/books/{0}/{1}".format(folder, i))
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			pages.append(PTOL_ROOT + "/include/flipbookjs/books/{0}/{1}".format(folder, i))
 		# print pages
 		img = Image.open(pages[0])
 		# w, h = img.size
@@ -455,7 +458,8 @@ class LibraryThread(QThread):
 		
 		try:
 			url = "https://patentimages.storage.googleapis.com/pdfs/{0}.pdf".format(title)
-			os.chdir("/home/rendier/Ptolemy/temp/flipbook/")
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			os.chdir(PTOL_ROOT + "/temp/flipbook/")
 			os.system("wget -q " + url)
 			fPath = os.getcwd() + "/" + title + '.pdf'
 			# print "fPath BEFORE", [fPath]
@@ -491,7 +495,8 @@ class FlippingBook(QWidget):
 		# print("BOOK: " + self.book, self.bookPath)
 		self.homeDir = self.Library.homeDir
 		self.flippingBookDir = self.Library.flippingBookDir
-		self.path = QUrl.fromLocalFile('/home/rendier/Ptolemy/include/flipbookjs/')
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.path = QUrl.fromLocalFile(PTOL_ROOT + '/include/flipbookjs/')
 		
 		QSett = QWebEngineSettings.globalSettings()
 		QSett.setAttribute(QWebEngineSettings.PluginsEnabled, True)

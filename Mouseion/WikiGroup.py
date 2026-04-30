@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QDesktopWidget, Q
 
 import sys, os, re, pdfkit
 
-from formlayout import fedit
+# TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from lxml import html as HTML
 from urllib.request import build_opener, quote, unquote
 from Pharos.Dialogs import Dialogs
@@ -110,7 +110,8 @@ class WikiGroup(QMainWindow, PtolFace):
 		self.Ptolemy = parent
 		print("WIKIGROUP PARENT: ", self.Ptolemy)
 		
-		self.setWindowIcon(QIcon('/home/rendier/Ptolemy/images/ptol.svg'))
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
 		self.resize(int(QDesktopWidget().geometry().width() * 0.8), int(QDesktopWidget().geometry().height() * 0.8))
 		self.setWindowTitle('Mouseion Wikipedia Books - Ptolemy')
 		
@@ -148,7 +149,8 @@ class WikiGroup(QMainWindow, PtolFace):
 							  "QTableWidget { background-color: black; color: white } " \
 							  "QTableWidget::item:focus { border: 1px solid white; background-color: blue; color: white } " \
 							  "QHeaderView::section { background-color: darkblue; color: white }"
-			self.groupDir = '/home/rendier/Ptolemy/media/docs/wikiGroupPdfs/'
+   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+			self.groupDir = PTOL_ROOT + '/media/docs/wikiGroupPdfs/'
 			self.setStyleSheet(self.styles)
 			self.dialogs = Dialogs()
 			
@@ -193,7 +195,8 @@ class WikiGroup(QMainWindow, PtolFace):
 		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
 		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
 		QSett.setAttribute(QWebEngineSettings.WebGLEnabled, True)
-		self.path = QUrl.fromLocalFile("/home/rendier/Ptolemy/media/docs/wikiGroupPdfs/") # Fix home directory thing TODO
+  # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
+		self.path = QUrl.fromLocalFile(PTOL_ROOT + "/media/docs/wikiGroupPdfs/") # Fix home directory thing TODO
 
 		self.webView = QWebEngineView(parent=self)
 		self.webView.setStyleSheet("QWebEngineView { background-color: grey; }")
