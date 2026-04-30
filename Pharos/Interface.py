@@ -13,7 +13,11 @@ from random import randrange
 from subprocess import Popen, PIPE, call
 from OpenGL.GLUT import *
 
-from working.SpectroSecurity import LiveSpectrogram as LS
+# SpectroSecurity moved to Archimedes — import via proper path
+try:
+    from Archimedes.SpectroSecurity.LiveSpectrogram import LiveSpectrogram as LS
+except ImportError:
+    LS = None  # stub — Archimedes.SpectroSecurity not available
 
 import os, psutil
 
