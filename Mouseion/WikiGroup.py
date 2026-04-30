@@ -13,6 +13,7 @@ from formlayout import fedit
 from lxml import html as HTML
 from urllib.request import build_opener, quote, unquote
 from Pharos.Dialogs import Dialogs
+from Pharos.PtolFace import PtolFace
 
 class WikiThread(QThread):
 	groupFinished = pyqtSignal(list)
@@ -100,7 +101,7 @@ class WikiThread(QThread):
 		
 		pass
 
-class WikiGroup(QMainWindow):
+class WikiGroup(QMainWindow, PtolFace):
 
 	def __init__(self, parent=None):
 		super(WikiGroup, self).__init__(parent)

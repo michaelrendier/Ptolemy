@@ -14,9 +14,10 @@ from Callimachus.Database import Database
 
 import sys
 from matplotlib import pyplot as ptl
+from Pharos.PtolFace import PtolFace
 
 
-class DBControlPanel(QMainWindow):
+class DBControlPanel(QMainWindow, PtolFace):
 	
 	def __init__(self, parent=None):
 		super(DBControlPanel, self).__init__(parent)

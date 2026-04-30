@@ -16,6 +16,7 @@ from html2text import html2text as h2t
 from formlayout import fedit
 from urllib.request import build_opener
 from espeak import espeak
+from Pharos.PtolFace import PtolFace
 
 
 
@@ -1001,7 +1002,7 @@ place_results = \
 #                                      departure_time=now)
 
 
-class Navigation(QMainWindow):
+class Navigation(QMainWindow, PtolFace):
 
     def __init__(self, parent=None):
         super(Navigation, self).__init__(parent)

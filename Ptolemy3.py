@@ -110,6 +110,11 @@ class PtolBus(QObject):
         # Instantiate the face
         face = face_cls(*args, parent=self.Ptolemy, **kwargs)
 
+        # Wire bus back-reference into face (PtolFace contract)
+        if hasattr(face, '_ptol_id'):
+            face._ptol_id  = face_id
+            face._ptol_bus = self
+
         # Collect timers declared by the face (convention: face._ptol_timers)
         timers = getattr(face, '_ptol_timers', [])
 

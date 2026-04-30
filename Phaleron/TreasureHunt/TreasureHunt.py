@@ -35,6 +35,7 @@ import articleDateExtractor as ADE
 # }
 
 import sys, os, urllib, re
+from Pharos.PtolFace import PtolFace
 
 
 
@@ -821,7 +822,7 @@ class ThreadIndicator(QWidget):
 		# exec code
 		pass
 
-class TreasureHunt(QMainWindow):
+class TreasureHunt(QMainWindow, PtolFace):
 
 	def __init__(self, parent=None):
 		super(TreasureHunt, self).__init__(parent)

@@ -13,10 +13,11 @@ from urllib.error import HTTPError, URLError
 from formlayout import fedit
 
 import sys, os, string, math, pdfkit
+from Pharos.PtolFace import PtolFace
 
 
 # make listwidget into tree, add categories w/parents to db. TODO
-class Library(QMainWindow):
+class Library(QMainWindow, PtolFace):
 	
 	def __init__(self, parent=None):
 		super(Library, self).__init__(parent)

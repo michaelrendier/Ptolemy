@@ -10,9 +10,10 @@ from PyQt5.QtSvg import *
 
 from Callimachus.Database import Database
 from Pharos.Dialogs import Dialogs
+from Pharos.PtolFace import PtolFace
 
 
-class Notepad(QMainWindow):
+class Notepad(QMainWindow, PtolFace):
     
     def __init__(self, parent=None):
         super(Notepad, self).__init__(parent)
