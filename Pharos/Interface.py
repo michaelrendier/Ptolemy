@@ -15,7 +15,7 @@ from OpenGL.GLUT import *
 
 # SpectroSecurity moved to Archimedes — import via proper path
 try:
-    from Archimedes.SpectroSecurity.LiveSpectrogram import LiveSpectrogram as LS
+    from Archimedes.SpectroSecurity import LiveSpectrogram as LS
 except ImportError:
     LS = None  # stub — Archimedes.SpectroSecurity not available
 
