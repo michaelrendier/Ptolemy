@@ -58,6 +58,8 @@ from Pharos.SystemTrayIcon     import SystemTrayIcon
 from Pharos.UtilityFunctions   import cmdline
 from Pharos.Menu               import Menu
 from Pharos.Interface          import User
+from Pharos.PtolShell          import PtolShell
+from Pharos.LeftPanel          import LeftPanel
 from urllib.request            import build_opener
 
 # ── Tesla — all interfacing ────────────────────────────────────────────────────
@@ -409,17 +411,111 @@ class Ptolemy(QMainWindow):
 
     def _init_ui(self):
         self.setStyleSheet(self.stylesheet)
-
-        # Philadelphos must exist before Interface tries to bind setOutput
         self._launch_philadelphos()
 
-        # Pharos nav interface (always present)
+        # Pharos nav interface
         self.Interface = User(self)
-        self.scene.addWidget(self.Interface)
+        self._pharos_proxy = self.scene.addWidget(self.Interface)
+        self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsMovable, True)
+        self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsSelectable, True)
+        self._pharos_proxy.setOpacity(0.30)
 
-        # Menu (always present)
+        # Left panel (file tree + Archimedes)
+        self.LeftPanel = LeftPanel(parent=None)
+        self._left_proxy = self.scene.addWidget(self.LeftPanel)
+        self._left_proxy.setFlag(self._left_proxy.ItemIsMovable, True)
+        self._left_proxy.setFlag(self._left_proxy.ItemIsSelectable, True)
+        self._left_proxy.setPos(0, 0)
+        self._left_proxy.setOpacity(0.30)
+        self.LeftPanel.arch_item_activated.connect(self._on_arch_drop)
+
+        # PtolShell
+        self.PtolShell = PtolShell(parent=None)
+        self._shell_proxy = self.scene.addWidget(self.PtolShell)
+        self._shell_proxy.setFlag(self._shell_proxy.ItemIsMovable, True)
+        self._shell_proxy.setFlag(self._shell_proxy.ItemIsSelectable, True)
+        self._shell_proxy.setPos(270, 0)
+        self._shell_proxy.setOpacity(0.30)
+
+        # Legacy menu
         self.Menu = Menu(parent=self)
-        self.scene.addWidget(self.Menu)
+        self._menu_proxy = self.scene.addWidget(self.Menu)
+        self._menu_proxy.setFlag(self._menu_proxy.ItemIsMovable, True)
+        self._menu_proxy.setFlag(self._menu_proxy.ItemIsSelectable, True)
+        self._menu_proxy.setOpacity(0.30)
+
+        # Focus tracking -> opacity (70% unfocused)
+        self._proxies = [
+            self._pharos_proxy, self._left_proxy,
+            self._shell_proxy,  self._menu_proxy,
+        ]
+        self.scene.focusItemChanged.connect(self._on_focus_changed)
+
+        # Drag-and-drop onto empty desktop
+        self.view.setAcceptDrops(True)
+        self.view.dragEnterEvent = self._drag_enter
+        self.view.dragMoveEvent  = self._drag_move
+        self.view.dropEvent      = self._drop_event
+
+        # Windows/Menu key listener
+        self._key_filter = _GlobalKeyFilter(self)
+        QApplication.instance().installEventFilter(self._key_filter)
+
+    def _on_focus_changed(self, new_item, _old, _reason):
+        for proxy in self._proxies:
+            is_focused = (new_item is proxy or
+                          (new_item is not None and
+                           new_item.parentItem() is proxy))
+            proxy.setOpacity(1.0 if is_focused else 0.30)
+
+    def raise_ptolemy(self):
+        self.raise_()
+        self.activateWindow()
+        w = self.screen.width()
+        h = self.screen.height()
+        self._pharos_proxy.setPos(w - self.Interface.width() - 20, h // 2 - 150)
+        self._shell_proxy.setPos(w - self.Interface.width() - 450, h // 2 - 150)
+        self._left_proxy.setPos(0, 0)
+
+    def _drag_enter(self, event):
+        if event.mimeData().hasUrls() or event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    def _drag_move(self, event):
+        event.acceptProposedAction()
+
+    def _drop_event(self, event):
+        pos = self.view.mapToScene(event.pos())
+        for item in self.scene.items(pos):
+            if isinstance(item, QGraphicsProxyWidget):
+                return  # landed on existing window
+        data = {}
+        if event.mimeData().hasUrls():
+            data['urls'] = [u.toLocalFile() for u in event.mimeData().urls()]
+        elif event.mimeData().hasText():
+            data['text'] = event.mimeData().text()
+        self._open_drop_window(pos, data)
+        event.acceptProposedAction()
+
+    def _open_drop_window(self, pos, data):
+        from Pharos.DropWindow import DropWindow
+        win = DropWindow(data, parent=None)
+        proxy = self.scene.addWidget(win)
+        proxy.setFlag(proxy.ItemIsMovable, True)
+        proxy.setFlag(proxy.ItemIsSelectable, True)
+        proxy.setPos(pos)
+        proxy.setOpacity(1.0)
+        self._proxies.append(proxy)
+
+    def _on_arch_drop(self, data):
+        from Pharos.DropWindow import DropWindow
+        win = DropWindow({'arch': data}, parent=None)
+        proxy = self.scene.addWidget(win)
+        proxy.setFlag(proxy.ItemIsMovable, True)
+        proxy.setFlag(proxy.ItemIsSelectable, True)
+        proxy.setPos(300, 200)
+        proxy.setOpacity(1.0)
+        self._proxies.append(proxy)
 
     def _launch_philadelphos(self):
         """
