@@ -39,7 +39,7 @@ class Menu(QWidget):
 		self.filemenucounter = 0
 		self.filemenushift = 0
 
-		self.rect = QRect(0, 0, 254, self.Ptolemy.scene.height() - 50)
+		self.rect = QRect(0, 0, 254, int(self.Ptolemy.scene.height()) - 50)
 		self.setGeometry(self.rect)
 
 		# self.setZValue(0)
