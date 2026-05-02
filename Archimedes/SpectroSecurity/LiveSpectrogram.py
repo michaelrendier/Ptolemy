@@ -75,7 +75,8 @@ class SpectrogramWidget(pg.PlotWidget):
         # setup the correct scaling for y-axis
         freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
         yscale = 1.0/(self.img_array.shape[1]/freq[-1])
-        self.img.scale((1./FS)*CHUNKSZ, yscale)
+        from PyQt5.QtGui import QTransform
+        self.img.setTransform(QTransform.fromScale((1./FS)*CHUNKSZ, yscale))
 
         # Set Labels
         # self.setLabel('left', 'Frequency', units='Hz')
