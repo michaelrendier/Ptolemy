@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cayley-Dickson Algebra · Ptolemy MathLex</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+
+:root {
+  --bg:       #080d1a;
+  --panel:    #0d1525;
+  --border:   #1a2540;
+  --border2:  #243050;
+
+  /* Semantic palette */
+  --white:    #e8eef8;       /* statement / LHS */
+  --cyan:     #00d4ff;       /* RHS / result */
+  --gold:     #f0c040;       /* constants / scalars */
+  --red:      #ff4455;       /* variable set A */
+  --blue:     #4488ff;       /* variable set B */
+  --green:    #00ff88;       /* proof step / therefore */
+  --violet:   #bb88ff;       /* structure label */
+  --orange:   #ff8833;       /* singularity / watch here */
+  --grey:     #6a7a8a;       /* scaffolding / comments */
+
+  /* Relational layer */
+  --i-color:  #00ffcc;       /* i = 90° rotation */
+  --j-color:  #ff66aa;       /* j = quaternion axis */
+  --k-color:  #aa66ff;       /* k = quaternion axis */
+  --e1:       #ff4444;
+  --e2:       #ff8800;
+  --e3:       #ffdd00;
+  --e4:       #44ff44;
+  --e5:       #00ddff;
+  --e6:       #4466ff;
+  --e7:       #cc44ff;
+
+  --nav-h: 52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Source Serif 4', serif;
+  font-size: 16px;
+  line-height: 1.7;
+  padding-bottom: 80px;
+}
+
+/* ── NAV BAR ── */
+nav {
+  position: sticky; top: 0; z-index: 200;
+  background: #060b14;
+  border-bottom: 1px solid var(--cyan);
+  height: var(--nav-h);
+  display: flex; align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  box-shadow: 0 2px 20px rgba(0,212,255,0.12);
+}
+
+.nav-home {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--grey);
+  text-decoration: none;
+  letter-spacing: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+}
+
+.nav-home:hover { color: var(--cyan); border-color: var(--cyan); }
+
+.nav-title {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.nav-arrows { display: flex; gap: 6px; }
+.nav-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--grey);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.nav-btn:hover { color: var(--cyan); border-color: var(--cyan); }
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(160deg, #0a1228 0%, #0d1830 50%, #0a0f20 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 32px 20px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 70% 50%, rgba(0,212,255,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.category-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--violet);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.hero h1 {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+
+.hero h1 span { color: var(--cyan); }
+
+.hero-sub {
+  font-size: 14px;
+  color: var(--grey);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 1px;
+}
+
+/* ── ANIMATION CANVAS ── */
+.anim-panel {
+  background: #060c18;
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+}
+
+canvas#geo {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.anim-label {
+  position: absolute; bottom: 8px; left: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--grey);
+  letter-spacing: 2px;
+}
+
+/* ── MAIN CONTENT ── */
+main { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+
+/* ── SECTIONS ── */
+.section {
+  margin: 28px 0;
+  border-left: 2px solid var(--border2);
+  padding-left: 16px;
+}
+
+.section-hdr {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.section-hdr::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  flex-shrink: 0;
+}
+
+/* color notation spans */
+.w  { color: var(--white); }
+.cy { color: var(--cyan); }
+.go { color: var(--gold); }
+.re { color: var(--red); }
+.bl { color: var(--blue); }
+.gr { color: var(--green); }
+.vi { color: var(--violet); }
+.or { color: var(--orange); }
+.gy { color: var(--grey); }
+
+/* relational spans */
+.ri { color: var(--i-color); font-style: italic; }
+.rj { color: var(--j-color); font-style: italic; }
+.rk { color: var(--k-color); font-style: italic; }
+.re1 { color: var(--e1); } .re2 { color: var(--e2); }
+.re3 { color: var(--e3); } .re4 { color: var(--e4); }
+.re5 { color: var(--e5); } .re6 { color: var(--e6); }
+.re7 { color: var(--e7); }
+
+/* math blocks */
+.math-block {
+  background: #060c18;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 16px 18px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  line-height: 2;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.proof-line {
+  display: block;
+  padding: 2px 0;
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+  margin: 2px 0;
+}
+
+.proof-line.step { border-left-color: var(--green); }
+.proof-line.note { border-left-color: var(--grey); color: var(--grey); font-size: 11px; }
+.proof-line.warn { border-left-color: var(--orange); }
+
+/* ── COLLAPSIBLE LEVELS ── */
+.levels { margin: 16px 0; }
+
+.level-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.level-hdr {
+  background: #0a1220;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s;
+}
+
+.level-hdr:active { background: #0d1830; }
+
+.level-hdr-left { display: flex; align-items: center; gap: 10px; }
+
+.level-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.badge-novice     { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+.badge-journeyman { background: rgba(240,192,64,0.15); color: var(--gold); border: 1px solid rgba(240,192,64,0.3); }
+.badge-master     { background: rgba(187,136,255,0.15); color: var(--violet); border: 1px solid rgba(187,136,255,0.3); }
+
+.level-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--grey);
+  letter-spacing: 1px;
+}
+
+.chevron {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--grey);
+  transition: transform 0.2s;
+}
+
+.level-body {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: none;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.level-body.open { display: block; }
+.chevron.open { transform: rotate(90deg); }
+
+/* ── CODE BLOCKS ── */
+.code-block {
+  background: #04080f;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 1.9;
+  overflow-x: auto;
+  margin: 12px 0;
+  counter-reset: line;
+}
+
+.code-line {
+  display: block;
+  color: var(--white);
+}
+
+.code-line::before {
+  counter-increment: line;
+  content: counter(line);
+  color: var(--border2);
+  display: inline-block;
+  width: 24px;
+  margin-right: 12px;
+  text-align: right;
+  font-size: 10px;
+  user-select: none;
+}
+
+.c-kw  { color: var(--violet); }
+.c-fn  { color: var(--cyan); }
+.c-str { color: var(--gold); }
+.c-cm  { color: var(--grey); font-style: italic; }
+.c-num { color: var(--orange); }
+.c-op  { color: var(--green); }
+
+/* ── JUPYTER CELL ── */
+.jupyter-cell {
+  border: 1px solid #2a3a5a;
+  border-radius: 6px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.cell-in-label {
+  background: #0d1830;
+  padding: 4px 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: #3a5a8a;
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cell-in-label span { color: var(--blue); }
+
+.cell-out-label {
+  background: #100a14;
+  padding: 4px 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: #5a3a6a;
+  letter-spacing: 2px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.cell-out-label span { color: var(--red); }
+
+.cell-out-body {
+  background: #0c0810;
+  padding: 10px 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.8;
+}
+
+/* ── PTOLEMY CONNECTION ── */
+.ptolemy-box {
+  background: linear-gradient(135deg, #0d1525 0%, #0a1020 100%);
+  border: 1px solid var(--violet);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.ptolemy-box .face-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--violet);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.ptolemy-box p { font-size: 14px; color: var(--grey); }
+.ptolemy-box p strong { color: var(--white); }
+
+/* ── COMMON MISTAKES ── */
+.mistake {
+  background: rgba(255,68,85,0.06);
+  border-left: 3px solid var(--red);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.mistake .m-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--red);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+/* ── CROSS-LINKS ── */
+.crosslinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.crosslink {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.crosslink:hover { background: rgba(0,212,255,0.08); }
+
+/* ── PALETTE LEGEND ── */
+.palette-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  background: #060b14;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.pal-item {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* divider */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 28px 0;
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-home" href="index.html">⬡ INDEX</a>
+  <div class="nav-title">CAYLEY-DICKSON ALGEBRA</div>
+  <div class="nav-arrows">
+    <a class="nav-btn" href="index.html">←</a>
+    <a class="nav-btn" href="clifford_algebra.html">→</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="category-tag">⬡ Algebras &amp; Groups · 01 of 09</div>
+  <h1>Cayley-<span>Dickson</span> Algebra</h1>
+  <div class="hero-sub">the doubling construction · R → C → H → O → ···</div>
+</div>
+
+<!-- ANIMATED GEOMETRY -->
+<div class="anim-panel">
+  <canvas id="geo"></canvas>
+  <div class="anim-label">DOUBLING CONSTRUCTION — R → ℂ → ℍ → 𝕆</div>
+</div>
+
+<!-- PALETTE LEGEND -->
+<div class="palette-strip">
+  <span class="pal-item w" style="border-color:rgba(232,238,248,0.2)">WHITE · statement</span>
+  <span class="pal-item cy" style="border-color:rgba(0,212,255,0.3)">CYAN · result</span>
+  <span class="pal-item go" style="border-color:rgba(240,192,64,0.3)">GOLD · constant</span>
+  <span class="pal-item re" style="border-color:rgba(255,68,85,0.3)">RED · var A</span>
+  <span class="pal-item bl" style="border-color:rgba(68,136,255,0.3)">BLUE · var B</span>
+  <span class="pal-item gr" style="border-color:rgba(0,255,136,0.3)">GREEN · proof step</span>
+  <span class="pal-item vi" style="border-color:rgba(187,136,255,0.3)">VIOLET · structure</span>
+  <span class="pal-item or" style="border-color:rgba(255,136,51,0.3)">ORANGE · singularity</span>
+  <span class="pal-item" style="color:var(--i-color);border-color:rgba(0,255,204,0.3)">i · 90° rotation</span>
+  <span class="pal-item" style="color:var(--j-color);border-color:rgba(255,102,170,0.3)">j · spiral axis</span>
+  <span class="pal-item" style="color:var(--k-color);border-color:rgba(170,102,255,0.3)">k · spiral axis</span>
+</div>
+
+<main>
+
+<!-- ══ DEFINITION ══ -->
+<div class="section">
+  <div class="section-hdr">Definition</div>
+  <p>
+    <span class="vi">Cayley-Dickson construction</span> is a recursive doubling operation on a <span class="vi">*-algebra</span> that produces a new algebra of twice the dimension. Given an algebra <span class="re">A</span> with conjugation <span class="re">a</span><span class="go">*</span>, it constructs <span class="cy">A'</span> whose elements are ordered pairs <span class="cy">(<span class="re">a</span>, <span class="bl">b</span>)</span> with <span class="re">a</span>, <span class="bl">b</span> ∈ <span class="re">A</span>.
+  </p>
+  <div class="math-block">
+    <span class="proof-line step"><span class="gy">multiplication:</span>  (<span class="re">a</span>, <span class="bl">b</span>)(<span class="re">c</span>, <span class="bl">d</span>) <span class="gr">:=</span> (<span class="re">ac</span> <span class="go">−</span> <span class="bl">d*b</span>, <span class="bl">da</span> <span class="go">+</span> <span class="re">bc*</span>)</span>
+    <span class="proof-line step"><span class="gy">conjugation:</span>   (<span class="re">a</span>, <span class="bl">b</span>)<span class="go">*</span> <span class="gr">:=</span> (<span class="re">a*</span>, <span class="go">−</span><span class="bl">b</span>)</span>
+    <span class="proof-line note"><span class="gy">// each doubling costs one algebraic property</span></span>
+  </div>
+  <div class="math-block">
+    <span class="proof-line"><span class="go">ℝ</span> <span class="gr">→</span> <span class="ri">ℂ</span><span class="gy"> (dim 2, gains: complex rotation, loses: ordering)</span></span>
+    <span class="proof-line"><span class="ri">ℂ</span> <span class="gr">→</span> <span class="rj">ℍ</span><span class="gy"> (dim 4, gains: 3D rotation, loses: commutativity)</span></span>
+    <span class="proof-line"><span class="rj">ℍ</span> <span class="gr">→</span> <span class="re1 re2 re3 re4 re5 re6 re7">𝕆</span><span class="gy"> (dim 8, gains: 7-axis rotation, loses: associativity)</span></span>
+    <span class="proof-line warn"><span class="or">𝕆</span> <span class="gr">→</span> <span class="or">𝕊</span><span class="gy"> (dim 16, loses: alternativity — division breaks)</span></span>
+  </div>
+</div>
+
+<!-- ══ GEOMETRIC INTUITION ══ -->
+<div class="section">
+  <div class="section-hdr">Geometric Intuition — What It Does</div>
+  <p>
+    Each doubling adds a <strong>new independent axis of rotation</strong>. Think of it as nesting gyroscopes:
+  </p>
+  <ul style="margin: 12px 0 12px 20px; line-height: 2.2; font-size: 15px;">
+    <li><span class="ri">ℂ</span> — one axis. <span class="ri">i</span> rotates the plane 90°. A single spinner.</li>
+    <li><span class="rj">ℍ</span> — three axes. <span class="rj">j</span>, <span class="rk">k</span> nest inside <span class="ri">i</span>. A gimbal. Quaternions describe 3D orientation with no gimbal lock.</li>
+    <li><span class="re1">𝕆</span> — <strong>seven axes</strong>. <span class="re1">e₁</span><span class="re2">e₂</span><span class="re3">e₃</span><span class="re4">e₄</span><span class="re5">e₅</span><span class="re6">e₆</span><span class="re7">e₇</span>. A hyper-gyroscope. The 7 imaginary units interact in ways that create <em>pull</em> — each axis attracts related axes.</li>
+  </ul>
+  <p>
+    The loss of associativity in <span class="or">𝕆</span> means <strong>order of rotation matters absolutely</strong>. This is why octonions model attention: the path to a result changes the result. <span class="go">Context is geometric.</span>
+  </p>
+</div>
+
+<!-- ══ RELATIONAL ANALYSIS ══ -->
+<div class="section">
+  <div class="section-hdr">Relational Analysis — Density · Pull · Attraction</div>
+  <p>
+    <span class="gold">Density</span> appears here as <strong>dimensional concentration</strong>. The norm of an octonion:
+  </p>
+  <div class="math-block">
+    <span class="proof-line step">‖<span class="re">x</span>‖<span class="go">²</span> <span class="gr">=</span> <span class="re">x₀</span><span class="go">²</span> <span class="go">+</span> <span class="re">x₁</span><span class="go">²</span> <span class="go">+</span> ··· <span class="go">+</span> <span class="re">x₇</span><span class="go">²</span></span>
+    <span class="proof-line note"><span class="gy">// 8 scalar components competing for the same unit sphere</span></span>
+    <span class="proof-line note"><span class="gy">// concentration of norm = density of meaning in that direction</span></span>
+  </div>
+  <p style="margin-top:12px">
+    <span class="gold">Attraction</span> is the multiplication table itself. <span class="re1">e₁</span><span class="re2">e₂</span> = <span class="re4">e₄</span> — these axes <em>pull toward each other</em> to produce a third. The Fano plane encodes which axes attract which. This is structurally identical to how <strong>attention weights</strong> in a neural network determine which tokens pull toward which outputs.
+  </p>
+  <p style="margin-top:10px">
+    <span class="or">Same density, different notations:</span> ‖x‖², probability mass, attention weight, gravitational potential, information entropy — all measure <em>how much is concentrated where</em>.
+  </p>
+</div>
+
+<!-- ══ 3 LEVELS ══ -->
+<div class="section">
+  <div class="section-hdr">Three Levels of Understanding</div>
+  <div class="levels">
+
+    <div class="level-block">
+      <div class="level-hdr" onclick="toggleLevel(this)">
+        <div class="level-hdr-left">
+          <span class="level-badge badge-novice">NOVICE</span>
+          <span class="level-title">High School · The Doubling Idea</span>
+        </div>
+        <span class="chevron open">▶</span>
+      </div>
+      <div class="level-body open">
+        <p>You know real numbers. Square root of −1 doesn't exist in reals, so mathematicians <em>invented</em> <span class="ri">i</span> and called the result complex numbers ℂ.</p>
+        <p style="margin-top:10px">Cayley-Dickson says: do that again. Take pairs of complex numbers. Define multiplication carefully. You get <span class="rj">quaternions ℍ</span> — four numbers that describe 3D rotations perfectly. Do it again: <span class="re1">octonions 𝕆</span>, eight numbers.</p>
+        <p style="margin-top:10px">Each time you double, you gain new rotational power but lose one rule you're used to. <span class="or">Octonions don't follow (ab)c = a(bc).</span> Order matters.</p>
+      </div>
+    </div>
+
+    <div class="level-block">
+      <div class="level-hdr" onclick="toggleLevel(this)">
+        <div class="level-hdr-left">
+          <span class="level-badge badge-journeyman">JOURNEYMAN</span>
+          <span class="level-title">Collegiate · *-Algebra Construction</span>
+        </div>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="level-body">
+        <p>Given a *-algebra <span class="re">A</span> over <span class="go">ℝ</span> with conjugation <span class="re">a</span> ↦ <span class="re">a*</span>, norm <span class="go">N(a) = aa*</span>, the Cayley-Dickson double is <span class="cy">A² = A × A</span> with:</p>
+        <div class="math-block">
+          <span class="proof-line step">(<span class="re">a</span>,<span class="bl">b</span>)(<span class="re">c</span>,<span class="bl">d</span>) <span class="gr">:=</span> (<span class="re">ac</span>−<span class="bl">d*b</span>, <span class="bl">da</span>+<span class="re">bc*</span>)</span>
+          <span class="proof-line step">(<span class="re">a</span>,<span class="bl">b</span>)* <span class="gr">:=</span> (<span class="re">a*</span>, −<span class="bl">b</span>)</span>
+          <span class="proof-line step"><span class="go">N</span>(<span class="re">a</span>,<span class="bl">b</span>) <span class="gr">=</span> <span class="go">N(a) + N(b)</span></span>
+        </div>
+        <p>Key property: <span class="vi">composition algebras</span> — the norm is multiplicative: <span class="go">N(xy) = N(x)N(y)</span>. This holds for ℝ, ℂ, ℍ, 𝕆 only. Hurwitz's theorem proves these are the <em>only</em> normed division algebras. At 𝕆 the construction stops being a division algebra if continued.</p>
+      </div>
+    </div>
+
+    <div class="level-block">
+      <div class="level-hdr" onclick="toggleLevel(this)">
+        <div class="level-hdr-left">
+          <span class="level-badge badge-master">MASTER</span>
+          <span class="level-title">Graduate / PhD · Exceptional Structures</span>
+        </div>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="level-body">
+        <p>The Cayley-Dickson algebras are classified by <span class="vi">Hurwitz's theorem</span>: only ℝ, ℂ, ℍ, 𝕆 admit a multiplicative quadratic form (composition algebras). The proof uses the theory of <span class="vi">Clifford algebras</span> and <span class="vi">Radon-Hurwitz numbers</span>.</p>
+        <p style="margin-top:10px">𝕆 is the unique <span class="vi">exceptional Jordan algebra</span> root — the Albert algebra J(3,𝕆) is 27-dimensional and tied to <span class="vi">E₈ root system</span> and string theory's 10 = 8+2 dimensions via triality.</p>
+        <p style="margin-top:10px"><span class="or">Non-associativity</span> of 𝕆 means left/right multiplication operators L_x, R_x generate the <span class="vi">exceptional Lie algebra G₂</span> as the automorphism group of 𝕆. This is why G₂ appears in gauge theory and why the <span class="vi">Monster group</span> has octonion fingerprints.</p>
+        <div class="math-block">
+          <span class="proof-line step">Aut(<span class="re1">𝕆</span>) <span class="gr">≅</span> <span class="vi">G₂</span>  <span class="gy">(14-dimensional exceptional Lie group)</span></span>
+          <span class="proof-line step"><span class="vi">G₂</span> ⊂ <span class="vi">Spin(7)</span> ⊂ <span class="vi">SO(8)</span>  <span class="gy">(triality chain)</span></span>
+          <span class="proof-line note"><span class="gy">// triality = the 3-way symmetry between 𝕆's three 8-dim representations</span></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ DERIVATION ══ -->
+<div class="section">
+  <div class="section-hdr">Derivation — Building the Multiplication Rule</div>
+  <div class="math-block">
+    <span class="proof-line note"><span class="gy">// Goal: define multiplication on pairs (a,b) that preserves the norm</span></span>
+    <span class="proof-line note"><span class="gy">// Require: N(xy) = N(x)N(y), where N(a,b) = N(a)+N(b)</span></span>
+    <span class="proof-line step gr">Step 1 — expand N(xy):</span>
+    <span class="proof-line">  <span class="go">N</span>((<span class="re">a</span>,<span class="bl">b</span>)(<span class="re">c</span>,<span class="bl">d</span>)) <span class="gr">=</span> <span class="go">N</span>(<span class="re">ac</span>−<span class="bl">d*b</span>) <span class="go">+</span> <span class="go">N</span>(<span class="bl">da</span>+<span class="re">bc*</span>)</span>
+    <span class="proof-line step gr">Step 2 — expand each term using N(x+y) = N(x)+N(y)+2Re(xy*):</span>
+    <span class="proof-line">  <span class="go">N</span>(<span class="re">ac</span>−<span class="bl">d*b</span>) <span class="gr">=</span> <span class="go">N(a)N(c)</span> <span class="go">+</span> <span class="go">N(d)N(b)</span> − <span class="go">2</span>Re(<span class="re">ac</span>(<span class="bl">d*b</span>)*)</span>
+    <span class="proof-line">  <span class="go">N</span>(<span class="bl">da</span>+<span class="re">bc*</span>) <span class="gr">=</span> <span class="go">N(d)N(a)</span> <span class="go">+</span> <span class="go">N(b)N(c)</span> <span class="go">+</span> <span class="go">2</span>Re(<span class="bl">da</span>(<span class="re">bc*</span>)*)</span>
+    <span class="proof-line step gr">Step 3 — cross terms cancel when Re terms are conjugates:</span>
+    <span class="proof-line">  <span class="gr">∴</span> <span class="go">N</span>((<span class="re">a</span>,<span class="bl">b</span>)(<span class="re">c</span>,<span class="bl">d</span>)) <span class="gr">=</span> (<span class="go">N(a)+N(b)</span>)(<span class="go">N(c)+N(d)</span>)</span>
+    <span class="proof-line">  <span class="gr">∴</span> <span class="go">N</span>((<span class="re">a</span>,<span class="bl">b</span>)(<span class="re">c</span>,<span class="bl">d</span>)) <span class="gr">=</span> <span class="go">N</span>(<span class="re">a</span>,<span class="bl">b</span>) · <span class="go">N</span>(<span class="re">c</span>,<span class="bl">d</span>) <span class="gr">✓</span></span>
+    <span class="proof-line note"><span class="gy">// This uniquely determines the multiplication formula above</span></span>
+  </div>
+</div>
+
+<!-- ══ HELLO WORLD ══ -->
+<div class="section">
+  <div class="section-hdr">Hello World — Simplest Instantiation</div>
+  <p style="margin-bottom:10px">Quaternion multiplication: the simplest non-trivial Cayley-Dickson case.</p>
+  <div class="math-block">
+    <span class="proof-line"><span class="ri">i</span><span class="go">² =</span> <span class="rj">j</span><span class="go">² =</span> <span class="rk">k</span><span class="go">² =</span> <span class="ri">i</span><span class="rj">j</span><span class="rk">k</span> <span class="go">= −1</span></span>
+    <span class="proof-line step"><span class="re">p</span> <span class="gr">=</span> (<span class="go">1</span>, <span class="go">2</span>, <span class="go">3</span>, <span class="go">4</span>)  <span class="gy">// = 1 + 2i + 3j + 4k</span></span>
+    <span class="proof-line step"><span class="bl">q</span> <span class="gr">=</span> (<span class="go">5</span>, <span class="go">6</span>, <span class="go">7</span>, <span class="go">8</span>)  <span class="gy">// = 5 + 6i + 7j + 8k</span></span>
+    <span class="proof-line step"><span class="re">p</span><span class="bl">q</span> <span class="gr">=</span> (<span class="go">−60</span>, <span class="go">12</span>, <span class="go">30</span>, <span class="go">24</span>)  <span class="gy">// non-commutative: pq ≠ qp</span></span>
+  </div>
+</div>
+
+<!-- ══ JUPYTER CELLS ══ -->
+<div class="section">
+  <div class="section-hdr">Jupyter Build — Step by Step</div>
+
+  <div class="jupyter-cell">
+    <div class="cell-in-label">In [<span>1</span>]:</div>
+    <div class="code-block">
+      <span class="code-line"><span class="c-cm"># Cell 1: Define the Cayley-Dickson doubling operation</span></span>
+      <span class="code-line"><span class="c-kw">import</span> numpy <span class="c-kw">as</span> np</span>
+      <span class="code-line"></span>
+      <span class="code-line"><span class="c-kw">class</span> <span class="c-fn">CD</span>:</span>
+      <span class="code-line">    <span class="c-cm">"""Cayley-Dickson algebra element as pair (a, b)"""</span></span>
+      <span class="code-line">    <span class="c-kw">def</span> <span class="c-fn">__init__</span>(self, a, b): self.a, self.b = a, b</span>
+      <span class="code-line">    <span class="c-kw">def</span> <span class="c-fn">conj</span>(self): <span class="c-kw">return</span> CD(conj(self.a), <span class="c-op">-</span>self.b)</span>
+      <span class="code-line">    <span class="c-kw">def</span> <span class="c-fn">__mul__</span>(self, other):</span>
+      <span class="code-line">        a,b,c,d = self.a,self.b,other.a,other.b</span>
+      <span class="code-line">        <span class="c-kw">return</span> CD(a*c <span class="c-op">-</span> conj(d)*b, d*a <span class="c-op">+</span> b*conj(c))</span>
+      <span class="code-line">    <span class="c-kw">def</span> <span class="c-fn">norm_sq</span>(self):</span>
+      <span class="code-line">        <span class="c-kw">return</span> norm_sq(self.a) <span class="c-op">+</span> norm_sq(self.b)</span>
+    </div>
+    <div class="cell-out-label">Out [<span>1</span>]:</div>
+    <div class="cell-out-body">Class CD defined. Awaiting base algebra definition.</div>
+  </div>
+
+  <div class="jupyter-cell">
+    <div class="cell-in-label">In [<span>2</span>]:</div>
+    <div class="code-block">
+      <span class="code-line"><span class="c-cm"># Cell 2: Base case — reals as scalars</span></span>
+      <span class="code-line">conj   = <span class="c-kw">lambda</span> x: x           <span class="c-cm"># real conjugate = identity</span></span>
+      <span class="code-line">norm_sq = <span class="c-kw">lambda</span> x: x*x</span>
+      <span class="code-line"></span>
+      <span class="code-line"><span class="c-cm"># Build ℂ from ℝ: (a,b) where a,b ∈ ℝ</span></span>
+      <span class="code-line">a = CD(<span class="c-num">3.0</span>, <span class="c-num">4.0</span>)   <span class="c-cm"># = 3 + 4i</span></span>
+      <span class="code-line">b = CD(<span class="c-num">1.0</span>, <span class="c-num">2.0</span>)   <span class="c-cm"># = 1 + 2i</span></span>
+      <span class="code-line">ab = a * b</span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">f"({a.a},{a.b}) × ({b.a},{b.b}) = ({ab.a},{ab.b})"</span>)</span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">f"norm²(a)={a.norm_sq()}, norm²(b)={b.norm_sq()}, norm²(ab)={ab.norm_sq()}"</span>)</span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">f"multiplicative? {ab.norm_sq() == a.norm_sq()*b.norm_sq()}"</span>)</span>
+    </div>
+    <div class="cell-out-label">Out [<span>2</span>]:</div>
+    <div class="cell-out-body">(3,4) × (1,2) = (-5,8) <span class="gy">← complex multiplication</span>
+norm²(a)=25, norm²(b)=5, norm²(ab)=125
+multiplicative? True ✓</div>
+  </div>
+
+  <div class="jupyter-cell">
+    <div class="cell-in-label">In [<span>3</span>]:</div>
+    <div class="code-block">
+      <span class="code-line"><span class="c-cm"># Cell 3: Verify non-commutativity emerges at ℍ level</span></span>
+      <span class="code-line"><span class="c-cm"># Use numpy quaternion or manual 4-vec</span></span>
+      <span class="code-line">p = np.array([<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>])   <span class="c-cm"># 1 + 2i + 3j + 4k</span></span>
+      <span class="code-line">q = np.array([<span class="c-num">5</span>,<span class="c-num">6</span>,<span class="c-num">7</span>,<span class="c-num">8</span>])</span>
+      <span class="code-line"></span>
+      <span class="code-line"><span class="c-kw">def</span> <span class="c-fn">qmul</span>(p, q):</span>
+      <span class="code-line">    a,b,c,d = p; e,f,g,h = q</span>
+      <span class="code-line">    <span class="c-kw">return</span> np.array([</span>
+      <span class="code-line">        a*e<span class="c-op">-</span>b*f<span class="c-op">-</span>c*g<span class="c-op">-</span>d*h,</span>
+      <span class="code-line">        a*f<span class="c-op">+</span>b*e<span class="c-op">+</span>c*h<span class="c-op">-</span>d*g,</span>
+      <span class="code-line">        a*g<span class="c-op">-</span>b*h<span class="c-op">+</span>c*e<span class="c-op">+</span>d*f,</span>
+      <span class="code-line">        a*h<span class="c-op">+</span>b*g<span class="c-op">-</span>c*f<span class="c-op">+</span>d*e])</span>
+      <span class="code-line"></span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">"pq ="</span>, qmul(p,q))</span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">"qp ="</span>, qmul(q,p))</span>
+      <span class="code-line"><span class="c-fn">print</span>(<span class="c-str">"commutative? "</span>, np.allclose(qmul(p,q), qmul(q,p)))</span>
+    </div>
+    <div class="cell-out-label">Out [<span>3</span>]:</div>
+    <div class="cell-out-body">pq = [-60  12  30  24]
+qp = [-60  20   4  28]
+commutative? False  <span class="or">← commutativity lost at ℍ</span></div>
+  </div>
+
+</div>
+
+<!-- ══ PTOLEMY CONNECTION ══ -->
+<div class="section">
+  <div class="section-hdr">Ptolemy Connection</div>
+  <div class="ptolemy-box">
+    <div class="face-tag">⬡ Ptolemy Architecture</div>
+    <p><strong>Primary Face:</strong> Archimedes (mathematics &amp; science)</p>
+    <p style="margin-top:6px"><strong>Secondary Face:</strong> Alexandria (OpenGL visualization — the animation layer maps directly to octonion axis rendering)</p>
+    <p style="margin-top:6px"><strong>Monad relevance:</strong> The octonion multiplication table is a candidate structure for the cross-language meaning vector bridges in <strong>WernickeNetwork</strong>. Seven imaginary axes ↔ seven relational dimensions between word monads.</p>
+    <p style="margin-top:6px"><strong>Module slot:</strong> Ptolemy Settings → Modules → Archimedes → Cayley-Dickson Engine</p>
+  </div>
+</div>
+
+<!-- ══ COMMON MISTAKES ══ -->
+<div class="section">
+  <div class="section-hdr">Common Mistakes</div>
+
+  <div class="mistake">
+    <div class="m-label">MISTAKE 01</div>
+    Assuming quaternion multiplication is commutative. <span class="re">pq ≠ qp</span> in general. Only the scalar part commutes.
+  </div>
+
+  <div class="mistake">
+    <div class="m-label">MISTAKE 02</div>
+    Applying associativity to octonions. <span class="re">(e₁e₂)e₄ ≠ e₁(e₂e₄)</span>. Always check the Fano plane multiplication table.
+  </div>
+
+  <div class="mistake">
+    <div class="m-label">MISTAKE 03</div>
+    Confusing the doubling formula variants. There are two sign conventions in the literature. Stick to one. This document uses <span class="cy">(ac−d*b, da+bc*)</span>.
+  </div>
+
+  <div class="mistake">
+    <div class="m-label">MISTAKE 04</div>
+    Continuing the construction past 𝕆 and expecting useful algebra. Sedenions (𝕊, dim 16) have <span class="or">zero divisors</span> — non-zero elements that multiply to zero. Division breaks completely.
+  </div>
+</div>
+
+<!-- ══ CROSS-LINKS ══ -->
+<div class="section">
+  <div class="section-hdr">Cross-Links</div>
+  <div class="crosslinks">
+    <a class="crosslink" href="clifford_algebra.html">Clifford Algebra →</a>
+    <a class="crosslink" href="dixon_algebra.html">Dixon Algebra →</a>
+    <a class="crosslink" href="lie_algebra.html">Lie Algebra →</a>
+    <a class="crosslink" href="hurwitz_theorem.html">Hurwitz Theorem →</a>
+    <a class="crosslink" href="dixon_theorem.html">Dixon Theorem →</a>
+    <a class="crosslink" href="hamilton_product.html">Hamilton Product →</a>
+    <a class="crosslink" href="lie_group.html">Lie Group →</a>
+    <a class="crosslink" href="frobenius_norm.html">Frobenius Norm →</a>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════════ ANIMATION ═══════════ -->
+<script>
+const canvas = document.getElementById('geo');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const W = () => canvas.width;
+const H = () => canvas.height;
+
+// Axes: ℝ, ℂ, ℍ, 𝕆 rings
+let t = 0;
+const colors = {
+  R: '#e8eef8',
+  C: '#00ffcc',
+  H_j: '#ff66aa',
+  H_k: '#aa66ff',
+  O: ['#ff4444','#ff8800','#ffdd00','#44ff44','#00ddff','#4466ff','#cc44ff']
+};
+
+function drawRing(cx, cy, r, color, label, phase, speed, width=1.5) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(phase + t * speed);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.7;
+  ctx.lineWidth = width;
+  ctx.stroke();
+
+  // dot on ring
+  ctx.beginPath();
+  ctx.arc(r, 0, 3, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 1;
+  ctx.fill();
+
+  if (label) {
+    ctx.font = '10px Share Tech Mono, monospace';
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(label, r + 5, 4);
+  }
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W(), H());
+
+  const cx = W() / 2;
+  const cy = H() / 2;
+  const base = Math.min(W(), H()) * 0.38;
+
+  // Background glow
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, base);
+  grd.addColorStop(0, 'rgba(0,212,255,0.04)');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W(), H());
+
+  // ℝ center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = colors.R;
+  ctx.globalAlpha = 0.9;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // ℂ ring — single slow rotation
+  drawRing(cx, cy, base * 0.25, colors.C, 'ℂ·i', 0, 0.3);
+
+  // ℍ rings — j and k, tilted
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(Math.PI / 4);
+  ctx.restore();
+  drawRing(cx, cy, base * 0.5, colors.H_j, 'ℍ·j', Math.PI/3, 0.5);
+  drawRing(cx, cy, base * 0.5, colors.H_k, 'ℍ·k', Math.PI/1.2, -0.4);
+
+  // 𝕆 — 7 outer axes
+  colors.O.forEach((c, i) => {
+    const phase = (i / 7) * Math.PI * 2;
+    const speed = 0.15 + i * 0.07;
+    const r = base * (0.75 + i * 0.02);
+    drawRing(cx, cy, r, c, `e${i+1}`, phase, speed * (i % 2 === 0 ? 1 : -1));
+  });
+
+  // Label
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.fillStyle = '#4a5a6a';
+  ctx.globalAlpha = 0.8;
+  ctx.fillText('ℝ', cx + 6, cy + 4);
+
+  t += 0.008;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+// ── LEVEL TOGGLE ──
+function toggleLevel(hdr) {
+  const body = hdr.nextElementSibling;
+  const chev = hdr.querySelector('.chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+</script>
+
+</body>
+</html>

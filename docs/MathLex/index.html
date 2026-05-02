@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ptolemy MathLex · Index</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap');
+
+:root {
+  --bg: #080d1a; --panel: #0d1525; --border: #1a2540;
+  --cyan: #00d4ff; --gold: #f0c040; --green: #00ff88;
+  --violet: #bb88ff; --orange: #ff8833; --red: #ff4455;
+  --white: #e8eef8; --grey: #4a5a6a;
+  --i-color: #00ffcc; --j-color: #ff66aa; --k-color: #aa66ff;
+}
+* { box-sizing: border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { background: var(--bg); color: var(--white); font-family: 'Share Tech Mono', monospace; overflow: hidden; height: 100vh; }
+
+header {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  background: rgba(6,11,20,0.95);
+  border-bottom: 1px solid var(--cyan);
+  padding: 10px 16px;
+  display: flex; align-items:center; gap:12px;
+  backdrop-filter: blur(8px);
+}
+.logo { font-family:'Cinzel',serif; font-size:14px; color:var(--cyan); letter-spacing:3px; }
+.logo span { color:var(--grey); font-size:10px; font-family:'Share Tech Mono',monospace; letter-spacing:2px; display:block; margin-top:2px; }
+.level-toggle { margin-left:auto; display:flex; gap:6px; }
+.lbtn {
+  font-size:9px; letter-spacing:1px; padding:4px 10px;
+  border-radius:3px; border:1px solid var(--border);
+  cursor:pointer; color:var(--grey); background:none;
+  transition:all 0.15s;
+}
+.lbtn.active { border-color:var(--cyan); color:var(--cyan); }
+
+canvas#graph { display:block; width:100%; height:100%; }
+
+/* Node preview panel */
+.preview {
+  position:fixed; bottom:0; left:0; right:0;
+  background: rgba(10,18,36,0.97);
+  border-top: 1px solid var(--border);
+  transform: translateY(100%);
+  transition: transform 0.25s ease;
+  z-index:90;
+  max-height: 55vh;
+  overflow-y:auto;
+  backdrop-filter: blur(10px);
+}
+.preview.show { transform: translateY(0); }
+.preview-inner { padding:16px; }
+.preview-cat { font-size:9px; letter-spacing:3px; color:var(--grey); margin-bottom:6px; }
+.preview-name { font-family:'Cinzel',serif; font-size:18px; color:var(--white); margin-bottom:10px; }
+.preview-links { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.plink {
+  font-size:10px; letter-spacing:1px; padding:5px 10px;
+  border:1px solid rgba(0,212,255,0.3); border-radius:4px;
+  color:var(--cyan); cursor:pointer; text-decoration:none;
+}
+.plink:hover { background:rgba(0,212,255,0.08); }
+.open-btn {
+  display:block; width:100%; padding:12px;
+  background:var(--cyan); color:#000;
+  border:none; border-radius:6px; font-family:'Share Tech Mono',monospace;
+  font-size:12px; letter-spacing:2px; cursor:pointer; text-align:center;
+  text-decoration:none;
+}
+.preview-close {
+  position:absolute; top:12px; right:16px;
+  font-size:18px; color:var(--grey); cursor:pointer; background:none; border:none; color:var(--grey);
+}
+.preview-desc { font-size:12px; color:var(--grey); line-height:1.7; margin-bottom:12px; }
+
+/* Palette strip */
+.palette {
+  position:fixed; top:56px; left:0; right:0; z-index:80;
+  background: rgba(6,11,20,0.9);
+  border-bottom:1px solid var(--border);
+  padding:6px 14px;
+  display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto;
+}
+.pal { font-size:9px; letter-spacing:1px; padding:2px 7px; border-radius:3px; white-space:nowrap; }
+
+/* Instructions */
+.hint {
+  position:fixed; bottom:16px; right:16px; z-index:80;
+  font-size:9px; letter-spacing:2px; color:var(--grey);
+  text-align:right; pointer-events:none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PTOLEMY MATHLEX<span>HIERARCHICAL CONCEPT GRAPH</span></div>
+  <div class="level-toggle">
+    <button class="lbtn active" onclick="filterLevel('all',this)">ALL</button>
+    <button class="lbtn" onclick="filterLevel('foundation',this)" style="color:var(--green)">FOUND</button>
+    <button class="lbtn" onclick="filterLevel('applied',this)" style="color:var(--gold)">APPL</button>
+    <button class="lbtn" onclick="filterLevel('ptolemy',this)" style="color:var(--violet)">PTOL</button>
+  </div>
+</header>
+
+<div class="palette">
+  <span class="pal" style="color:#00ffcc;border:1px solid rgba(0,255,204,0.3)">i·90°</span>
+  <span class="pal" style="color:#ff66aa;border:1px solid rgba(255,102,170,0.3)">j·spiral</span>
+  <span class="pal" style="color:#aa66ff;border:1px solid rgba(170,102,255,0.3)">k·spiral</span>
+  <span class="pal" style="color:var(--green);border:1px solid rgba(0,255,136,0.3)">FOUNDATION</span>
+  <span class="pal" style="color:var(--gold);border:1px solid rgba(240,192,64,0.3)">APPLIED</span>
+  <span class="pal" style="color:var(--violet);border:1px solid rgba(187,136,255,0.3)">PTOLEMY</span>
+</div>
+
+<canvas id="graph"></canvas>
+
+<div class="preview" id="preview">
+  <button class="preview-close" onclick="closePreview()">✕</button>
+  <div class="preview-inner">
+    <div class="preview-cat" id="pCat"></div>
+    <div class="preview-name" id="pName"></div>
+    <div class="preview-desc" id="pDesc"></div>
+    <div class="preview-links" id="pLinks"></div>
+    <a class="open-btn" id="pBtn" href="#">OPEN LESSON →</a>
+  </div>
+</div>
+
+<div class="hint">TAP NODE → LINKS → PREVIEW → OPEN</div>
+
+<script>
+// ── DATA ──
+const NODES = [
+  // FOUNDATION LAYER — row 0
+  {id:'cayley_dickson_algebra', label:'Cayley-Dickson\nAlgebra', cat:'Algebras', layer:'foundation', file:'cayley_dickson_algebra.html',
+   desc:'The recursive doubling construction: ℝ→ℂ→ℍ→𝕆. Root of all division algebras.',
+   links:['clifford_algebra','dixon_algebra','lie_algebra','hurwitz_theorem','hamilton_product']},
+  {id:'lie_algebra', label:'Lie Algebra', cat:'Algebras', layer:'foundation', file:'lie_algebra.html',
+   desc:'Infinitesimal symmetry algebra. The tangent space at the identity of a Lie group.',
+   links:['lie_group','lorentz_group','galois_group','renormalization_group']},
+  {id:'galois_group', label:'Galois Group', cat:'Groups', layer:'foundation', file:'galois_group.html',
+   desc:'Symmetry group of a field extension. Encodes which roots of a polynomial can be permuted.',
+   links:['lie_group','lorentz_group']},
+  {id:'riemannian_manifold', label:'Riemannian\nManifold', cat:'Spaces', layer:'foundation', file:'riemannian_manifold.html',
+   desc:'Smooth manifold with an inner product on each tangent space. Defines distance and curvature.',
+   links:['symplectic_manifold','minkowski_metric','schwarzschild_metric','covariant_derivative']},
+  {id:'hilbert_space', label:'Hilbert Space', cat:'Spaces', layer:'foundation', file:'hilbert_space.html',
+   desc:'Complete inner product space. The arena of quantum mechanics and functional analysis.',
+   links:['dirac_operator','von_neumann_entropy','shannon_entropy','spectral_representation']},
+  {id:'fourier_decomposition', label:'Fourier\nDecomposition', cat:'Transforms', layer:'foundation', file:'fourier_decomposition.html',
+   desc:'Decomposition of a function into orthogonal frequency components.',
+   links:['maclaurin_series','legendre_transform','mellin_transform']},
+
+  // FOUNDATION LAYER — row 1 (more algebras/equations)
+  {id:'clifford_algebra', label:'Clifford Algebra', cat:'Algebras', layer:'foundation', file:'clifford_algebra.html',
+   desc:'Algebra generated by a vector space with a quadratic form. Generalizes complex numbers and quaternions.',
+   links:['cayley_dickson_algebra','pauli_algebra','dirac_operator','dirac_field']},
+  {id:'pauli_algebra', label:'Pauli Algebra', cat:'Algebras', layer:'foundation', file:'pauli_algebra.html',
+   desc:'The Clifford algebra Cl(3,0) generated by Pauli matrices. Describes spin-½ particles.',
+   links:['clifford_algebra','dirac_representation','majorana_representation']},
+  {id:'dixon_algebra', label:'Dixon Algebra', cat:'Algebras', layer:'foundation', file:'dixon_algebra.html',
+   desc:'T = ℂ⊗ℍ⊗𝕆. Dixon\'s unified algebra encompassing the Standard Model gauge groups.',
+   links:['cayley_dickson_algebra','dixon_theorem','dixon_product','gauge_field']},
+
+  // APPLIED LAYER
+  {id:'dirac_equation', label:'Dirac Equation', cat:'Equations', layer:'applied', file:'dirac_equation.html',
+   desc:'Relativistic quantum equation for spin-½ particles. Predicted antimatter.',
+   links:['dirac_field','dirac_operator','klein_gordon_equation','majorana_representation','dirac_representation']},
+  {id:'klein_gordon_equation', label:'Klein-Gordon\nEquation', cat:'Equations', layer:'applied', file:'klein_gordon_equation.html',
+   desc:'Relativistic wave equation for spin-0 particles. The scalar field equation.',
+   links:['dirac_equation','yang_mills_equation','gauge_field','liouville_equation']},
+  {id:'yang_mills_equation', label:'Yang-Mills\nEquation', cat:'Equations', layer:'applied', file:'yang_mills_equation.html',
+   desc:'Equations of motion for non-abelian gauge fields. Foundation of the Standard Model.',
+   links:['gauge_field','yang_mills_field','lie_algebra','lorentz_group']},
+  {id:'cauchy_riemann_equation', label:'Cauchy-Riemann\nEquation', cat:'Equations', layer:'applied', file:'cauchy_riemann_equation.html',
+   desc:'Conditions for complex differentiability. Defines holomorphic functions.',
+   links:['mobius_transform','wirtinger_derivative','jacobian_form']},
+  {id:'liouville_equation', label:'Liouville Equation', cat:'Equations', layer:'applied', file:'liouville_equation.html',
+   desc:'Conservation of phase space density. Foundational to statistical mechanics.',
+   links:['symplectic_manifold','shannon_entropy','bekenstein_entropy']},
+  {id:'lorentz_group', label:'Lorentz Group', cat:'Groups', layer:'applied', file:'lorentz_group.html',
+   desc:'Symmetry group of spacetime. Rotations and boosts preserving the spacetime interval.',
+   links:['lie_group','lie_algebra','lorentz_transform','minkowski_metric','dirac_representation']},
+  {id:'lie_group', label:'Lie Group', cat:'Groups', layer:'applied', file:'lie_group.html',
+   desc:'A group that is also a smooth manifold. Continuous symmetry transformations.',
+   links:['lie_algebra','lorentz_group','renormalization_group','galois_group']},
+  {id:'renormalization_group', label:'Renormalization\nGroup', cat:'Groups', layer:'applied', file:'renormalization_group.html',
+   desc:'Flow equations describing how physical laws change with scale. Encodes density across scales.',
+   links:['lie_group','yang_mills_equation','shannon_entropy','bekenstein_hawking_entropy']},
+  {id:'hodge_decomposition', label:'Hodge\nDecomposition', cat:'Transforms', layer:'applied', file:'hodge_decomposition.html',
+   desc:'Unique decomposition of a differential form into exact, coexact, and harmonic parts.',
+   links:['riemannian_manifold','symplectic_manifold','bianchi_identity','covariant_derivative']},
+  {id:'legendre_transform', label:'Legendre Transform', cat:'Transforms', layer:'applied', file:'legendre_transform.html',
+   desc:'Converts between Lagrangian and Hamiltonian formulations. Conjugate variable duality.',
+   links:['symplectic_manifold','euler_lagrange_equation','shannon_entropy']},
+  {id:'lorentz_transform', label:'Lorentz Transform', cat:'Transforms', layer:'applied', file:'lorentz_transform.html',
+   desc:'Linear map between inertial frames preserving the speed of light.',
+   links:['lorentz_group','minkowski_metric','minkowski_space']},
+  {id:'mellin_transform', label:'Mellin Transform', cat:'Transforms', layer:'applied', file:'mellin_transform.html',
+   desc:'Multiplicative analog of the Laplace transform. Connects to number theory via zeta functions.',
+   links:['fourier_decomposition','berry_keating_conjecture','langlands_kernel']},
+  {id:'mobius_transform', label:'Möbius Transform', cat:'Transforms', layer:'applied', file:'mobius_transform.html',
+   desc:'Fractional linear transformation on the Riemann sphere. Conformal, invertible, elegant.',
+   links:['cauchy_riemann_equation','jacobian_form','cayley_graph']},
+  {id:'symplectic_manifold', label:'Symplectic\nManifold', cat:'Spaces', layer:'applied', file:'symplectic_manifold.html',
+   desc:'Manifold with a closed non-degenerate 2-form. The natural home of classical mechanics.',
+   links:['riemannian_manifold','legendre_transform','hodge_decomposition','liouville_equation']},
+  {id:'covariant_derivative', label:'Covariant\nDerivative', cat:'Operators', layer:'applied', file:'covariant_derivative.html',
+   desc:'Derivative that accounts for the curvature of the space. Generalizes the partial derivative.',
+   links:['riemannian_manifold','bianchi_identity','gauge_field','schwarzschild_metric']},
+  {id:'wirtinger_derivative', label:'Wirtinger\nDerivative', cat:'Operators', layer:'applied', file:'wirtinger_derivative.html',
+   desc:'Formal derivatives ∂/∂z and ∂/∂z̄ treating complex variables as independent.',
+   links:['cauchy_riemann_equation','jacobian_form','mobius_transform']},
+  {id:'dirac_operator', label:'Dirac Operator', cat:'Operators', layer:'applied', file:'dirac_operator.html',
+   desc:'First-order differential operator whose square is the Laplacian. Acts on spinors.',
+   links:['clifford_algebra','dirac_equation','spectral_representation','frobenius_norm']},
+  {id:'frobenius_norm', label:'Frobenius Norm', cat:'Operators', layer:'applied', file:'frobenius_norm.html',
+   desc:'Matrix norm: square root of sum of squared entries. The Euclidean norm on matrices.',
+   links:['von_neumann_entropy','spectral_representation','jacobian_form']},
+  {id:'hamilton_product', label:'Hamilton Product', cat:'Operators', layer:'applied', file:'hamilton_product.html',
+   desc:'Quaternion multiplication. Non-commutative. Encodes 3D rotation composition.',
+   links:['cayley_dickson_algebra','dixon_product','lorentz_group']},
+  {id:'dixon_product', label:'Dixon Product', cat:'Operators', layer:'applied', file:'dixon_product.html',
+   desc:'Multiplication in the Dixon algebra T=ℂ⊗ℍ⊗𝕆 encoding gauge symmetry structure.',
+   links:['dixon_algebra','hamilton_product','cayley_dickson_algebra']},
+  {id:'langlands_kernel', label:'Langlands Kernel', cat:'Operators', layer:'applied', file:'langlands_kernel.html',
+   desc:'Automorphic kernel connecting number theory and representation theory.',
+   links:['galois_group','mellin_transform','modular_form']},
+  {id:'shannon_entropy', label:'Shannon Entropy', cat:'Entropy', layer:'applied', file:'shannon_entropy.html',
+   desc:'H = -Σ p log p. Average information per symbol. The measure of uncertainty.',
+   links:['von_neumann_entropy','bekenstein_entropy','bigram_entropy','renormalization_group']},
+  {id:'von_neumann_entropy', label:'von Neumann\nEntropy', cat:'Entropy', layer:'applied', file:'von_neumann_entropy.html',
+   desc:'S = -Tr(ρ log ρ). Quantum generalization of Shannon entropy. Measures entanglement.',
+   links:['shannon_entropy','bekenstein_hawking_entropy','spectral_representation','hilbert_space']},
+  {id:'bekenstein_entropy', label:'Bekenstein Entropy', cat:'Entropy', layer:'applied', file:'bekenstein_entropy.html',
+   desc:'S ∝ Area. Entropy proportional to surface area, not volume. The holographic principle seed.',
+   links:['bekenstein_hawking_entropy','shannon_entropy','schwarzschild_metric','liouville_equation']},
+  {id:'bekenstein_hawking_entropy', label:'Bekenstein-Hawking\nEntropy', cat:'Entropy', layer:'applied', file:'bekenstein_hawking_entropy.html',
+   desc:'S = A/(4lₚ²). Black hole entropy. Unites gravity, thermodynamics, and quantum mechanics.',
+   links:['bekenstein_entropy','von_neumann_entropy','schwarzschild_metric','renormalization_group']},
+  {id:'minkowski_metric', label:'Minkowski Metric', cat:'Metrics', layer:'applied', file:'minkowski_metric.html',
+   desc:'ds² = -dt² + dx² + dy² + dz². The flat spacetime metric. Signature (−,+,+,+).',
+   links:['schwarzschild_metric','lorentz_transform','riemannian_manifold','minkowski_space']},
+  {id:'schwarzschild_metric', label:'Schwarzschild Metric', cat:'Metrics', layer:'applied', file:'schwarzschild_metric.html',
+   desc:'Exact solution to Einstein\'s equations for a spherically symmetric mass. Contains the event horizon.',
+   links:['minkowski_metric','bekenstein_hawking_entropy','covariant_derivative','riemannian_manifold']},
+  {id:'maclaurin_series', label:'Maclaurin Series', cat:'Series', layer:'applied', file:'maclaurin_series.html',
+   desc:'Taylor series expanded at x=0. The universal local approximation tool.',
+   links:['perturbation_series','chebyshev_polynomial','bernoulli_number']},
+  {id:'perturbation_series', label:'Perturbation Series', cat:'Series', layer:'applied', file:'perturbation_series.html',
+   desc:'Expansion of a solution as powers of a small parameter ε. The physicist\'s approximation engine.',
+   links:['maclaurin_series','renormalization_group','yang_mills_equation']},
+  {id:'balmer_series', label:'Balmer Series', cat:'Series', layer:'applied', file:'balmer_series.html',
+   desc:'Visible emission lines of hydrogen. 1/λ = R(1/4 - 1/n²). First quantization evidence.',
+   links:['rydberg_formula','chern_number','bernoulli_number']},
+  {id:'bernoulli_number', label:'Bernoulli Number', cat:'Numbers', layer:'applied', file:'bernoulli_number.html',
+   desc:'Bₙ: rational numbers appearing in power sum formulas, zeta function, and Euler-Maclaurin formula.',
+   links:['maclaurin_series','catalan_number','lucas_polynomial']},
+  {id:'catalan_number', label:'Catalan Number', cat:'Numbers', layer:'applied', file:'catalan_number.html',
+   desc:'Cₙ = C(2n,n)/(n+1). Count triangulations, bracket sequences, binary trees.',
+   links:['bernoulli_number','chern_number','cayley_graph']},
+  {id:'chern_number', label:'Chern Number', cat:'Numbers', layer:'applied', file:'chern_number.html',
+   desc:'Topological invariant of a vector bundle. Integer-valued. Counts topological phase transitions.',
+   links:['riemannian_manifold','hodge_decomposition','modular_form']},
+  {id:'chebyshev_polynomial', label:'Chebyshev\nPolynomial', cat:'Polynomials', layer:'applied', file:'chebyshev_polynomial.html',
+   desc:'Tₙ(cos θ) = cos(nθ). Optimal approximation. Minimax polynomials.',
+   links:['maclaurin_series','lucas_polynomial','wilson_hilferty']},
+  {id:'lucas_polynomial', label:'Lucas Polynomial', cat:'Polynomials', layer:'applied', file:'lucas_polynomial.html',
+   desc:'Generalizations of Lucas numbers. Satisfy the same recurrence as Fibonacci but different seed.',
+   links:['chebyshev_polynomial','bernoulli_number','catalan_number']},
+  {id:'jacobian_form', label:'Jacobian Form', cat:'Metrics', layer:'applied', file:'jacobian_form.html',
+   desc:'Matrix of partial derivatives. Measures how a map stretches and rotates space locally.',
+   links:['covariant_derivative','wirtinger_derivative','frobenius_norm','mobius_transform']},
+  {id:'modular_form', label:'Modular Form', cat:'Other', layer:'applied', file:'modular_form.html',
+   desc:'Complex function with symmetry under the modular group. Bridges number theory and geometry.',
+   links:['langlands_kernel','galois_group','leech_lattice','wyler_formula']},
+
+  // THEOREMS
+  {id:'hurwitz_theorem', label:'Hurwitz Theorem', cat:'Theorems', layer:'foundation', file:'hurwitz_theorem.html',
+   desc:'Only ℝ, ℂ, ℍ, 𝕆 admit a multiplicative quadratic form. Four is the hard limit.',
+   links:['cayley_dickson_algebra','clifford_algebra','dixon_algebra','frobenius_norm']},
+  {id:'dixon_theorem', label:'Dixon Theorem', cat:'Theorems', layer:'foundation', file:'dixon_theorem.html',
+   desc:'Dixon\'s result unifying the Standard Model gauge groups within the algebra T=ℂ⊗ℍ⊗𝕆.',
+   links:['dixon_algebra','dixon_product','gauge_field','yang_mills_field']},
+  {id:'lindemann_weierstrass', label:'Lindemann-\nWeierstrass', cat:'Theorems', layer:'foundation', file:'lindemann_weierstrass.html',
+   desc:'If α₁...αₙ are algebraic and linearly independent over ℚ, then e^α₁...e^αₙ are transcendental.',
+   links:['galois_group','bernoulli_number','maclaurin_series']},
+  {id:'berry_keating_conjecture', label:'Berry-Keating\nConjecture', cat:'Theorems', layer:'foundation', file:'berry_keating_conjecture.html',
+   desc:'The Riemann zeros are eigenvalues of a self-adjoint operator. Connects number theory to physics.',
+   links:['berry_keating_operator','mellin_transform','spectral_representation','langlands_kernel']},
+  {id:'moufang_identity', label:'Moufang Identity', cat:'Theorems', layer:'foundation', file:'moufang_identity.html',
+   desc:'Weaker form of associativity holding in alternative algebras, including 𝕆.',
+   links:['cayley_dickson_algebra','dixon_algebra','bianchi_identity']},
+  {id:'bianchi_identity', label:'Bianchi Identity', cat:'Theorems', layer:'applied', file:'bianchi_identity.html',
+   desc:'∇[λRμν]ρσ = 0. The differential Bianchi identity implies conservation of the Einstein tensor.',
+   links:['covariant_derivative','riemannian_manifold','yang_mills_equation','hodge_decomposition']},
+  {id:'ward_identity', label:'Ward Identity', cat:'Theorems', layer:'applied', file:'ward_identity.html',
+   desc:'Current conservation identity in quantum field theory, following from global symmetry.',
+   links:['ward_takahashi_identity','yang_mills_equation','gauge_field']},
+  {id:'ward_takahashi_identity', label:'Ward-Takahashi\nIdentity', cat:'Theorems', layer:'applied', file:'ward_takahashi_identity.html',
+   desc:'QED version of Ward identity. Constrains Green\'s functions via gauge invariance.',
+   links:['ward_identity','gauge_field','dirac_equation','renormalization_group']},
+
+  // FIELDS
+  {id:'dirac_field', label:'Dirac Field', cat:'Fields', layer:'applied', file:'dirac_field.html',
+   desc:'Quantum field of spin-½ particles. Transforms as a Dirac spinor under Lorentz group.',
+   links:['dirac_equation','gauge_field','majorana_representation','dirac_representation']},
+  {id:'gauge_field', label:'Gauge Field', cat:'Fields', layer:'applied', file:'gauge_field.html',
+   desc:'Connection on a principal bundle. The field mediating a gauge force (photon, gluon, W/Z).',
+   links:['yang_mills_field','covariant_derivative','lie_algebra','bianchi_identity']},
+  {id:'yang_mills_field', label:'Yang-Mills Field', cat:'Fields', layer:'applied', file:'yang_mills_field.html',
+   desc:'Non-abelian gauge field. Self-interacting. The heart of QCD and electroweak theory.',
+   links:['gauge_field','yang_mills_equation','dixon_algebra','renormalization_group']},
+  {id:'dirac_representation', label:'Dirac\nRepresentation', cat:'Representations', layer:'applied', file:'dirac_representation.html',
+   desc:'Specific 4×4 matrix representation of the Dirac algebra. Standard in QFT textbooks.',
+   links:['majorana_representation','pauli_algebra','dirac_field','lorentz_group']},
+  {id:'majorana_representation', label:'Majorana\nRepresentation', cat:'Representations', layer:'applied', file:'majorana_representation.html',
+   desc:'All-real gamma matrices. Particles equal their own antiparticles. Relevant to neutrino physics.',
+   links:['dirac_representation','pauli_algebra','dirac_field']},
+  {id:'spectral_representation', label:'Spectral\nRepresentation', cat:'Representations', layer:'applied', file:'spectral_representation.html',
+   desc:'Decomposition of an operator in terms of its eigenvalues and eigenvectors.',
+   links:['hilbert_space','frobenius_norm','von_neumann_entropy','dirac_operator']},
+
+  // PTOLEMY LAYER
+  {id:'bigram_entropy', label:'Bigram Entropy', cat:'Entropy', layer:'ptolemy', file:'bigram_entropy.html',
+   desc:'Ptolemy-specific: entropy of character pair transitions. Density measure for the HyperWebster pipeline.',
+   links:['shannon_entropy','von_neumann_entropy','langlands_kernel']},
+  {id:'berry_keating_operator', label:'Berry-Keating\nOperator', cat:'Operators', layer:'ptolemy', file:'berry_keating_operator.html',
+   desc:'Conjectured operator whose spectrum matches Riemann zeros. Key to Ptolemy\'s spectral analysis.',
+   links:['berry_keating_conjecture','dirac_operator','spectral_representation','mellin_transform']},
+  {id:'leech_lattice', label:'Leech Lattice', cat:'Other', layer:'ptolemy', file:'leech_lattice.html',
+   desc:'24-dimensional lattice with exceptional kissing number 196560. Tied to Monster group and error correction.',
+   links:['cayley_dickson_algebra','chern_number','modular_form','catalan_number']},
+  {id:'cayley_graph', label:'Cayley Graph', cat:'Other', layer:'ptolemy', file:'cayley_graph.html',
+   desc:'Graph encoding group structure: nodes=elements, edges=generator actions. This index is one.',
+   links:['galois_group','lie_group','catalan_number','mobius_transform']},
+  {id:'rydberg_formula', label:'Rydberg Formula', cat:'Other', layer:'ptolemy', file:'rydberg_formula.html',
+   desc:'1/λ = R∞(1/n₁² - 1/n₂²). Predicts hydrogen spectral lines. n as discrete density levels.',
+   links:['balmer_series','chern_number','bernoulli_number']},
+  {id:'wilson_hilferty', label:'Wilson-Hilferty\nApprox', cat:'Other', layer:'ptolemy', file:'wilson_hilferty.html',
+   desc:'Chi-squared to normal approximation via cube root transform. Statistical calibration tool.',
+   links:['chebyshev_polynomial','perturbation_series','shannon_entropy']},
+  {id:'wyler_formula', label:'Wyler Formula', cat:'Other', layer:'ptolemy', file:'wyler_formula.html',
+   desc:'Geometric derivation of the fine structure constant α from volumes of symmetric spaces.',
+   links:['leech_lattice','modular_form','chern_number','cayley_dickson_algebra']},
+];
+
+const EDGES = [];
+NODES.forEach(n => {
+  (n.links||[]).forEach(t => {
+    if (NODES.find(x=>x.id===t)) EDGES.push([n.id, t]);
+  });
+});
+
+// ── LAYOUT ──
+const LAYER_Y = { foundation: 0.22, applied: 0.52, ptolemy: 0.82 };
+const LAYER_COLOR = { foundation: '#00ff88', applied: '#f0c040', ptolemy: '#bb88ff' };
+
+function layoutNodes(W, H) {
+  const byLayer = { foundation:[], applied:[], ptolemy:[] };
+  NODES.forEach(n => byLayer[n.layer].push(n));
+
+  Object.entries(byLayer).forEach(([layer, nodes]) => {
+    const y = LAYER_Y[layer] * H;
+    nodes.forEach((n, i) => {
+      n.x = (W * 0.06) + (i / (nodes.length - 1 || 1)) * (W * 0.88);
+      n.y = y + (i % 2 === 0 ? -18 : 18);
+    });
+  });
+}
+
+// ── CANVAS ──
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+let activeNode = null;
+let expandedNode = null;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+  layoutNodes(W, H);
+}
+
+resize();
+window.addEventListener('resize', () => { resize(); draw(); });
+
+// ── DRAW ──
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Layer bands
+  Object.entries(LAYER_Y).forEach(([layer, yf]) => {
+    const y = yf * H;
+    ctx.fillStyle = LAYER_COLOR[layer] + '06';
+    ctx.fillRect(0, y - 50, W, 100);
+    ctx.font = `700 9px Share Tech Mono, monospace`;
+    ctx.fillStyle = LAYER_COLOR[layer] + '44';
+    ctx.fillText(layer.toUpperCase(), 10, y - 36);
+  });
+
+  // Edges
+  EDGES.forEach(([aId, bId]) => {
+    const a = NODES.find(n=>n.id===aId);
+    const b = NODES.find(n=>n.id===bId);
+    if (!a || !b) return;
+
+    const isHighlighted = expandedNode &&
+      (expandedNode.id===aId || expandedNode.id===bId ||
+       (expandedNode.links||[]).includes(aId) || (expandedNode.links||[]).includes(bId));
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+
+    // Bezier for cross-layer
+    const cp1x = a.x + (b.x - a.x) * 0.3;
+    const cp1y = a.y + (b.y - a.y) * 0.1;
+    const cp2x = a.x + (b.x - a.x) * 0.7;
+    const cp2y = b.y - (b.y - a.y) * 0.1;
+    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, b.x, b.y);
+
+    ctx.strokeStyle = isHighlighted ? 'rgba(0,212,255,0.4)' : 'rgba(30,36,64,0.6)';
+    ctx.lineWidth = isHighlighted ? 1.5 : 0.8;
+    ctx.stroke();
+  });
+
+  // Nodes
+  NODES.forEach(n => {
+    const isActive = activeNode && activeNode.id === n.id;
+    const isLinked = expandedNode && (expandedNode.links||[]).includes(n.id);
+    const isExpanded = expandedNode && expandedNode.id === n.id;
+
+    const r = isExpanded ? 10 : isActive ? 8 : 6;
+    const col = LAYER_COLOR[n.layer];
+
+    // Glow
+    if (isExpanded || isLinked) {
+      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4);
+      grd.addColorStop(0, col + '44');
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 4, 0, Math.PI*2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+    }
+
+    // Node
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI*2);
+    ctx.fillStyle = isExpanded ? col : isLinked ? col + 'aa' : '#0d1525';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = isExpanded ? 2 : 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // Label
+    const lines = n.label.split('\n');
+    ctx.font = `${isExpanded ? 700 : 400} 9px Share Tech Mono, monospace`;
+    ctx.fillStyle = isExpanded ? col : isLinked ? col+'cc' : col + '88';
+    ctx.textAlign = 'center';
+    lines.forEach((line, i) => {
+      ctx.fillText(line, n.x, n.y + r + 11 + i * 11);
+    });
+    ctx.textAlign = 'left';
+  });
+}
+
+// ── INTERACTION ──
+function getNode(x, y) {
+  return NODES.find(n => Math.hypot(n.x - x, n.y - y) < 18);
+}
+
+let tapState = 0; // 0=none, 1=expanded (links shown), 2=preview
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const node = getNode(x, y);
+
+  if (!node) {
+    // tap outside
+    if (expandedNode) {
+      if (document.getElementById('preview').classList.contains('show')) {
+        closePreview();
+      } else {
+        expandedNode = null; tapState = 0;
+      }
+      draw(); return;
+    }
+    return;
+  }
+
+  if (expandedNode && expandedNode.id === node.id) {
+    // second tap on same = show preview
+    showPreview(node);
+    return;
+  }
+
+  if (expandedNode && (expandedNode.links||[]).includes(node.id)) {
+    // tap a linked node = show its preview directly
+    showPreview(node);
+    return;
+  }
+
+  expandedNode = node;
+  tapState = 1;
+  closePreview();
+  draw();
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  activeNode = getNode(t.clientX - rect.left, t.clientY - rect.top);
+  draw();
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const node = getNode(t.clientX - rect.left, t.clientY - rect.top);
+  activeNode = null;
+
+  if (!node) {
+    if (expandedNode) { expandedNode = null; closePreview(); draw(); }
+    return;
+  }
+
+  if (expandedNode && expandedNode.id === node.id) {
+    showPreview(node); return;
+  }
+
+  if (expandedNode && (expandedNode.links||[]).includes(node.id)) {
+    showPreview(node); return;
+  }
+
+  expandedNode = node;
+  closePreview();
+  draw();
+}, { passive: false });
+
+function showPreview(node) {
+  document.getElementById('pCat').textContent = `⬡ ${node.cat} · ${node.layer.toUpperCase()}`;
+  document.getElementById('pName').textContent = node.label.replace('\n', ' ');
+  document.getElementById('pDesc').textContent = node.desc;
+
+  const linksEl = document.getElementById('pLinks');
+  linksEl.innerHTML = '';
+  (node.links||[]).forEach(lid => {
+    const linked = NODES.find(n=>n.id===lid);
+    if (!linked) return;
+    const a = document.createElement('a');
+    a.className = 'plink';
+    a.textContent = linked.label.replace('\n',' ');
+    a.href = '#';
+    a.onclick = e => { e.preventDefault(); closePreview(); expandedNode = linked; draw(); setTimeout(()=>showPreview(linked),50); };
+    linksEl.appendChild(a);
+  });
+
+  document.getElementById('pBtn').href = node.file;
+  document.getElementById('pBtn').textContent = `OPEN LESSON: ${node.label.replace('\n',' ')} →`;
+  document.getElementById('preview').classList.add('show');
+}
+
+function closePreview() {
+  document.getElementById('preview').classList.remove('show');
+}
+
+function filterLevel(level, btn) {
+  document.querySelectorAll('.lbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  NODES.forEach(n => {
+    n._hidden = level !== 'all' && n.layer !== level;
+  });
+  draw();
+}
+
+// ── ANIMATE subtle pulse ──
+let pulse = 0;
+function animate() {
+  pulse += 0.02;
+  // subtle: just redraw on interaction, skip constant redraw for perf
+  requestAnimationFrame(animate);
+}
+
+draw();
+animate();
+</script>
+</body>
+</html>
