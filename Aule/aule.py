@@ -47,6 +47,7 @@ import hashlib
 import inspect
 import textwrap
 import argparse
+from Aule.aule_wiring import init_aule_wiring, aule_beat
 import threading
 import traceback
 import subprocess
@@ -173,6 +174,7 @@ def _append_log(event: dict):
 def _stream_writer_thread(path: Path, stop_event: threading.Event):
     """Background thread: flush stream buffer to JSON file every 2s."""
     while not stop_event.is_set():
+        aule_beat()
         time.sleep(2)
         with _stream_lock:
             if _stream_buffer:
@@ -743,6 +745,7 @@ def status_summary():
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main():
+    init_aule_wiring()
     parser = argparse.ArgumentParser(
         prog="aule",
         description="Aulë Face — Ptolemy Diagnostic Forge",
