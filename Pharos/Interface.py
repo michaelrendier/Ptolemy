@@ -74,10 +74,10 @@ class UserDisplay(QGraphicsItem):
 
 		self.rect = QRectF(self.x, self.y, self.w, self.h)
 
-		# self.setFlag(QGraphicsWidget.ItemIsMovable, True)
-		# self.setFlag(QGraphicsWidget.ItemIsSelectable, True)
-		# self.setFlag(QGraphicsWidget.ItemIsFocusable, True)
-		# self.setFlag(QGraphicsWidget.ItemSendsGeometryChanges, True)
+		self.setFlag(QGraphicsItem.ItemIsMovable, True)
+		self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+		self.setFlag(QGraphicsItem.ItemIsFocusable, True)
+		self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
 
 		self.setAcceptHoverEvents(True)
 
@@ -206,7 +206,7 @@ class UserDisplay(QGraphicsItem):
 		pass
 
 	def mousePressEvent(self, event):
-		print("User Display Clicked Mouse Press Event")
+		super().mousePressEvent(event)
 	
 	def changeIdentity(self, identity):
 		self.identity = identity
@@ -722,7 +722,7 @@ class User(QWidget):
 		self.clockBtn = QLabel(str(self.Ptolemy.timeStamp()))
 		self.clockBtn.setAlignment(Qt.AlignCenter)
 		self.clockBtn.setFixedHeight(self.btnSize)
-		self.clockBtn.setToolTip('Clock')
+		self.clockBtn.setToolTip('Clock  [CTRL+D]')
 		self.layout.addWidget(self.clockBtn, 12, 0, 1, 10)
 
 	def displayEnter(self):
@@ -734,15 +734,13 @@ class User(QWidget):
 		self.display.load(self.interfaceImg + 'nav-seal.svg')
 
 	def mouseMoveEvent(self, event):
-		print("Mouse Move Event")
-		
-		pass
+		super().mouseMoveEvent(event)
 	
 	def buildButtons(self):
 		self.clockBtn = QLabel(str(self.Ptolemy.timeStamp()))
 		self.clockBtn.setAlignment(Qt.AlignCenter)
 		self.clockBtn.setFixedHeight(self.btnSize)
-		self.clockBtn.setToolTip('Clock')
+		self.clockBtn.setToolTip('Clock  [CTRL+D]')
 		# self.layout.addWidget(self.clockBtn, 12, 0, 1, 10)
 
 		self.blankBtn = QSvgWidget(self.interfaceImg + 'blank.svg')
@@ -750,57 +748,57 @@ class User(QWidget):
 
 		self.powerBtn = QSvgWidget(self.interfaceImg + "power.svg")
 		self.powerBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.powerBtn.setToolTip("Exit Program")
+		self.powerBtn.setToolTip("Exit Program  [CTRL+Q]")
 		self.powerBtn.mousePressEvent = self.power
 
 		self.archimedesBtn = QSvgWidget(self.interfaceImg + 'archimedessymbol.svg')
 		self.archimedesBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.archimedesBtn.setToolTip("Archimedes Menu")
+		self.archimedesBtn.setToolTip("Archimedes Menu  [CTRL+A]")
 		self.archimedesBtn.mousePressEvent = self.archimedesMenu
 
 		self.anaximanderBtn = QSvgWidget(self.interfaceImg + 'anaximandersymbol.svg')
 		self.anaximanderBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.anaximanderBtn.setToolTip("Anaximander Menu")
+		self.anaximanderBtn.setToolTip("Anaximander Menu  [CTRL+N]")
 		self.anaximanderBtn.mousePressEvent = self.anaximanderMenu
 
 		self.alexandriaBtn = QSvgWidget(self.interfaceImg + 'alexandriasymbol.svg')
 		self.alexandriaBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.alexandriaBtn.setToolTip('Alexandria Symbol')
+		self.alexandriaBtn.setToolTip('Alexandria  [CTRL+V]')
 		self.alexandriaBtn.mousePressEvent = self.alexandriaMenu
 
 		self.callimachusBtn = QSvgWidget(self.interfaceImg + 'callimachussymbol.svg')
 		self.callimachusBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.callimachusBtn.setToolTip('Callimachus Menu')
+		self.callimachusBtn.setToolTip('Callimachus Menu  [CTRL+L]')
 		self.callimachusBtn.mousePressEvent = self.callimachusMenu
 
 		self.kryptosBtn = QSvgWidget(self.interfaceImg + 'kryptossymbol.svg')
 		self.kryptosBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.kryptosBtn.setToolTip('Kryptos Menu')
+		self.kryptosBtn.setToolTip('Kryptos Menu  [CTRL+K]')
 		self.kryptosBtn.mousePressEvent = self.kryptosMenu
 
 		self.mouseionBtn = QSvgWidget(self.interfaceImg + 'mouseionsymbol.svg')
 		self.mouseionBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.mouseionBtn.setToolTip('Mouseion Menu')
+		self.mouseionBtn.setToolTip('Mouseion Menu  [CTRL+M]')
 		self.mouseionBtn.mousePressEvent = self.mouseionMenu
 
 		self.phaleronBtn = QSvgWidget(self.interfaceImg + 'phaleronsymbol.svg')
 		self.phaleronBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.phaleronBtn.setToolTip('Phaleron Menu')
+		self.phaleronBtn.setToolTip('Phaleron Menu  [CTRL+P]')
 		self.phaleronBtn.mousePressEvent = self.phaleronMenu
 
 		self.pharosBtn = QSvgWidget(self.interfaceImg + 'pharossymbol.svg')
 		self.pharosBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.pharosBtn.setToolTip('Pharos Menu')
+		self.pharosBtn.setToolTip('Pharos Menu  [CTRL+H]')
 		self.pharosBtn.mousePressEvent = self.pharosMenu
 
 		self.teslaBtn = QSvgWidget(self.interfaceImg + 'teslasymbol.svg')
 		self.teslaBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.teslaBtn.setToolTip('Tesla Menu')
+		self.teslaBtn.setToolTip('Tesla Menu  [CTRL+T]')
 		self.teslaBtn.mousePressEvent = self.teslaMenu
 
 		self.treasureHuntBtn = QSvgWidget(self.interfaceImg + 'treasurehunt.svg')
 		self.treasureHuntBtn.setFixedSize(self.btnSize, self.btnSize)
-		self.treasureHuntBtn.setToolTip('Treasure Hunt Research Browser')
+		self.treasureHuntBtn.setToolTip('Treasure Hunt  [CTRL+F]')
 		self.treasureHuntBtn.mousePressEvent = self.Ptolemy.openSearch
 
 		self.navigationBtn = QSvgWidget(self.interfaceImg + 'navigation.svg')
