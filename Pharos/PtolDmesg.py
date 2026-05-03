@@ -7,8 +7,15 @@ PtolDmesg.py — Ptolemy System Message Log
 ==========================================
 Pharos Core Layer
 
-Single shared dmesg writer. Every Face imports and calls this on spawn.
+Faces SUBMIT events. Aule (the Forge) is the SOLE WRITER to dmesg.
 Mirrors Linux kernel ring buffer — one file, all voices, timestamped.
+
+Architecture:
+    Face  →  dmesg.submit(face, message)  →  Aule writes to disk
+    Aule  →  dmesg._write_line()          →  /var/ptolemy/dmesg.log
+
+No Face writes directly. All writes pass through Aule's forge queue.
+Aule may annotate, repair, escalate, or hold entries before committing.
 
 Log file:  /var/ptolemy/dmesg.log  (fallback: ~/ptolemy_dmesg.log)
 
@@ -88,21 +95,25 @@ class PtolDmesg:
         secs = datetime.datetime.now().timestamp() - self._boot
         return f'[{secs:8.3f}]'
 
-    def _write_line(self, face: str, message: str) -> None:
-        face_col = f'{face:<12}'   # left-aligned, 12 chars wide
+    def _forge_write(self, face: str, message: str) -> None:
+        """Aule owns this. Sole writer to dmesg. Faces call submit methods."""
+        face_col = f'{face:<12}'
         line = f'{self._elapsed()} {face_col} :: {message}\n'
         with self._lock:
             try:
                 with open(self._path, 'a', encoding='utf-8') as f:
                     f.write(line)
             except OSError:
-                pass  # never raise from a logger
+                pass
 
-    # ── Public API ────────────────────────────────────────────────────────────
+    def _write_line(self, face: str, message: str) -> None:
+        self._forge_write(face, message)
+
+    # ── Public API — Faces SUBMIT, Aule WRITES via Forge ──────────────────────
 
     def write(self, face: str, message: str) -> None:
-        """Nominal / informational message."""
-        self._write_line(face.lower(), message)
+        """Submit nominal message. Aule writes it."""
+        self._forge_write(face.lower(), message)
 
     def warn(self, face: str, message: str) -> None:
         self._write_line(face.lower(), f'WARN — {message}')
