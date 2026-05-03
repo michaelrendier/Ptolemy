@@ -151,9 +151,15 @@ class GraphNode(QGraphicsObject):
         if os.path.exists(svg_path):
             self._svg_renderer = QSvgRenderer(svg_path)
 
+        self._port_hover    = False
+        self._port_dragging = False
+        self._drag_line     = None
+        self._graph_ref     = None   # set by ProcessGraph after construction
+
         self.setFlag(QGraphicsItem.ItemIsMovable, False)   # we handle drag
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.setZValue(5)
 
         # tooltip
@@ -184,6 +190,12 @@ class GraphNode(QGraphicsObject):
         painter.setPen(pen)
         painter.drawEllipse(QPointF(0, 0), r, r)
 
+        # Port dot (right edge — JACK-style output port)
+        port_color = QColor('#00ffcc') if self._port_hover else QColor('#004444')
+        painter.setPen(QPen(QColor('#00ffcc'), 1))
+        painter.setBrush(QBrush(port_color))
+        painter.drawEllipse(self._port_rect())
+
         # SVG icon or text
         if self._svg_renderer and self._svg_renderer.isValid():
             svg_r = r * 0.65
@@ -201,32 +213,126 @@ class GraphNode(QGraphicsObject):
         self._hover = True
         self.update()
 
+    def hoverMoveEvent(self, event):
+        was = self._port_hover
+        self._port_hover = self._in_port(event.pos())
+        if was != self._port_hover:
+            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
+                                   else Qt.ArrowCursor))
+            self.update()
+
     def hoverLeaveEvent(self, event):
         self._hover = False
+        self._port_hover = False
         self.update()
+
+    def _port_rect(self) -> QRectF:
+        """Small port circle on right edge of node for JACK-drag."""
+        r = self.radius
+        return QRectF(r - 5, -5, 10, 10)
+
+    def _in_port(self, pos: QPointF) -> bool:
+        return self._port_rect().contains(pos)
+
+    def contextMenuEvent(self, event):
+        """Right-click: Connect to... menu."""
+        from PyQt5.QtWidgets import QMenu, QAction
+        menu = QMenu()
+        menu.setStyleSheet("""
+            QMenu { background:#080d1a; border:1px solid #1a2a3a;
+                    color:#aac8d8; font-family:'Ubuntu Mono'; font-size:11px; }
+            QMenu::item:selected { background:#0d1830; color:#00ccff; }
+        """)
+
+        # find graph to get sibling nodes
+        graph = getattr(self, '_graph_ref', None)
+        if graph:
+            connect_menu = menu.addMenu('Connect to...')
+            for fid, node in graph._nodes.items():
+                if node is self:
+                    continue
+                a = QAction(node.label, connect_menu)
+                a.setData(fid)
+                a.triggered.connect(
+                    lambda checked, s=self.face_id, d=fid: graph.add_stream_connection(s, d, 'stream')
+                )
+                connect_menu.addAction(a)
+            menu.addSeparator()
+
+        disconnect_a = menu.addAction('Disconnect all streams')
+        disconnect_a.triggered.connect(lambda: self._disconnect_streams(graph))
+        menu.addSeparator()
+        info_a = menu.addAction(f'Face: {self.label}')
+        info_a.setEnabled(False)
+
+        menu.exec_(event.screenPos().toPoint())
+        event.accept()
+
+    def _disconnect_streams(self, graph):
+        if not graph:
+            return
+        to_remove = [c for c in graph._conns
+                     if (c.src is self or c.dst is self)
+                     and c.stype == 'stream']
+        for c in to_remove:
+            graph._scene.removeItem(c)
+            graph._conns.remove(c)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._drag = True
-            self._drag_off = event.pos()
-            self.setCursor(QCursor(Qt.SizeAllCursor))
-            self.setZValue(20)
+            if self._in_port(event.pos()):
+                # JACK-style port drag — start drawing a connection line
+                self._port_dragging = True
+                sp = self.scenePos() + QPointF(self.radius, 0)
+                self._drag_line = PortDragLine(sp)
+                self.scene().addItem(self._drag_line)
+                self.setCursor(QCursor(Qt.CrossCursor))
+            else:
+                self._drag = True
+                self._drag_off = event.pos()
+                self.setCursor(QCursor(Qt.SizeAllCursor))
+                self.setZValue(20)
         event.accept()
 
     def mouseMoveEvent(self, event):
-        if self._drag:
+        if getattr(self, '_port_dragging', False) and self._drag_line:
+            self._drag_line.set_dst(event.scenePos())
+            self._drag_line.update()
+        elif self._drag:
             delta = event.scenePos() - self.scenePos() - self._drag_off
             self.setPos(self.pos() + delta)
             self.position_changed.emit()
         event.accept()
 
     def mouseReleaseEvent(self, event):
-        if self._drag:
+        if getattr(self, '_port_dragging', False):
+            self._port_dragging = False
+            self.setCursor(QCursor(Qt.ArrowCursor))
+            # find node under release point
+            if self._drag_line:
+                self.scene().removeItem(self._drag_line)
+                self._drag_line = None
+            target = self._find_node_at(event.scenePos())
+            if target and target is not self:
+                graph = getattr(self, '_graph_ref', None)
+                if graph:
+                    graph.add_stream_connection(
+                        self.face_id, target.face_id, 'stream'
+                    )
+        elif self._drag:
             self._drag = False
             self.setCursor(QCursor(Qt.ArrowCursor))
             self.setZValue(5)
             self.position_changed.emit()
         event.accept()
+
+    def _find_node_at(self, scene_pos: QPointF):
+        """Return GraphNode under scene_pos, or None."""
+        items = self.scene().items(scene_pos)
+        for item in items:
+            if isinstance(item, GraphNode) and item is not self:
+                return item
+        return None
 
     def mouseDoubleClickEvent(self, event):
         self.node_clicked.emit(self.face_id)
@@ -279,6 +385,14 @@ class StreamConnection(QGraphicsItem):
     def hoverEnterEvent(self, event):
         self._hover = True
         self.update()
+
+    def hoverMoveEvent(self, event):
+        was = self._port_hover
+        self._port_hover = self._in_port(event.pos())
+        if was != self._port_hover:
+            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
+                                   else Qt.ArrowCursor))
+            self.update()
         self.prepareGeometryChange()
 
     def hoverLeaveEvent(self, event):
@@ -360,11 +474,16 @@ class ProcessGraph(QObject):
             self._scene.addItem(node)
             self._nodes[fid] = node
 
+            node._graph_ref = self   # back-reference for context menu
+
             # connection to center (structural, not a stream)
             conn = StreamConnection(center, node, stream_type='face',
                                     color=color)
             self._scene.addItem(conn)
             self._conns.append(conn)
+
+        # set graph_ref on center too
+        center._graph_ref = self
 
     def _redraw_connections(self):
         for conn in self._conns:
@@ -464,6 +583,14 @@ class SidebarActivationStrip(QGraphicsItem):
     def hoverEnterEvent(self, event):
         self._hover = True
         self.update()
+
+    def hoverMoveEvent(self, event):
+        was = self._port_hover
+        self._port_hover = self._in_port(event.pos())
+        if was != self._port_hover:
+            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
+                                   else Qt.ArrowCursor))
+            self.update()
         self._on_activate()
 
     def hoverLeaveEvent(self, event):
@@ -716,3 +843,42 @@ class DualTrayMenu(QSystemTrayIcon):
                 padding: 4px 8px 2px;
             }
         """
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §4  JACK-STYLE PORT DRAG + RIGHT-CLICK CONNECT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class PortDragLine(QGraphicsItem):
+    """
+    Temporary drag line while user is drawing a stream connection.
+    Appears when user drags from a node port. Disappears on release.
+    """
+    def __init__(self, src_pos: QPointF, parent=None):
+        super().__init__(parent)
+        self._src = src_pos
+        self._dst = src_pos
+        self._pen = QPen(QColor('#00ccff'), 1.5, Qt.DashLine)
+        self._pen.setDashPattern([6, 4])
+        self.setZValue(200)
+
+    def set_dst(self, pos: QPointF):
+        self.prepareGeometryChange()
+        self._dst = pos
+
+    def boundingRect(self):
+        x = min(self._src.x(), self._dst.x()) - 10
+        y = min(self._src.y(), self._dst.y()) - 10
+        w = abs(self._src.x() - self._dst.x()) + 20
+        h = abs(self._src.y() - self._dst.y()) + 20
+        return QRectF(x, y, w, h)
+
+    def paint(self, painter, option, widget=None):
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(self._pen)
+        painter.drawLine(self._src, self._dst)
+        # destination dot
+        dot = QPen(QColor('#00ccff'), 1)
+        painter.setPen(dot)
+        painter.setBrush(QBrush(QColor('#00ccff')))
+        painter.drawEllipse(self._dst, 4, 4)
