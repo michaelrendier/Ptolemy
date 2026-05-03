@@ -37,8 +37,8 @@ PRIORITY_SCHEME        = "rotary"
 
 LUTHSPELL_SETTINGS = {
     "channel_prompt":     CHANNEL_PROMPT,
-    "channel_inference":  CHANME�_INFERENCE,
-    "channel_luthspell":  CHANME�_LUTHSPELL,
+    "channel_inference":  CHANNEL_INFERENCE,
+    "channel_luthspell":  CHANNEL_LUTHSPELL,
     "blockchain_backend": BLOCKCHAIN_BACKEND,
     "priority_scheme":    PRIORITY_SCHEME,
 }
@@ -136,7 +136,7 @@ class LuthSpell:
         if PRIORITY_SCHEME == "rotary": return sorted(messages, key=lambda m: m.priority)
         raise NotImplementedError(f"Priority scheme '{PRIORITY_SCHEME}' not wired")
     def _publish(self, payload, priority=Priority.T0):
-        self._bus.publish(BusMessage(CHANNEL_LUTHPELL, payload, priority))
+        self._bus.publish(BusMessage(CHANNEL_LUTHSPELL, payload, priority))
     def set_boundary(self, coords): return self._monitor.set_boundary(coords)
     def check(self, coords): return self._monitor.check(coords)
     @property
