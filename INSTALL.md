@@ -302,3 +302,39 @@ ip addr show wlp1s0 | grep 'inet '
 # 5. Authenticate Claude Code
 claude login
 ```
+
+---
+
+## Third-Party Build Dependencies
+
+These packages cannot be installed via apt or pip — they require building from source.
+Build scripts are in `installation/`. Run them after the main setup script.
+
+| Package | Repository | Build Script | Role |
+|---|---|---|---|
+| **QTermWidget** | https://github.com/lxqt/qtermwidget | `installation/build_qtermwidget.sh` | **The Shell** — PtolShell pty backend. Required for all Face subshells. |
+| **vispy** | https://github.com/vispy/vispy | `pip install vispy --break-system-packages` | OpenGL canvas — Alexandria Face, 320k-vertex renders verified |
+
+### QTermWidget — Quick Build
+
+```bash
+chmod +x installation/build_qtermwidget.sh
+./installation/build_qtermwidget.sh
+```
+
+Verify:
+```bash
+python3 -c "import QTermWidget; print('OK:', QTermWidget.__file__)"
+```
+
+If the CMake `BUILD_PYTHON_BINDINGS=ON` path fails (older qtermwidget versions),
+the script falls back to manual SIP binding. See script for details.
+
+### vispy — Quick Install
+
+```bash
+pip install vispy --break-system-packages
+python3 -c "import vispy; print('vispy', vispy.__version__)"
+```
+
+vispy requires PyQt5 as the Qt backend — already in the main setup script.
