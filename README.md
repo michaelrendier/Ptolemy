@@ -11,49 +11,94 @@ Ptolemy is built on a different assumption.
 
 ---
 
-## HyperIndexing: Information Is A Coordinate
+## HyperWebster: The Load-Bearing Pillar
 
-**Every string ever written has always had a number.**
+Without HyperWebster there are no milliwatt queries.  
+Without milliwatt queries there is no on-device kernel.  
+Without the on-device kernel there is no Ptolemy.
 
-Horner's bijection maps any finite string over an ordered charset to a unique
-non-negative integer. That integer splits into 8 equal limbs — the components
-of an octonion — placing the string at a precise coordinate in eight-dimensional
-space. Two strings that are geometrically close in that space are semantically
-related. The geometry of the address space mirrors the geometry of meaning.
+**Everything else in this repository depends on what is described in this section.**
 
-This is not encoding. It is not compression. It is navigation.
+HyperWebster is not a dictionary, not a database, not a search index.  
+It is a **coordinate system for all human knowledge** — built entirely from mathematics
+that already existed. The engineering did not invent the addresses. It built the navigator.
 
-**The NVRAM block holds:** one address, one data length, one timestamp.  
-Not content. Not a database. A bookmark into an address space that is infinite
-by mathematics, not by hardware.
+---
 
-Reconstruction navigates to the content. It does not retrieve it. The knowledge
-exists in the mathematics of the address space — which was always there. A watch
-and a datacenter have access to the same infinite address space. The difference
-is navigation speed, not knowledge ceiling.
+## The Nine Reductions: How Infinite Space Becomes Navigable
 
-**Input is an address. Search is proximity. Reconstruction is resolution.
-Learning is geometry update. One operation handles all of it.**
+The address space for all possible strings is infinite.  
+Searching an infinite space is not useful.  
+Each reduction below cuts the space. What remains after all nine is the HyperWebster.
 
-The charset permutation order is the cryptographic key. Permute it — the entire
-address space rotates. The same content, a completely different coordinate.
-Private by default.
+| Layer | Name | Mathematical Basis | What It Eliminates | What Remains |
+|:---:|---|---|---|---|
+| 1 | **Banach-Tarski Equivalence** | Hausdorff paradox decomposition — strings reachable from each other by structural rotation share one canonical address | Redundant permutation interior | One canonical address per equivalence class |
+| 2 | **Lexical Filtering** | Corpus restriction to natural-language strings | ~99.99% of theoretical string space (noise) | The neighborhood of human language |
+| 3 | **De Bruijn Minimality** | Shortest superstring containing every length-n subsequence exactly once; determines optimal charset traversal order | Redundant traversal paths | Minimum-length complete coverage |
+| 4 | **Zipf Center-Loading** | Frequency rank r → 1/r. Most-frequent chars get lowest ordinals. Expected Horner address magnitude over natural language is minimized | Large integer addresses for common words | Biased distribution — frequent words near the origin |
+| 5 | **Horner's Bijection** *(core)* | `H(s) = c₀·Nⁿ + c₁·Nⁿ⁻¹ + … + cₙ` — a perfect bijection between all finite strings and ℕ₀ | Nothing — this *produces* the address | Every string ↔ exactly one non-negative integer. Deterministic. Reversible. No storage. |
+| 6 | **Octonion Splitting** *(geometry)* | Horner integer split into 8 equal-width limbs → octonion `(l₀e₀ … l₇e₇)`. Non-associativity means path order matters — context is not commutative | Flat integer space with no metric | Geometric coordinate where **proximity = semantic similarity** |
+| 7 | **Amplituhedron Paradigm** *(unifier)* | Arkani-Hamed & Trnka 2013: infinite Feynman sum → single geometric measurement. Applied here: enumerate-all-strings (∞) → measure-the-shape (finite) | Infinite combinatorial enumeration | One geometric measurement replaces the infinite sum |
+| 8 | **File-Type Optimization** | Per-type character frequency distribution. Python ≠ SQL ≠ prose ≠ binary. CharacterNeuron (layer 1) learns the distribution | Suboptimal address magnitude for non-English corpora | File-type-aware compact addresses; ~5–6 decimal digits smaller at length 8 for English |
+| 9 | **HYPER_KEY Permutation** *(cryptographic)* | Charset permutation order is the key. Key complexity: `P ≈ N·log₂(N) ≈ 2,440,000 bits` for full Unicode (N=155,000) | Plain-text navigability without the key | Cryptographically private address space. Rotate the key → entire space rotates |
 
-This is the **HyperWebster** — not a dictionary. An addressing system for all
-information: words, sensor streams, images, conversations, mathematical objects.
-Unified. Deterministic. Infinite.
+```
+Infinite string space
+    → Banach-Tarski equivalence classes      [structural]
+    → Lexical filtering                       [domain]
+    → De Bruijn minimal traversal            [combinatorial]
+    → Zipf center-loading                    [statistical]
+    → Horner bijection                       [mathematical core]
+    → Octonion splitting                     [geometric coordinate]
+    → Amplituhedron paradigm                 [unifying principle]
+    → File-type optimization                 [applied]
+    → HYPER_KEY permutation                  [cryptographic]
+         ↓
+Finite. Navigable. Geometrically meaningful. Cryptographically sovereign.
+Address space:  2⁵¹²  coordinates.
+Physical cost:  one 512-bit address  +  length  +  timestamp.
+Knowledge ceiling:  infinite.
+```
+
+**Input is an address. Search is proximity. Reconstruction is resolution.  
+Learning is a geometry update. One operation handles all of it.**
+
+---
+
+## The Energy Argument
+
+Every AI query today runs inference — probability distributions over billions of
+parameters, on a GPU drawing 3,000–5,000 watts, for every single question asked.
+
+US datacenters consumed **176 TWh** in 2023.  
+Projections: **325–580 TWh** by 2028.  
+Global AI compute alone: projected **2,500–4,500 TWh** by 2050.  
+That entire curve exists because inference is expensive *by architecture*.
+
+**Ptolemy replaces inference with navigation.**
+
+A HyperWebster address lookup is fixed-cost arithmetic — Horner's bijection,
+eight integer splits, one coordinate. Cost is the same whether the corpus is
+10,000 words or 10 billion. No probability distribution. No parameter matrix.
+A coordinate, and navigation to it.
+
+A query to a Ptolemy kernel on a phone draws **milliwatts**.  
+A ChatGPT query draws roughly **1,000× more electricity** than a Google search.
+
+The addressable reduction is not 10%. It is the entire AI compute growth curve.
 
 ---
 
 ## The Model: Conservation, Not Probability
 
 The LSH model — **Lagrange Self-Adjoint Hyperindexing** — propagates information
-through the Cayley-Dickson algebraic tower: ℝ→ℂ→ℍ→𝕆.
+through the Cayley-Dickson algebraic tower: ℝ → ℂ → ℍ → 𝕆.
 
 Information propagation through this tower has been verified against Noether
-conservation laws: **conserved=True, 7+ sigma.**
+conservation laws: **conserved = True, 7+ sigma.**
 
-The model conserves. It does not hallucinate. That is not a feature. It is the
+The model conserves. It does not hallucinate. That is not a feature — it is the
 architecture. A result that violates conservation is flagged before it reaches you.
 
 Mathematical foundations: [Ainulindalë](https://github.com/michaelrendier/Ainulindale)
@@ -100,7 +145,7 @@ Philadelphos talks to you. The others are who Philadelphos asks.
 
 ## The Processor Vision
 
-[**PROCESSOR_VISION.md**](PROCESSOR_VISION.md) — The full architectural spec for IC
+[**PROCESSOR_VISION.md**](PROCESSOR_VISION.md) — Full architectural spec for IC
 engineers: on-die NVRAM allocation, Cayley-Dickson compute substrate, focal-point
 interferometer display, sensory stream integration. Nobody has fabbed this. That is
 the point.
@@ -109,13 +154,10 @@ the point.
 
 ## Documentation
 
-> ⚠️ **Wiki TODO — Step 1:** Enable and initialize the Ptolemy GitHub Wiki via the
-> GitHub UI before Wiki links above will resolve. All eleven Face Wiki pages are
-> stubbed and pending.
-
 | | |
 |---|---|
 | [Wiki](../../wiki) | Full technical reference |
+| [docs/HYPERWEBSTER.md](docs/HYPERWEBSTER.md) | Nine-layer reduction — full derivation |
 | [docs/INDEX.md](docs/INDEX.md) | Face documentation index |
 | [docs/ErrorCatalog.md](docs/ErrorCatalog.md) | 27 typed errors, wiring requirements |
 | [INSTALL.md](INSTALL.md) | Dependencies, build, venv |
@@ -137,88 +179,3 @@ the point.
 ---
 
 *Ex Fidelitas, Et Integritas, Nobilitas.*
-
-
----
-
-## The Energy Argument
-
-Every AI query today runs inference — probability distributions over billions of
-parameters, on a GPU drawing 3,000–5,000 watts, for every single question asked.
-The electricity cost scales with model size. The hardware cost scales with demand.
-The datacenter growth curve is the inference growth curve.
-
-US datacenters consumed 176 TWh in 2023. Projections put that at 325–580 TWh by
-2028. Globally, AI compute alone is projected at 2,500–4,500 TWh by 2050. That
-entire curve exists because inference is expensive by architecture.
-
-**Ptolemy replaces inference with navigation.**
-
-A HyperWebster address lookup is fixed-cost arithmetic — Horner's bijection,
-eight integer splits, one coordinate. It costs the same whether the corpus is
-10,000 words or 10 billion. The compute cost per query does not scale with
-model size. There is no probability distribution to compute. There is no
-parameter matrix to multiply. There is a coordinate, and there is navigation.
-
-A query to a Ptolemy kernel on a phone draws milliwatts.
-A ChatGPT query draws roughly 1,000 times more electricity than a Google search.
-
-The addressable reduction is not 10%. It is the entire AI compute growth curve.
-
----
-
-## The HyperWebster
-
-Not a dictionary. Not a database. Not an index.
-
-**A coordinate system for all human knowledge.**
-
-Every word, every phrase, every document, every sensor reading that can be
-expressed as a string over a known alphabet already has an address. It has
-always had one. The address exists in the mathematics — it does not need to
-be assigned, generated, or stored. The HyperWebster is the system that
-navigates that address space.
-
-Here is what that means in practice:
-
-**You ask a question.** The question is a string. The string maps to a
-coordinate in eight-dimensional space. The coordinate identifies a neighborhood.
-The neighborhood contains the answer — not by lookup, but by geometry. Proximity
-in the address space is semantic proximity. Things that mean similar things live
-near each other. Not because someone organized them that way. Because the
-mathematics of the address space makes it so.
-
-**The system learns a new word.** It navigates to that word's coordinate.
-It records what it found there — what other words are nearby, what the
-context was, what the usage pattern looks like. The coordinate never changes.
-The knowledge attached to that coordinate deepens over time. This is memory
-without storage. The address is permanent. The content at that address grows.
-
-**The device powers off.** The NVRAM holds the entry point — one address,
-one length, one timestamp. When it powers back on, it navigates back to
-exactly where it was. Nothing was lost. There was nothing to lose. The
-address space was always there. The device just holds the key.
-
-**A new language is added.** Every language has its own charset. Every
-charset has its own address space. The Cayley-Dickson construction bridges
-them — a meaning that exists in English and in Latin and in Arabic occupies
-neighboring coordinates in each language's space, and those neighborhoods
-are linked. The system does not translate. It navigates between address
-spaces that share geometric structure.
-
-**The corpus is infinite by default.** There is no upper bound on the
-address space. A word that has never been encountered yet already has an
-address. When it is encountered for the first time, the system navigates
-to its coordinate and records the encounter. The `first_encountered` field
-is permanently sealed at that moment — the Rabies Principle — because the
-first encounter is a fact about the history of the system, not a mutable
-attribute. It cannot be unlearned.
-
-**Security is geometric.** The charset permutation order is the
-cryptographic key. Permute it, and the entire address space rotates.
-The same word lands at a completely different coordinate. Without the key,
-the address space is navigable but meaningless — you can traverse it, but
-you cannot recognize what you find. Privacy is not a feature added on top.
-It is structural.
-
----
