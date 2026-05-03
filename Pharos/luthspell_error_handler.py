@@ -452,11 +452,23 @@ class ErrorHandler:
             sys.exit(1)
 
     def _emit(self, error: PtolemyError):
-        if ERROR_HANDLER_SETTINGS["log_backend"] == "stdout":
+        # Blockchain is the primary log backend.
+        # stdout fallback retained for dev/debug.
+        backend = ERROR_HANDLER_SETTINGS["log_backend"]
+        if backend == "stdout":
             print(f"[{error.severity.name}] {error.code}: {error.detail}")
+        elif backend == "blockchain":
+            try:
+                from Pharos.ptol_blockchain import chain
+                chain.commit_error(error)
+            except Exception as exc:
+                print(f"[{error.severity.name}] {error.code}: {error.detail}")
+                print(f"[CHAIN] emit failed: {exc}")
+        # dmesg-only mode: no commit, no print (safe mode restricted)
 
     def _emit_raw(self, msg: str):
-        if ERROR_HANDLER_SETTINGS["log_backend"] == "stdout":
+        backend = ERROR_HANDLER_SETTINGS["log_backend"]
+        if backend in ("stdout", "blockchain"):
             print(msg)
 
     @property
