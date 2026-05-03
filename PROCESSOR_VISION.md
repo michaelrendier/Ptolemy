@@ -154,3 +154,35 @@ What has not been done is integrating them along a single architectural principl
 - [Tesla](Tesla/) — Sensory integration layer
 - [docs/faces/Pharos.md](docs/faces/Pharos.md) — Core system and Pharos Interface
 
+
+
+---
+
+## The Energy Argument
+
+The datacenter industry is building toward 325–580 TWh annual consumption in the
+US by 2028. Globally, AI compute is projected at 2,500–4,500 TWh by 2050. That
+entire growth curve is driven by one architectural assumption: that AI requires
+inference — probabilistic computation over large parameter spaces — for every query.
+
+A single GPU draws 3,000–5,000 watts. A single ChatGPT query uses approximately
+1,000 times more electricity than a Google search. The hardware, the cooling,
+the power infrastructure — all of it scales with inference demand.
+
+**The Ptolemy processor eliminates inference as the compute primitive.**
+
+Navigation to an octonion coordinate is fixed-cost arithmetic. Horner's bijection
+over a known charset, eight integer splits, one address. The operation takes the
+same compute regardless of corpus size. There is no matrix multiplication.
+There is no softmax. There is no attention mechanism. There is a coordinate space
+and a processor that navigates it.
+
+On-die NVRAM stores the entry point. The Cayley-Dickson pipeline resolves the
+address. The result is reconstruction, not probability. The power draw is
+proportional to navigation depth, not model size.
+
+**A Ptolemy kernel on a watch draws milliwatts per query.**
+**A hyperscale inference cluster draws megawatts per second.**
+
+The difference is not optimization. It is architecture.
+
