@@ -180,3 +180,97 @@ Face catches exception
 
 **Never reuse a code.** Retired codes must remain as comments.
 
+---
+
+### PTL_1xx additions
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_106 | `BusQueueFull` | ERROR | ✓ | `queue.Full` during bus put — subscriber not consuming |
+| PTL_107 | `BusDispatchFailed` | ERROR | ✗ | Unhandled exception during dispatch to subscriber |
+
+---
+
+### PTL_2xx additions
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_206 | `PrioritySchemeNotWired` | ERROR | ✗ | PRIORITY_SCHEME value has no implementation in luthspell.py |
+
+---
+
+### PTL_3xx additions
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_306 | `CompressionModelNotWired` | ERROR | ✗ | Compression model name not implemented |
+| PTL_307 | `HyperindexMethodNotWired` | ERROR | ✗ | Hyperindex method name not implemented |
+| PTL_308 | `BufferCommitOutOfOrder` | ERROR | ✗ | commit() before compress()/hyperindex() — sequencing violation |
+
+---
+
+### PTL_5xx additions
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_506 | `AcquisitionSourceParseError` | WARN | ✗ | Per-source parse failure during acquisition |
+
+---
+
+### PTL_7xx additions
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_705 | `SettingsValidationError` | ERROR | ✗ | Settings value failed validation — wrong type or out of range |
+
+---
+
+### PTL_8xx — I/O and System Resources *(new range)*
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_801 | `DmesgWriteFailed` | WARN | ✗ | PtolDmesg OSError/PermissionError on log write |
+| PTL_802 | `FaceImportFailed` | ERROR | ✗ | Face found but failed to import — syntax or dependency error |
+| PTL_803 | `ContextPersistFailed` | ERROR | ✗ | context_manager FileNotFoundError or JSONDecodeError |
+| PTL_804 | `ForgeJobFailed` | ERROR | ✓ | forge_queue subprocess failed or timed out |
+| PTL_805 | `ShellCommandFailed` | WARN | ✗ | PtolShell command raised unhandled exception |
+
+---
+
+### PTL_9xx additions — Mandos supervisor codes
+
+| Code | Class | Sev | GC | Description |
+|---|---|---|---|---|
+| PTL_906 | `MandosRestoreFailed` | FATAL | ✗ | Checkpoint found, deserialization failed — cold boot required |
+| PTL_907 | `SupervisorRestartBudgetExceeded` | FATAL | ✗ | Aule N/T restart ceiling hit — Face enters Mandos |
+| PTL_908 | `MandosStoreWriteFailed` | FATAL | ✗ | Could not serialize checkpoint before GC — state lost |
+| PTL_909 | `AuleWatchdogTimeout` | FATAL | ✗ | Mandos declares Aule dead — gains supervisor priority |
+| PTL_910 | `WorldBreak` | FATAL | ✗ | Mandos FATAL — final PtolChain write, kernel panic, sys.exit(1) |
+
+**PTL_910 kernel panic message is fixed and verbatim. See `Mandos/mandos.py:world_break()`.**
+
+---
+
+## Wiring Template (all Faces)
+
+```python
+from Pharos.luthspell_error_handler import ErrorHandler, GarbageCollector
+from Pharos.PtolDmesg import dmesg
+
+gc      = GarbageCollector()
+handler = ErrorHandler(
+    gc=gc,
+    face_name=FACE_NAME,
+    on_error=lambda e: dmesg.error(FACE_NAME, str(e)),
+    get_state_fn=lambda: self.get_checkpoint_state(),  # optional but recommended
+)
+gc.register(self)
+```
+
+`get_state_fn` is called automatically before GC on any FATAL — result is checkpointed to Mandos.
+If omitted, Mandos receives an empty state dict plus the fatal error record.
+
+---
+
+## Total: 55 typed PTL errors across 9 ranges (PTL_904, PTL_905 reserved)
+
