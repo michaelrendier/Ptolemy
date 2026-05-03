@@ -343,3 +343,26 @@ class PtolemySettingsWindow(QWidget):
         self._engine.scan()
         self._build_sidebar()
         self._status.setText(f"{len(self._engine.modules)} modules loaded")
+
+    def select_section(self, section: str):
+        """
+        Navigate to a named module section.
+        Accepts module_id (snake_case) or display name.
+        Falls back silently if not found.
+        """
+        section_lower = section.lower()
+        for row, mod in enumerate(self._engine.modules):
+            if (mod.module_id.lower() == section_lower or
+                    mod.display.lower() == section_lower or
+                    mod.face.lower() == section_lower):
+                self._mod_list.setCurrentRow(row)
+                return
+        # Try sensor inputs
+        for row, sid in enumerate(self._engine.sensor_inputs.keys()):
+            if sid.lower() == section_lower:
+                self._input_list.setCurrentRow(row)
+                return
+
+
+# Alias so Ptolemy3.py can import either name
+SettingsWindow = PtolemySettingsWindow
