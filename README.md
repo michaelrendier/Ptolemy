@@ -185,6 +185,7 @@ Eleven **Faces** — sovereign capability domains, each named after a historical
 | [Phaleron](Phaleron/) | Port of Phaleron | Discovery, search, document topology, OCR | [Wiki](../../wiki/Phaleron) |
 | [Philadelphos](Philadelphos/) | Ptolemy II Philadelphos | Language, LSH inference, conversation, context management | [Wiki](../../wiki/Philadelphos) |
 | [Tesla](Tesla/) | Nikola Tesla | Physical world, sensor streams, hardware state, device I/O | [Wiki](../../wiki/Tesla) |
+| [Mandos](Mandos/) | Mandos, Keeper of the Dead | Dormant state, checkpoint store, resurrection, world_break | [Wiki](../../wiki/Mandos) |
 
 Philadelphos is the conversational surface — the Face that talks. The other ten are who Philadelphos consults.
 
