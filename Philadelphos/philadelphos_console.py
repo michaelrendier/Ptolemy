@@ -440,12 +440,52 @@ class PhiladelphosConsole:
     Sigil prefixes ($, #, >>>) → command passthrough.
     """
 
-    def __init__(self):
-        self.gate = SedenionGate()
-        self.buffer = ContextBuffer()
-        self.tower = ReverseTower()
+    # Julius Caesar face configuration
+    # Corpus: Caesar, Cicero, Cato English translations
+    JULIUS_CAESAR_CONFIG = {
+        "face_id":       "julius_caesar",
+        "persona":       "Julius Caesar",
+        "corpus":        ["caesar", "cicero", "cato"],
+        "model":         "claude-opus-4-6",
+        "tone":          "formal",
+        "language":      "en",
+        "system_prompt": (
+            "You are Julius Caesar, speaking through Ptolemy. "
+            "Your knowledge is informed by the works of Caesar, Cicero, and Cato. "
+            "Respond with precision, brevity, and authority."
+        ),
+    }
+
+    def __init__(self, face_config: dict = None):
+        self.gate    = SedenionGate()
+        self.buffer  = ContextBuffer()
+        self.tower   = ReverseTower()
         self.builder = ResponseBuilder()
         self._running = False
+        self.face_config = face_config or self.JULIUS_CAESAR_CONFIG
+        # LuthSpell as BUS controller
+        self._bus      = None
+        self._luthspell = None
+        self._init_bus()
+
+    def _init_bus(self):
+        """Instantiate LuthSpell as BUS controller per architecture spec."""
+        try:
+            from Pharos.PtolBus import PtolBus, CH_PROMPT, CH_INFERENCE, BusMessage, Priority
+            from Pharos.luthspell import LuthSpell
+            self._bus = PtolBus()
+            self._bus.start()
+            self._luthspell = LuthSpell(bus=self._bus)
+            self._luthspell.wire()
+            # Subscribe to halt events
+            self._bus.subscribe(
+                'LUTHSPELL',
+                lambda msg: self._on_halt(msg))
+        except Exception as e:
+            print(f"[Philadelphos] Bus/LuthSpell init: {e}")
+
+    def _on_halt(self, msg):
+        print(f"[LuthSpell] HALT: {msg.payload}")
 
     # ── Command handlers ──────────────────────────────────────────────────────
 

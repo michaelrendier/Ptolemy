@@ -235,15 +235,37 @@ class SensorStream(QObject):
         'bat': '_emit_bat',
     }
 
-    def __init__(self, host='0.0.0.0', port=5556, parent=None):
+    def __init__(self, host='0.0.0.0', port=5556, parent=None, bus=None):
         super().__init__(parent)
         self.host    = host
         self.port    = port
         self.sig     = SensorSignals(self)
+        self._bus    = bus   # PtolBus reference — set externally or via attach_bus()
 
         self._devices  = {}     # device_id → DeviceState
         self._thread   = None
         self._sock     = None   # external punched socket if provided
+
+    def attach_bus(self, bus):
+        """
+        Attach a PtolBus. After this, every sensor packet is also
+        published to CH_SENSOR so TuningDisplay and other subscribers see it.
+        """
+        self._bus = bus
+        # Wire packet signal to bus publisher
+        self.sig.packet_received.connect(self._publish_to_bus)
+
+    def _publish_to_bus(self, packet: dict, device_id: str):
+        if self._bus is None:
+            return
+        try:
+            from Pharos.PtolBus import BusMessage, CH_SENSOR, Priority
+            self._bus.publish(BusMessage(
+                CH_SENSOR,
+                {'device': device_id, 'packet': packet},
+                Priority.T1, sender='Tesla.SensorStream'))
+        except Exception:
+            pass
 
         # Device timeout watchdog — checks every 5s
         self._watchdog = QTimer(self)

@@ -136,7 +136,15 @@ class EntryObject:
             return False
 
 
-# ─── Branch Blockchain (stub) ────────────────────────────────────────────────
+# ─── Branch Blockchain — backed by PtolChain AuditChain ────────────────────────────────────────────────
+
+# PtolChain AuditChain backend
+try:
+    from Callimachus.BlockChain.PtolChain import AuditChain as _AuditChain
+    _HAS_AUDIT_CHAIN = True
+except ImportError:
+    _AuditChain = None
+    _HAS_AUDIT_CHAIN = False
 
 class BranchBlock:
     def __init__(self, data: dict, prev_hash: str):

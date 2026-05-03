@@ -373,6 +373,14 @@ class Ptolemy(QMainWindow):
         except Exception as e:
             self.luthspell = None
             print(f"[PtolBus] LuthSpell wire failed: {e}")
+        # Tuning Display (output stream monitor)
+        try:
+            from Pharos.TuningDisplay import TuningDisplay
+            self.tuning_display = TuningDisplay(bus=self.bus, parent=self)
+            # Don't show on startup — launch via tray or shortcut
+        except Exception as e:
+            self.tuning_display = None
+            print(f"[TuningDisplay] init failed: {e}")
         # Aule forge queue
         try:
             from Aule.forge_queue import ForgeQueue
@@ -382,6 +390,14 @@ class Ptolemy(QMainWindow):
         except Exception as e:
             self.forge_queue = None
             print(f"[Aule] ForgeQueue start failed: {e}")
+        # Tesla sensor stream → bus
+        try:
+            from Tesla.SensorStream import SensorStream
+            self.sensor_stream = SensorStream(parent=self)
+            self.sensor_stream.attach_bus(self.bus)
+        except Exception as e:
+            self.sensor_stream = None
+            print(f"[Tesla] SensorStream init: {e}")
 
         # ── Network layer ─────────────────────────────────────────────────────
         self.hole_punch = HolePunch(self)
@@ -579,6 +595,17 @@ class Ptolemy(QMainWindow):
         """
         face_cls = self.bus.import_face(module_path, class_name)
         return self.bus.launch(face_cls, *args, **kwargs)
+
+    def openTuningDisplay(self, event=None):
+        """Launch the Tuning Display stream monitor."""
+        try:
+            if self.tuning_display is None:
+                from Pharos.TuningDisplay import TuningDisplay
+                self.tuning_display = TuningDisplay(bus=self.bus, parent=self)
+            self.tuning_display.show()
+            self.tuning_display.raise_()
+        except Exception as e:
+            print(f'[TuningDisplay] {e}')
 
     def openSettings(self, section=None, event=None):
         """Launch the PtolemySettings window. Wires to DualTrayMenu."""

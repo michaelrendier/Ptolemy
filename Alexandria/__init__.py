@@ -62,6 +62,12 @@ register_engine('inversion',       _load_inversion)
 register_engine('kcf',             _load_kcf)
 register_engine('hyperwebster',    _load_hyperwebster)
 
+def _load_fractal():
+    from Alexandria.FractalRenderer import FractalRenderer
+    return FractalRenderer
+
+register_engine('fractal', _load_fractal)
+
 _MOUSEION_PIPE: Optional[callable] = None
 
 def set_mouseion_pipe(fn: callable):
