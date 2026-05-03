@@ -137,3 +137,88 @@ the point.
 ---
 
 *Ex Fidelitas, Et Integritas, Nobilitas.*
+
+
+---
+
+## The Energy Argument
+
+Every AI query today runs inference — probability distributions over billions of
+parameters, on a GPU drawing 3,000–5,000 watts, for every single question asked.
+The electricity cost scales with model size. The hardware cost scales with demand.
+The datacenter growth curve is the inference growth curve.
+
+US datacenters consumed 176 TWh in 2023. Projections put that at 325–580 TWh by
+2028. Globally, AI compute alone is projected at 2,500–4,500 TWh by 2050. That
+entire curve exists because inference is expensive by architecture.
+
+**Ptolemy replaces inference with navigation.**
+
+A HyperWebster address lookup is fixed-cost arithmetic — Horner's bijection,
+eight integer splits, one coordinate. It costs the same whether the corpus is
+10,000 words or 10 billion. The compute cost per query does not scale with
+model size. There is no probability distribution to compute. There is no
+parameter matrix to multiply. There is a coordinate, and there is navigation.
+
+A query to a Ptolemy kernel on a phone draws milliwatts.
+A ChatGPT query draws roughly 1,000 times more electricity than a Google search.
+
+The addressable reduction is not 10%. It is the entire AI compute growth curve.
+
+---
+
+## The HyperWebster
+
+Not a dictionary. Not a database. Not an index.
+
+**A coordinate system for all human knowledge.**
+
+Every word, every phrase, every document, every sensor reading that can be
+expressed as a string over a known alphabet already has an address. It has
+always had one. The address exists in the mathematics — it does not need to
+be assigned, generated, or stored. The HyperWebster is the system that
+navigates that address space.
+
+Here is what that means in practice:
+
+**You ask a question.** The question is a string. The string maps to a
+coordinate in eight-dimensional space. The coordinate identifies a neighborhood.
+The neighborhood contains the answer — not by lookup, but by geometry. Proximity
+in the address space is semantic proximity. Things that mean similar things live
+near each other. Not because someone organized them that way. Because the
+mathematics of the address space makes it so.
+
+**The system learns a new word.** It navigates to that word's coordinate.
+It records what it found there — what other words are nearby, what the
+context was, what the usage pattern looks like. The coordinate never changes.
+The knowledge attached to that coordinate deepens over time. This is memory
+without storage. The address is permanent. The content at that address grows.
+
+**The device powers off.** The NVRAM holds the entry point — one address,
+one length, one timestamp. When it powers back on, it navigates back to
+exactly where it was. Nothing was lost. There was nothing to lose. The
+address space was always there. The device just holds the key.
+
+**A new language is added.** Every language has its own charset. Every
+charset has its own address space. The Cayley-Dickson construction bridges
+them — a meaning that exists in English and in Latin and in Arabic occupies
+neighboring coordinates in each language's space, and those neighborhoods
+are linked. The system does not translate. It navigates between address
+spaces that share geometric structure.
+
+**The corpus is infinite by default.** There is no upper bound on the
+address space. A word that has never been encountered yet already has an
+address. When it is encountered for the first time, the system navigates
+to its coordinate and records the encounter. The `first_encountered` field
+is permanently sealed at that moment — the Rabies Principle — because the
+first encounter is a fact about the history of the system, not a mutable
+attribute. It cannot be unlearned.
+
+**Security is geometric.** The charset permutation order is the
+cryptographic key. Permute it, and the entire address space rotates.
+The same word lands at a completely different coordinate. Without the key,
+the address space is navigable but meaningless — you can traverse it, but
+you cannot recognize what you find. Privacy is not a feature added on top.
+It is structural.
+
+---
