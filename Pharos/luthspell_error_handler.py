@@ -158,3 +158,43 @@ class ErrorHandler:
     def log(self): return list(self._log)
     @property
     def gc(self): return self._gc
+
+
+# ---------------------------------------------------------------------------
+# PTL_9xx additions — Mandos supervisor codes
+# ---------------------------------------------------------------------------
+
+class MandosRestoreFailed(PtolemyError):
+    """PTL_906: Checkpoint found but deserialization failed -- cold boot required."""
+    code       = "PTL_906"
+    severity   = Severity.FATAL
+    gc_trigger = False
+
+
+class SupervisorRestartBudgetExceeded(PtolemyError):
+    """PTL_907: Aule N/T restart ceiling hit -- Face enters Mandos dormant state."""
+    code       = "PTL_907"
+    severity   = Severity.FATAL
+    gc_trigger = False
+
+
+class MandosStoreWriteFailed(PtolemyError):
+    """PTL_908: Could not serialize checkpoint before GC -- state is lost."""
+    code       = "PTL_908"
+    severity   = Severity.FATAL
+    gc_trigger = False
+
+
+class AuleWatchdogTimeout(PtolemyError):
+    """PTL_909: Mandos declares Aule dead -- Mandos gains supervisor priority."""
+    code       = "PTL_909"
+    severity   = Severity.FATAL
+    gc_trigger = False
+
+
+class WorldBreak(PtolemyError):
+    """PTL_910: Mandos FATAL -- final PtolChain write, kernel panic, sys.exit(1)."""
+    code       = "PTL_910"
+    severity   = Severity.FATAL
+    gc_trigger = False
+
