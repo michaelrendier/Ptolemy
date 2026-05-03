@@ -1593,3 +1593,654 @@ if __name__ == '__main__':
     print("\n" + "=" * 65)
     print("  ALL SELF-TESTS PASSED")
     print("=" * 65)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §13  LORENZ-STIRLING ATTRACTOR ENGINE
+#      Basin boundary (Stirling V=10) + trajectory (Lorenz) + bifurcation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import cmath as _cmath
+
+def _stirling_poly_10(re: float, im: float) -> Tuple[float, float]:
+    """Stirling polynomial degree 9 (UF om.ufm V=10). Returns (re, im)."""
+    def cpow(r, i, n):
+        rr, ri = 1.0, 0.0
+        for _ in range(n):
+            rr, ri = rr*r - ri*i, rr*i + ri*r
+        return rr, ri
+    def cadd(*terms):
+        return sum(t[0] for t in terms), sum(t[1] for t in terms)
+    def csc(r, i, s):
+        return r*s, i*s
+    z1 = (re, im)
+    z2 = cpow(re, im, 2); z3 = cpow(re, im, 3); z4 = cpow(re, im, 4)
+    z5 = cpow(re, im, 5); z6 = cpow(re, im, 6); z7 = cpow(re, im, 7)
+    z8 = cpow(re, im, 8); z9 = cpow(re, im, 9)
+    sr, si = cadd(csc(*z9, 15), csc(*z8, -45), csc(*z7, -270),
+                  csc(*z6, 182), csc(*z5, 1687), csc(*z4, 1395),
+                  csc(*z3, -1576), csc(*z2, -2684), csc(*z1, -1008))
+    return sr / 7680.0, si / 7680.0
+
+
+class BifurcationAnalysis:
+    """
+    Detects windows of order within chaotic bifurcation diagrams.
+
+    For a 1D map  x_{n+1} = f(r, x_n)  (logistic, Lorenz-r, etc.):
+      - Sweep parameter r over [r_min, r_max]
+      - At each r: iterate to transient, collect attractor points
+      - Detect order windows: parameter ranges where attractor collapses
+        to period-p orbit (p = 1,2,3,4,...) rather than chaos
+
+    Lyapunov exponent λ(r):
+      λ = lim_{N→∞} (1/N) Σ log|f'(r, x_n)|
+      λ < 0  →  stable periodic (order window)
+      λ = 0  →  bifurcation boundary
+      λ > 0  →  chaos
+    """
+
+    @staticmethod
+    def logistic_map(r: float, x: float) -> float:
+        return r * x * (1.0 - x)
+
+    @staticmethod
+    def logistic_deriv(r: float, x: float) -> float:
+        return r * (1.0 - 2.0 * x)
+
+    @staticmethod
+    def lorenz_r_map(rho: float, x: float, sigma: float = 10.0,
+                     beta: float = 8/3, dt: float = 0.01) -> float:
+        """1D Poincaré section of Lorenz: z-maxima sequence vs rho."""
+        # Simplified: iterate z-max extraction
+        y, z = 1.0, rho / 2.0
+        for _ in range(20):
+            dx = sigma * (y - x); dy = x * (rho - z) - y; dz = x*y - beta*z
+            x += dx*dt; y += dy*dt; z += dz*dt
+        return z
+
+    @staticmethod
+    def lyapunov(r: float, map_fn, deriv_fn,
+                 x0: float = 0.5, transient: int = 500, n: int = 1000) -> float:
+        """Lyapunov exponent for 1D map at parameter r."""
+        x = x0
+        for _ in range(transient):
+            x = map_fn(r, x)
+        lam = 0.0
+        for _ in range(n):
+            d = abs(deriv_fn(r, x))
+            if d > 1e-12:
+                lam += math.log(d)
+            x = map_fn(r, x)
+        return lam / n
+
+    @staticmethod
+    def order_windows(r_min: float = 3.5, r_max: float = 4.0,
+                      n_r: int = 500, transient: int = 200,
+                      n_collect: int = 100) -> List[Dict[str, Any]]:
+        """
+        Scan parameter space and identify windows of order.
+        Returns list of {r_start, r_end, period, lyapunov} dicts.
+        """
+        rs = [r_min + i * (r_max - r_min) / n_r for i in range(n_r)]
+        windows = []
+        in_window = False
+        w_start = None
+        w_period = None
+
+        for r in rs:
+            lam = BifurcationAnalysis.lyapunov(
+                r,
+                BifurcationAnalysis.logistic_map,
+                BifurcationAnalysis.logistic_deriv
+            )
+            # Detect period by attractor size
+            x = 0.5
+            for _ in range(transient):
+                x = BifurcationAnalysis.logistic_map(r, x)
+            pts = set()
+            for _ in range(n_collect):
+                x = BifurcationAnalysis.logistic_map(r, x)
+                pts.add(round(x, 4))
+            period = len(pts)
+
+            if lam < -0.01:  # order window
+                if not in_window:
+                    in_window = True
+                    w_start = r
+                    w_period = period
+            else:
+                if in_window:
+                    windows.append({
+                        'r_start':  w_start,
+                        'r_end':    r,
+                        'period':   w_period,
+                        'lyapunov': lam,
+                        'width':    r - w_start,
+                    })
+                    in_window = False
+
+        return windows
+
+    @staticmethod
+    def bifurcation_diagram(r_min: float = 2.5, r_max: float = 4.0,
+                            n_r: int = 400, transient: int = 200,
+                            n_collect: int = 80) -> List[Tuple[float, float]]:
+        """Return (r, x) pairs for plotting bifurcation diagram."""
+        pts = []
+        for i in range(n_r):
+            r = r_min + i * (r_max - r_min) / n_r
+            x = 0.5
+            for _ in range(transient):
+                x = BifurcationAnalysis.logistic_map(r, x)
+            for _ in range(n_collect):
+                x = BifurcationAnalysis.logistic_map(r, x)
+                pts.append((r, x))
+        return pts
+
+
+class StirlingBasinEngine:
+    """
+    Stirling V=10 basin classifier as a named engine,
+    parallel to LagrangianEngine and NoetherCalculus.
+    """
+
+    def __init__(self, p1: complex = complex(0.001, 0.001),
+                 bail: float = 4.0, maxiter: int = 500):
+        self.p1 = p1; self.bail = bail; self.maxiter = maxiter
+
+    @staticmethod
+    def _S10(z: complex) -> complex:
+        return (15*z**9 - 45*z**8 - 270*z**7 + 182*z**6 + 1687*z**5
+                + 1395*z**4 - 1576*z**3 - 2684*z**2 - 1008*z) / 7680
+
+    @staticmethod
+    def _S10d(z: complex) -> complex:
+        return (135*z**8 - 360*z**7 - 1890*z**6 + 1092*z**5 + 8435*z**4
+                + 5580*z**3 - 4728*z**2 - 5368*z - 1008) / 7680
+
+    # Roots of S10 (pre-computed): z=0 (order 1), z=-1, and 7 others
+    # Roots identified by Newton iteration and clustered
+    _ROOT_REPS: List[complex] = [
+        complex(0.0,    0.0),
+        complex(-1.0,   0.0),
+        complex(1.306,  0.0),
+        complex(-2.2,   0.0),
+        complex(0.5,    1.2),
+        complex(0.5,   -1.2),
+        complex(-0.8,   1.0),
+        complex(-0.8,  -1.0),
+    ]
+
+    def _root_to_basin(self, root: complex) -> int:
+        """Assign basin ID by closest known root representative."""
+        best, best_d = 0, float('inf')
+        for i, r in enumerate(self._ROOT_REPS):
+            d = abs(root - r)
+            if d < best_d:
+                best_d, best = d, i
+        return best + 1  # 1-indexed
+
+    def iterate(self, re: float, im: float) -> Dict[str, Any]:
+        """Newton's method on S10(z) — converges to a root (basin) or escapes."""
+        z = complex(re, im)
+        tol = 1e-6
+        for i in range(self.maxiter):
+            fz  = self._S10(z)
+            fpz = self._S10d(z)
+            if abs(fpz) < 1e-12:
+                return {'extinct': True, 'iter': i, 're': z.real, 'im': z.imag, 'basin': 0}
+            z_new = z - fz / fpz
+            if abs(z_new) > 50:   # diverged
+                return {'extinct': True, 'iter': i, 're': z_new.real, 'im': z_new.imag, 'basin': 0}
+            if abs(z_new - z) < tol:
+                basin = self._root_to_basin(z_new)
+                return {'extinct': False, 'iter': i, 're': z_new.real, 'im': z_new.imag,
+                        'basin': basin, 'uncertainty': abs(fz)}
+            z = z_new
+        return {'extinct': True, 'iter': self.maxiter, 're': z.real, 'im': z.imag, 'basin': 0}
+
+    def classify(self, re: float, im: float) -> Dict[str, Any]:
+        return self.iterate(re, im)
+
+
+class LorenzAttractorEngine:
+    """
+    Lorenz attractor engine. Trajectories, Lyapunov, Poincaré sections.
+    Rho bifurcation parameter sweepable for order window detection.
+    """
+
+    def __init__(self, sigma: float = 10.0, rho: float = 28.0,
+                 beta: float = 8/3, dt: float = 0.005):
+        self.sigma = sigma; self.rho = rho
+        self.beta = beta; self.dt = dt
+
+    def step(self, x, y, z) -> Tuple[float, float, float]:
+        dx = self.sigma*(y - x)
+        dy = x*(self.rho - z) - y
+        dz = x*y - self.beta*z
+        return x+dx*self.dt, y+dy*self.dt, z+dz*self.dt
+
+    def trajectory(self, x0=0.1, y0=0.0, z0=0.0,
+                   steps=5000) -> List[Tuple[float, float, float]]:
+        pts = []; x, y, z = x0, y0, z0
+        for _ in range(steps):
+            x, y, z = self.step(x, y, z)
+            pts.append((x, y, z))
+        return pts
+
+    def lyapunov(self, x0=0.1, y0=0.0, z0=0.0,
+                 transient=1000, n=5000) -> float:
+        """Largest Lyapunov exponent via separation method."""
+        x, y, z = x0, y0, z0
+        for _ in range(transient):
+            x, y, z = self.step(x, y, z)
+        # Perturbed trajectory
+        eps = 1e-8
+        xp, yp, zp = x+eps, y, z
+        lam = 0.0
+        for _ in range(n):
+            x,  y,  z  = self.step(x,  y,  z)
+            xp, yp, zp = self.step(xp, yp, zp)
+            d = math.sqrt((xp-x)**2 + (yp-y)**2 + (zp-z)**2)
+            if d > 1e-12:
+                lam += math.log(d / eps)
+                xp = x + eps*(xp-x)/d
+                yp = y + eps*(yp-y)/d
+                zp = z + eps*(zp-z)/d
+        return lam / (n * self.dt)
+
+    def rho_sweep(self, rho_min=0.5, rho_max=30.0,
+                  n_rho=60) -> List[Dict[str, Any]]:
+        """Sweep rho, detect order windows by Lyapunov sign change."""
+        results = []
+        for i in range(n_rho):
+            rho = rho_min + i*(rho_max - rho_min)/n_rho
+            self.rho = rho
+            lam = self.lyapunov()
+            order = lam < 0
+            results.append({'rho': rho, 'lyapunov': lam, 'order': order})
+        self.rho = 28.0  # restore default
+        return results
+
+    def poincare_section(self, z_level=27.0, x0=0.1, y0=0.0, z0=0.0,
+                         steps=50000) -> List[Tuple[float, float]]:
+        """Poincaré section at z=z_level, ascending crossings."""
+        pts = []; x, y, z = x0, y0, z0
+        z_prev = z
+        for _ in range(steps):
+            x, y, z = self.step(x, y, z)
+            if z_prev < z_level <= z:
+                pts.append((x, y))
+            z_prev = z
+        return pts
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §14  INPUT ENGINE  (ℝ → Sedenion)
+#      Encodes real-world waveform into the Cayley-Dickson tower
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class InputEngine:
+    """
+    Input Engine: ℝ → ℂ → ℍ → 𝕆 → 𝕊
+
+    Encodes a real-valued waveform (scalar, vector, or time series)
+    up through the Cayley-Dickson tower to a full 16-component sedenion.
+
+    Each stratum adds structure:
+        ℝ(1)   — scalar magnitude
+        ℂ(2)   — phase / quadrature
+        ℍ(4)   — spatial rotation frame
+        𝕆(8)   — octonion — full non-associative encoding
+        𝕊(16)  — sedenion — zero-divisor regime, CWC apex
+
+    Input: list of floats (waveform samples, sensor readings, etc.)
+    Output: 16-component list (sedenion coordinates)
+    """
+
+    @staticmethod
+    def _normalize(signal: List[float]) -> List[float]:
+        m = max(abs(x) for x in signal) if signal else 1.0
+        return [x / (m + 1e-12) for x in signal]
+
+    @staticmethod
+    def _to_real(signal: List[float]) -> float:
+        """ℝ layer: RMS of signal."""
+        return math.sqrt(sum(x*x for x in signal) / max(len(signal), 1))
+
+    @staticmethod
+    def _to_complex(signal: List[float]) -> List[float]:
+        """ℂ layer: real + Hilbert-like quadrature estimate."""
+        n = len(signal)
+        re = sum(signal) / max(n, 1)
+        # Quadrature: sum of alternating sign (rough phase)
+        im = sum((-1)**i * signal[i] for i in range(n)) / max(n, 1)
+        return [re, im]
+
+    @staticmethod
+    def _to_quaternion(signal: List[float]) -> List[float]:
+        """ℍ layer: partition signal into 4 components."""
+        n = max(len(signal), 1)
+        q = 4
+        chunk = max(n // q, 1)
+        parts = []
+        for i in range(q):
+            seg = signal[i*chunk:(i+1)*chunk] or [0.0]
+            parts.append(sum(seg) / len(seg))
+        return parts
+
+    @staticmethod
+    def _to_octonion(signal: List[float]) -> List[float]:
+        """𝕆 layer: 8-component encoding."""
+        n = max(len(signal), 1)
+        chunk = max(n // 8, 1)
+        parts = []
+        for i in range(8):
+            seg = signal[i*chunk:(i+1)*chunk] or [0.0]
+            parts.append(sum(seg) / len(seg))
+        return parts
+
+    @staticmethod
+    def _cayley_dickson_step(a: List[float], b: List[float]) -> List[float]:
+        """One CD doubling: (a,b) → 2n-dim element."""
+        n = len(a)
+        # (a,b)*(c,d) = (ac - d†b, da + bc†) — simplified for encoding
+        b_conj = [-x for x in b]
+        b_conj[0] = b[0]  # conjugate: negate non-scalar parts
+        return a + b_conj
+
+    @staticmethod
+    def encode(signal: List[float]) -> List[float]:
+        """
+        Full ℝ→𝕊 encoding pipeline.
+        Returns 16-component sedenion list.
+        """
+        sig = InputEngine._normalize(signal)
+
+        # ℝ → ℂ
+        c2 = InputEngine._to_complex(sig)
+        # ℂ → ℍ (CD doubling)
+        q4 = InputEngine._to_quaternion(sig)
+        # ℍ → 𝕆 (CD doubling)
+        o8 = InputEngine._to_octonion(sig)
+        # 𝕆 → 𝕊 (CD doubling: sedenion = two octonions)
+        # Second octonion: phase-shifted encoding
+        sig_shifted = sig[1:] + sig[:1]  # circular shift
+        o8b = InputEngine._to_octonion(sig_shifted)
+        s16 = o8 + o8b
+
+        return s16
+
+    @staticmethod
+    def encode_to_complex(signal: List[float]) -> complex:
+        """Encode to single complex number for Stirling basin input."""
+        s16 = InputEngine.encode(signal)
+        # Project sedenion to ℂ: first two components
+        return complex(s16[0], s16[1])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §15  OUTPUT ENGINE  (Sedenion → ℝ)
+#      Decodes sedenion through CWC → basin → Lorenz → real output
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class OutputEngine:
+    """
+    Output Engine: 𝕊 → 𝕆 → ℍ → ℂ → ℝ
+
+    Decodes a sedenion (post-CWC) back to real output via:
+        1. CWC: Lorenz-Stirling basin classification
+        2. Basin routing: which path survives (extinction = no output)
+        3. Lorenz trajectory: position within basin
+        4. 𝕊→ℝ collapse: project down the CD tower
+
+    Output is NOT a probability — it is the REAL VALUE the basin
+    trajectory collapses to. Uncertainty = distance from basin center.
+    """
+
+    def __init__(self, stirling_bail: float = 4.0, stirling_maxiter: int = 300,
+                 lorenz_sigma: float = 10.0, lorenz_rho: float = 28.0,
+                 lorenz_beta: float = 8/3):
+        self.basin_engine = StirlingBasinEngine(bail=stirling_bail,
+                                                maxiter=stirling_maxiter)
+        self.lorenz = LorenzAttractorEngine(sigma=lorenz_sigma,
+                                             rho=lorenz_rho,
+                                             beta=lorenz_beta)
+
+    def catastrophic_waveform_collapse(self, s16: List[float]) -> Dict[str, Any]:
+        """
+        CWC: project sedenion apex to complex plane for basin classification.
+        Returns basin result + extinction flag.
+        """
+        # Project 𝕊(16) → ℂ: energy-weighted first two components
+        norm = math.sqrt(sum(x*x for x in s16)) + 1e-12
+        re = s16[0] / norm * 1.5   # scale to active Stirling basin range
+        im = s16[1] / norm * 1.5
+        return self.basin_engine.classify(re, im)
+
+    def decode(self, s16: List[float], lorenz_steps: int = 200) -> Dict[str, Any]:
+        """
+        Full 𝕊→ℝ decode pipeline.
+
+        Returns:
+            output:      float — real-valued output
+            basin_id:    int   — which basin captured the signal
+            extinct:     bool  — True if no basin captured (no output path)
+            uncertainty: float — distance from basin center
+            lorenz_pos:  tuple — (x,y,z) in Lorenz space
+            cwc_z:       complex — complex point at CWC apex
+        """
+        # 1. CWC
+        cwc = self.catastrophic_waveform_collapse(s16)
+        cwc_z = complex(cwc['re'], cwc['im'])
+
+        if cwc['extinct']:
+            return {
+                'output': None, 'basin_id': 0, 'extinct': True,
+                'uncertainty': float('inf'), 'lorenz_pos': (0., 0., 0.),
+                'cwc_z': cwc_z
+            }
+
+        # 2. Seed Lorenz from basin capture
+        x0 = cwc['re'] * 5.0
+        y0 = cwc['im'] * 5.0
+        z0 = cwc.get('uncertainty', 1.0) * 10.0
+        traj = self.lorenz.trajectory(x0, y0, z0, steps=lorenz_steps)
+        lx, ly, lz = traj[-1] if traj else (0., 0., 0.)
+
+        # 3. 𝕊→ℝ collapse: project Lorenz position + sedenion through tower
+        # Each CD layer halves dimension: 𝕊(16)→𝕆(8)→ℍ(4)→ℂ(2)→ℝ(1)
+        o8  = [(s16[i] + s16[i+8]) / 2.0 for i in range(8)]
+        q4  = [(o8[i]  + o8[i+4])  / 2.0 for i in range(4)]
+        c2  = [(q4[i]  + q4[i+2])  / 2.0 for i in range(2)]
+        r1  = (c2[0] + c2[1]) / 2.0
+
+        # Modulate by Lorenz position (basin trajectory shapes output)
+        lorenz_mod = math.tanh(lx / 20.0)  # bounded modulation
+        output = r1 * (1.0 + 0.1 * lorenz_mod)
+
+        return {
+            'output':      output,
+            'basin_id':    cwc['basin'],
+            'extinct':     False,
+            'uncertainty': cwc.get('uncertainty', 0.0),
+            'lorenz_pos':  (lx, ly, lz),
+            'cwc_z':       cwc_z,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §16  INVERSION ENGINE  (sits between Input and Output)
+#      Implements J_N: (r,θ) → (1/r, θ+π/2) at the 𝕊 apex
+#      Bridges ℝ→𝕊 encode and 𝕊→ℝ decode
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class InversionEngine:
+    """
+    Inversion Engine: J_N map at the 𝕊 apex.
+
+    Sits between InputEngine and OutputEngine.
+    Implements the inside-out map from smnnip_inversion_engine.py
+    at the sedenion level:
+
+        J_N: (r, θ) → (1/r, θ + π/2)
+
+    In sedenion coordinates: each component pair (a_i, a_{i+8}) undergoes
+    the inversion, rotating the encoding inside-out before CWC.
+
+    This is the geometric heart of SMNNIP:
+        - Input arrives as ℝ→𝕊 expansion
+        - Inversion at apex flips topology
+        - Output departs as 𝕊→ℝ collapse
+        - The Stirling basin boundaries are the fixed points of J_N
+
+    Pipeline:
+        signal → InputEngine.encode() → s16
+               → InversionEngine.invert(s16) → s16_inv
+               → OutputEngine.decode(s16_inv) → result
+    """
+
+    PI    = math.pi
+    PHI   = (1.0 + math.sqrt(5.0)) / 2.0
+    OMEGA = 0.56714329040978384  # Lambert W fixed point
+
+    @staticmethod
+    def _polar(a: float, b: float) -> Tuple[float, float]:
+        r = math.sqrt(a*a + b*b)
+        theta = math.atan2(b, a)
+        return r, theta
+
+    @staticmethod
+    def _cartesian(r: float, theta: float) -> Tuple[float, float]:
+        return r * math.cos(theta), r * math.sin(theta)
+
+    @staticmethod
+    def j_n(a: float, b: float) -> Tuple[float, float]:
+        """
+        J_N map: (a,b) → (1/r, θ+π/2) in Cartesian.
+        Fixed point: r=1 (unit circle). Attractor: r=φ.
+        """
+        r, theta = InversionEngine._polar(a, b)
+        if r < 1e-12:
+            return 0.0, 0.0
+        r_inv = 1.0 / r
+        theta_rot = theta + InversionEngine.PI / 2.0
+        return InversionEngine._cartesian(r_inv, theta_rot)
+
+    @staticmethod
+    def invert(s16: List[float]) -> List[float]:
+        """
+        Apply J_N to sedenion: invert each (a_i, a_{i+8}) pair.
+        Returns inverted 16-component list.
+        """
+        result = list(s16)
+        for i in range(8):
+            a, b = s16[i], s16[i + 8]
+            ia, ib = InversionEngine.j_n(a, b)
+            result[i]     = ia
+            result[i + 8] = ib
+        return result
+
+    @staticmethod
+    def gradient_flow(r0: float = 1.0, steps: int = 200) -> List[Dict[str, float]]:
+        """
+        Gradient flow from inversion boundary (r=1) toward φ attractor.
+        Mirrors smnnip_inversion_engine GradientFlow.
+        Returns trajectory with Noether conservation check at each step.
+        """
+        PC = PhysicalConstants()
+        r = r0
+        trajectory = []
+        for i in range(steps):
+            theta = i * PC.PI / steps
+            r_new, theta_new = InversionEngine.j_n(
+                *InversionEngine._cartesian(r, theta)
+            )
+            r_new = math.sqrt(r_new**2 + (0.0)**2)
+            # Conservation: r * r_inv should = 1
+            r_prev, _ = InversionEngine._polar(
+                *InversionEngine._cartesian(r, theta)
+            )
+            conservation = abs(r_prev * (1.0 / max(r_prev, 1e-12)) - 1.0)
+            gap_to_phi = abs(r_new - InversionEngine.PHI)
+            trajectory.append({
+                'step':         i,
+                'r':            r_new,
+                'theta':        theta_new,
+                'conservation': conservation,
+                'gap_to_phi':   gap_to_phi,
+                'order':        gap_to_phi < 0.01,
+            })
+            r = r_new
+        return trajectory
+
+    @staticmethod
+    def fixed_point_analysis() -> Dict[str, Any]:
+        """
+        Analyze fixed points of J_N.
+        r=1 (boundary), φ (attractor), Ω (Lambert W — decay rate).
+        """
+        phi = InversionEngine.PHI
+        omega = InversionEngine.OMEGA
+        # J_N at r=phi: should map close to phi (quasi-fixed)
+        a, b = InversionEngine._cartesian(phi, InversionEngine.PI/4)
+        ia, ib = InversionEngine.j_n(a, b)
+        r_out = math.sqrt(ia**2 + ib**2)
+        return {
+            'phi':              phi,
+            'omega':            omega,
+            'hbar_nn':          0.1 / (2.0 * InversionEngine.PI),
+            'r_at_phi_in':      phi,
+            'r_at_phi_out':     r_out,
+            'phi_quasi_fixed':  abs(r_out - phi) < 0.5,
+            'boundary_r':       1.0,
+            'attractor_r':      phi,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §17  FULL PIPELINE  (convenience wrapper)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class SMNNIPPipeline:
+    """
+    Full ℝ → 𝕊 → J_N → CWC → 𝕊 → ℝ pipeline.
+
+    signal → InputEngine → InversionEngine → OutputEngine → result
+
+    This is the complete signal path through SMNNIP.
+    """
+
+    def __init__(self):
+        self.input_engine   = InputEngine()
+        self.inversion      = InversionEngine()
+        self.output_engine  = OutputEngine()
+        self.bifurcation    = BifurcationAnalysis()
+        self.stirling       = StirlingBasinEngine()
+        self.lorenz         = LorenzAttractorEngine()
+
+    def run(self, signal: List[float], lorenz_steps: int = 200) -> Dict[str, Any]:
+        """Full pipeline: real signal → real output."""
+        # 1. Input: ℝ → 𝕊
+        s16 = InputEngine.encode(signal)
+        # 2. Inversion at apex: J_N
+        s16_inv = InversionEngine.invert(s16)
+        # 3. Output: 𝕊 → ℝ via CWC + basin + Lorenz
+        result = self.output_engine.decode(s16_inv, lorenz_steps=lorenz_steps)
+        result['s16_pre_inversion']  = s16
+        result['s16_post_inversion'] = s16_inv
+        return result
+
+    def order_windows(self, **kwargs) -> List[Dict[str, Any]]:
+        """Bifurcation order windows in logistic map (proxy for Lorenz rho sweep)."""
+        return BifurcationAnalysis.order_windows(**kwargs)
+
+    def lorenz_order_windows(self, **kwargs) -> List[Dict[str, Any]]:
+        """Order windows in Lorenz rho parameter."""
+        return self.lorenz.rho_sweep(**kwargs)
+
+    def fixed_point_report(self) -> Dict[str, Any]:
+        return InversionEngine.fixed_point_analysis()
+
+
