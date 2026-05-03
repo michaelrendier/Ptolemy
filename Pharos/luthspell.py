@@ -89,12 +89,16 @@ class BusMessage:
         self.priority = priority; self.timestamp = time.time()
 
 
-class PtolBusStub:
-    def __init__(self): self._subscribers = {}
-    def subscribe(self, channel, handler):
-        self._subscribers.setdefault(channel, []).append(handler)
-    def publish(self, message):
-        for h in self._subscribers.get(message.channel, []): h(message)
+# PtolBusStub replaced by real PtolBus
+try:
+    from Pharos.PtolBus import PtolBus as PtolBusStub
+except ImportError:
+    class PtolBusStub:  # fallback for standalone testing
+        def __init__(self): self._subscribers = {}
+        def subscribe(self, channel, handler):
+            self._subscribers.setdefault(channel, []).append(handler)
+        def publish(self, message):
+            for h in self._subscribers.get(message.channel, []): h(message)
 
 
 class LuthSpell:

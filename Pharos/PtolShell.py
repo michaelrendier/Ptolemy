@@ -219,15 +219,95 @@ class PtolShell(QWidget):
             self._term.startShellProgram()
 
     def _ptolemy_command(self, command: str):
-        try:
-            from Pharos.Commandow.Commandow import Tools
+        """
+        Dispatch Ptolemy-mode commands.
+        Supported:
+            face <name>            — switch prompt identity / open face subshell
+            face <name> <message>  — send message to face
+            bus                    — show PtolBus queue/channel status
+            faces                  — list registered faces
+            help                   — list commands
+        """
+        parts   = command.strip().split(None, 2)
+        cmd     = parts[0].lower() if parts else ''
+        ptol    = getattr(self, 'Ptolemy', None) or (
+                      self.parent() if hasattr(self, 'parent') else None)
+
+        def _write(text, color='#00ccff'):
             if _HAS_QTERM:
-                self._term.sendText(f'# Ptolemy: {command}\n')
+                self._term.sendText(f'# {text}\n')
             else:
-                self._term.write(f'Ptolemy > {command}\n', '#00ccff')
-        except Exception as ex:
-            if not _HAS_QTERM:
-                self._term.write(f'Commandow error: {ex}\n', '#ff5555')
+                self._term.write(text + '\n', color)
+
+        if cmd == 'face':
+            if len(parts) < 2:
+                _write('Usage: face <name> [message]', '#ff9900')
+                return
+            face_name = parts[1].lower()
+            message   = parts[2] if len(parts) > 2 else None
+            # Try to get face identity
+            try:
+                from Pharos.FaceIdentity import get_face
+                face_obj = get_face(face_name)
+                color = face_obj.color if face_obj else '#c9a227'
+                label = face_obj.display if face_obj else face_name.title()
+            except Exception:
+                color, label = '#c9a227', face_name.title()
+            if message:
+                # Face-to-face message via PtolShell dispatch
+                self._dispatch_face_message(f'{face_name}:{message}')
+            else:
+                # Switch prompt to face subshell identity
+                self._set_transient_label(label, color)
+                _write(f'Entering {label} subshell. Type "exit" to return.', color)
+                # Emit on bus if available
+                if ptol and hasattr(ptol, 'bus'):
+                    try:
+                        from Pharos.PtolBus import BusMessage, CH_FACE_EVENT, Priority
+                        ptol.bus.publish(BusMessage(
+                            CH_FACE_EVENT,
+                            {'action': 'subshell', 'face': face_name},
+                            Priority.T1, sender='PtolShell'))
+                    except Exception:
+                        pass
+
+        elif cmd == 'faces':
+            if ptol and hasattr(ptol, 'bus') and hasattr(ptol.bus, '_registry'):
+                reg = ptol.bus._registry
+                if reg:
+                    for fid, rec in reg.items():
+                        _write(f'  {fid:30s} [{rec["state"]}]', '#aaffcc')
+                else:
+                    _write('No faces registered.', '#888888')
+            else:
+                _write('Bus not available.', '#ff5555')
+
+        elif cmd == 'bus':
+            if ptol and hasattr(ptol, 'bus'):
+                b = ptol.bus
+                _write(f'PtolBus  channels={len(b.channels())}  queue={b.queue_depth()}', '#00ccff')
+                for ch in b.channels():
+                    _write(f'  {ch:30s}  subscribers={b.subscriber_count(ch)}', '#aaaaaa')
+            else:
+                _write('Bus not available.', '#ff5555')
+
+        elif cmd == 'help' or cmd == '?':
+            _write('Ptolemy commands:', '#00ccff')
+            _write('  face <name> [message]  — open face subshell / send message')
+            _write('  faces                  — list active faces')
+            _write('  bus                    — bus channel status')
+            _write('  help                   — this list')
+
+        else:
+            # Unknown command — fall through to Commandow
+            try:
+                from Pharos.Commandow.Commandow import Tools
+                if _HAS_QTERM:
+                    self._term.sendText(f'# Ptolemy: {command}\n')
+                else:
+                    _write(f'Ptolemy > {command}')
+            except Exception as ex:
+                _write(f'Unknown command: {command}  ({ex})', '#ff5555')
 
     def _apply_mode_color(self, mode: str):
         label, color, _, _ = _MODES.get(mode, _MODES[_DEFAULT_MODE])

@@ -571,7 +571,7 @@ class PWindow(QGraphicsItem):
 
         if self._title_drag_rect().contains(p):
             self._drag = True
-            self._drag_offset = event.pos()
+            self._drag_offset = event.scenePos()
             self.setCursor(QCursor(Qt.SizeAllCursor))
             return
 
@@ -579,8 +579,9 @@ class PWindow(QGraphicsItem):
 
     def mouseMoveEvent(self, event):
         if self._drag:
-            delta = event.pos() - self._drag_offset
+            delta = event.scenePos() - self._drag_offset
             self.setPos(self.pos() + delta)
+            self._drag_offset = event.scenePos()
             return
         super().mouseMoveEvent(event)
 

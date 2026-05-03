@@ -59,6 +59,7 @@ from Pharos.UtilityFunctions   import cmdline
 from Pharos.Menu               import Menu
 from Pharos.Interface          import User
 from Pharos.PtolShell          import PtolShell
+from Pharos.PtolBus            import PtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
 from Pharos.LeftPanel          import LeftPanel
 from urllib.request            import build_opener
 
@@ -363,15 +364,41 @@ class Ptolemy(QMainWindow):
 
         # ── Integration bus ───────────────────────────────────────────────────
         self.bus = PtolBus(self)
+        self.bus.start()
+        # Wire luthspell to real bus
+        try:
+            from Pharos.luthspell import LuthSpell
+            self.luthspell = LuthSpell(bus=self.bus)
+            self.luthspell.wire()
+        except Exception as e:
+            self.luthspell = None
+            print(f"[PtolBus] LuthSpell wire failed: {e}")
 
         # ── Network layer ─────────────────────────────────────────────────────
         self.hole_punch = HolePunch(self)
         self.kvm        = KVMClient(self)
 
         # ── System tray ───────────────────────────────────────────────────────
-        self.sysTrayIcon = SystemTrayIcon(
-            QIcon(self.imgDir + 'Pharos/indicator-ball.gif'), parent=self)
-        self.sysTrayIcon.show()
+        # ── Desktop components ───────────────────────────────────────────
+        try:
+            from Pharos.PtolDesktop import ProcessGraph, SidebarPanel, DualTrayMenu
+            # Process graph (JACK-style node layout)
+            self.process_graph = ProcessGraph(self.scene, self)
+            # Bus → graph: update node states on face events
+            self.bus.face_launched.connect(
+                lambda fid: self.process_graph.add_minimized_window(None, fid))
+            # Sidebar (23px strip, 45s auto-hide)
+            left_widget = getattr(self, 'leftPanel', None)
+            self.sidebar = SidebarPanel(self.scene, self, left_widget)
+            # System tray (dual menus)
+            self.sysTrayIcon = DualTrayMenu(ptolemy=self, parent=self)
+            self.sysTrayIcon.show()
+        except Exception as _e:
+            print(f'[PtolDesktop] init failed: {_e}')
+            # Legacy tray fallback
+            self.sysTrayIcon = SystemTrayIcon(
+                QIcon(self.imgDir + 'Pharos/indicator-ball.gif'), parent=self)
+            self.sysTrayIcon.show()
 
         # ── Command history ───────────────────────────────────────────────────
         self.cmdhistory = []
@@ -543,6 +570,19 @@ class Ptolemy(QMainWindow):
         """
         face_cls = self.bus.import_face(module_path, class_name)
         return self.bus.launch(face_cls, *args, **kwargs)
+
+    def openSettings(self, section=None, event=None):
+        """Launch the PtolemySettings window. Wires to DualTrayMenu."""
+        try:
+            from Pharos.settings_window import SettingsWindow
+            if not hasattr(self, '_settings_win') or self._settings_win is None:
+                self._settings_win = SettingsWindow(parent=self)
+            self._settings_win.show()
+            self._settings_win.raise_()
+            if section:
+                self._settings_win.select_section(section)
+        except Exception as e:
+            print(f'[Settings] failed to open: {e}')
 
     def openSearch(self, event=None):
         return self.open_face(
