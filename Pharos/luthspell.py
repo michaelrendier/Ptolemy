@@ -37,8 +37,8 @@ PRIORITY_SCHEME        = "rotary"
 
 LUTHSPELL_SETTINGS = {
     "channel_prompt":     CHANNEL_PROMPT,
-    "channel_inference":  CHANME“_INFERENCE,
-    "channel_luthspell":  CHANME“_LUTHSPELL,
+    "channel_inference":  CHANMEï¿½_INFERENCE,
+    "channel_luthspell":  CHANMEï¿½_LUTHSPELL,
     "blockchain_backend": BLOCKCHAIN_BACKEND,
     "priority_scheme":    PRIORITY_SCHEME,
 }
@@ -120,7 +120,16 @@ class LuthSpell:
         if halt: self._halt_pass(reason, msg.payload)
     def _halt_pass(self, reason, coords):
         record = HaltRecord(reason, coords, self._monitor.boundary_hash)
-        if self._chain: self._chain.add_block(record.to_dict())
+        # Use PtolChain AuditChain if no explicit chain provided
+        chain = self._chain
+        if chain is None:
+            try:
+                from Callimachus.BlockChain.PtolChain import AuditChain
+                chain = AuditChain('luthspell')
+            except Exception:
+                chain = None
+        if chain:
+            chain.add_block(record.to_dict())
         self._publish(f"halt:{reason}", Priority.T0)
         if self._on_halt: self._on_halt(record)
     def arbitrate(self, messages):

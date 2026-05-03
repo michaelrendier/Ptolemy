@@ -260,6 +260,17 @@ class PtolShell(QWidget):
                 # Switch prompt to face subshell identity
                 self._set_transient_label(label, color)
                 _write(f'Entering {label} subshell. Type "exit" to return.', color)
+                # If face is archimedes, launch math shell
+                if face_name == 'archimedes':
+                    try:
+                        from Archimedes.Maths.ArchimedesShell import ArchimedesShell
+                        bus = getattr(ptol, 'bus', None) if ptol else None
+                        arch_shell = ArchimedesShell(output_fn=_write, bus=bus)
+                        _write(arch_shell._ns['help_math'](), '#aaaaaa')
+                        # Store on self for ongoing math eval
+                        self._arch_shell = arch_shell
+                    except Exception as ex:
+                        _write(f'Archimedes: {ex}', '#ff5555')
                 # Emit on bus if available
                 if ptol and hasattr(ptol, 'bus'):
                     try:
@@ -270,6 +281,21 @@ class PtolShell(QWidget):
                             Priority.T1, sender='PtolShell'))
                     except Exception:
                         pass
+
+        elif cmd in ('/math', 'math'):
+            # Enter Archimedes SymPy subshell
+            expr = ' '.join(parts[1:]) if len(parts) > 1 else None
+            try:
+                from Archimedes.Maths.ArchimedesShell import ArchimedesShell
+                bus = getattr(ptol, 'bus', None) if ptol else None
+                arch = ArchimedesShell(output_fn=_write, bus=bus)
+                if expr:
+                    arch.eval(expr)
+                else:
+                    _write('Archimedes /math mode. Type /math <expr> or face archimedes <expr>', '#00ccff')
+                    _write(arch._ns['help_math'](), '#aaaaaa')
+            except Exception as ex:
+                _write(f'Archimedes shell error: {ex}', '#ff5555')
 
         elif cmd == 'faces':
             if ptol and hasattr(ptol, 'bus') and hasattr(ptol.bus, '_registry'):

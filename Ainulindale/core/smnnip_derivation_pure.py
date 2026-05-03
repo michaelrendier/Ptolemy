@@ -1951,11 +1951,35 @@ class InputEngine:
         return a + b_conj
 
     @staticmethod
-    def encode(signal: List[float]) -> List[float]:
+    def encode(signal, experimental: bool = False) -> List[float]:
         """
         Full ℝ→𝕊 encoding pipeline.
         Returns 16-component sedenion list.
+
+        signal: List[float] | bytes | str | any file-like object
+            Any input type is accepted.
+            - bytes / str / file → UTF-8 bytes → ordinal floats
+            - No file type detection. Substrate is always the first layer.
+            - experimental=True bypasses standard CD structure;
+              uses raw byte values directly without normalization.
         """
+        # ── Universal input conversion (no file types, no substrates) ─────
+        if isinstance(signal, (bytes, bytearray)):
+            raw = list(signal)
+            signal = [float(b) for b in raw]
+        elif isinstance(signal, str):
+            signal = [float(b) for b in signal.encode('utf-8')]
+        elif hasattr(signal, 'read'):
+            signal = [float(b) for b in signal.read()]
+
+        if not signal:
+            return [0.0] * 16
+
+        if experimental:
+            # Bypass standard CD structure — raw values, no normalization
+            sig = signal[:16] + [0.0] * max(0, 16 - len(signal))
+            return sig[:16]
+
         sig = InputEngine._normalize(signal)
 
         # ℝ → ℂ

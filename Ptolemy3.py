@@ -373,6 +373,15 @@ class Ptolemy(QMainWindow):
         except Exception as e:
             self.luthspell = None
             print(f"[PtolBus] LuthSpell wire failed: {e}")
+        # Aule forge queue
+        try:
+            from Aule.forge_queue import ForgeQueue
+            self.forge_queue = ForgeQueue()
+            self.forge_queue.set_bus(self.bus)
+            self.forge_queue.start()
+        except Exception as e:
+            self.forge_queue = None
+            print(f"[Aule] ForgeQueue start failed: {e}")
 
         # ── Network layer ─────────────────────────────────────────────────────
         self.hole_punch = HolePunch(self)
