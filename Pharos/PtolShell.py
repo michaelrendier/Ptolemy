@@ -5,13 +5,18 @@ __author__ = 'rendier'
 # PtolShell — QTermWidget-backed shell with MetaPrompt mode routing
 #
 # MetaPrompt modes (commit on Enter):
-#   (none) → Ptolemy C/O  — Commandow handler        — color: CYAN
-#   >>>    → Python3 REPL C/O — python3 pty           — color: GREEN
+#   (none) → Ptolemy C/O   — Commandow handler        — color: ROYAL_BLUE
+#   >>>    → Python3 REPL  — python3 pty               — color: GREEN
 #   $      → System C/O   — bash pty                  — color: YELLOW
 #   #      → Root C/O     — bash pty (root)            — color: RED
+#   @Name  → Face C/O     — Face speaks in shell       — color: Face color
+#            e.g. @Archimedes: index rebuild complete
+#            Face → Face: @Callimachus→@Archimedes: index ready
 #
 # QTermWidget owns ALL display, pty, ANSI, interactive programs.
 # Mode detector intercepts only the input bar — QTermWidget is never replaced.
+#
+# Faces are shell users. Daemons POST at boot (see FaceIdentity.py).
 
 from PyQt5.QtCore    import Qt, pyqtSignal, QProcess
 from PyQt5.QtGui     import QFont, QColor, QKeyEvent
@@ -24,15 +29,24 @@ try:
 except ImportError:
     _HAS_QTERM = False
 
+try:
+    from Pharos.FaceIdentity import get_face, ShellPrompt, DaemonIdentity
+    from Pharos.PtolColor import PtolColor, ShellModeColor
+    _HAS_FACE_IDENTITY = True
+except ImportError:
+    _HAS_FACE_IDENTITY = False
+
 # ── Mode definitions ──────────────────────────────────────────────────────────
 # prefix : (label_text, label_color, pty_program, pty_args)
+# '@' is the Face mode prefix — resolved dynamically per Face name.
 _MODES = {
-    ''   : ('Ptolemy', '#00ccff', None,        None),
+    ''   : ('Ptolemy', '#1a2a6c', None,        None),
     '>>>': ('Python3', '#00ff66', 'python3',  ['-i']),
     '$'  : ('Shell',   '#ffcc00', '/bin/bash', []),
     '#'  : ('Root',    '#ff4444', '/bin/bash', ['--login']),
 }
 _DEFAULT_MODE = ''
+_FACE_PREFIX  = '@'   # @Archimedes: message  or  @Callimachus→@Archimedes: msg
 
 
 class PtolShell(QWidget):
@@ -80,7 +94,7 @@ class PtolShell(QWidget):
 
         self._input = _ModeInput(self)
         self._input.setFont(QFont('Monospace', 10))
-        self._input.setPlaceholderText('MetaPrompt  >>>  $  #')
+        self._input.setPlaceholderText('MetaPrompt  >>>  $  #  @FaceName')
         self._input.mode_commit.connect(self._on_commit)
 
         bar.addWidget(self._mode_label)
@@ -98,10 +112,73 @@ class PtolShell(QWidget):
 
     def _on_commit(self, text: str):
         stripped = text.strip()
+
+        # ── Face mode: @FaceName: message  or  @Sender→@Recipient: message ──
+        if stripped.startswith(_FACE_PREFIX) and _HAS_FACE_IDENTITY:
+            self._dispatch_face_message(stripped)
+            self._input.clear()
+            return
+
         new_mode = _DEFAULT_MODE
         command  = stripped
         for prefix in ('>>>', '$', '#'):
             if stripped.startswith(prefix):
+                new_mode = prefix
+                command  = stripped[len(prefix):].strip()
+                break
+        if new_mode != self._mode:
+            self._mode = new_mode
+            self._apply_mode_color(new_mode)
+            self.mode_changed.emit(new_mode)
+            if new_mode != _DEFAULT_MODE:
+                self._start_pty(new_mode)
+            if not command:
+                self._input.clear()
+                return
+        self._dispatch(new_mode, command)
+        self._input.clear()
+
+    def _dispatch_face_message(self, text: str):
+        """
+        Parse and emit a Face shell message.
+        Formats:
+          @Archimedes: index rebuild complete
+          @Callimachus→@Archimedes: index ready
+        """
+        body = text[1:]  # strip leading @
+        # Face → Face?
+        if '→' in body or '->' in body:
+            sep = '→' if '→' in body else '->'
+            parts = body.split(sep, 1)
+            sender_raw   = parts[0].strip().lstrip('@')
+            rest         = parts[1].strip().lstrip('@') if len(parts) > 1 else ''
+            colon_idx    = rest.find(':')
+            recipient_raw = rest[:colon_idx].strip() if colon_idx >= 0 else rest.strip()
+            message       = rest[colon_idx+1:].strip() if colon_idx >= 0 else ''
+            out = ShellPrompt.face_to_face(sender_raw, recipient_raw, message)
+            # color mode label with sender's color
+            face = get_face(sender_raw)
+            label_color = face.color if face else '#c9a227'
+            self._set_transient_label(face.display if face else sender_raw, label_color)
+        else:
+            colon_idx  = body.find(':')
+            face_name  = body[:colon_idx].strip().lstrip('@') if colon_idx >= 0 else body.strip().lstrip('@')
+            message    = body[colon_idx+1:].strip() if colon_idx >= 0 else ''
+            out        = ShellPrompt.face_say(face_name, message)
+            face = get_face(face_name)
+            label_color = face.color if face else '#c9a227'
+            self._set_transient_label(face.display if face else face_name, label_color)
+
+        if _HAS_QTERM:
+            self._term.sendText(out + '\n')
+        else:
+            self._term.write(out + '\n')
+
+    def _set_transient_label(self, name: str, color: str):
+        """Briefly show Face name as mode label (does not persist)."""
+        self._mode_label.setText(name[:10])
+        self._mode_label.setStyleSheet(
+            f'color: {color}; font-weight: bold; background: #0a0a12; border: 1px solid {color};')
                 new_mode = prefix
                 command  = stripped[len(prefix):].strip()
                 break
