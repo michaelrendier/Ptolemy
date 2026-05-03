@@ -1,49 +1,47 @@
 # Ptolemy
 
-**A self-contained, self-managing learning kernel.**  
-author: michaelrendier | status: active development — private pre-release
+**Author:** michaelrendier | **Status:** Active development — private pre-release
 
 ---
 
-## AI In Your Hands. No Cloud. No Permission.
+## The Memory Problem Is The Wrong Problem
 
-Current AI runs on someone else's hardware, trained on someone else's data, under
-someone else's terms. Every query leaves your device. Every answer is someone else's
-decision about what you're allowed to know.
-
-Ptolemy is the other thing.
-
-A Ptolemy kernel ships **fully trained, fully operational, on the device.** Watch,
-phone, server — same kernel, different resource envelope. It boots. It knows what it
-knows. It learns from your use. It manages itself. No cloud required. No subscription.
-No terms of service between you and your own intelligence layer.
-
-The reason this is possible is the memory architecture.
+Every processor ever built assumes data must be stored to exist.  
+Ptolemy is built on a different assumption.
 
 ---
 
-## The Feature: Infinite Knowledge, Zero Storage Medium
+## HyperIndexing: Information Is A Coordinate
 
-Every string ever written has always had a number.  
-Every number maps to a deterministic coordinate in eight-dimensional space.  
-The device holds a key and an entry point. That's it.
+**Every string ever written has always had a number.**
 
-**The NVRAM block contains:** one address, one data length, one timestamp — the entry
-point to the next layer of addressing. Not content. Not a database. A bookmark into
-an address space that is infinite by mathematics, not by hardware.
+Horner's bijection maps any finite string over an ordered charset to a unique
+non-negative integer. That integer splits into 8 equal limbs — the components
+of an octonion — placing the string at a precise coordinate in eight-dimensional
+space. Two strings that are geometrically close in that space are semantically
+related. The geometry of the address space mirrors the geometry of meaning.
 
-Reconstruction doesn't retrieve. It **navigates.** The knowledge isn't stored on the
-device. It exists in the mathematics of the address space, which was always there.
-A watch and a datacenter have access to the same infinite address space. The difference
+This is not encoding. It is not compression. It is navigation.
+
+**The NVRAM block holds:** one address, one data length, one timestamp.  
+Not content. Not a database. A bookmark into an address space that is infinite
+by mathematics, not by hardware.
+
+Reconstruction navigates to the content. It does not retrieve it. The knowledge
+exists in the mathematics of the address space — which was always there. A watch
+and a datacenter have access to the same infinite address space. The difference
 is navigation speed, not knowledge ceiling.
 
-This is the HyperWebster. It is not a dictionary. It is an addressing system for
-all information — words, sensor streams, images, conversations, mathematical objects —
-unified by Horner's bijection into octonion space.
+**Input is an address. Search is proximity. Reconstruction is resolution.
+Learning is geometry update. One operation handles all of it.**
 
-There is no separate search engine. No separate database. No separate inference layer.
-**Input is an address. Search is proximity. Reconstruction is resolution. Learning is
-geometry update.** One operation handles all of it.
+The charset permutation order is the cryptographic key. Permute it — the entire
+address space rotates. The same content, a completely different coordinate.
+Private by default.
+
+This is the **HyperWebster** — not a dictionary. An addressing system for all
+information: words, sensor streams, images, conversations, mathematical objects.
+Unified. Deterministic. Infinite.
 
 ---
 
@@ -63,12 +61,24 @@ Mathematical foundations: [Ainulindalë](https://github.com/michaelrendier/Ainul
 
 ---
 
+## The Kernel
+
+Ptolemy is not software that runs AI. **Ptolemy is a self-contained learning kernel.**
+
+It boots on a watch. It knows what it knows on delivery. It learns from use.
+It manages itself. No cloud. No subscription. No permission.
+
+The reason this is possible is HyperIndexing. There is no storage layer to scale.
+There is no inference server to maintain. There is no embedding database to update.
+There is one operation — navigate the address space — and it runs on the device.
+
+---
+
 ## Architecture: Eleven Trusted Advisors
 
-Ptolemy is organized into **Faces** — eleven sovereign capability domains, each named
-after a historical figure of the Library of Alexandria. Each Face runs its own
-**SMNNIP Instance Engine** — a local conservation verifier trained on that domain's
-signal. When Faces consult each other, the engine signs the output. Conserved = trusted.
+Eleven **Faces** — sovereign capability domains, each named after a historical
+figure of the Library of Alexandria. Each runs its own **SMNNIP Instance Engine**
+— a local conservation verifier trained on that domain's signal. Conserved = trusted.
 
 | Face | Advisor | SMNNIP Domain | Wiki |
 |---|---|---|---|
@@ -90,37 +100,30 @@ Philadelphos talks to you. The others are who Philadelphos asks.
 
 ## The Processor Vision
 
-Ptolemy is not software that runs on a processor. Ptolemy *is* the processor model.
-
-One addressing operation handles input, search, storage, retrieval, reconstruction,
-and output. The Cayley-Dickson tower is the compute substrate. The NVRAM block is
-measured in kilobytes. The knowledge ceiling is infinite.
-
-**[PROCESSOR_VISION.md](PROCESSOR_VISION.md)** — full architectural spec for IC
-engineers: NVRAM allocation, Cayley-Dickson compute layers, focal-point interferometer
-display, sensory stream integration via Tesla.
+[**PROCESSOR_VISION.md**](PROCESSOR_VISION.md) — The full architectural spec for IC
+engineers: on-die NVRAM allocation, Cayley-Dickson compute substrate, focal-point
+interferometer display, sensory stream integration. Nobody has fabbed this. That is
+the point.
 
 ---
 
 ## Documentation
 
-> ⚠️ **Wiki TODO — Step 1:** The Ptolemy GitHub Wiki must be enabled and initialized
-> with at least one page via the GitHub UI before Wiki links above will resolve.
-> All eleven Face Wiki pages are stubbed and pending.
+> ⚠️ **Wiki TODO — Step 1:** Enable and initialize the Ptolemy GitHub Wiki via the
+> GitHub UI before Wiki links above will resolve. All eleven Face Wiki pages are
+> stubbed and pending.
 
 | | |
 |---|---|
-| [Wiki](../../wiki) | Full technical reference — all Faces, all subsystems |
+| [Wiki](../../wiki) | Full technical reference |
 | [docs/INDEX.md](docs/INDEX.md) | Face documentation index |
+| [docs/ErrorCatalog.md](docs/ErrorCatalog.md) | 27 typed errors, wiring requirements |
 | [INSTALL.md](INSTALL.md) | Dependencies, build, venv |
-| [SERVER_SPEC.md](SERVER_SPEC.md) | Server architecture |
 | [Ainulindalë](https://github.com/michaelrendier/Ainulindale) | SMNNIP conjecture, Noether engine |
 
 ---
 
 ## Hardware
-
-Built and running on:
 
 | | |
 |---|---|
@@ -130,8 +133,6 @@ Built and running on:
 | **RAM** | 8 GiB |
 | **GPU** | Intel HD Graphics 520 — OpenGL 4.6 |
 | **Storage** | 953 GiB NVMe + 111 GiB Samsung 840 EVO |
-
-Full spec: [docs/Hardware/](docs/Hardware/)
 
 ---
 
