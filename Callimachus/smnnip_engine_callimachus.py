@@ -1,70 +1,28 @@
 """
-SMNNIP Instance Engine — Callimachus
+SMNNIP Instance Engine -- Callimachus
 
 Domain: Information architecture, HyperWebster address geometry, blockchain state
 
-Status: STUB — pending SMNNIPEngine base class implementation
+Status: STUB -- pending SMNNIPEngine base class implementation
+         (Philadelphos/smnnip_engine.py)
 
-This module will provide the local Noether conservation verifier for the Callimachus Face.
-Each Face runs a sovereign SMNNIP instance trained on its domain-specific signal.
-Conserved output = trusted advisor output. Violations are flagged before inter-Face
-consultation results reach the user.
-
-Architecture:
-    - Cayley-Dickson tower: R -> C -> H -> O
-    - Domain conservation signature: Information architecture, HyperWebster address geometry, blockchain state
-    - Trust-signing hook: pending PtolBus integration
-    - Cross-Face consultation: via Pharos/PtolBus
-
-TODO:
-    [ ] Implement SMNNIPEngine base class (Philadelphos/smnnip_engine.py)
-    [ ] Subclass with domain-specific conservation signature
-    [ ] Wire trust-signing hook into PtolBus inter-Face calls
-    [ ] Training corpus: Callimachus-specific signal data
+Wired via ptol_face_wiring on module import.
 """
 
-# from Philadelphos.smnnip_engine import SMNNIPEngine  # pending base class
+from Pharos.ptol_face_wiring import wire_face
+from Pharos.PtolDmesg import dmesg
+
+FACE_NAME = "Callimachus"
+
+# Wire ErrorHandler + GC. Mandos checkpoint-before-GC is automatic.
+_handler = wire_face(FACE_NAME)
 
 
-class CallimachusSMNNIPEngine:
-    """SMNNIP Instance Engine stub for Callimachus.
+def verify(signal):
+    """Verify conservation of Callimachus domain signal. TODO: implement."""
+    raise NotImplementedError("Callimachus SMNNIP verify() not yet implemented.")
 
-    Domain: Information architecture, HyperWebster address geometry, blockchain state
-    """
 
-    DOMAIN = "Information architecture, HyperWebster address geometry, blockchain state"
-    FACE = "Callimachus"
-    STATUS = "STUB"
-
-    def __init__(self):
-        self.conserved = None
-        self.sigma = None
-        self._trained = False
-
-    def verify(self, signal):
-        """Run Noether conservation check on domain signal.
-
-        Args:
-            signal: Domain-specific input (type TBD per domain).
-
-        Returns:
-            dict: {'conserved': bool, 'sigma': float, 'violations': list}
-
-        Raises:
-            NotImplementedError: Until SMNNIPEngine base class is implemented.
-        """
-        raise NotImplementedError("SMNNIPEngine base class pending — see Philadelphos/smnnip_engine.py TODO")
-
-    def sign(self, output):
-        """Trust-sign a Face output for inter-Face consultation.
-
-        Args:
-            output: The Face result to be signed.
-
-        Returns:
-            dict: {'output': output, 'conserved': self.conserved, 'face': self.FACE}
-
-        Raises:
-            NotImplementedError: Until SMNNIPEngine base class is implemented.
-        """
-        raise NotImplementedError("Trust-signing pending PtolBus integration")
+def sign(signal):
+    """Sign a verified Callimachus signal. TODO: implement."""
+    raise NotImplementedError("Callimachus SMNNIP sign() not yet implemented.")
