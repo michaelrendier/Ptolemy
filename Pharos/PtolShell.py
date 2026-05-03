@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-__author__ = 'rendier'
+__author__ = 'rendier@thewanderinggod.tech'
 
 # PtolShell — QTermWidget-backed shell with MetaPrompt mode routing
 #
 # MetaPrompt modes (commit on Enter):
-#   (none) → Ptolemy C/O   — Commandow handler        — color: ROYAL_BLUE
+#   (none) → Ptolemy C/O   — BBS-style buffered conversation, /slash commands
+#                             Own CyclicContextBuffer. Stateful. Not a pty.
+#                             Designed like old ATA BBS chat: /who /say /history etc.
+#                             color: ROYAL_BLUE
 #   >>>    → Python3 REPL  — python3 pty               — color: GREEN
 #   $      → System C/O   — bash pty                  — color: YELLOW
 #   #      → Root C/O     — bash pty (root)            — color: RED
@@ -17,6 +20,7 @@ __author__ = 'rendier'
 # Mode detector intercepts only the input bar — QTermWidget is never replaced.
 #
 # Faces are shell users. Daemons POST at boot (see FaceIdentity.py).
+# Ptolemy buffer is its own conversation space — not piped to QTermWidget.
 
 from PyQt5.QtCore    import Qt, pyqtSignal, QProcess
 from PyQt5.QtGui     import QFont, QColor, QKeyEvent

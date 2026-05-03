@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-__author__ = 'rendier'
+__author__ = 'rendier@thewanderinggod.tech'
 
 """
 FaceIdentity.py — Shell Identity for Ptolemy Faces
