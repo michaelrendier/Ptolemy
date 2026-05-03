@@ -183,6 +183,16 @@ class PtolShell(QWidget):
         self._mode_label.setText(name[:10])
         self._mode_label.setStyleSheet(
             f'color: {color}; font-weight: bold; background: #0a0a12; border: 1px solid {color};')
+
+    def _handle_input(self):
+        """Process input bar submission — route to mode dispatch or ptolemy command."""
+        stripped = self._input.text().strip()
+        if not stripped:
+            return
+        new_mode = _DEFAULT_MODE
+        command  = stripped
+        for prefix in _MODES:
+            if stripped.startswith(prefix + ' ') or stripped == prefix:
                 new_mode = prefix
                 command  = stripped[len(prefix):].strip()
                 break
