@@ -1,6 +1,6 @@
 # Ptolemy
 
-**Author:** michaelrendier | **Status:** Active development — private pre-release
+**Author:** michaelrendier | **Status:** Active development — public pre-release
 
 ---
 
