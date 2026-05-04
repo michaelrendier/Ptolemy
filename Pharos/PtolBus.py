@@ -304,16 +304,39 @@ class PtolBus(QObject):
 # TODO: Move CyclicContextBuffer ownership to Ptolemy3 kernel init.
 # TODO: Bus delivers context updates to all subscribed Faces via CH_CONTEXT.
 
-# FLAG: EMERGENCY_LK
-# Little Kernel — AppArmor-level containment. Owned by Ptolemy kernel.
-# Not managed by Bus — Bus is what LK manages during emergency.
-# LK.engage(): graceful Face quit -> stop SMNNIP -> flush caches ->
-#              force-terminate stragglers -> Desktop stays up ->
-#              Bus restarts clean -> Aule gets full authority.
-# Desktop cannot be a Face. Desktop is the floor Bus runs on.
-# TODO: Implement LithKernel class at Ptolemy root (not Pharos, not a Face).
-# TODO: LK owns Qt event loop reference directly — cannot be revoked by Bus.
-# TODO: LK restart path: known good state, fast resume. Same as PC firmware.
+# FLAG: LICH
+# Lich — Always On. Undead. First responder. AppArmor-level containment.
+# Named: Lich. The Undead Fiend of Earth. Always at the ready.
+# Owned by Ptolemy kernel. Not a Face. Not managed by Bus.
+# Bus is what Lich manages DURING an emergency — inversion of authority.
+# Lich.engage(): graceful Face quit -> stop SMNNIP distribution ->
+#               flush caches -> force-terminate stragglers ->
+#               Desktop stays up -> Bus restarts clean under Lich ->
+#               Aule gets full authority over thread pool.
+# Desktop cannot be a Face. Desktop is the floor everything runs on.
+# TODO: Implement Lich class at Ptolemy root (not Pharos, not a Face).
+# TODO: Lich owns Qt event loop reference directly — Bus cannot revoke it.
+# TODO: Lich restart path: known good state, fast resume. PC firmware model.
+
+# FLAG: AULE_ACTIVE_PREVENTION
+# Aule does not predict problems — Aule PREVENTS them.
+# Aule is a teachable monad. Learns system's normal rhythm. Corrects drift.
+# Low overhead: zero graphics server-side, zero processing client-side.
+# Aule feels the system: recursion depth, memory growth rate, queue backpressure,
+# thread starvation, SIGXCPU/SIGXFSZ approach, lock wait times.
+# Acts before symptoms become failures — not after.
+# Authority: Aule dynamically defines thread pool by availability.
+# Aule talks to the system already — pool sizing is a natural extension.
+# TODO: Aule monad learning loop — baseline normal, detect drift, correct.
+# TODO: Aule intervention signals via dmesg — Bus reads and acts.
+# TODO: Color gradient on TuningDisplay reflects Aule's current system reading.
+
+# FLAG: FACE_NAME_DEMETRIUS
+# Demetrius of Phaleron (Phalerum) — proposed the Library to Ptolemy I,
+# designed the Mouseion university model, AND was the first Librarian.
+# Split: Mouseion = Demetrius externally (Dean/University/web presence).
+# Internal librarian function remains with Callimachus (he wrote the Pinakes).
+# Demetrius is external face + institutional model. Callimachus is the index.
 
 # FLAG: FACE_NAME_DEMETRIUS
 # Demetrius of Phaleron proposed the Library, designed the Mouseion model.
