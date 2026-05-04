@@ -31,6 +31,8 @@ This is not a faster implementation of existing architecture. It is a different 
 
 **► [VSauce — The Banach-Tarski Paradox](https://www.youtube.com/watch?v=s86-Z-CbaHA)** (25 min)
 
+**► [Want to learn the Maths used?](docs/MathLex/index.html)** — Ptolemy MathLex: interactive lessons on every mathematical concept in this project
+
 This video is not supplementary material. It is prerequisite context.
 
 The Banach-Tarski paradox proves — formally, using only the axiom of choice and measure theory — that a sphere in ℝ³ can be decomposed into a finite number of non-measurable subsets and reassembled, using only rigid rotations and translations, into two spheres of identical volume to the original. No stretching. No new points. Same density. Two from one.
