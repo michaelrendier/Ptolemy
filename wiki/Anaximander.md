@@ -1,62 +1,59 @@
 # Anaximander
 
-**Historical figure:** Anaximander of Miletus — first to produce a map of the known world  
-**Responsibility:** Navigation and travel — geographic routing, GPS, location services
+**Historical figure:** Anaximander of Miletus — first cartographer, first to produce a world map, pre-Socratic philosopher  
+**Born:** c. 610 BCE, Miletus (modern Turkey)  
+**Died:** c. 546 BCE  
+**Responsibility:** Navigation, geographic routing, GPS, location services
 
 ---
 
-## Overview
+## The First Cartographer
 
-Anaximander is Ptolemy's navigation Face. It handles all geographic data, routing logic, GPS interfacing, and location-aware queries. Named for the pre-Socratic philosopher who drew the first known world map.
+Anaximander was a student of Thales — the first named philosopher in Western tradition. He surpassed his teacher in systematic scope. He was the **first person known to have drawn a map of the inhabited world** (the *oikoumene*) — a circular projection with Greece at center, surrounded by ocean, with Europe to the north and Asia/Africa to the south. The map itself is lost. Its existence is attested by Hecataeus of Miletus, who corrected and republished it a generation later, and by later ancient sources.
 
----
+He was also the first to attempt a geometric model of the cosmos — concentric rings of fire observed through holes in celestial wheels, with Earth suspended freely at center, held in place by symmetry rather than resting on anything. This is the first known argument from symmetry in the history of science: Earth stays put because there is no reason to move in any direction. Anaximander invented the argument from symmetry two and a half millennia before it became standard physics reasoning.
 
-## Modules
+His concept of *apeiron* (the boundless, the indefinite) as the originating substance of all things was the first abstract principle proposed as a cosmological foundation — not water (Thales), not fire (Heraclitus), but an undefined generative source. Remarkably abstract for 600 BCE.
 
-| Module | Description |
-|---|---|
-| `Navigation.py` | Core navigation logic — routing, waypoints, destination management |
+He introduced the **gnomon** (the shadow-casting arm of a sundial) to Greece from Babylon — making him the first to provide Greece with a working instrument for measuring the position of the sun and tracking the solstices and equinoxes. Navigation by solar angle traces back to him.
 
 ---
 
-## Planned Capabilities
+## In Ptolemy
 
-| Capability | Status |
-|---|---|
-| GPS integration | Stub — wired via Tesla SensorStream |
-| Offline map cache | Stub — settings flag exists |
-| Route calculation | Partial |
-| Location-aware search | Planned — Phaleron integration |
-| Map provider abstraction | Stub — OSM / Google / Bing enum |
+Anaximander is the navigation Face. He maps the *oikoumene* — the known world — as Anaximander mapped the inhabited world. GPS coordinates are the modern gnomon shadow. Routing is the path between points on the map he invented.
+
+The Face holds:
+- Geographic routing and waypoint management
+- GPS stream from Tesla (sensor pipe)
+- Location-aware query context for other Faces
+- Solar/stellar position data (heritage of the gnomon)
 
 ---
 
-## GPS Data Flow
+## Module Tree
 
 ```
-Tesla/SensorStream → CH_SENSOR (PtolBus) → Anaximander subscriber
+Anaximander/
+└── Navigation.py    ← Core routing, waypoints, GPS handling
 ```
 
-GPS sensor data arrives on the PtolBus `CH_SENSOR` channel. Anaximander subscribes and maintains current location state.
+---
+
+## Ptolemy Connection
+
+Anaximander navigates. Ptolemy (Claudius Ptolemaeus, 100–170 CE) later wrote the *Geographia* — the definitive ancient atlas, projection mathematics, coordinate system. The Face named Anaximander runs inside a system named for his intellectual descendant. The cartographic lineage is unbroken.
 
 ---
 
-## Settings
+## Selected Bibliography
 
-`Anaximander/settings/settings.json`
-
-| Key | Default | Description |
-|---|---|---|
-| `default_map_provider` | `osm` | Map tile source: osm / google / bing |
-| `gps_update_interval_s` | `5` | GPS poll interval in seconds |
-| `offline_maps_enabled` | `false` | Cache map tiles locally |
-
-All settings currently stubbed — wiring pending Tesla GPS activation.
+- Couprie, D.L. (2011). *Heaven and Earth in Ancient Greek Cosmology*. Springer.
+- O'Grady, P. (2002). *Thales of Miletus: The Beginnings of Western Science and Philosophy*. Ashgate.
+- Heidel, W.A. (1921). *The Frame of the Ancient Greek Maps*. American Geographical Society.
 
 ---
 
-## Dependencies
-
-- Tesla/SensorStream (GPS source)
-- Pharos/PtolBus (sensor channel subscriber)
-- Mouseion (map display target, planned)
+## See Also
+- [[Tesla]] — GPS sensor stream
+- [[Pharos]] — navigation context passed to PtolShell
