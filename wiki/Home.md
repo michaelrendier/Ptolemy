@@ -32,6 +32,7 @@
 | [[GeoffreyDixon]] | Geoffrey Dixon | Standard Model gauge structure from division algebras |
 | [[BenoitMandelbrot]] | Benoit Mandelbrot | Fractal geometry, attractor visualization |
 | [[GastonJulia]] | Gaston Julia | Julia sets, context basin topology |
+| [[EdvardGrieg]] | Edvard Grieg | Lyric minimalism — the aesthetic model for SMNNIP output |
 
 ## Fractals
 
