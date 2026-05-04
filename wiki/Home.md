@@ -61,3 +61,9 @@
 
 - [Ainulindalë](https://github.com/michaelrendier/Ainulindale) — SMNNIP conjecture, Noether engine
 - [README](https://github.com/michaelrendier/Ptolemy#readme)
+
+## Patron
+
+| Page | Figure | Role |
+|---|---|---|
+| [[AlexanderTheGreat]] | Alexander III of Macedon | The origin. Made everything possible. His tomb is being excavated now. |
