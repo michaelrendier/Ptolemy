@@ -52,20 +52,66 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QGraphicsScene,
                               QDesktopWidget, QGridLayout)
 
 # ── Ptolemy core modules ───────────────────────────────────────────────────────
-from Callimachus.Database      import Database
-from Pharos.Dialogs            import Dialogs
-from Pharos.SystemTrayIcon     import SystemTrayIcon
-from Pharos.UtilityFunctions   import cmdline
-from Pharos.Menu               import Menu
-from Pharos.Interface          import User
+# GUARANTEED loads — Qt only, no external deps
 from Pharos.PtolShell          import PtolShell
 from Pharos.PtolBus            import PtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
-from Pharos.LeftPanel          import LeftPanel
 from urllib.request            import build_opener
 
+# DEFERRED — may fail, reported to shell, never kills desktop
+try:
+    from Callimachus.Database  import Database
+except Exception as _e:
+    Database = None
+    print(f'[Callimachus] Database: {_e}')
+
+try:
+    from Pharos.Dialogs        import Dialogs
+except Exception as _e:
+    Dialogs = None
+    print(f'[Pharos] Dialogs: {_e}')
+
+try:
+    from Pharos.SystemTrayIcon import SystemTrayIcon
+except Exception as _e:
+    SystemTrayIcon = None
+    print(f'[Pharos] SystemTrayIcon: {_e}')
+
+try:
+    from Pharos.UtilityFunctions import cmdline
+except Exception as _e:
+    cmdline = None
+    print(f'[Pharos] UtilityFunctions: {_e}')
+
+try:
+    from Pharos.Menu           import Menu
+except Exception as _e:
+    Menu = None
+    print(f'[Pharos] Menu: {_e}')
+
+try:
+    from Pharos.Interface      import User   # NOTE: pulls OpenGL.GLUT
+except Exception as _e:
+    User = None
+    print(f'[Pharos] Interface (OpenGL): {_e}')
+
+try:
+    from Pharos.LeftPanel      import LeftPanel
+except Exception as _e:
+    LeftPanel = None
+    print(f'[Pharos] LeftPanel: {_e}')
+
 # ── Tesla — all interfacing ────────────────────────────────────────────────────
-from Tesla.HolePunch           import HolePunch
-from Tesla.KVM                 import KVMClient
+try:
+    from Tesla.HolePunch       import HolePunch
+except Exception as _e:
+    HolePunch = None
+    print(f'[Tesla] HolePunch: {_e}')
+
+try:
+    from Tesla.KVM             import KVMClient
+except Exception as _e:
+    KVMClient = None
+    print(f'[Tesla] KVM: {_e}')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -352,8 +398,8 @@ class Ptolemy(QMainWindow):
         self.stylesheet = self._build_stylesheet()
 
         # ── Core singletons ───────────────────────────────────────────────────
-        self.db       = Database(parent=self)
-        self.dialogs  = Dialogs(parent=self)
+        self.db      = Database(parent=self) if Database else None
+        self.dialogs = Dialogs(parent=self)  if Dialogs  else None
         self.opener   = build_opener()
         self.opener.addheaders = [
             ('User-agent',           'Mozilla/5.0 (X11; Linux x86_64)'),
@@ -400,8 +446,8 @@ class Ptolemy(QMainWindow):
             print(f"[Tesla] SensorStream init: {e}")
 
         # ── Network layer ─────────────────────────────────────────────────────
-        self.hole_punch = HolePunch(self)
-        self.kvm        = KVMClient(self)
+        self.hole_punch = HolePunch(self)   if HolePunch  else None
+        self.kvm        = KVMClient(self)   if KVMClient  else None
 
         # ── System tray ───────────────────────────────────────────────────────
         # ── Desktop components ───────────────────────────────────────────
@@ -466,11 +512,16 @@ class Ptolemy(QMainWindow):
         self._launch_philadelphos()
 
         # Pharos nav interface
-        self.Interface = User(self)
-        self._pharos_proxy = self.scene.addWidget(self.Interface)
-        self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsMovable, True)
-        self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsSelectable, True)
-        self._pharos_proxy.setOpacity(0.30)
+        if User:
+            self.Interface = User(self)
+            self._pharos_proxy = self.scene.addWidget(self.Interface)
+            self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsMovable, True)
+            self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsSelectable, True)
+            self._pharos_proxy.setOpacity(0.30)
+        else:
+            self.Interface = None
+            self._pharos_proxy = None
+            print('[Pharos] Interface (OpenGL) disabled — skipped')
 
         # Left panel (file tree + Archimedes)
         self.LeftPanel = LeftPanel(parent=None)
