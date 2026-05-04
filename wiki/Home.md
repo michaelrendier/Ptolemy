@@ -34,24 +34,11 @@
 | [[GastonJulia]] | Gaston Julia | Julia sets, context basin topology |
 | [[EdvardGrieg]] | Edvard Grieg | Lyric minimalism — the aesthetic model for SMNNIP output |
 
-## Fractals
-
-*(Pages to be built — each fractal formula gets its own page showing the math, radian form, and Ptolemy relation)*
-
-| Fractal | Engine Relation |
-|---|---|
-| Mandelbrot $z^2+c$ | Quadratic iteration baseline |
-| Julia (fixed $c$) | Context basin topology snapshot |
-| Newton basin (Stirling) | SMNNIP Output Engine routing |
-| Lorenz projection | Output attractor trajectory |
-| Lyapunov | Bifurcation / stability signature |
-| Burning Ship | Absolute-value folding — spectral layer model |
-| Magnet (Type I, II) | $J_N$ fixed-point problem analog |
-
 ## Reference
 
 | | |
 |---|---|
+| [[MathLex]] | 64 interactive math lessons — Foundation / Applied / Ptolemy layers |
 | [[ErrorCatalog]] | 27 typed errors, wiring requirements, escalation path |
 | [[PROCESSOR_VISION]] | IC engineer spec — NVRAM, Cayley-Dickson, interferometer |
 | [[HyperWebster]] | Addressing system — Horner bijection, octonion coordinates |
