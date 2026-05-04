@@ -250,3 +250,78 @@ class PtolBus(QObject):
     def __repr__(self):
         return (f"PtolBus(channels={len(self._subscribers)}, "
                 f"queue={self.queue_depth()})")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ARCHITECTURE FLAGS & TODOS
+#  These define what the Bus becomes — not what it handles for others
+# ══════════════════════════════════════════════════════════════════════════════
+
+# FLAG: BUS_IS_THREADS
+# The Bus owns and IS the thread pool. Fully isolated from Ptolemy kernel.
+# Ptolemy hands Bus a resource budget at start. Bus manages allocation internally.
+# TODO: Extract Bus into fully isolated module with zero Ptolemy imports.
+# TODO: Bus registers itself to Ptolemy via single handshake, then operates autonomously.
+
+# FLAG: FACE_POST_BOOT
+# No Face exists to the system until Face.POST() completes.
+# POST registers: face_id, channel subscriptions, thread requirements, stdio triple.
+# Faces are NPCs — they respond, they do not initiate.
+# TODO: Implement Face.POST() handshake in PtolFace mixin.
+# TODO: Bus rejects any message to/from a Face that has not completed POST.
+
+# FLAG: PER_FACE_STDIO
+# Each Face gets its own stdin/stdout/stderr channels and threads.
+# CH_FACE_IN, CH_FACE_OUT, CH_FACE_ERR — named by face_id.
+# TODO: Allocate stdio channel triple on Face.POST().
+# TODO: Per-Face thread allocation: stdin(A), stdout(B), stderr(C), work(D).
+
+# FLAG: THREAD_POOL_DYNAMIC
+# Ptolemy reserves Threads 0-4 (permanent, never parked by Bus).
+# Per-Face minimum: 4 threads (stdio triple + work).
+# Pool beyond that: dynamically sized by Aule based on available resources.
+# Faces may request additional threads — Aule approves/denies via dmesg.
+# TODO: Implement thread request/grant protocol via CH_LOG -> dmesg -> Aule.
+# TODO: Aule writes pool size decisions back to dmesg; Bus reads and resizes.
+
+# FLAG: ALL_BUS_EVENTS_TO_DMESG
+# Every Bus event (launch, suspend, resume, terminate, error) writes to dmesg.
+# Aule watches dmesg only. Bus never calls Aule directly.
+# TODO: Replace all print() in Bus with dmesg writes via Aule channel.
+
+# FLAG: EARLY_SYMPTOM_DETECTION
+# Monitor recursion depth, memory growth rate, queue backpressure,
+# thread starvation, SIGXCPU/SIGXFSZ approach — warn before losing control.
+# Symptoms as color gradient on Heartbeat/TuningDisplay — not binary.
+# TODO: Per-thread resource monitor with configurable thresholds.
+# TODO: Queue depth growth rate (delta) as backpressure metric.
+# TODO: Thread wait-time monitor — flag starvation before deadlock.
+
+# FLAG: CYCLIC_CONTEXT_BUFFER_SHARED
+# CyclicContextBuffer owned by Ptolemy kernel, not Philadelphos.
+# All Faces read from it. Ptolemy routes SMNNIP data to per-Face instances.
+# Surface behavior monolithic. Face separation explicit/requested only.
+# TODO: Move CyclicContextBuffer ownership to Ptolemy3 kernel init.
+# TODO: Bus delivers context updates to all subscribed Faces via CH_CONTEXT.
+
+# FLAG: EMERGENCY_LK
+# Little Kernel — AppArmor-level containment. Owned by Ptolemy kernel.
+# Not managed by Bus — Bus is what LK manages during emergency.
+# LK.engage(): graceful Face quit -> stop SMNNIP -> flush caches ->
+#              force-terminate stragglers -> Desktop stays up ->
+#              Bus restarts clean -> Aule gets full authority.
+# Desktop cannot be a Face. Desktop is the floor Bus runs on.
+# TODO: Implement LithKernel class at Ptolemy root (not Pharos, not a Face).
+# TODO: LK owns Qt event loop reference directly — cannot be revoked by Bus.
+# TODO: LK restart path: known good state, fast resume. Same as PC firmware.
+
+# FLAG: FACE_NAME_DEMETRIUS
+# Demetrius of Phaleron proposed the Library, designed the Mouseion model.
+# Web/university Face = Demetrius. Mouseion is the place, not the Face.
+# TODO: Rename Mouseion Face references to Demetrius where appropriate.
+
+# FLAG: IMPORT_PTOLEMY_FINAL
+# Ptolemy3.py is the last file with that name.
+# Final state: `import Ptolemy` only. All structure in __init__.py chains.
+# TODO: Each Face directory gets __init__.py exporting its canonical class.
+# TODO: Ptolemy root __init__.py is the single public surface.
