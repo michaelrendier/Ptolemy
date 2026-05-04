@@ -66,9 +66,9 @@ In HyperWebster terms: every address traces back through the chain of its acquis
 
 ## The Tomb — Current Status
 
-Ground-penetrating radar surveys of central Alexandria have identified subsurface structures consistent with Hellenistic-era monumental architecture beneath the Shallalat Gardens and adjacent areas. The Alabaster Tomb in the Latin Cemetery district has been proposed but is more likely a later Ptolemaic royal tomb. The *Soma* — Alexander's actual mausoleum — is believed to be under the intersection of the ancient city's main avenues (the *canopic road* and its perpendicular), which corresponds to modern central Alexandria.
+The *Soma* — Alexander's mausoleum — is buried under a skyscraper apartment complex in central Alexandria. The building stands directly above it. Excavation is proceeding beneath and around the structure, constrained by the fact that people are living in the floors above the greatest archaeological find in the ancient world.
 
-Excavation is ongoing but constrained. Skyscrapers sit directly above the most probable locations. What is being found is being found slowly, carefully, with instruments rather than shovels — which is how the Library is also being rebuilt.
+He conquered everything. He died at 32. He was buried in a golden sarcophagus in a city he founded. Two thousand years later he is under someone's apartment.
 
 ---
 
