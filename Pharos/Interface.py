@@ -685,22 +685,22 @@ class User(QWidget):
 		self.clockTimer.timeout.connect(self.clockAnimate)
 		self.clockTimer.start()
 
-		self.spectro = LS.SpectrogramWidget(self)
-		self.spectro.read_collected.connect(self.spectro.update)
-		self.spectro.setGeometry(self.x + self.w + 30, self.y + self.h - 85, 50, 50)
-		self.spectro.setWindowFlags(Qt.CustomizeWindowHint)  # Qt.FramelessWindowHint)
-		self.spectro.setZValue(3)
-		self.spectro.setStyleSheet(self.styles)
-		self.scene.addWidget(self.spectro)
-		# self.spectro.show()
+		self.spectro = None
+		self.mic = None
+		if LS is not None:
+			self.spectro = LS.SpectrogramWidget(self)
+			self.spectro.read_collected.connect(self.spectro.update)
+			self.spectro.setGeometry(self.x + self.w + 30, self.y + self.h - 85, 50, 50)
+			self.spectro.setWindowFlags(Qt.CustomizeWindowHint)
+			self.spectro.setStyleSheet(self.styles)
+			_spectro_proxy = self.scene.addWidget(self.spectro)
+			_spectro_proxy.setZValue(3)
 
-		self.mic = LS.MicrophoneRecorder(self.spectro.read_collected)
-
-		# time (seconds) between reads
-		interval = self.FS / self.CHUNKSZ
-		t = QTimer(self)
-		t.timeout.connect(self.mic.read)
-		t.start(int(1000 / interval))  # QTimer takes ms
+			self.mic = LS.MicrophoneRecorder(self.spectro.read_collected)
+			interval = self.FS / self.CHUNKSZ
+			t = QTimer(self)
+			t.timeout.connect(self.mic.read)
+			t.start(int(1000 / interval))
 
 		self.indicator = QLabel(parent=self)
 		self.indicatorIcon = QPixmap(self.interfaceImg + 'indicator-ball.gif')

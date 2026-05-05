@@ -54,7 +54,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QGraphicsScene,
 # ── Ptolemy core modules ───────────────────────────────────────────────────────
 # GUARANTEED loads — Qt only, no external deps
 from Pharos.PtolShell          import PtolShell
-from Pharos.PtolBus            import PtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
+from Pharos.PtolBus            import PtolBus as _PharosPtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
 from urllib.request            import build_opener
 
 # DEFERRED — may fail, reported to shell, never kills desktop
@@ -409,12 +409,15 @@ class Ptolemy(QMainWindow):
         ]
 
         # ── Integration bus ───────────────────────────────────────────────────
+        # self.bus       = face lifecycle registry (launch/suspend/terminate)
+        # self.msg_bus   = Pharos message bus (pub/sub channels, T0/T1 priority)
         self.bus = PtolBus(self)
-        self.bus.start()
-        # Wire luthspell to real bus
+        self.msg_bus = _PharosPtolBus(ptolemy=self, parent=self)
+        self.msg_bus.start()
+        # Wire luthspell to message bus
         try:
             from Pharos.luthspell import LuthSpell
-            self.luthspell = LuthSpell(bus=self.bus)
+            self.luthspell = LuthSpell(bus=self.msg_bus)
             self.luthspell.wire()
         except Exception as e:
             self.luthspell = None
@@ -422,7 +425,7 @@ class Ptolemy(QMainWindow):
         # Tuning Display (output stream monitor)
         try:
             from Pharos.TuningDisplay import TuningDisplay
-            self.tuning_display = TuningDisplay(bus=self.bus, parent=self)
+            self.tuning_display = TuningDisplay(bus=self.msg_bus, parent=self)
             # Don't show on startup — launch via tray or shortcut
         except Exception as e:
             self.tuning_display = None
@@ -431,16 +434,16 @@ class Ptolemy(QMainWindow):
         try:
             from Aule.forge_queue import ForgeQueue
             self.forge_queue = ForgeQueue()
-            self.forge_queue.set_bus(self.bus)
+            self.forge_queue.set_bus(self.msg_bus)
             self.forge_queue.start()
         except Exception as e:
             self.forge_queue = None
             print(f"[Aule] ForgeQueue start failed: {e}")
-        # Tesla sensor stream → bus
+        # Tesla sensor stream → message bus
         try:
             from Tesla.SensorStream import SensorStream
             self.sensor_stream = SensorStream(parent=self)
-            self.sensor_stream.attach_bus(self.bus)
+            self.sensor_stream.attach_bus(self.msg_bus)
         except Exception as e:
             self.sensor_stream = None
             print(f"[Tesla] SensorStream init: {e}")
@@ -811,11 +814,14 @@ class Ptolemy(QMainWindow):
     # ── Events ────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
-        # Terminate all faces cleanly
         for fid in list(self.bus._registry.keys()):
             self.bus.terminate(fid)
-        self.kvm.disconnect()
-        self.hole_punch.close()
+        if self.msg_bus:
+            self.msg_bus.stop()
+        if self.kvm:
+            self.kvm.disconnect()
+        if self.hole_punch:
+            self.hole_punch.close()
         event.accept()
 
     def keyPressEvent(self, event):
@@ -848,6 +854,28 @@ class Ptolemy(QMainWindow):
             self.hide()
         else:
             self.show()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  _GlobalKeyFilter — application-wide keyboard shortcut interceptor
+#  TODO: wire CTRL+Q/A/L/V/N/K/M/P/H/T/F shortcuts to Ptolemy face launchers
+# ══════════════════════════════════════════════════════════════════════════════
+
+from PyQt5.QtCore import QObject, QEvent
+
+class _GlobalKeyFilter(QObject):
+    def __init__(self, ptolemy):
+        super().__init__(ptolemy)
+        self.Ptolemy = ptolemy
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress:
+            key  = event.key()
+            mods = event.modifiers()
+            if mods == Qt.ControlModifier:
+                if key == Qt.Key_Q:
+                    self.Ptolemy.close(); return True
+        return False
 
 
 # ══════════════════════════════════════════════════════════════════════════════
