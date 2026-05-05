@@ -52,10 +52,14 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QGraphicsScene,
                               QDesktopWidget, QGridLayout)
 
 # ── Ptolemy core modules ───────────────────────────────────────────────────────
-# GUARANTEED loads — Qt only, no external deps
-from Pharos.PtolShell          import PtolShell
 from Pharos.PtolBus            import PtolBus as _PharosPtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
 from urllib.request            import build_opener
+
+try:
+    from Pharos.PtolShell      import PtolShell
+except Exception as _e:
+    PtolShell = None
+    print(f'[Pharos] PtolShell: {_e}')
 
 # DEFERRED — may fail, reported to shell, never kills desktop
 try:
@@ -93,12 +97,6 @@ try:
 except Exception as _e:
     User = None
     print(f'[Pharos] Interface (OpenGL): {_e}')
-
-try:
-    from Pharos.LeftPanel      import LeftPanel
-except Exception as _e:
-    LeftPanel = None
-    print(f'[Pharos] LeftPanel: {_e}')
 
 # ── Tesla — all interfacing ────────────────────────────────────────────────────
 try:
@@ -453,25 +451,9 @@ class Ptolemy(QMainWindow):
         self.kvm        = KVMClient(self)   if KVMClient  else None
 
         # ── System tray ───────────────────────────────────────────────────────
-        # ── Desktop components ───────────────────────────────────────────
-        try:
-            from Pharos.PtolDesktop import ProcessGraph, SidebarPanel, DualTrayMenu
-            # Process graph (JACK-style node layout)
-            self.process_graph = ProcessGraph(self.scene, self)
-            # Bus → graph: update node states on face events
-            self.bus.face_launched.connect(
-                lambda fid: self.process_graph.add_minimized_window(None, fid))
-            # Sidebar (23px strip, 45s auto-hide)
-            left_widget = getattr(self, 'leftPanel', None)
-            self.sidebar = SidebarPanel(self.scene, self, left_widget)
-            # System tray (dual menus)
-            self.sysTrayIcon = DualTrayMenu(ptolemy=self, parent=self)
-            self.sysTrayIcon.show()
-        except Exception as _e:
-            print(f'[PtolDesktop] init failed: {_e}')
-            # Legacy tray fallback
-            self.sysTrayIcon = SystemTrayIcon(
-                QIcon(self.imgDir + 'Pharos/indicator-ball.gif'), parent=self)
+        self.sysTrayIcon = SystemTrayIcon(
+            QIcon(self.imgDir + 'Pharos/indicator-ball.gif'), parent=self) if SystemTrayIcon else None
+        if self.sysTrayIcon:
             self.sysTrayIcon.show()
 
         # ── Command history ───────────────────────────────────────────────────
@@ -514,114 +496,33 @@ class Ptolemy(QMainWindow):
         self.setStyleSheet(self.stylesheet)
         self._launch_philadelphos()
 
-        # Pharos nav interface
+        if Menu:
+            self.Menu = Menu(parent=self)
+            self.scene.addWidget(self.Menu)
+        else:
+            self.Menu = None
+
         if User:
             self.Interface = User(self)
             self._pharos_proxy = self.scene.addWidget(self.Interface)
-            self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsMovable, True)
-            self._pharos_proxy.setFlag(self._pharos_proxy.ItemIsSelectable, True)
-            self._pharos_proxy.setOpacity(0.30)
         else:
             self.Interface = None
             self._pharos_proxy = None
             print('[Pharos] Interface (OpenGL) disabled — skipped')
 
-        # Left panel (file tree + Archimedes)
-        self.LeftPanel = LeftPanel(parent=None)
-        self._left_proxy = self.scene.addWidget(self.LeftPanel)
-        self._left_proxy.setFlag(self._left_proxy.ItemIsMovable, True)
-        self._left_proxy.setFlag(self._left_proxy.ItemIsSelectable, True)
-        self._left_proxy.setPos(0, 0)
-        self._left_proxy.setOpacity(0.30)
-        self.LeftPanel.arch_item_activated.connect(self._on_arch_drop)
+        self.PtolShell = None
+        self.LeftPanel = None
 
-        # PtolShell
-        self.PtolShell = PtolShell(parent=None)
-        self._shell_proxy = self.scene.addWidget(self.PtolShell)
-        self._shell_proxy.setFlag(self._shell_proxy.ItemIsMovable, True)
-        self._shell_proxy.setFlag(self._shell_proxy.ItemIsSelectable, True)
-        self._shell_proxy.setPos(270, 0)
-        self._shell_proxy.setOpacity(0.30)
-
-        # Legacy menu
-        self.Menu = Menu(parent=self)
-        self._menu_proxy = self.scene.addWidget(self.Menu)
-        self._menu_proxy.setFlag(self._menu_proxy.ItemIsMovable, True)
-        self._menu_proxy.setFlag(self._menu_proxy.ItemIsSelectable, True)
-        self._menu_proxy.setOpacity(0.30)
-
-        # Focus tracking -> opacity (70% unfocused)
-        self._proxies = [
-            self._pharos_proxy, self._left_proxy,
-            self._shell_proxy,  self._menu_proxy,
-        ]
-        self.scene.focusItemChanged.connect(self._on_focus_changed)
-
-        # Drag-and-drop onto empty desktop
-        self.view.setAcceptDrops(True)
-        self.view.dragEnterEvent = self._drag_enter
-        self.view.dragMoveEvent  = self._drag_move
-        self.view.dropEvent      = self._drop_event
-
-        # Windows/Menu key listener
         self._key_filter = _GlobalKeyFilter(self)
         QApplication.instance().installEventFilter(self._key_filter)
-
-    def _on_focus_changed(self, new_item, _old, _reason):
-        for proxy in self._proxies:
-            is_focused = (new_item is proxy or
-                          (new_item is not None and
-                           new_item.parentItem() is proxy))
-            proxy.setOpacity(1.0 if is_focused else 0.30)
 
     def raise_ptolemy(self):
         self.raise_()
         self.activateWindow()
-        w = self.screen.width()
-        h = self.screen.height()
-        self._pharos_proxy.setPos(w - self.Interface.width() - 20, h // 2 - 150)
-        self._shell_proxy.setPos(w - self.Interface.width() - 450, h // 2 - 150)
-        self._left_proxy.setPos(0, 0)
-
-    def _drag_enter(self, event):
-        if event.mimeData().hasUrls() or event.mimeData().hasText():
-            event.acceptProposedAction()
-
-    def _drag_move(self, event):
-        event.acceptProposedAction()
-
-    def _drop_event(self, event):
-        pos = self.view.mapToScene(event.pos())
-        for item in self.scene.items(pos):
-            if isinstance(item, QGraphicsProxyWidget):
-                return  # landed on existing window
-        data = {}
-        if event.mimeData().hasUrls():
-            data['urls'] = [u.toLocalFile() for u in event.mimeData().urls()]
-        elif event.mimeData().hasText():
-            data['text'] = event.mimeData().text()
-        self._open_drop_window(pos, data)
-        event.acceptProposedAction()
-
-    def _open_drop_window(self, pos, data):
-        from Pharos.DropWindow import DropWindow
-        win = DropWindow(data, parent=None)
-        proxy = self.scene.addWidget(win)
-        proxy.setFlag(proxy.ItemIsMovable, True)
-        proxy.setFlag(proxy.ItemIsSelectable, True)
-        proxy.setPos(pos)
-        proxy.setOpacity(1.0)
-        self._proxies.append(proxy)
-
-    def _on_arch_drop(self, data):
-        from Pharos.DropWindow import DropWindow
-        win = DropWindow({'arch': data}, parent=None)
-        proxy = self.scene.addWidget(win)
-        proxy.setFlag(proxy.ItemIsMovable, True)
-        proxy.setFlag(proxy.ItemIsSelectable, True)
-        proxy.setPos(300, 200)
-        proxy.setOpacity(1.0)
-        self._proxies.append(proxy)
+        if self._pharos_proxy and self.Interface:
+            w = self.screen.width()
+            h = self.screen.height()
+            self._pharos_proxy.setPos(w - self.Interface.width() - 20, h // 2 - 150)
 
     def _launch_philadelphos(self):
         """
@@ -662,7 +563,6 @@ class Ptolemy(QMainWindow):
             print(f'[TuningDisplay] {e}')
 
     def openSettings(self, section=None, event=None):
-        """Launch the PtolemySettings window. Wires to DualTrayMenu."""
         try:
             from Pharos.settings_window import SettingsWindow
             if not hasattr(self, '_settings_win') or self._settings_win is None:
