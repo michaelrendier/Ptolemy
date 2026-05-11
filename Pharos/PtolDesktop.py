@@ -45,13 +45,13 @@ Usage
 
 import os
 import math
-from PyQt5.QtCore  import (Qt, QRectF, QPointF, QTimer, QPropertyAnimation,
+from PyQt6.QtCore  import (Qt, QRectF, QPointF, QTimer, QPropertyAnimation,
                             QEasingCurve, pyqtSignal, QObject)
-from PyQt5.QtGui   import (QPainter, QColor, QPen, QBrush, QFont,
-                            QFontMetrics, QCursor, QIcon)
-from PyQt5.QtSvg   import QSvgRenderer
-from PyQt5.QtWidgets import (QGraphicsItem, QGraphicsScene, QGraphicsObject,
-                              QSystemTrayIcon, QMenu, QAction, QWidget,
+from PyQt6.QtGui   import (QPainter, QColor, QPen, QBrush, QFont,
+                            QFontMetrics, QCursor, QIcon, QAction)
+from PyQt6.QtSvg   import QSvgRenderer
+from PyQt6.QtWidgets import (QGraphicsItem, QGraphicsScene, QGraphicsObject,
+                              QSystemTrayIcon, QMenu, QWidget,
                               QGraphicsProxyWidget, QApplication,
                               QGraphicsLineItem)
 
@@ -156,10 +156,10 @@ class GraphNode(QGraphicsObject):
         self._drag_line     = None
         self._graph_ref     = None   # set by ProcessGraph after construction
 
-        self.setFlag(QGraphicsItem.ItemIsMovable, False)   # we handle drag
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)   # we handle drag
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(True)
-        self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
+        self.setAcceptedMouseButtons(Qt.MouseButton.LeftButton | Qt.MouseButton.RightButton)
         self.setZValue(5)
 
         # tooltip
@@ -171,14 +171,14 @@ class GraphNode(QGraphicsObject):
         return QRectF(-r, -r, r * 2, r * 2)
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = self.radius
         hover_boost = 8 if self._hover else 0
 
         # glow ring
         glow = QColor(self.color)
         glow.setAlpha(60 + hover_boost * 4)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(glow))
         painter.drawEllipse(QPointF(0, 0), r + 6 + hover_boost, r + 6 + hover_boost)
 
@@ -217,8 +217,8 @@ class GraphNode(QGraphicsObject):
         was = self._port_hover
         self._port_hover = self._in_port(event.pos())
         if was != self._port_hover:
-            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
-                                   else Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.CrossCursor if self._port_hover
+                                   else Qt.CursorShape.ArrowCursor))
             self.update()
 
     def hoverLeaveEvent(self, event):
@@ -236,7 +236,7 @@ class GraphNode(QGraphicsObject):
 
     def contextMenuEvent(self, event):
         """Right-click: Connect to... menu."""
-        from PyQt5.QtWidgets import QMenu, QAction
+        from PyQt6.QtGui import QAction; from PyQt6.QtWidgets import QMenu
         menu = QMenu()
         menu.setStyleSheet("""
             QMenu { background:#080d1a; border:1px solid #1a2a3a;
@@ -265,7 +265,7 @@ class GraphNode(QGraphicsObject):
         info_a = menu.addAction(f'Face: {self.label}')
         info_a.setEnabled(False)
 
-        menu.exec_(event.screenPos().toPoint())
+        menu.exec(event.screenPos().toPoint())
         event.accept()
 
     def _disconnect_streams(self, graph):
@@ -279,18 +279,18 @@ class GraphNode(QGraphicsObject):
             graph._conns.remove(c)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             if self._in_port(event.pos()):
                 # JACK-style port drag — start drawing a connection line
                 self._port_dragging = True
                 sp = self.scenePos() + QPointF(self.radius, 0)
                 self._drag_line = PortDragLine(sp)
                 self.scene().addItem(self._drag_line)
-                self.setCursor(QCursor(Qt.CrossCursor))
+                self.setCursor(QCursor(Qt.CursorShape.CrossCursor))
             else:
                 self._drag = True
                 self._drag_off = event.pos()
-                self.setCursor(QCursor(Qt.SizeAllCursor))
+                self.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
                 self.setZValue(20)
         event.accept()
 
@@ -307,7 +307,7 @@ class GraphNode(QGraphicsObject):
     def mouseReleaseEvent(self, event):
         if getattr(self, '_port_dragging', False):
             self._port_dragging = False
-            self.setCursor(QCursor(Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             # find node under release point
             if self._drag_line:
                 self.scene().removeItem(self._drag_line)
@@ -321,7 +321,7 @@ class GraphNode(QGraphicsObject):
                     )
         elif self._drag:
             self._drag = False
-            self.setCursor(QCursor(Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             self.setZValue(5)
             self.position_changed.emit()
         event.accept()
@@ -367,11 +367,11 @@ class StreamConnection(QGraphicsItem):
         return QRectF(x, y, w, h)
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         sp = self.src.scenePos()
         dp = self.dst.scenePos()
         pen = QPen(self.color, 2.0 if self._hover else _CONN_W)
-        pen.setStyle(Qt.DashLine if self.stype == 'stream' else Qt.SolidLine)
+        pen.setStyle(Qt.PenStyle.DashLine if self.stype == 'stream' else Qt.PenStyle.SolidLine)
         painter.setPen(pen)
         painter.drawLine(sp, dp)
 
@@ -390,8 +390,8 @@ class StreamConnection(QGraphicsItem):
         was = self._port_hover
         self._port_hover = self._in_port(event.pos())
         if was != self._port_hover:
-            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
-                                   else Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.CrossCursor if self._port_hover
+                                   else Qt.CursorShape.ArrowCursor))
             self.update()
         self.prepareGeometryChange()
 
@@ -440,8 +440,8 @@ class ProcessGraph(QObject):
 
     def _center(self) -> QPointF:
         return QPointF(
-            self._scene.width()  / 2,
-            self._scene.height() / 2
+            int(self._scene.width())  // 2,
+            int(self._scene.height()) // 2
         )
 
     def _build(self):
@@ -569,13 +569,13 @@ class SidebarActivationStrip(QGraphicsItem):
         # nearly invisible — just a hint
         color = QColor('#00ccff')
         color.setAlpha(15 if not self._hover else 40)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(color))
         painter.drawRect(self.boundingRect())
 
         # vertical line at edge
         pen = QPen(QColor('#00ccff'), 1)
-        pen.setStyle(Qt.DotLine)
+        pen.setStyle(Qt.PenStyle.DotLine)
         painter.setPen(pen)
         painter.drawLine(QPointF(_STRIP_W - 1, 0),
                          QPointF(_STRIP_W - 1, self._h))
@@ -588,8 +588,8 @@ class SidebarActivationStrip(QGraphicsItem):
         was = self._port_hover
         self._port_hover = self._in_port(event.pos())
         if was != self._port_hover:
-            self.setCursor(QCursor(Qt.CrossCursor if self._port_hover
-                                   else Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.CrossCursor if self._port_hover
+                                   else Qt.CursorShape.ArrowCursor))
             self.update()
         self._on_activate()
 
@@ -629,7 +629,7 @@ class SidebarPanel(QObject):
 
         # activation strip
         self._strip = SidebarActivationStrip(
-            scene.height(), self._show
+            int(scene.height()), self._show
         )
         self._strip.setPos(0, 0)
         scene.addItem(self._strip)
@@ -816,7 +816,10 @@ class DualTrayMenu(QSystemTrayIcon):
             self._ptolemy.openSettings(section='wifi')
 
     def _exit(self):
-        QApplication.instance().quit()
+        if self._ptolemy is not None:
+            self._ptolemy.close()
+        else:
+            QApplication.instance().quit()
 
     def _menu_style(self) -> str:
         return """
@@ -858,7 +861,7 @@ class PortDragLine(QGraphicsItem):
         super().__init__(parent)
         self._src = src_pos
         self._dst = src_pos
-        self._pen = QPen(QColor('#00ccff'), 1.5, Qt.DashLine)
+        self._pen = QPen(QColor('#00ccff'), 1.5, Qt.PenStyle.DashLine)
         self._pen.setDashPattern([6, 4])
         self.setZValue(200)
 
@@ -874,7 +877,7 @@ class PortDragLine(QGraphicsItem):
         return QRectF(x, y, w, h)
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(self._pen)
         painter.drawLine(self._src, self._dst)
         # destination dot

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import QObject, QThread
+from PyQt6.QtCore import QObject, QThread
 
 import socket
 from subprocess import Popen, PIPE

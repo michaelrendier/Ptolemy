@@ -14,14 +14,14 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWebKitWidgets import *
-from PyQt5.QtSvg import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtWebKit import *
-from PyQt5.QtMultimedia import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWebEngineWidgets import *
+
+from PyQt6.QtSvgWidgets import *
+from PyQt6.QtWidgets import *
+
+from PyQt6.QtMultimedia import *
 
 # example = {
 # 	'close_date': 'Jan. 8, 2019',
@@ -185,7 +185,7 @@ if __name__ == "__main__":
 
 	Watcher.show()
 
-	sys.exit(app.exec_())
+	sys.exit(app.exec())
 	
 # 	argparser = argparse.ArgumentParser()
 # 	argparser.add_argument('ticker', help='Company stock symbol')

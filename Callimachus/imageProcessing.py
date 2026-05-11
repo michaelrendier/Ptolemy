@@ -3,7 +3,7 @@
 __author__ = 'rendier'
 
 import base64, os
-from PyQt5.QtCore import QObject
+from PyQt6.QtCore import QObject
 from PIL import ExifTags, Image
 from urllib.request import urlopen
 

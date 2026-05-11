@@ -5,7 +5,7 @@ __author__ = 'rendier'
 from math import *
 import time
 
-from PyQt5.QtCore import QThread, pyqtSignal, QObject
+from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
 #OpenGL
 from OpenGL.GL import *

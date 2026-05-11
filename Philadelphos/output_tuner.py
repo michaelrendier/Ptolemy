@@ -154,24 +154,43 @@ class SemanticWordIndex:
 
     def _assign_coordinate(self, word: str, record: Dict) -> float:
         """
-        Stub coordinate: normalized blend of alphabetical + semantic density.
-        Replace with hyperwebster_address when Callimachus layer assigns it.
+        Coordinate via LorenzStirling basin attractor.
+
+        Word properties → complex plane → Stirling V=10 basin classification
+        → Lorenz trajectory within basin → real coordinate in [PHI_INV, PHI].
+
+        Falls back to alphabetical/density blend if LorenzStirling unavailable.
         """
-        # Alphabetical component (0..1)
+        # Alphabetical component (0..1) — first 4 chars
         alpha = 0.0
         if word:
             alpha = sum((ord(c) - ord('a')) / 25.0
                         for c in word[:4].lower()
                         if 'a' <= c <= 'z') / max(1, min(4, len(word)))
 
-        # Semantic density component
+        # Semantic density (0..1)
         defs = record.get("semantic", {}).get("sense_inventory", [])
         syns = record.get("semantic", {}).get("synonyms", [])
         density = min(1.0, (len(defs) * 0.1 + len(syns) * 0.02))
 
-        # Blend: alpha dominates, density adds texture
-        coord = 0.7 * alpha + 0.3 * density
-        # Map to [PHI_INV, PHI] range — the natural attractor range
+        # Map to complex plane: real=alpha, imag=density, scaled to [-1.5, 1.5]
+        z = complex(alpha * 3.0 - 1.5, density * 3.0 - 1.5)
+
+        try:
+            from Archimedes.Maths.LorenzStirling import lorenz_stirling
+            result = lorenz_stirling.classify(z, lorenz_steps=50)
+            if result.extinct:
+                # Extinct point — use fallback blend
+                coord = 0.7 * alpha + 0.3 * density
+            else:
+                # basin_id 1-8 → 0..1
+                basin_norm = (result.basin_id - 1) / 7.0
+                # Lorenz z-position is in [0, ~50]; normalize
+                lz = max(0.0, min(50.0, result.lorenz_pos[2])) / 50.0
+                coord = 0.6 * basin_norm + 0.4 * lz
+        except Exception:
+            coord = 0.7 * alpha + 0.3 * density
+
         return PHI_INV + coord * (PHI - PHI_INV)
 
     def lookup(self, r: float, window: float = H4) -> Optional[Dict]:

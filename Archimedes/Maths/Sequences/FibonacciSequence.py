@@ -49,8 +49,9 @@ def explicit_formula_fibonacci_number(n):
     """
     return int(((1 + sqrt(5))**n - (1 - sqrt(5))**n)/(2**n*sqrt(5)))
 
-for i in range(10000):
-    print("!", i, "FIB", f"{explicit_formula_fibonacci_number(i)}")
+if __name__ == '__main__':
+    for i in range(10000):
+        print("!", i, "FIB", f"{explicit_formula_fibonacci_number(i)}")
 
 
 def fibonacci_music(fib, modulus): #TODO

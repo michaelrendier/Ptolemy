@@ -18,14 +18,14 @@ Three tiers:
 Usage
 -----
     from Pharos.PtolColor import PtolColor, FaceColor
-    from PyQt5.QtGui import QColor
+    from PyQt6.QtGui import QColor
 
     bg = QColor(PtolColor.ROYAL_BLUE)
     fg = QColor(FaceColor.ARCHIMEDES)
 """
 
 try:
-    from PyQt5.QtGui import QColor as _QColor
+    from PyQt6.QtGui import QColor as _QColor
     _HAS_QCOLOR = True
 except ImportError:
     _QColor = None

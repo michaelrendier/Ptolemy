@@ -56,15 +56,15 @@ from __future__ import annotations
 import threading
 from typing import Callable, Optional
 
-from PyQt5.QtCore    import Qt, QThread, QObject, pyqtSignal, QTimer
-from PyQt5.QtGui     import QFont, QKeySequence
-from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QLineEdit,
+from PyQt6.QtCore    import Qt, QThread, QObject, pyqtSignal, QTimer
+from PyQt6.QtGui     import QFont, QKeySequence
+from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QLineEdit,
                               QPushButton, QLabel, QSizePolicy)
 
 # Local imports — lazy so Ptolemy can boot without full Ainulindale chain loaded
 def _get_chain():
     """Lazy import of NoetherChainInput to avoid circular boot."""
-    from Ainulindale.core.noether_chain_input import NoetherChainInput
+    from Philadelphos.noether_chain_input import NoetherChainInput
     return NoetherChainInput
 
 def _get_tongue():
@@ -141,7 +141,7 @@ class PtolemyEars(QWidget):
         self.lineEdit = QLineEdit(self)
         self.lineEdit.setPlaceholderText("Speak to Ptolemy…")
         self.lineEdit.setFont(QFont('Ubuntu Mono', 10))
-        self.lineEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.lineEdit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.lineEdit.returnPressed.connect(self.on_submit)
         layout.addWidget(self.lineEdit)
 

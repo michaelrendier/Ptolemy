@@ -24,14 +24,14 @@ import certifi
 import sys
 import csv
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWebKitWidgets import *
-from PyQt5.QtSvg import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtWebKit import *
-from PyQt5.QtMultimedia import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWebEngineWidgets import *
+from PyQt6.QtWebKitWidgets import *
+from PyQt6.QtSvg import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtWebKit import *
+from PyQt6.QtMultimedia import *
 
 
 # example = {

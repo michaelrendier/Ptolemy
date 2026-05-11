@@ -67,6 +67,24 @@
 
 ---
 
+## Architecture Deep-Dives
+
+| Document | Description |
+|---|---|
+| [architecture/SMIP_Architecture.md](architecture/SMIP_Architecture.md) | SMIP/SMMIP — Cayley-Dickson tower, four-layer Lagrangian, J_N, domain floor |
+| [architecture/PtolBus.md](architecture/PtolBus.md) | PtolBus — rotary semaphore, T0-T4 priorities, thread pool, channels |
+| [architecture/LuthSpell.md](architecture/LuthSpell.md) | LuthSpell — BUS controller, halting monitor, error catalog, GC |
+| [architecture/LSH_Datatype.md](architecture/LSH_Datatype.md) | LSH_Datatype — 12-layer spectral word record, Rabies Principle, schema |
+| [architecture/CyclicContextBuffer.md](architecture/CyclicContextBuffer.md) | CyclicContextBuffer — FIFO eviction, octonion compression, hyperindex, blockchain |
+| [architecture/PtolShell.md](architecture/PtolShell.md) | PtolShell — MetaPrompt modes, SedenionGate, inference pipeline, DataInput |
+| [architecture/Aule_Sanitation.md](architecture/Aule_Sanitation.md) | Aulë Sanitation — trust levels, FA gate, 3FA word challenge, Aule-risk |
+| [architecture/Blockchain.md](architecture/Blockchain.md) | PtolChain AuditChain — block structure, Face branches, /audit endpoint |
+| [architecture/Callimachus_v09.md](architecture/Callimachus_v09.md) | Callimachus v09 — HyperWebster, HyperDatabase, acquisition pipeline |
+| [architecture/Ainulindale.md](architecture/Ainulindale.md) | Ainulindalë — SMNNIP derivation, Noether engine, ValaQuenta, open questions |
+| [architecture/Archimedes_Maths_Guide.md](architecture/Archimedes_Maths_Guide.md) | Archimedes Maths — 27-file implementation guide (Tiers A–D) |
+
+---
+
 ## Related Repositories
 
 | Repo | Description |

@@ -66,7 +66,12 @@ def _load_fractal():
     from Alexandria.FractalRenderer import FractalRenderer
     return FractalRenderer
 
-register_engine('fractal', _load_fractal)
+def _load_fractal_view():
+    from Alexandria.FractalRenderer import FractalView
+    return FractalView
+
+register_engine('fractal',      _load_fractal)
+register_engine('fractal_view', _load_fractal_view)
 
 _MOUSEION_PIPE: Optional[callable] = None
 

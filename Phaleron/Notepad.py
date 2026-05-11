@@ -3,21 +3,23 @@
 __author__ = 'rendier'
 
 import sys
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtSvg import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtSvg import *
+from PyQt6.QtSvgWidgets import *
 
 from Callimachus.Database import Database
 from Pharos.Dialogs import Dialogs
 from Pharos.PtolFace import PtolFace
+from Pharos.PGui import PMainWindow
 
 
-class Notepad(QMainWindow, PtolFace):
+class Notepad(PMainWindow, PtolFace):
     
     def __init__(self, parent=None):
         super(Notepad, self).__init__(parent)
-        QMainWindow.__init__(self)
+        PMainWindow.__init__(self)
         
         self.Ptolemy = parent
         print("NOTEPAD PARENT: ", self.Ptolemy)
@@ -219,4 +221,4 @@ if __name__ == '__main__':
     w.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
     w.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

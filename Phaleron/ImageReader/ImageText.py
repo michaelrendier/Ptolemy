@@ -3,9 +3,9 @@
 __author__ = 'rendier'
 
 
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtGui import *
 import cv2
 import pytesseract
 import numpy as np

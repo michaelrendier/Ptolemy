@@ -24,9 +24,9 @@ Settings hook → Ptolemy Settings > Tuning Display tab.
 """
 
 import time
-from PyQt5.QtCore    import Qt, QTimer, pyqtSignal, QObject
-from PyQt5.QtGui     import QColor, QFont, QTextCursor
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+from PyQt6.QtCore    import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui     import QColor, QFont, QTextCursor
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QTextEdit, QPushButton, QLineEdit,
                               QLabel, QCheckBox)
 
@@ -180,7 +180,7 @@ class TuningDisplay(_BASE):
                 f'{ts_str}<br>')
 
         cur = self._view.textCursor()
-        cur.movePosition(QTextCursor.End)
+        cur.movePosition(QTextCursor.MoveOperation.End)
         self._view.setTextCursor(cur)
         self._view.insertHtml(html)
 

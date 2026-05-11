@@ -5,7 +5,7 @@ PGui.py — Pharos Window Manager Shim
 =====================================
 Ptolemy's WINE-style UI layer.
 
-Every Face module imports from here instead of PyQt5 directly:
+Every Face module imports from here instead of PyQt directly:
 
     from Pharos.PGui import PMainWindow, PWidget, PButton, PLineEdit ...
 
@@ -45,15 +45,15 @@ import ast
 import importlib
 import inspect
 
-from PyQt5.QtCore    import Qt, QRectF, QPointF, QTimer, pyqtSignal, QObject
-from PyQt5.QtGui     import QPainter, QColor, QPen, QBrush, QLinearGradient, \
-                            QFont, QFontMetrics, QCursor
-from PyQt5.QtSvg     import QSvgRenderer
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QPushButton, QLineEdit,
+from PyQt6.QtCore    import Qt, QRectF, QPointF, QTimer, pyqtSignal, QObject
+from PyQt6.QtGui     import (QPainter, QColor, QPen, QBrush, QLinearGradient,
+                             QFont, QFontMetrics, QCursor, QAction)
+from PyQt6.QtSvg     import QSvgRenderer
+from PyQt6.QtWidgets import (QWidget, QMainWindow, QPushButton, QLineEdit,
                              QLabel, QComboBox, QTabWidget, QDockWidget,
                              QTextEdit, QListWidget, QTableWidget,
                              QGraphicsItem, QGraphicsProxyWidget,
-                             QGraphicsScene, QAction, QMenu, QMenuBar,
+                             QGraphicsScene, QMenu, QMenuBar,
                              QApplication)
 
 # ── Mode flag ─────────────────────────────────────────────────────────────────
@@ -362,8 +362,8 @@ class PWindow(QGraphicsItem):
         self._proxy.setPos(0, _TITLE_H)
 
         self.setPos(x, y)
-        self.setFlag(QGraphicsItem.ItemIsMovable, False)   # we handle drag
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)   # we handle drag
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setAcceptHoverEvents(True)
         self.setZValue(10)
 
@@ -403,27 +403,27 @@ class PWindow(QGraphicsItem):
     # ── paint ──────────────────────────────────────────────────────────────
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self._w, self._h
 
         # ── window body ──
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(_C_BG))
         painter.drawRect(QRectF(0, 0, w, h))
 
         # ── border gradient ──
         pen = QPen(QBrush(_border_grad(0, 0, w, 0)), 1.0)
         painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(QRectF(0.5, 0.5, w - 1, h - 1))
 
         # ── title bar bg ──
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(_C_TITLEBAR))
         painter.drawRect(QRectF(0, 0, w, _TITLE_H))
 
         # ── gradient accent line ──
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(_grad(0, 0, w, 0)))
         painter.drawRect(QRectF(0, _TITLE_H - 1, w, 1.5))
 
@@ -450,7 +450,7 @@ class PWindow(QGraphicsItem):
         short = _CORNER_SHORT
         long_ = _CORNER_LONG
 
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(g)
 
         # top-left outer
@@ -498,14 +498,14 @@ class PWindow(QGraphicsItem):
 
             # O — blue circle
             pen = QPen(QColor('#0000FF'), r.width() * 0.11)
-            pen.setCapStyle(Qt.RoundCap)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
-            painter.setBrush(Qt.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(QPointF(cx, cy), rad, rad)
 
             # I — red line through and beyond
             pen = QPen(QColor('#FF0000'), r.width() * 0.08)
-            pen.setCapStyle(Qt.RoundCap)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
             top = r.y() + 1
             bot = r.y() + r.height() - 1
@@ -532,7 +532,7 @@ class PWindow(QGraphicsItem):
         painter.setBrush(QBrush(QColor('#0d1a1a')))
         painter.drawRoundedRect(xr, 2, 2)
         painter.setPen(QPen(QColor('#004466'), 1.0))
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         inner = xr.adjusted(3, 3, -3, -3)
         painter.drawRect(inner)
 
@@ -572,7 +572,7 @@ class PWindow(QGraphicsItem):
         if self._title_drag_rect().contains(p):
             self._drag = True
             self._drag_offset = event.scenePos()
-            self.setCursor(QCursor(Qt.SizeAllCursor))
+            self.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
             return
 
         super().mousePressEvent(event)
@@ -588,7 +588,7 @@ class PWindow(QGraphicsItem):
     def mouseReleaseEvent(self, event):
         if self._drag:
             self._drag = False
-            self.setCursor(QCursor(Qt.ArrowCursor))
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             return
         super().mouseReleaseEvent(event)
 
@@ -718,7 +718,7 @@ if PHAROS_MODE:
         def __init__(self, parent=None):
             super().__init__(parent)
             self._pwindow = None
-            self.setWindowFlags(Qt.Widget)
+            self.setWindowFlags(Qt.WindowType.Widget)
 
         def show(self):
             scene = PMainWindow._ptolemy_scene

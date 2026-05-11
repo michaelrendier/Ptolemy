@@ -4,7 +4,7 @@ __author__ = 'rendier'
 
 import io
 
-from PyQt5.QtCore import QObject
+from PyQt6.QtCore import QObject
 
 from pdfminer.converter import TextConverter
 from pdfminer.pdfinterp import PDFPageInterpreter

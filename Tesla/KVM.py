@@ -29,7 +29,7 @@ VNC fallback:
 
 import socket
 import struct
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
 # ── Packet definition ─────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ class KVMClient(QObject):
         kvm = KVMClient(parent=ptolemy)
         kvm.connect(remote_ip, remote_port, sock=punched_sock)
         kvm.send_mouse_move(dx, dy)
-        kvm.send_key(Qt.Key_A, Qt.NoModifier, pressed=True)
+        kvm.send_key(Qt.Key.Key_A, Qt.KeyboardModifier.NoModifier, pressed=True)
     """
 
     connected    = pyqtSignal(str, int)   # ip, port
@@ -244,11 +244,11 @@ class KVMClient(QObject):
 
 if __name__ == '__main__':
     import sys
-    from PyQt5.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     port = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[1] == '--server' else 23233
     print(f'[KVMServer] Listening on 0.0.0.0:{port}')
     server = KVMServer(port=port)
     server.start()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

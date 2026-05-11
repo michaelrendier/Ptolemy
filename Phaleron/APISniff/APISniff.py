@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import QEvent, QUrl, QVariant, Qt
-from PyQt5.QtGui import QIcon, QFont, QImage, QImageReader, QTextDocument, QTextImageFormat, QTextCursor, QCursor, QColor
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QListWidget, QCheckBox, QWidget, QTextEdit, QAction, qApp, QGridLayout, QInputDialog, QListWidgetItem, QApplication
+from PyQt6.QtCore import QEvent, QUrl, Qt
+from PyQt6.QtGui import QAction, QIcon, QFont, QImage, QImageReader, QTextDocument, QTextImageFormat, QTextCursor, QCursor, QColor
+from PyQt6.QtWidgets import QMainWindow, QListWidget, QCheckBox, QWidget, QTextEdit, QGridLayout, QInputDialog, QListWidgetItem, QApplication
 
 from Syntax import PythonHighlighter
 from Dialogs import Dialogs
@@ -39,7 +39,7 @@ class CodeBrowser(QMainWindow):
 		self.package = "Current"
 		self.crumbs = ['Explorer', 'Current']
 		self.exploration = ""
-		self.geo = QDesktopWidget().frameGeometry()
+		self.geo = QApplication.primaryScreen().availableGeometry()
 		
 		self.current = crumbs
 		# if curScope:
@@ -405,7 +405,7 @@ class CodeBrowser(QMainWindow):
 		elif entryType == types.MethodType:
 			self.listsEntry(dEntry, 'white', 'purple', entryType)
 		
-		elif entryType == dict or entryType == str or types.ListType or types.TupleType:
+		elif entryType in (dict, str, list, tuple):
 			self.listsEntry(dEntry, 'black', 'yellow', entryType)
 		
 		else:
@@ -434,7 +434,7 @@ class CodeBrowser(QMainWindow):
 		self.dPrint("textwidth", textwidth)
 		cols = (textwidth / longest)
 		self.dPrint("columns", cols)
-		code = "self.self.pTable = prettytable.PrettyTable({0})".format([i for i in range(cols)])
+		code = "self.pTable = prettytable.PrettyTable({0})".format([i for i in range(cols)])
 		self.dPrint("PrettyTable code", code)
 		exec(code)
 		# self.pTable = PrettyTable(["0", "1", "2"])
@@ -609,7 +609,7 @@ class CodeBrowser(QMainWindow):
 		entry = "{0}{1}{2}".format(self.docstr, self.valS,
 								   [str(pyPrivate) if str(pyPrivate) not in self.docstr else "See Doc String"][0])
 		
-		if self.itemType == types.DictionaryType or types.IntType or types.StringTypes or types.ListType or types.LongType or types.FloatType or types.ComplexType:
+		if self.itemType in (dict, int, str, list, float, complex):
 			self.highlight.setDocument(self.text.document())
 		
 		self.setText(entry, "private-folder.png", "Private Python Data")
@@ -767,22 +767,21 @@ class CodeBrowser(QMainWindow):
 		self.dPrint("\n<INSTANCE METHOD>")
 		if "Current" in self.crumbs:
 			if len(self.crumbs[2:]) == 0:
-				code = "methodOf = {0}.im_class; obj = {0}".format(self.pkg)
+				code = "obj = {0}; methodOf = getattr({0}, '__self__', {0}).__class__".format(self.pkg)
 				self.dPrint("current short methodOf code", code)
 				exec(code)
 			else:
-				code = "methodOf = {0}.{1}.im_class; obj = {0}.{1}".format(self.icrumbs, self.pkg)
+				code = "obj = {0}.{1}; methodOf = getattr({0}.{1}, '__self__', {0}.{1}).__class__".format(self.icrumbs, self.pkg)
 				self.dPrint("current long methodOf code", code)
 				exec(code)
-		
+
 		elif len(self.crumbs[2:]) == 0:
-			code = "methodOf = self.exploration.{0}.im_class; obj = self.exploration.{0}".format(self.pkg)
+			code = "obj = self.exploration.{0}; methodOf = getattr(self.exploration.{0}, '__self__', self.exploration.{0}).__class__".format(self.pkg)
 			self.dPrint("short methodOf code", code)
 			exec(code)
-		
+
 		else:
-			code = "methodOf = self.exploration.{0}.{1}.im_class; obj = self.exploration.{0}.{1}".format(self.icrumbs,
-																										 self.pkg)
+			code = "obj = self.exploration.{0}.{1}; methodOf = getattr(self.exploration.{0}.{1}, '__self__', self.exploration.{0}.{1}).__class__".format(self.icrumbs, self.pkg)
 			self.dPrint("long methodOf code", code)
 			exec(code)
 		
@@ -838,7 +837,7 @@ class CodeBrowser(QMainWindow):
 		elif self.itemType == types.MethodType:
 			self.typeInstanceMethod()
 		
-		elif self.itemType != types.BuiltinFunctionType and self.itemType != types.MethodType and self.itemType == types.FloatType or types.StringType or types.ListType or types.TupleType or types.IntType or types.DictionaryType:
+		elif self.itemType not in (types.BuiltinFunctionType, types.MethodType) and self.itemType in (float, str, list, tuple, int, dict):
 			self.typeCollection()
 		
 		else:

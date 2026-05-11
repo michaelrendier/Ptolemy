@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-# from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtSvg import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+# from PyQt6.QtWebEngineWidgets import *
+from PyQt6.QtSvg import *
+from PyQt6.QtSvgWidgets import *
+from PyQt6.QtWidgets import *
 
 from Callimachus.Database import Database
 from Callimachus.imageProcessing import processImage
@@ -36,6 +37,7 @@ import articleDateExtractor as ADE
 
 import sys, os, urllib, re
 from Pharos.PtolFace import PtolFace
+from Pharos.PGui import PMainWindow
 
 
 
@@ -64,18 +66,18 @@ class Research(QWidget):
 		self.setStyleSheet(self.Phaleron.styles)
 		self.setAutoFillBackground(True)
 
-		QSett = QWebEngineSettings.globalSettings()
-		QSett.setAttribute(QWebEngineSettings.PluginsEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.Accelerated2dCanvasEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.AutoLoadImages, True)
-		QSett.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-		QSett.setAttribute(QWebEngineSettings.WebGLEnabled, True)
+		from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+		QSett = QWebEngineProfile.defaultProfile().settings()
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.AutoLoadImages, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.HyperlinkAuditingEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
 
 		self.initUI()
 
@@ -826,11 +828,11 @@ class ThreadIndicator(QWidget):
 		# exec code
 		pass
 
-class TreasureHunt(QMainWindow, PtolFace):
+class TreasureHunt(PMainWindow, PtolFace):
 
 	def __init__(self, parent=None):
 		super(TreasureHunt, self).__init__(parent)
-		QMainWindow.__init__(self)
+		PMainWindow.__init__(self)
 
 		self.Ptolemy = parent
 		print("TREASURE HUNT PARENT: ", self.Ptolemy)
@@ -1055,7 +1057,7 @@ def main():
 
 
 	Phaleron = TreasureHunt()
-	Phaleron.resize(int(QDesktopWidget().geometry().width() * 0.8), int(QDesktopWidget().geometry().height() * 0.8))
+	Phaleron.resize(int(QApplication.primaryScreen().geometry().width() * 0.8), int(QApplication.primaryScreen().geometry().height() * 0.8))
 	Phaleron.setWindowTitle('Phaleron - Ptolemy')
 
 	Phaleron.win = Phaleron.frameGeometry()
@@ -1068,7 +1070,7 @@ def main():
 	# trayIcon.show()
 
 	# It's exec_ because exec is a reserved word in Python
-	sys.exit(app.exec_())
+	sys.exit(app.exec())
 
 
 if __name__ == "__main__":

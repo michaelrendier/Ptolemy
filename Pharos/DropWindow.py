@@ -5,9 +5,9 @@ __author__ = 'rendier'
 # Also used for Archimedes equation evaluation windows
 # Includes repass: re-source data without age/staleness taint
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QTextEdit, QPushButton,
                              QLineEdit, QTabWidget)
 import os, json, time

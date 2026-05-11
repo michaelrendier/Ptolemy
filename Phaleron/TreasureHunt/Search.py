@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtWebKit import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWebEngineWidgets import *
+from PyQt6.QtWidgets import *
+
 
 from Phaleron.Syntax import PythonHighlighter
 
@@ -333,7 +333,7 @@ class Search(QWidget):
 		self.searchLayout = QGridLayout(self.searchWidget)
 		self.searchText = QTextBrowser(self.searchWidget)
 		self.searchText.setStyleSheet(self.parent.styles)
-		self.searchText.setAlignment(Qt.AlignCenter)
+		self.searchText.setAlignment(Qt.AlignmentFlag.AlignCenter)
 		self.highlighter = PythonHighlighter(self.searchText.document())
 		self.highlighter.setDocument(None)
 		

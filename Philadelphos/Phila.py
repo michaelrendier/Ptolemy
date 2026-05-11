@@ -178,6 +178,33 @@ def lookup(word: str, language: str = "en") -> Optional[Dict]:
     return arch.lookup(word, language=language)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PHILA — kernel-visible stub (v0.9)
+# Ptolemy3.py does: from Philadelphos.Phila import Phila; self.Philadelphos = Phila(self)
+# In v0.9 Philadelphos is a thin log-bridge.  Full SMIP integration in Plan 2.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Phila:
+    """
+    Ptolemy kernel's handle to the Philadelphos layer.
+    v0.9: bridges setOutput → msg_bus.post(CH_LOG).
+    """
+
+    def __init__(self, ptolemy):
+        self.Ptolemy = ptolemy
+
+    def setOutput(self, text, color=None, speak=False):
+        """Route legacy setOutput calls to the message bus log channel."""
+        try:
+            from Pharos.PtolBus import BusMessage, Priority, CH_LOG
+            meta = {'color': color} if color else {}
+            self.Ptolemy.msg_bus.publish(
+                BusMessage(CH_LOG, str(text), Priority.T2,
+                           sender='Philadelphos', meta=meta))
+        except Exception:
+            print(f'[Phila] {text}')
+
+
 def architecture_info() -> Dict[str, Any]:
     """Return info dict about the active architecture, or status message if None."""
     if NEURAL_ARCHITECTURE is None:
@@ -227,10 +254,10 @@ if __name__ == "__main__":
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel,
+    from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel,
                                   QTextEdit, QSizePolicy)
-    from PyQt5.QtCore    import Qt
-    from PyQt5.QtGui     import QFont, QColor
+    from PyQt6.QtCore    import Qt
+    from PyQt6.QtGui     import QFont, QColor
 
     class Phila(QWidget):
         """
@@ -250,7 +277,7 @@ try:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.setMinimumSize(480, 200)
-            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             self._build_ui()
 
         def _build_ui(self):

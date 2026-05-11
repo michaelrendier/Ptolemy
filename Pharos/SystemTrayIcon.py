@@ -15,7 +15,7 @@ Icon: ptol_button.svg (PTOL power symbol)
 """
 
 from Pharos.PtolDesktop import DualTrayMenu as _DualTrayMenu
-from PyQt5.QtWidgets import QSystemTrayIcon
+from PyQt6.QtWidgets import QSystemTrayIcon
 
 class SystemTrayIcon(_DualTrayMenu):
     """

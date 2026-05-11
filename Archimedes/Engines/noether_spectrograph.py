@@ -80,9 +80,9 @@ except ImportError:
 
 # ── Qt / pyqtgraph ────────────────────────────────────────────────────────────
 try:
-    from PyQt5.QtCore import QTimer, Qt, pyqtSignal
-    from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
-    from PyQt5.QtGui import QFont
+    from PyQt6.QtCore import QTimer, Qt, pyqtSignal
+    from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
+    from PyQt6.QtGui import QFont
     import pyqtgraph as pg
     QT_AVAILABLE = True
 except ImportError:

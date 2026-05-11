@@ -54,8 +54,9 @@ def _weights_path(corpus_name: str) -> str:
 # WEIGHT SAVE / LOAD
 # ==============================================================================
 
-def save_weights(L0, L1, L2, L3, C, corpus_name: str) -> str:
-    """Serialize trained layer weights to pickle. Returns path."""
+def save_weights(L0, L1, L2, L3, C, chars, corpus_name: str,
+                 ctx: int = 4, hidden: int = 24) -> str:
+    """Serialize trained layer weights + vocab to pickle. Returns path."""
     _ensure_weights_dir()
     path = _weights_path(corpus_name)
 
@@ -63,7 +64,6 @@ def save_weights(L0, L1, L2, L3, C, corpus_name: str) -> str:
         state = {}
         for attr in vars(layer):
             val = getattr(layer, attr)
-            # Capture weight fields, higgs fields, loss history
             if hasattr(val, '__dict__') or isinstance(val, (list, float, int)):
                 try:
                     state[attr] = val
@@ -74,6 +74,9 @@ def save_weights(L0, L1, L2, L3, C, corpus_name: str) -> str:
     bundle = {
         "corpus":    corpus_name,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "chars":     chars,    # sorted unique chars from corpus — needed for inference
+        "ctx":       ctx,      # context window used during training
+        "hidden":    hidden,   # hidden size used during training
         "L0": _layer_state(L0),
         "L1": _layer_state(L1),
         "L2": _layer_state(L2),
@@ -186,14 +189,15 @@ def run_diagnostic_mode(corpus_text: str, ainur_instance=None) -> None:
 # ==============================================================================
 
 def handle_data_input(diagnostic_mode: bool = False,
-                      ainur_instance=None) -> None:
+                      ainur_instance=None,
+                      corpus_path: Optional[str] = None) -> None:
     """
     Full /DataInput handler.
 
-    1. Prompt for corpus directory
+    1. Get corpus path (from corpus_path param, or stdin as fallback)
     2. Validate path
     3. Load corpus
-    4. Start + train SMNNIP tower
+    4. Start + train SMIP tower
     5. Save weights
     6. Report "Data Consumed"
     7. Stop tower
@@ -204,12 +208,15 @@ def handle_data_input(diagnostic_mode: bool = False,
     )
 
     # ── Step 1: Get path ──────────────────────────────────────────────────────
-    print("\n[DataInput] Enter absolute path to corpus directory:")
-    try:
-        path = input("  Path: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        print("\n[DataInput] Cancelled.")
-        return
+    if corpus_path:
+        path = corpus_path.strip()
+    else:
+        print("\n[DataInput] Enter absolute path to corpus directory:")
+        try:
+            path = input("  Path: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n[DataInput] Cancelled.")
+            return
 
     # ── Step 2: Validate ──────────────────────────────────────────────────────
     if not os.path.isabs(path):
@@ -253,7 +260,7 @@ def handle_data_input(diagnostic_mode: bool = False,
     cap    = max(cap, 50)
 
     try:
-        L0, L1, L2, L3, C = train_tower(
+        L0, L1, L2, L3, C, chars = train_tower(
             corpus_text,
             epochs=epochs,
             lr=0.005,
@@ -268,7 +275,7 @@ def handle_data_input(diagnostic_mode: bool = False,
     # ── Step 5: Save weights ──────────────────────────────────────────────────
     print(f"\n[DataInput] Saving weights...")
     try:
-        weights_path = save_weights(L0, L1, L2, L3, C, corpus_name)
+        weights_path = save_weights(L0, L1, L2, L3, C, chars, corpus_name, ctx=4, hidden=24)
         print(f"[DataInput] Weights saved → {weights_path}")
     except Exception as e:
         print(f"[DataInput] Warning: could not save weights: {e}")
@@ -308,18 +315,23 @@ def parse_and_run(command: str, ainur_instance=None) -> bool:
     Accepts:
         /DataInput
         /DataInput --DM
-        /datainput --dm   (case-insensitive)
+        /DataInput /path/to/corpus
+        /DataInput /path/to/corpus --DM
+        datainput /path/to/corpus    (no slash prefix also accepted)
     """
     parts = command.strip().split()
     if not parts:
         return False
 
     cmd = parts[0].lower()
-    if cmd != "/datainput":
+    if cmd not in ('/datainput', 'datainput'):
         return False
 
-    flags  = [p.lower() for p in parts[1:]]
-    dm     = "--dm" in flags
+    flags      = [p for p in parts[1:] if p.startswith('-')]
+    path_parts = [p for p in parts[1:] if not p.startswith('-')]
+    dm         = '--dm' in [f.lower() for f in flags]
+    path       = ' '.join(path_parts) if path_parts else None
 
-    handle_data_input(diagnostic_mode=dm, ainur_instance=ainur_instance)
+    handle_data_input(diagnostic_mode=dm, ainur_instance=ainur_instance,
+                      corpus_path=path)
     return True

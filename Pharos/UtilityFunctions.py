@@ -4,7 +4,7 @@ __author__ = 'rendier'
 
 import os, time
 
-from PyQt5.QtCore import QTimer
+from PyQt6.QtCore import QTimer
 from subprocess import Popen, PIPE
 from datetime import datetime, timedelta, timezone
 

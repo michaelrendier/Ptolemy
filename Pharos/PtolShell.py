@@ -22,9 +22,11 @@ __author__ = 'rendier@thewanderinggod.tech'
 # Faces are shell users. Daemons POST at boot (see FaceIdentity.py).
 # Ptolemy buffer is its own conversation space — not piped to QTermWidget.
 
-from PyQt5.QtCore    import Qt, pyqtSignal, QProcess
-from PyQt5.QtGui     import QFont, QColor, QKeyEvent
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+import os
+
+from PyQt6.QtCore    import Qt, pyqtSignal, QProcess, QThread
+from PyQt6.QtGui     import QFont, QColor, QKeyEvent
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                               QLineEdit, QLabel, QSizePolicy)
 
 try:
@@ -53,6 +55,107 @@ _DEFAULT_MODE = ''
 _FACE_PREFIX  = '@'   # @Archimedes: message  or  @Callimachus→@Archimedes: msg
 
 
+class _AinurThread(QThread):
+    """Run Ainur.stream() off the UI thread. Emits chunk by chunk."""
+    chunk   = pyqtSignal(str)
+    done    = pyqtSignal()
+    error   = pyqtSignal(str)
+
+    def __init__(self, ainur, message, parent=None):
+        super().__init__(parent)
+        self._ainur   = ainur
+        self._message = message
+
+    def run(self):
+        try:
+            for chunk in self._ainur.stream(self._message):
+                self.chunk.emit(chunk)
+        except Exception as exc:
+            self.error.emit(str(exc))
+        finally:
+            self.done.emit()
+
+
+class _GeminiThread(QThread):
+    """Run Gemini streaming generation off the UI thread."""
+    chunk = pyqtSignal(str)
+    done  = pyqtSignal()
+    error = pyqtSignal(str)
+
+    def __init__(self, prompt, api_key, parent=None):
+        super().__init__(parent)
+        self._prompt  = prompt
+        self._api_key = api_key
+
+    def run(self):
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self._api_key)
+            model    = genai.GenerativeModel('gemini-2.0-flash')
+            response = model.generate_content(self._prompt, stream=True)
+            for chunk in response:
+                text = getattr(chunk, 'text', None)
+                if text:
+                    self.chunk.emit(text)
+        except Exception as exc:
+            self.error.emit(str(exc))
+        finally:
+            self.done.emit()
+
+
+class _SMNNIPThread(QThread):
+    """Run SMNNIP L3 autoregressive generation off the UI thread."""
+    chunk = pyqtSignal(str)
+    done  = pyqtSignal()
+    error = pyqtSignal(str)
+
+    def __init__(self, brain, command, parent=None):
+        super().__init__(parent)
+        self._brain   = brain
+        self._command = command
+
+    def run(self):
+        try:
+            for ch in self._brain.generate(self._command):
+                self.chunk.emit(ch)
+        except Exception as exc:
+            self.error.emit(str(exc))
+        finally:
+            self.done.emit()
+
+
+class _PhiladelphosThread(QThread):
+    """Run PhiladelphosConsole Noether pipeline off the UI thread.
+    Used when no SMIP weights exist — returns the Noether diagnostic response."""
+    done  = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+    def __init__(self, phila, command, parent=None):
+        super().__init__(parent)
+        self._phila   = phila
+        self._command = command
+
+    def run(self):
+        try:
+            from Philadelphos.philadelphos_console import (
+                SedenionElement, BufferedPrompt, _token_count)
+            se       = SedenionElement.from_text(self._command)
+            collapse = se.is_zero_divisor_candidate()
+            bp = BufferedPrompt(
+                text=self._command,
+                sedenion=se,
+                collapse_candidate=collapse,
+                token_count=_token_count(self._command),
+            )
+            self._phila.buffer.push(bp)
+            context = self._phila.buffer.l1_snapshot()
+            reals, diag = self._phila.tower.run(se, context)
+            response = self._phila.builder.build(reals, diag, self._command, context)
+            self.done.emit(response)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
 class PtolShell(QWidget):
     """
     In-scene Ptolemy shell.
@@ -66,7 +169,8 @@ class PtolShell(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumSize(600, 360)
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setStyleSheet('background: #050510;')
         self._mode = _DEFAULT_MODE
 
         layout = QVBoxLayout(self)
@@ -74,15 +178,26 @@ class PtolShell(QWidget):
         layout.setSpacing(0)
 
         # ── Terminal area ─────────────────────────────────────────────────────
+        _term_ok = False
         if _HAS_QTERM:
-            self._term = QTermWidget.QTermWidget()
-            self._term.setColorScheme('Linux')
-            self._term.setScrollBarPosition(QTermWidget.QTermWidget.NoScrollBar)
-            self._term.setTerminalFont(QFont('Monospace', 10))
-            self._term.startShellProgram()
-            self._term.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            layout.addWidget(self._term)
-        else:
+            try:
+                self._term = QTermWidget.QTermWidget()
+                self._term.setColorScheme('Linux')
+                scroll_pos = getattr(QTermWidget.QTermWidget, 'ScrollBarRight', None)
+                if scroll_pos is None:
+                    _enum = getattr(QTermWidget.QTermWidget, 'ScrollBarPosition', None)
+                    if _enum is not None:
+                        scroll_pos = getattr(_enum, 'ScrollBarRight', None)
+                if scroll_pos is not None:
+                    self._term.setScrollBarPosition(scroll_pos)
+                self._term.setTerminalFont(QFont('Monospace', 10))
+                self._term.startShellProgram()
+                self._term.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+                layout.addWidget(self._term)
+                _term_ok = True
+            except Exception as exc:
+                print(f'[PtolShell] QTermWidget init failed, using fallback: {exc}')
+        if not _term_ok:
             self._term = _FallbackTerm(self)
             layout.addWidget(self._term)
 
@@ -93,7 +208,7 @@ class PtolShell(QWidget):
 
         self._mode_label = QLabel('Ptolemy')
         self._mode_label.setFixedWidth(62)
-        self._mode_label.setAlignment(Qt.AlignCenter)
+        self._mode_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._mode_label.setFont(QFont('Monospace', 9))
 
         self._input = _ModeInput(self)
@@ -111,6 +226,20 @@ class PtolShell(QWidget):
         layout.addWidget(bar_widget)
 
         self._apply_mode_color(_DEFAULT_MODE)
+
+        # SedenionGate — blocks re-entry during active Ptolemy inference
+        self._ptol_busy = False
+        self._phila     = None   # lazy PhiladelphosConsole (no-weights path)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if hasattr(self, '_input'):
+            self._input.setFocus()
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        if hasattr(self, '_input'):
+            self._input.setFocus()
 
     # ── Mode commit ───────────────────────────────────────────────────────────
 
@@ -177,6 +306,18 @@ class PtolShell(QWidget):
             self._term.sendText(out + '\n')
         else:
             self._term.write(out + '\n')
+
+    def _ccb_add(self, prompt_text: str, response_text: str):
+        """Add a completed Ptolemy C/O exchange to the kernel CCB."""
+        ptol = getattr(self, 'Ptolemy', None)
+        ccb  = getattr(ptol, 'ccb', None) if ptol else None
+        if ccb is None or not response_text.strip():
+            return
+        try:
+            from Philadelphos.cyclic_context_buffer import PromptObject, ResponseObject
+            ccb.add(PromptObject(prompt_text), ResponseObject(response_text))
+        except Exception:
+            pass
 
     def _set_transient_label(self, name: str, color: str):
         """Briefly show Face name as mode label (does not persist)."""
@@ -282,10 +423,10 @@ class PtolShell(QWidget):
                     except Exception as ex:
                         _write(f'Archimedes: {ex}', '#ff5555')
                 # Emit on bus if available
-                if ptol and hasattr(ptol, 'bus'):
+                if ptol and hasattr(ptol, 'msg_bus'):
                     try:
                         from Pharos.PtolBus import BusMessage, CH_FACE_EVENT, Priority
-                        ptol.bus.publish(BusMessage(
+                        ptol.msg_bus.publish(BusMessage(
                             CH_FACE_EVENT,
                             {'action': 'subshell', 'face': face_name},
                             Priority.T1, sender='PtolShell'))
@@ -319,31 +460,335 @@ class PtolShell(QWidget):
                 _write('Bus not available.', '#ff5555')
 
         elif cmd == 'bus':
-            if ptol and hasattr(ptol, 'bus'):
-                b = ptol.bus
-                _write(f'PtolBus  channels={len(b.channels())}  queue={b.queue_depth()}', '#00ccff')
-                for ch in b.channels():
-                    _write(f'  {ch:30s}  subscribers={b.subscriber_count(ch)}', '#aaaaaa')
+            b = getattr(ptol, 'msg_bus', None)
+            if b:
+                try:
+                    _write(f'PtolBus  channels={len(b.channels())}  queue={b.queue_depth()}', '#00ccff')
+                    for ch in b.channels():
+                        _write(f'  {ch:30s}  subscribers={b.subscriber_count(ch)}', '#aaaaaa')
+                except Exception as ex:
+                    _write(f'Bus status error: {ex}', '#ff5555')
             else:
-                _write('Bus not available.', '#ff5555')
+                _write('msg_bus not available.', '#ff5555')
+
+        elif cmd == '/claude':
+            prompt = command[len('/claude'):].strip()
+            if not prompt:
+                _write('Usage: /claude <prompt>', '#ff9900')
+                return
+            self._ainur_respond(prompt, _write)
+
+        elif cmd == '/gemini':
+            prompt = command[len('/gemini'):].strip()
+            if not prompt:
+                _write('Usage: /gemini <prompt>', '#ff9900')
+                return
+            self._gemini_respond(prompt, _write)
+
+        elif cmd in ('/datainput', 'datainput'):
+            # Extract path from command if present, else prompt via dialog
+            tail_parts = [p for p in parts[1:] if not p.startswith('-')]
+            corpus_path = ' '.join(tail_parts) if tail_parts else None
+            if not corpus_path:
+                try:
+                    from PyQt6.QtWidgets import QFileDialog
+                    corpus_path = QFileDialog.getExistingDirectory(
+                        self, 'Select Corpus Directory',
+                        os.path.expanduser('~'))
+                    if not corpus_path:
+                        _write('[DataInput] cancelled.', '#888888')
+                        return
+                except Exception:
+                    _write('[DataInput] Usage: /DataInput /path/to/corpus', '#ff9900')
+                    return
+            _write(f'[DataInput] ingesting: {corpus_path}', '#9988ff')
+            try:
+                from Philadelphos.data_input import handle_data_input
+                import threading
+                flags = [p for p in (parts[1:] if len(parts) > 1 else [])
+                         if p.startswith('-')]
+                dm = '--dm' in [f.lower() for f in flags]
+
+                def _run():
+                    from PyQt6.QtCore import QTimer
+                    try:
+                        handle_data_input(corpus_path=corpus_path,
+                                          diagnostic_mode=dm,
+                                          ainur_instance=getattr(self, '_ainur', None))
+                        self._brain = None  # invalidate — next query loads new weights
+                        QTimer.singleShot(0, lambda: _write(
+                            '[DataInput] Training complete — Ptolemy is ready.', '#aaffcc'))
+                    except Exception as _ex:
+                        _msg = str(_ex)
+                        QTimer.singleShot(0, lambda: _write(
+                            f'[DataInput] training error: {_msg}', '#ff5555'))
+
+                t = threading.Thread(target=_run, daemon=True)
+                t.start()
+                _write('[DataInput] tower running in background…', '#9988ff')
+                _write('When complete: weights saved to Philadelphos/weights/', '#888888')
+            except Exception as ex:
+                _write(f'[DataInput] error: {ex}', '#ff5555')
+
+        elif cmd in ('/outputtuning', 'outputtuning'):
+            _write('[OutputTuning] starting shell…', '#9988ff')
+            try:
+                from Philadelphos.output_tuner import parse_and_run as ot_run
+                ot_run(command)
+            except Exception as ex:
+                _write(f'[OutputTuning] error: {ex}', '#ff5555')
 
         elif cmd == 'help' or cmd == '?':
             _write('Ptolemy commands:', '#00ccff')
             _write('  face <name> [message]  — open face subshell / send message')
             _write('  faces                  — list active faces')
             _write('  bus                    — bus channel status')
+            _write('  /DataInput [--DM]      — ingest corpus, train SMNNIP tower')
+            _write('  /OutputTuning [flags]  — diagnostic output tuner shell')
+            _write('  /claude <prompt>       — [user] ask Claude directly')
+            _write('  /gemini <prompt>       — [user] ask Gemini directly')
             _write('  help                   — this list')
+            _write('  (anything else)        — Ptolemy responds via SMNNIP 𝕆 layer')
 
         else:
-            # Unknown command — fall through to Commandow
+            # Primary: Ptolemy responds via SMNNIP tower (backward to Reals)
+            self._ptolemy_respond(command, _write)
+
+    def _ptolemy_respond(self, command: str, write_fn):
+        """
+        Ptolemy's primary response path.
+        Routes through PhiladelphosConsole → SMIP tower.
+        SedenionGate closes on prompt submission, opens on response delivery.
+        If SMIP weights are trained: L3 autoregressive generation (𝕆 layer).
+        If no weights: Noether diagnostic from PhiladelphosConsole.
+        """
+        # SedenionGate — reject while response in flight
+        if self._ptol_busy:
+            write_fn('[Gate closed — response in flight]', '#888888')
+            return
+        self._ptol_busy = True
+
+        # Lazy PtolemyTongue
+        if not hasattr(self, '_tongue') or self._tongue is None:
             try:
-                from Pharos.Commandow.Commandow import Tools
-                if _HAS_QTERM:
-                    self._term.sendText(f'# Ptolemy: {command}\n')
-                else:
-                    _write(f'Ptolemy > {command}')
-            except Exception as ex:
-                _write(f'Unknown command: {command}  ({ex})', '#ff5555')
+                from Philadelphos.ptolemy_tongue import PtolemyTongue
+                self._tongue = PtolemyTongue()
+            except Exception:
+                self._tongue = None
+
+        def _flush(text: str):
+            t = text.strip()
+            if not t:
+                return
+            if self._tongue is not None:
+                t = self._tongue.filter(t)
+            write_fn(t, '#aaffcc')
+
+        def _gate_open():
+            self._ptol_busy = False
+
+        # ── Path A: SMIP weights exist — L3 autoregressive generation ─────────
+        if not hasattr(self, '_brain') or self._brain is None:
+            try:
+                from Pharos.PtolBrain import PtolBrain
+                self._brain = PtolBrain()
+                write_fn(self._brain.status(), '#00ccff')
+            except FileNotFoundError:
+                self._brain = None
+            except Exception as exc:
+                write_fn(f'[Ptolemy] brain error: {exc}', '#ff5555')
+                self._brain = None
+
+        if self._brain is not None:
+            write_fn('Ptolemy ›', '#00ccff')
+            self._ptol_buf = []
+
+            def on_chunk(ch):
+                self._ptol_buf.append(ch)
+                joined = ''.join(self._ptol_buf)
+                if any(joined.endswith(p) for p in ('.', '!', '?', '\n')) or len(joined) > 120:
+                    _flush(joined)
+                    self._ptol_buf = []
+
+            def on_done():
+                _flush(''.join(self._ptol_buf))
+                response_text = ''.join(self._ptol_buf)
+                self._ptol_buf = []
+                self._ptol_thread = None
+                _gate_open()
+                self._ccb_add(command, response_text)
+
+            def on_error(msg):
+                write_fn(f'[Ptolemy] {msg}', '#ff5555')
+                self._ptol_thread = None
+                _gate_open()
+
+            thread = _SMNNIPThread(self._brain, command, parent=self)
+            thread.chunk.connect(on_chunk, Qt.ConnectionType.QueuedConnection)
+            thread.done.connect(on_done,   Qt.ConnectionType.QueuedConnection)
+            thread.error.connect(on_error, Qt.ConnectionType.QueuedConnection)
+            self._ptol_thread = thread
+            thread.start()
+            return
+
+        # ── Path B: No weights — Philadelphos Noether diagnostic ─────────────
+        write_fn('[Ptolemy] No corpus trained — running Noether diagnostic', '#9988ff')
+        write_fn('[Ptolemy] Use /DataInput to train the tower first.', '#ff9900')
+        write_fn('Ptolemy ›', '#00ccff')
+
+        if self._phila is None:
+            try:
+                from Philadelphos.philadelphos_console import PhiladelphosConsole
+                self._phila = PhiladelphosConsole()
+            except Exception as exc:
+                write_fn(f'[Philadelphos] init error: {exc}', '#ff5555')
+                _gate_open()
+                return
+
+        def on_phila_done(response: str):
+            t = response.strip()
+            if self._tongue is not None:
+                t = self._tongue.filter(t)
+            write_fn(t, '#aaffcc')
+            self._phila_thread = None
+            _gate_open()
+            self._ccb_add(command, response)
+
+        def on_phila_error(msg: str):
+            write_fn(f'[Philadelphos] {msg}', '#ff5555')
+            self._phila_thread = None
+            _gate_open()
+
+        thread = _PhiladelphosThread(self._phila, command, parent=self)
+        thread.done.connect(on_phila_done,  Qt.ConnectionType.QueuedConnection)
+        thread.error.connect(on_phila_error, Qt.ConnectionType.QueuedConnection)
+        self._phila_thread = thread
+        thread.start()
+
+    def _ainur_respond(self, command: str, write_fn):
+        """
+        Send a free-form command to Ainur (Claude API).
+        Runs stream() in a QThread; chunks are filtered through PtolemyTongue
+        and written to the terminal as they arrive.
+        Lazy-initialises self._ainur and self._tongue on first call.
+        """
+        if not hasattr(self, '_ainur') or self._ainur is None:
+            try:
+                from Philadelphos.Ainur.ainur import Ainur
+                self._ainur = Ainur()
+                if not self._ainur.status.ready:
+                    write_fn(f'[Ainur] not ready: {self._ainur.status.error}', '#ff5555')
+                    return
+                write_fn(self._ainur.status.header(), '#9988ff')
+            except Exception as exc:
+                write_fn(f'[Ainur] init error: {exc}', '#ff5555')
+                self._ainur = None
+                return
+
+        # Lazy PtolemyTongue init — last filter before display
+        if not hasattr(self, '_tongue') or self._tongue is None:
+            try:
+                from Philadelphos.ptolemy_tongue import PtolemyTongue
+                self._tongue = PtolemyTongue()
+            except Exception:
+                self._tongue = None
+
+        write_fn('Ainur ›', '#9988ff')
+
+        # Running buffer — flush at sentence boundary or 120 chars
+        self._ainur_buf = []
+
+        def _flush(text: str):
+            t = text.strip()
+            if not t:
+                return
+            if self._tongue is not None:
+                t = self._tongue.filter(t)
+            write_fn(t, '#ccbbff')
+
+        def on_chunk(chunk):
+            self._ainur_buf.append(chunk)
+            joined = ''.join(self._ainur_buf)
+            if any(joined.endswith(p) for p in ('.', '!', '?', '\n')) or len(joined) > 120:
+                _flush(joined)
+                self._ainur_buf = []
+
+        def on_done():
+            _flush(''.join(self._ainur_buf))
+            self._ainur_buf = []
+            self._ainur_thread = None
+
+        def on_error(msg):
+            write_fn(f'[Ainur] stream error: {msg}', '#ff5555')
+            self._ainur_thread = None
+
+        thread = _AinurThread(self._ainur, command, parent=self)
+        thread.chunk.connect(on_chunk, Qt.ConnectionType.QueuedConnection)
+        thread.done.connect(on_done,   Qt.ConnectionType.QueuedConnection)
+        thread.error.connect(on_error, Qt.ConnectionType.QueuedConnection)
+        self._ainur_thread = thread   # keep alive until done
+        thread.start()
+
+    def _gemini_respond(self, prompt: str, write_fn):
+        """
+        Send prompt to Gemini (user-level command).
+        Requires GEMINI_API_KEY in environment.
+        Chunks filtered through PtolemyTongue before display.
+        """
+        import os
+        key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+        if not key:
+            write_fn('[Gemini] GEMINI_API_KEY not set — Gemini offline.', '#ff5555')
+            write_fn('[Gemini] Set env var GEMINI_API_KEY to enable.', '#ff9900')
+            return
+
+        try:
+            import google.generativeai
+        except ImportError:
+            write_fn('[Gemini] google-generativeai not installed.', '#ff5555')
+            write_fn('[Gemini] Run: pip3 install google-generativeai', '#ff9900')
+            return
+
+        if not hasattr(self, '_tongue') or self._tongue is None:
+            try:
+                from Philadelphos.ptolemy_tongue import PtolemyTongue
+                self._tongue = PtolemyTongue()
+            except Exception:
+                self._tongue = None
+
+        write_fn('Gemini ›', '#4db8ff')
+        self._gemini_buf = []
+
+        def _flush(text: str):
+            t = text.strip()
+            if not t:
+                return
+            if self._tongue is not None:
+                t = self._tongue.filter(t)
+            write_fn(t, '#aaddff')
+
+        def on_chunk(chunk):
+            self._gemini_buf.append(chunk)
+            joined = ''.join(self._gemini_buf)
+            if any(joined.endswith(p) for p in ('.', '!', '?', '\n')) or len(joined) > 120:
+                _flush(joined)
+                self._gemini_buf = []
+
+        def on_done():
+            _flush(''.join(self._gemini_buf))
+            self._gemini_buf = []
+            self._gemini_thread = None
+
+        def on_error(msg):
+            write_fn(f'[Gemini] error: {msg}', '#ff5555')
+            self._gemini_thread = None
+
+        thread = _GeminiThread(prompt, key, parent=self)
+        thread.chunk.connect(on_chunk, Qt.ConnectionType.QueuedConnection)
+        thread.done.connect(on_done,   Qt.ConnectionType.QueuedConnection)
+        thread.error.connect(on_error, Qt.ConnectionType.QueuedConnection)
+        self._gemini_thread = thread
+        thread.start()
 
     def _apply_mode_color(self, mode: str):
         label, color, _, _ = _MODES.get(mode, _MODES[_DEFAULT_MODE])
@@ -364,7 +809,7 @@ class _ModeInput(QLineEdit):
     mode_commit = pyqtSignal(str)
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.mode_commit.emit(self.text())
         else:
             super().keyPressEvent(event)
@@ -375,7 +820,7 @@ class _ModeInput(QLineEdit):
 class _FallbackTerm(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        from PyQt5.QtWidgets import QTextEdit
+        from PyQt6.QtWidgets import QTextEdit
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self._out = QTextEdit()

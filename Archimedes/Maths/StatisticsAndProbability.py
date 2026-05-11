@@ -5,7 +5,7 @@ __author__ = 'rendier'
 import math
 from decimal import Decimal
 import inspect
-from PyQt5.QtCore import QObject
+from PyQt6.QtCore import QObject
 
 class Statistics(object):  ####Make Sample Stats Modular
 	"""Stats"""

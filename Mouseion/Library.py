@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWebEngineWidgets import *
+from PyQt6.QtWidgets import *
 
 from PIL import Image
 from urllib.request import build_opener
@@ -14,14 +14,15 @@ from urllib.error import HTTPError, URLError
 
 import sys, os, string, math, pdfkit
 from Pharos.PtolFace import PtolFace
+from Pharos.PGui import PMainWindow
 
 
 # make listwidget into tree, add categories w/parents to db. TODO
-class Library(QMainWindow, PtolFace):
+class Library(PMainWindow, PtolFace):
 	
 	def __init__(self, parent=None):
 		super(Library, self).__init__(parent)
-		QMainWindow.__init__(self)
+		PMainWindow.__init__(self)
 		
 		self.Ptolemy = parent
 		print("LIBRARY PARENTS: ", self.Ptolemy)
@@ -36,7 +37,7 @@ class Library(QMainWindow, PtolFace):
 		self.setAutoFillBackground(True)
   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
 		self.setWindowIcon(QIcon(PTOL_ROOT + '/images/ptol.svg'))
-		self.resize(int(QDesktopWidget().geometry().width() * 0.8), int(QDesktopWidget().geometry().height() * 0.8))
+		self.resize(int(QApplication.primaryScreen().geometry().width() * 0.8), int(QApplication.primaryScreen().geometry().height() * 0.8))
 		self.setWindowTitle('Mouseion Library - Ptolemy')
 		
 		# print "stylesheet", self.styleSheet()
@@ -498,19 +499,19 @@ class FlippingBook(QWidget):
   # TODO:SETTINGS — hardcoded path, use PTOL_ROOT
 		self.path = QUrl.fromLocalFile(PTOL_ROOT + '/include/flipbookjs/')
 		
-		QSett = QWebEngineSettings.globalSettings()
-		QSett.setAttribute(QWebEngineSettings.PluginsEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.Accelerated2dCanvasEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.AutoLoadImages, True)
-		QSett.setAttribute(QWebEngineSettings.HyperlinkAuditingEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
-		QSett.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-		QSett.setAttribute(QWebEngineSettings.LocalContentCanAccessFileUrls, True)
-		QSett.setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
-		QSett.setAttribute(QWebEngineSettings.WebGLEnabled, True)
+		from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+		QSett = QWebEngineProfile.defaultProfile().settings()
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.AutoLoadImages, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.HyperlinkAuditingEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanAccessClipboard, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, True)
+		QSett.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
 		
 		self.webView = QWebEngineView(parent=self)
 		
@@ -594,7 +595,7 @@ def main():
 	TheStudy.show()
 
 	# It's exec_ because exec is a reserved word in Python
-	sys.exit(app.exec_())
+	sys.exit(app.exec())
 
 
 if __name__ == "__main__":

@@ -43,16 +43,19 @@ import importlib
 import struct
 from subprocess import Popen, PIPE
 
-# ── PyQt5 ─────────────────────────────────────────────────────────────────────
-from PyQt5.QtCore    import Qt, QTimer, QThread, pyqtSignal, QObject, QRect
-from PyQt5.QtGui     import QBrush, QColor, QPen, QFont, QIcon, QPixmap
-from PyQt5.QtSvg     import QSvgWidget
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QGraphicsScene,
-                              QGraphicsView, QGraphicsProxyWidget, QFrame,
-                              QDesktopWidget, QGridLayout)
+# ── PyQt6 ─────────────────────────────────────────────────────────────────────
+from PyQt6.QtCore    import Qt, QTimer, QThread, pyqtSignal, QObject, QRect, QRectF, QPointF, QEvent
+from PyQt6.QtGui     import QBrush, QColor, QPen, QFont, QIcon, QPixmap
+from PyQt6.QtSvgWidgets import QSvgWidget
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QGraphicsScene,
+                              QGraphicsView, QGraphicsProxyWidget, QGraphicsItemGroup,
+                              QGraphicsItem, QGraphicsRectItem,
+                              QFrame, QGridLayout)
 
 # ── Ptolemy core modules ───────────────────────────────────────────────────────
-from Pharos.PtolBus            import PtolBus as _PharosPtolBus, BusMessage, Priority, CH_PROMPT, CH_LOG
+from Pharos.PtolBus            import (PtolBus as _PharosPtolBus, BusMessage, Priority,
+                                        CH_PROMPT, CH_LOG, CH_BLOCKCHAIN)
+from Pharos.PtolRegistry       import FaceRegistry
 from urllib.request            import build_opener
 
 try:
@@ -63,10 +66,10 @@ except Exception as _e:
 
 # DEFERRED — may fail, reported to shell, never kills desktop
 try:
-    from Callimachus.Database  import Database
+    from Callimachus.v09 import Callimachus as _CallimachusV09
 except Exception as _e:
-    Database = None
-    print(f'[Callimachus] Database: {_e}')
+    _CallimachusV09 = None
+    print(f'[Callimachus] v09: {_e}')
 
 try:
     from Pharos.Dialogs        import Dialogs
@@ -112,186 +115,6 @@ except Exception as _e:
     print(f'[Tesla] KVM: {_e}')
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  PtolBus — Face lifecycle manager
-# ══════════════════════════════════════════════════════════════════════════════
-
-class PtolBus(QObject):
-    """
-    Central integration bus. Owns the face registry and enforces the
-    threading contract: faces not on screen are not processing.
-
-    Usage:
-        window = self.bus.launch(TreasureHunt)        # inline, threaded
-        self.bus.suspend(window.face_id)              # minimize → pause
-        self.bus.resume(window.face_id)               # restore → unpause
-        self.bus.terminate(window.face_id)            # close → destroy
-    """
-
-    face_launched   = pyqtSignal(str)     # face_id
-    face_suspended  = pyqtSignal(str)
-    face_resumed    = pyqtSignal(str)
-    face_terminated = pyqtSignal(str)
-
-    def __init__(self, ptolemy):
-        super().__init__(ptolemy)
-        self.Ptolemy  = ptolemy
-        self._registry = {}               # face_id → FaceRecord
-        self._counter  = 0
-
-    # ── Launch ────────────────────────────────────────────────────────────────
-
-    def launch(self, face_cls, *args, use_vispy=False, **kwargs):
-        """
-        Instantiate a Face and wrap it in a PWindow on the scene.
-        Returns the PWindow item.
-        face_cls must accept parent=Ptolemy as first kwarg.
-        If use_vispy=True, expects face_cls to return a VisPy canvas;
-        wraps it as QGraphicsProxyWidget(canvas.native) instead.
-        """
-        from Pharos.PGui import PWindow           # lazy — PGui not written yet
-
-        face_id = f"{face_cls.__name__}_{self._counter}"
-        self._counter += 1
-
-        # Instantiate the face
-        face = face_cls(*args, parent=self.Ptolemy, **kwargs)
-
-        # Wire bus back-reference into face (PtolFace contract)
-        if hasattr(face, '_ptol_id'):
-            face._ptol_id  = face_id
-            face._ptol_bus = self
-
-        # Collect timers declared by the face (convention: face._ptol_timers)
-        timers = getattr(face, '_ptol_timers', [])
-
-        # Collect thread declared by the face (convention: face._ptol_thread)
-        thread = getattr(face, '_ptol_thread', None)
-
-        # Wrap in PWindow chrome on the scene
-        if use_vispy:
-            native = face.native          # VisPy canvas native Qt widget
-            pwin = PWindow(native, title=face_cls.__name__,
-                           face_id=face_id, bus=self,
-                           ptolemy=self.Ptolemy)
-        else:
-            pwin = PWindow(face, title=face_cls.__name__,
-                           face_id=face_id, bus=self,
-                           ptolemy=self.Ptolemy)
-
-        self.Ptolemy.scene.addItem(pwin)
-
-        self._registry[face_id] = {
-            'face':    face,
-            'pwin':    pwin,
-            'thread':  thread,
-            'timers':  timers,
-            'state':   'running',
-            'cls':     face_cls.__name__,
-        }
-
-        self.face_launched.emit(face_id)
-        return pwin
-
-    # ── Launch subprocess (legacy / standalone mode) ──────────────────────────
-
-    def launch_subprocess(self, script_path, *args):
-        """
-        For faces not yet integrated inline (legacy subprocess path).
-        Returns Popen handle. No suspend/resume — process-level only.
-        """
-        cmd = ['python3', script_path] + list(args)
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        face_id = f"subprocess_{os.path.basename(script_path)}_{self._counter}"
-        self._counter += 1
-        self._registry[face_id] = {
-            'face':   None,
-            'pwin':   None,
-            'thread': None,
-            'timers': [],
-            'state':  'subprocess',
-            'proc':   proc,
-            'cls':    script_path,
-        }
-        return proc
-
-    # ── Import helper — dynamic face loading ──────────────────────────────────
-
-    def import_face(self, module_path, class_name):
-        """
-        Dynamically import a Face class by dotted module path.
-        Example: bus.import_face('Phaleron.TreasureHunt.TreasureHunt', 'TreasureHunt')
-        Returns the class. Caches the import.
-        """
-        mod = importlib.import_module(module_path)
-        return getattr(mod, class_name)
-
-    # ── Suspend / Resume / Terminate ─────────────────────────────────────────
-
-    def suspend(self, face_id):
-        """Pause all processing for a face (minimize). Thread-safe."""
-        rec = self._registry.get(face_id)
-        if not rec or rec['state'] != 'running':
-            return
-        if rec['thread']:
-            rec['thread'].quit()
-        for timer in rec['timers']:
-            timer.stop()
-        rec['state'] = 'suspended'
-        self.face_suspended.emit(face_id)
-
-    def resume(self, face_id):
-        """Resume processing for a face (restore from minimize)."""
-        rec = self._registry.get(face_id)
-        if not rec or rec['state'] != 'suspended':
-            return
-        if rec['thread']:
-            rec['thread'].start()
-        for timer in rec['timers']:
-            timer.start()
-        rec['state'] = 'running'
-        self.face_resumed.emit(face_id)
-
-    def terminate(self, face_id):
-        """Fully destroy a face and remove its PWindow from the scene."""
-        rec = self._registry.get(face_id)
-        if not rec:
-            return
-
-        # Subprocess path
-        if rec['state'] == 'subprocess':
-            proc = rec.get('proc')
-            if proc:
-                proc.terminate()
-            del self._registry[face_id]
-            return
-
-        # Inline path
-        self.suspend(face_id)
-        if rec['thread']:
-            rec['thread'].wait(2000)        # 2s grace period
-
-        pwin = rec.get('pwin')
-        if pwin and pwin.scene():
-            self.Ptolemy.scene.removeItem(pwin)
-
-        face = rec.get('face')
-        if face:
-            try:
-                face.deleteLater()
-            except Exception:
-                pass
-
-        del self._registry[face_id]
-        self.face_terminated.emit(face_id)
-
-    # ── Status ────────────────────────────────────────────────────────────────
-
-    def status(self):
-        return {fid: {'cls': r['cls'], 'state': r['state']}
-                for fid, r in self._registry.items()}
-
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PtolVispy — VisPy GL canvas integration helper
@@ -335,7 +158,7 @@ class PtolVispy:
         """Return a VisPy canvas configured for Qt5 backend embedding."""
         try:
             import vispy
-            vispy.use('PyQt5')
+            vispy.use('PyQt6')
             from vispy import app
             canvas = app.Canvas(size=size, title=title, keys=keys, show=False)
             return canvas
@@ -353,6 +176,107 @@ class PtolVispy:
         proxy = scene.addWidget(canvas.native)
         proxy.setPos(x, y)
         return proxy
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Desktop helper items — sidebar, magic strip, drag overlays
+# ══════════════════════════════════════════════════════════════════════════════
+
+class _PanelTimerFilter(QObject):
+    """Resets a single-shot hide-timer whenever the panel sees mouse activity."""
+
+    def __init__(self, timer, parent=None):
+        super().__init__(parent)
+        self._timer = timer
+
+    def eventFilter(self, obj, event):
+        if event.type() in (QEvent.Type.MouseMove,
+                             QEvent.Type.MouseButtonPress,
+                             QEvent.Type.HoverMove,
+                             QEvent.Type.Enter):
+            self._timer.start()
+        return False
+
+
+class _MagicStrip(QGraphicsRectItem):
+    """5 px invisible vertical strip anchored to the left edge of the scene.
+    Hovering or pressing it calls show_fn to reveal the sidebar."""
+
+    def __init__(self, scene_h, show_fn):
+        super().__init__(0, 0, 5, scene_h)
+        self._show_fn = show_fn
+        self.setBrush(QBrush(QColor(0, 0, 0, 1)))
+        self.setPen(QPen(Qt.PenStyle.NoPen))
+        self.setAcceptHoverEvents(True)
+        self.setZValue(200)
+
+    def hoverEnterEvent(self, event):
+        self._show_fn()
+        super().hoverEnterEvent(event)
+
+    def mousePressEvent(self, event):
+        self._show_fn()
+        super().mousePressEvent(event)
+
+
+class _DragOverlay(QGraphicsItem):
+    """Transparent grab-strip that moves a target QGraphicsItem when dragged.
+
+    Positioned over the top edge of the target; the target and overlay move
+    together.  The overlay is NOT a child of the target so it can have a
+    Z-value above the proxy widget that would otherwise eat mouse events.
+    """
+
+    def __init__(self, target, w, h=24):
+        super().__init__()
+        self._target      = target
+        self._w           = float(w)
+        self._h           = float(h)
+        self._dragging    = False
+        self._press_scene = QPointF()
+        self._press_pos   = QPointF()
+        self.setAcceptHoverEvents(True)
+        self.setZValue(2)
+
+    def boundingRect(self):
+        return QRectF(0, 0, self._w, self._h)
+
+    def paint(self, painter, option, widget=None):
+        pass
+
+    def hoverEnterEvent(self, event):
+        self.setCursor(Qt.CursorShape.SizeAllCursor)
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.unsetCursor()
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._dragging    = True
+            self._press_scene = event.scenePos()
+            self._press_pos   = self._target.pos()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._dragging:
+            delta   = event.scenePos() - self._press_scene
+            new_pos = self._press_pos + delta
+            self._target.setPos(new_pos)
+            self.setPos(new_pos)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._dragging:
+            self._dragging = False
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -381,7 +305,7 @@ class Ptolemy(QMainWindow):
         self.mediaDir  = os.path.join(self.homeDir, 'media', '')
         self.imgDir    = os.path.join(self.homeDir, 'images', '')
         self.pharosImg = os.path.join(self.imgDir, 'Pharos', '')
-        self.screen    = QDesktopWidget().screenGeometry()
+        self.screen    = QApplication.primaryScreen().geometry()
 
         # ── Scene / View ──────────────────────────────────────────────────────
         self._setup_scene()
@@ -396,7 +320,16 @@ class Ptolemy(QMainWindow):
         self.stylesheet = self._build_stylesheet()
 
         # ── Core singletons ───────────────────────────────────────────────────
-        self.db      = Database(parent=self) if Database else None
+        if _CallimachusV09:
+            _db_path = os.path.join(self.homeDir, 'Callimachus', 'data', 'ptolemy.db')
+            _hw_root = os.path.join(self.homeDir, 'Callimachus', 'data', 'hyperwebster')
+            try:
+                self.db = _CallimachusV09(_db_path, _hw_root)
+            except Exception as _e:
+                self.db = None
+                print(f'[Callimachus] init: {_e}')
+        else:
+            self.db = None
         self.dialogs = Dialogs(parent=self)  if Dialogs  else None
         self.opener   = build_opener()
         self.opener.addheaders = [
@@ -407,9 +340,9 @@ class Ptolemy(QMainWindow):
         ]
 
         # ── Integration bus ───────────────────────────────────────────────────
-        # self.bus       = face lifecycle registry (launch/suspend/terminate)
-        # self.msg_bus   = Pharos message bus (pub/sub channels, T0/T1 priority)
-        self.bus = PtolBus(self)
+        # self.bus       = FaceRegistry (launch/suspend/terminate faces)
+        # self.msg_bus   = PtolBus message bus (pub/sub channels, T0/T1 priority)
+        self.bus = FaceRegistry(self)
         self.msg_bus = _PharosPtolBus(ptolemy=self, parent=self)
         self.msg_bus.start()
         # Wire luthspell to message bus
@@ -423,7 +356,7 @@ class Ptolemy(QMainWindow):
         # Tuning Display (output stream monitor)
         try:
             from Pharos.TuningDisplay import TuningDisplay
-            self.tuning_display = TuningDisplay(bus=self.msg_bus, parent=self)
+            self.tuning_display = TuningDisplay(bus=self.msg_bus, parent=None)
             # Don't show on startup — launch via tray or shortcut
         except Exception as e:
             self.tuning_display = None
@@ -460,7 +393,58 @@ class Ptolemy(QMainWindow):
         self.cmdhistory = []
 
         # ── UI ────────────────────────────────────────────────────────────────
+        self.Philadelphos = None   # pre-set so Menu/Interface don't crash before _launch_philadelphos()
         self._init_ui()
+
+        # ── dmesg boot header ─────────────────────────────────────────────────
+        try:
+            from Pharos.PtolDmesg import dmesg
+            dmesg.boot()
+            dmesg.write('pharos', 'boot initiated')
+        except Exception as _e:
+            print(f'[dmesg] {_e}')
+
+        # ── Blockchain — resurrection check + bus subscription ────────────────
+        self._chain = None
+        try:
+            from Pharos.ptol_blockchain import chain as _chain, SafeMode
+            mode, ctx = _chain.resurrection_mode()
+            if mode != SafeMode.CLEAN:
+                try:
+                    from Pharos.PtolDmesg import dmesg
+                    dmesg.warn('pharos', f'resurrection mode: {mode.name}')
+                except Exception:
+                    pass
+                print(f'[blockchain] resurrection: {mode.name} — {ctx}')
+            self.msg_bus.subscribe(CH_BLOCKCHAIN, _chain.bus_handler)
+            self._chain = _chain
+        except Exception as _e:
+            print(f'[blockchain] {_e}')
+
+        # ── CyclicContextBuffer — kernel-owned, shared via CH_CONTEXT ─────────
+        self.ccb = None
+        try:
+            from Philadelphos.cyclic_context_buffer import CyclicContextBuffer
+            def _ccb_evict(entry):
+                try:
+                    self.msg_bus.broadcast_context_update({
+                        'compressed': entry._compressed,
+                        'address':    entry._hyperindex_address,
+                        'hash':       entry._block_hash,
+                    })
+                except Exception:
+                    pass
+            self.ccb = CyclicContextBuffer(on_evict=_ccb_evict)
+        except Exception as _e:
+            print(f'[CCB] {_e}')
+
+        # ── Lich — undead emergency manager ──────────────────────────────────
+        try:
+            from Lich import LichKing
+            self.lich = LichKing(self)
+        except Exception as _e:
+            self.lich = None
+            print(f'[Lich] {_e}')
 
     # ── Scene setup ───────────────────────────────────────────────────────────
 
@@ -476,9 +460,9 @@ class Ptolemy(QMainWindow):
         self.scene = QGraphicsScene(0, 0, w, h)
         self.view  = QGraphicsView(self._form)
         self.view.setScene(self.scene)
-        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.view.setFrameShape(QFrame.NoFrame)
+        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.view.setFrameShape(QFrame.Shape.NoFrame)
         self.view.setBackgroundBrush(QBrush(QColor('black')))
         self.view.setInteractive(True)
         self.view.setContentsMargins(0, 0, 0, 0)
@@ -494,52 +478,135 @@ class Ptolemy(QMainWindow):
 
     def _init_ui(self):
         self.setStyleSheet(self.stylesheet)
-        self._launch_philadelphos()
 
         if Menu:
             self.Menu = Menu(parent=self)
-            self.scene.addWidget(self.Menu)
+            self.Menu.setParent(None)       # detach from QMainWindow so addWidget can embed it
+            self._menu_proxy = self.scene.addWidget(self.Menu)
         else:
             self.Menu = None
+            self._menu_proxy = None
 
         if User:
             self.Interface = User(self)
+            self.Interface.setParent(None)  # detach from QMainWindow so addWidget can embed it
             self._pharos_proxy = self.scene.addWidget(self.Interface)
+            # Group holds proxy + UserDisplay so the whole Interface moves as one.
+            # No flags — movement via itemAt() in mousePressEvent.
+            self._interface_group = QGraphicsItemGroup()
+            self._interface_group.setZValue(1)
+            self.scene.addItem(self._interface_group)
+            self._pharos_proxy.setParentItem(self._interface_group)
+            self._pharos_proxy.setPos(0, 0)          # local origin inside group
+            self.Interface.UserDisplay.setParentItem(self._interface_group)
+            self._interface_group.setPos(self.Interface.x, self.Interface.y)
         else:
             self.Interface = None
             self._pharos_proxy = None
+            self._interface_group = None
             print('[Pharos] Interface (OpenGL) disabled — skipped')
 
-        self.PtolShell = None
-        self.LeftPanel = None
+        try:
+            if PtolShell:
+                self.PtolShell = PtolShell(parent=None)
+                self.PtolShell.Ptolemy = self
+                self._shell_proxy = self.scene.addWidget(self.PtolShell)
+                self._shell_proxy.setPos(0, 0)
+                self._shell_proxy.setZValue(0)
+                self._shell_proxy.hide()             # toggle via Ctrl+`
+                self.PtolShell.resize(self.screen.width(), self.screen.height())
+            else:
+                self.PtolShell = None
+        except Exception as _e:
+            self.PtolShell = None
+            print(f'[PtolShell] init failed: {_e}')
 
-        self._key_filter = _GlobalKeyFilter(self)
-        QApplication.instance().installEventFilter(self._key_filter)
+        self._launch_philadelphos()   # after PtolShell — needs self.PtolShell set
+
+        # ── LeftPanel (fixed sidebar, 30 s autohide) ──────────────────────────
+        self._panel_proxy     = None
+        self._panel_hide_timer = None
+        self._magic_strip     = None
+        try:
+            from Pharos.LeftPanel import LeftPanel as _LP
+            self.LeftPanel = _LP(parent=None)
+            self.LeftPanel.resize(260, self.screen.height())
+            self._panel_proxy = self.scene.addWidget(self.LeftPanel)
+            self._panel_proxy.setPos(0, 0)
+            self._panel_proxy.setZValue(5)
+            self._panel_proxy.hide()                 # hidden until magic strip
+
+            self._panel_hide_timer = QTimer(self)
+            self._panel_hide_timer.setSingleShot(True)
+            self._panel_hide_timer.setInterval(30000)
+            self._panel_hide_timer.timeout.connect(self._hide_left_panel)
+
+            self._panel_ef = _PanelTimerFilter(self._panel_hide_timer)
+            self.LeftPanel.installEventFilter(self._panel_ef)
+
+            self._magic_strip = _MagicStrip(self.screen.height(), self._show_left_panel)
+            self._magic_strip.setPos(0, 0)
+            self.scene.addItem(self._magic_strip)
+        except Exception as _lp_e:
+            self.LeftPanel = None
+            print(f'[LeftPanel] {_lp_e}')
+
+        # wire drag overlays after first event loop (widgets sized by then)
+        self._iface_drag = None
+        self._menu_drag  = None
+        QTimer.singleShot(0, self._wire_drag_overlays)
 
     def raise_ptolemy(self):
         self.raise_()
         self.activateWindow()
-        if self._pharos_proxy and self.Interface:
-            w = self.screen.width()
-            h = self.screen.height()
-            self._pharos_proxy.setPos(w - self.Interface.width() - 20, h // 2 - 150)
+        if self._interface_group and self.Interface:
+            self._interface_group.setPos(self.Interface.x, self.Interface.y)
+            if self._iface_drag:
+                self._iface_drag.setPos(self.Interface.x, self.Interface.y)
+
+    def _show_left_panel(self):
+        if self._panel_proxy:
+            self._panel_proxy.show()
+            if self._panel_hide_timer:
+                self._panel_hide_timer.start()
+
+    def _hide_left_panel(self):
+        if self._panel_proxy:
+            self._panel_proxy.hide()
+
+    def _wire_drag_overlays(self):
+        """Add transparent drag-grab strips over moveable scene items."""
+        if self._interface_group and self.Interface:
+            br = self._interface_group.childrenBoundingRect()
+            gp = self._interface_group.pos()
+            w  = br.width() if br.width() > 1 else self.Interface.width()
+            if w > 0:
+                self._iface_drag = _DragOverlay(self._interface_group, w, 24)
+                self._iface_drag.setPos(gp)
+                self.scene.addItem(self._iface_drag)
+
+        if self._menu_proxy and self.Menu:
+            mp = self._menu_proxy
+            w  = self.Menu.width()  or 200
+            h  = self.Menu.height() or 30
+            if w > 0:
+                self._menu_drag = _DragOverlay(mp, w, h)
+                self._menu_drag.setPos(mp.pos())
+                self.scene.addItem(self._menu_drag)
 
     def _launch_philadelphos(self):
         """
-        Philadelphos is the AI/command layer. Launch inline if available,
-        subprocess fallback otherwise.
+        Philadelphos is the AI/command layer.
+        If PtolShell is present it owns the visible input/output — Phila is
+        API-only (setOutput calls). Only add Phila to scene when no shell exists.
         """
         try:
             from Philadelphos.Phila import Phila
-            self.Philadelphos = Phila(self)
-            self.scene.addWidget(self.Philadelphos)
-        except ImportError:
-            try:
-                from Pharos.Philadelphos.CommandInput import Command
-                self.Philadelphos = Command(self)
+            self.Philadelphos = Phila(None)
+            if not self.PtolShell:
                 self.scene.addWidget(self.Philadelphos)
-            except ImportError:
-                self.Philadelphos = None
+        except ImportError:
+            self.Philadelphos = None
 
     # ── Face launchers (bus delegates) ────────────────────────────────────────
 
@@ -607,11 +674,18 @@ class Ptolemy(QMainWindow):
         from Archimedes.Maths.GraphPlot import GraphPlot
         return self.bus.launch(GraphPlot)
 
+    def openFractal(self, event=None):
+        try:
+            from Alexandria.FractalRenderer import FractalView
+            return self.bus.launch(FractalView)
+        except Exception as e:
+            print(f'[Fractal] {e}')
+
     def openStanDev(self, event=None):
         # Stub: StandardDeviation face not yet implemented.
         # Replace with: return self.open_face('Archimedes.Maths.StandardDeviation', 'StandardDeviation')
         try:
-            from PyQt5.QtWidgets import QMessageBox
+            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.information(self, 'Standard Deviation',
                 'StandardDeviation face is not implemented yet.')
         except Exception as e:
@@ -651,7 +725,7 @@ class Ptolemy(QMainWindow):
     def pen(self, color, width=1):
         p = QPen(QColor(color))
         p.setWidth(width)
-        p.setCapStyle(Qt.FlatCap)
+        p.setCapStyle(Qt.PenCapStyle.FlatCap)
         return p
 
     def brush(self, color):
@@ -725,11 +799,71 @@ class Ptolemy(QMainWindow):
         event.accept()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        key  = event.key()
+        mods = event.modifiers()
+        if mods & Qt.KeyboardModifier.ControlModifier:
+            _map = {
+                Qt.Key.Key_Q:         self.close,
+                Qt.Key.Key_A:         self.openGraphPlot,       # Archimedes
+                Qt.Key.Key_L:         self.openDbCPanel,        # Callimachus
+                Qt.Key.Key_V:         self.openCore,            # Alexandria
+                Qt.Key.Key_N:         self.openNavigation,      # Anaximander
+                Qt.Key.Key_K:         self.openKryptos,
+                Qt.Key.Key_M:         self.openLibrary,         # Mouseion
+                Qt.Key.Key_P:         self.openSearch,          # Phaleron
+                Qt.Key.Key_H:         self.raise_ptolemy,       # Pharos — raise interface
+                Qt.Key.Key_T:         self.openTesla,
+                Qt.Key.Key_F:         self.openSearch,
+                Qt.Key.Key_Comma:     self.openSettings,
+                Qt.Key.Key_QuoteLeft: self.openShell,           # CTRL+`
+            }
+            fn = _map.get(key)
+            if fn:
+                fn()
+
+    def openShell(self, event=None):
+        """Toggle PtolShell visibility."""
+        if self.PtolShell:
+            if self.PtolShell.isVisible():
+                self.PtolShell.hide()
+            else:
+                self.PtolShell.show()
+                self.PtolShell.setFocus()
+
+    def openFace(self, face_id: str):
+        """Dispatcher: open a Face by id string (used by DualTrayMenu, graph nodes)."""
+        _dispatch = {
+            'pharos':       self.raise_ptolemy,
+            'archimedes':   self.openGraphPlot,
+            'callimachus':  self.openDbCPanel,
+            'alexandria':   self.openCore,
+            'anaximander':  self.openNavigation,
+            'kryptos':      self.openKryptos,
+            'mouseion':     self.openLibrary,
+            'phaleron':     self.openSearch,
+            'tesla':        self.openTesla,
+            'settings':     self.openSettings,
+        }
+        fn = _dispatch.get(face_id.lower())
+        if fn:
+            fn()
+
+    def openKryptos(self, event=None):
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, 'Kryptos', 'Kryptos face not yet implemented.')
+        except Exception:
+            pass
+
+    def openTesla(self, event=None):
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(self, 'Tesla', 'Tesla face not yet implemented.')
+        except Exception:
             pass
 
     def mousePressEvent(self, event):
-        item = self.view.itemAt(event.x(), event.y())
+        item = self.view.itemAt(int(event.position().x()), int(event.position().y()))
         if self.Philadelphos and hasattr(self.Philadelphos, 'setOutput'):
             self.Philadelphos.setOutput(str(item), speak=False)
         self._aniclick(event)
@@ -737,7 +871,7 @@ class Ptolemy(QMainWindow):
     def _aniclick(self, event):
         pen = self.pen('white', 2)
         brush = self.brush('black')
-        x, y = event.x(), event.y()
+        x, y = int(event.position().x()), int(event.position().y())
         c1 = self.scene.addEllipse(x-10, y-10, 20,  20,  pen, brush)
         c2 = self.scene.addEllipse(x-20, y-20, 40,  40,  pen, brush)
         c3 = self.scene.addEllipse(x-30, y-30, 60,  60,  pen, brush)
@@ -749,33 +883,20 @@ class Ptolemy(QMainWindow):
         if item.scene():
             self.scene.removeItem(item)
 
+    def log(self, msg, color=None):
+        """Post a log message to the message bus (CH_LOG channel)."""
+        try:
+            meta = {'color': color} if color else {}
+            self.msg_bus.publish(BusMessage(CH_LOG, str(msg), Priority.T2,
+                                            sender='Ptolemy', meta=meta))
+        except Exception:
+            print(f'[Ptolemy.log] {msg}')
+
     def hideShow(self):
         if self.isVisible():
             self.hide()
         else:
             self.show()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  _GlobalKeyFilter — application-wide keyboard shortcut interceptor
-#  TODO: wire CTRL+Q/A/L/V/N/K/M/P/H/T/F shortcuts to Ptolemy face launchers
-# ══════════════════════════════════════════════════════════════════════════════
-
-from PyQt5.QtCore import QObject, QEvent
-
-class _GlobalKeyFilter(QObject):
-    def __init__(self, ptolemy):
-        super().__init__(ptolemy)
-        self.Ptolemy = ptolemy
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyPress:
-            key  = event.key()
-            mods = event.modifiers()
-            if mods == Qt.ControlModifier:
-                if key == Qt.Key_Q:
-                    self.Ptolemy.close(); return True
-        return False
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -789,7 +910,7 @@ def main():
     ptol = Ptolemy()
     ptol.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

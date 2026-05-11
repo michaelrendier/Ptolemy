@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtSvg import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtSvg import *
 
 import json
 import itertools as it

@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import QUrl, QEvent, QVariant, Qt
-from PyQt5.QtGui import QIcon, QFont, QImage, QImageReader, QTextDocument, QTextImageFormat, QCursor, QTextCursor, QColor
-from PyQt5.QtWidgets import QApplication, QListWidgetItem, QInputDialog, QGridLayout, QAction, qApp, QWidget, QListWidget, QTextEdit, QCheckBox, QDesktopWidget, QMainWindow, QMessageBox
+from PyQt6.QtCore import QUrl, QEvent, Qt
+from PyQt6.QtGui import QAction, QIcon, QFont, QImage, QImageReader, QTextDocument, QTextImageFormat, QCursor, QTextCursor, QColor
+from PyQt6.QtWidgets import QApplication, QListWidgetItem, QInputDialog, QGridLayout, QWidget, QListWidget, QTextEdit, QCheckBox, QMainWindow, QMessageBox
 
 from Phaleron.Syntax import PythonHighlighter
 from Pharos.Dialogs import Dialogs
@@ -87,7 +87,7 @@ class CodeBrowser(QMainWindow):
 		self.package = "Current"
 		self.crumbs = ['Explorer', 'Current']
 		self.exploration = ""
-		self.geo = QDesktopWidget().frameGeometry()
+		self.geo = QApplication.primaryScreen().availableGeometry()
 
 		self.current = current
 		# if curScope:
@@ -128,7 +128,7 @@ class CodeBrowser(QMainWindow):
 		exitAction = QAction(QIcon(self.imgDir + 'exit.png'), 'E&xit', self)
 		exitAction.setShortcut('Ctrl+X')
 		exitAction.setStatusTip('Exit Application')
-		exitAction.triggered.connect(qApp.quit)
+		exitAction.triggered.connect(QApplication.instance().quit)
 
 		openAction = QAction(QIcon(self.imgDir + 'folder_red_open.png'), '&Open', self)
 		openAction.setShortcut('Ctrl+O')
@@ -165,8 +165,8 @@ class CodeBrowser(QMainWindow):
 		# Directory List Setup
 		self.list.setFont(QFont('Monospace', 9))
 		self.list.setFixedWidth(300)
-		self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+		self.list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 		self.list.currentItemChanged.connect(self.itemSelect)
 		self.list.itemClicked.connect(self.itemSelect)
 		self.list.itemDoubleClicked.connect(self.repopList)
@@ -176,8 +176,8 @@ class CodeBrowser(QMainWindow):
 		self.tlist.setFont(QFont('Monospace', 9))
 		self.tlist.setFixedWidth(300)
 		self.tlist.setMaximumWidth(300)
-		self.tlist.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.tlist.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.tlist.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+		self.tlist.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 		self.tlist.verticalScrollBar().valueChanged.connect(self.list.verticalScrollBar().setValue)
 		# self.list.currentItemChanged.connect(self.setText)#FOR WHEN TYPE LIST HAS setText TODO
 
@@ -268,14 +268,14 @@ class CodeBrowser(QMainWindow):
 		headerUri = QUrl(self.imgDir + 'rectgradient.jpg')
 		header = QImage(QImageReader(self.imgDir + 'rectgradient.jpg').read())
 
-		self.text.document().addResource(QTextDocument.ImageResource, headerUri, QVariant(header))
+		self.text.document().addResource(QTextDocument.ResourceType.ImageResource, headerUri, header)
 
 		imageHeader = QTextImageFormat()
 		imageHeader.setWidth(240)
 		imageHeader.setHeight(88)
 		imageHeader.setName(headerUri.toString())
 
-		self.text.document().addResource(QTextDocument.ImageResource, imageUri, QVariant(image))
+		self.text.document().addResource(QTextDocument.ResourceType.ImageResource, imageUri, image)
 
 		imageFormat = QTextImageFormat()
 		imageFormat.setWidth(88)
@@ -283,7 +283,7 @@ class CodeBrowser(QMainWindow):
 		imageFormat.setName(imageUri.toString())
 
 		textCursor = self.text.textCursor()
-		textCursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
+		textCursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.MoveAnchor)
 
 		textCursor.insertImage(imageHeader)
 		textCursor.insertImage(imageFormat)
@@ -291,7 +291,7 @@ class CodeBrowser(QMainWindow):
 		self.text.append(self.spacer.format(title) + "\n\n")
 
 		# This will hide the cursor
-		blankCursor = QCursor(Qt.BlankCursor)
+		blankCursor = QCursor(Qt.CursorShape.BlankCursor)
 		self.text.setCursor(blankCursor)
 
 	def importPkg(self):  # FIX INPUT DIALOG COLORS and from and multi import TODO
@@ -379,7 +379,7 @@ class CodeBrowser(QMainWindow):
 		term, ok = QInputDialog.getText(self, "List Search", "Enter Search Term for Current List")
 
 		if ok:
-			self.sitems = self.list.findItems(term, Qt.MatchContains)
+			self.sitems = self.list.findItems(term, Qt.MatchFlag.MatchContains)
 			for i in self.sitems:
 				i.setForeground(QColor('red'))
 
@@ -463,7 +463,7 @@ class CodeBrowser(QMainWindow):
 			self.listsEntry(dEntry, 'black', 'white', entryType)
 
 	def debug(self, state):
-		if state == Qt.Checked:
+		if state == Qt.CheckState.Checked:
 			self.debugger = 1
 			self.bugcheck.setText("DEBUGGING ON")
 		else:
@@ -892,7 +892,7 @@ def main(current):
 	# stdErrHandler = StdErrHandler() TODO
 	# sys.stderr = stdErrHandler
 	# It's exec_ because exec is a reserved word in Python
-	sys.exit(app.exec_())
+	sys.exit(app.exec())
 
 
 

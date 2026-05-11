@@ -37,7 +37,7 @@ Usage:
 import socket
 import time
 import json
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
 # ── Known endpoints (from existing Tesla config) ──────────────────────────────
@@ -338,7 +338,7 @@ if __name__ == '__main__':
         relay.serve()
 
     elif '--punch' in sys.argv:
-        from PyQt5.QtWidgets import QApplication
+        from PyQt6.QtWidgets import QApplication
         app = QApplication(sys.argv)
         idx = sys.argv.index('--punch')
         target = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else 'ptolemy_remote'

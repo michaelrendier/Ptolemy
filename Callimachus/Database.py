@@ -5,7 +5,7 @@ __author__ = 'rendier'
 import os, sys, urllib, inspect
 
 try:
-    from PyQt5.QtCore import QObject
+    from PyQt6.QtCore import QObject
     _QT = True
 except ImportError:
     class QObject: pass  # fallback stub

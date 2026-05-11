@@ -60,7 +60,7 @@ import socket
 import time
 from collections import deque
 
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
 # ── Sensor signal definitions ─────────────────────────────────────────────────
@@ -96,6 +96,7 @@ class SensorSignals(QObject):
     device_connected    = pyqtSignal(str, str)     # device_id, addr
     device_lost         = pyqtSignal(str)          # device_id
     raw_packet          = pyqtSignal(dict)         # full packet for debugging
+    packet_received     = pyqtSignal(dict, str)    # packet, device_id — bus publisher
     parse_error         = pyqtSignal(str, bytes)   # error msg, raw data
 
 
@@ -471,7 +472,7 @@ class SensorRecorder(QObject):
 
 if __name__ == '__main__':
     import sys
-    from PyQt5.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
 
@@ -504,4 +505,4 @@ if __name__ == '__main__':
     print('  Waiting for sensor data from PtolDroid or PtolSense...')
     print('  Ctrl+C to stop')
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

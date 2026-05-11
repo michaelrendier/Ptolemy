@@ -23,9 +23,10 @@ Right panel:  tab content for selected module or sensor
 Sensor rows: label, active indicator (green dot / grey dot), Settings btn
 """
 
-from PyQt5.QtCore    import Qt, QSize
-from PyQt5.QtGui     import QColor, QPalette, QFont
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore    import Qt, QSize
+from PyQt6.QtGui     import QColor, QPalette, QFont
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QStackedWidget, QTableWidget,
     QTableWidgetItem, QHeaderView, QSplitter, QFrame, QSizePolicy,
@@ -105,23 +106,23 @@ class ModuleSettingsPanel(QWidget):
         layout.setContentsMargins(12, 8, 12, 8)
 
         header = QLabel(f"{module.display}  <span style='color:{_DIM}'>v{module.version} · {module.face}</span>")
-        header.setTextFormat(Qt.RichText)
+        header.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(header)
 
         div = QFrame()
         div.setObjectName("divider")
-        div.setFrameShape(QFrame.HLine)
+        div.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(div)
 
         self._table = QTableWidget()
         self._table.setColumnCount(4)
         self._table.setHorizontalHeaderLabels(["Key", "Value", "Type", "Status"])
-        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self._table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self._table.setSelectionMode(QTableWidget.SingleSelection)
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self._table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self._table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self._table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._table.verticalHeader().setVisible(False)
         layout.addWidget(self._table)
 
@@ -129,7 +130,7 @@ class ModuleSettingsPanel(QWidget):
 
         save_btn = QPushButton("Save")
         save_btn.clicked.connect(self._save)
-        layout.addWidget(save_btn, 0, Qt.AlignRight)
+        layout.addWidget(save_btn, 0, Qt.AlignmentFlag.AlignRight)
 
     def _populate(self):
         s = self._module.settings
@@ -205,7 +206,7 @@ class SensorsPanel(QWidget):
 
         div = QFrame()
         div.setObjectName("divider")
-        div.setFrameShape(QFrame.HLine)
+        div.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(div)
 
         note = QLabel("Active streams show green ●. Greyed sensors have no incoming data.")
@@ -237,7 +238,7 @@ class PtolemySettingsWindow(QWidget):
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # ── Left sidebar ──────────────────────────────────────────────────────
         sidebar = QWidget()
@@ -249,17 +250,17 @@ class PtolemySettingsWindow(QWidget):
 
         sb_layout.addWidget(_section_label("Modules"))
         self._mod_list = QListWidget()
-        self._mod_list.setFrameShape(QFrame.NoFrame)
+        self._mod_list.setFrameShape(QFrame.Shape.NoFrame)
         sb_layout.addWidget(self._mod_list)
 
         div = QFrame()
         div.setObjectName("divider")
-        div.setFrameShape(QFrame.HLine)
+        div.setFrameShape(QFrame.Shape.HLine)
         sb_layout.addWidget(div)
 
         sb_layout.addWidget(_section_label("Inputs"))
         self._input_list = QListWidget()
-        self._input_list.setFrameShape(QFrame.NoFrame)
+        self._input_list.setFrameShape(QFrame.Shape.NoFrame)
         self._input_list.setMaximumHeight(160)
         sb_layout.addWidget(self._input_list)
 

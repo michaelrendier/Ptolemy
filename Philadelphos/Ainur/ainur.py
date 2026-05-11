@@ -480,6 +480,8 @@ class Ainur:
         if not key:
             self.status.error = "ANTHROPIC_API_KEY not set"
             self._client = None
+            print("[Ainur] ANTHROPIC_API_KEY not set — Claude offline.")
+            print("[Ainur] Set env var ANTHROPIC_API_KEY to enable Ainur.")
             return
 
         self.status.api_key_set = True

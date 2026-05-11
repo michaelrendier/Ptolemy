@@ -4,8 +4,8 @@
 # from PyQt4 import QtCore, QtGui
 # from PyQt4.QtCore import *
 # from PyQt4.QtGui import *
-from PyQt5.QtCore import pyqtSignal, QTimer, Qt
-from PyQt5.QtWidgets import QApplication, QGraphicsWidget
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt
+from PyQt6.QtWidgets import QApplication, QGraphicsWidget
 import numpy as np
 import pyqtgraph as pg
 import pyaudio
@@ -75,7 +75,7 @@ class SpectrogramWidget(pg.PlotWidget):
         # setup the correct scaling for y-axis
         freq = np.arange((CHUNKSZ/2)+1)/(float(CHUNKSZ)/FS)
         yscale = 1.0/(self.img_array.shape[1]/freq[-1])
-        from PyQt5.QtGui import QTransform
+        from PyQt6.QtGui import QTransform
         self.img.setTransform(QTransform.fromScale((1./FS)*CHUNKSZ, yscale))
 
         # Set Labels

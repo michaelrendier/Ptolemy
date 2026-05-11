@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtSvg import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtSvg import *
+from PyQt6.QtSvgWidgets import *
 
 import googlemaps, MySQLdb, socket, sys
 
@@ -20,6 +21,7 @@ except ImportError:
 from urllib.request import build_opener
 # TODO:BUILD — replace espeak with Philadelphos.ptolemy_tongue
 from Pharos.PtolFace import PtolFace
+from Pharos.PGui import PMainWindow
 
 
 
@@ -1005,11 +1007,11 @@ place_results = \
 #                                      departure_time=now)
 
 
-class Navigation(QMainWindow, PtolFace):
+class Navigation(PMainWindow, PtolFace):
 
     def __init__(self, parent=None):
         super(Navigation, self).__init__(parent)
-        QMainWindow.__init__(self)
+        PMainWindow.__init__(self)
 
         self.Ptolemy = parent
         print("Anaximander Parent : ", self.Ptolemy)
@@ -1386,4 +1388,4 @@ if __name__ == '__main__':
     # w.setWindowTitle('Simple')
     w.show()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

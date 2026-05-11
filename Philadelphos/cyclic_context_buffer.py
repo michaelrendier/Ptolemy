@@ -20,10 +20,10 @@ from typing import Optional, Callable
 
 # ─── Settings (all modular — each gets a Settings tab entry) ─────────────────
 
-BUFFER_SIZE_LINES = 100          # configurable: number of Entry lines
-COMPRESSION_MODEL = "stub"       # module hook: swap in Philadelphos/Ainur call
-HYPERINDEX_METHOD = "octonion"   # module hook: octonion hyperindexing
-BLOCKCHAIN_BACKEND = "branch"    # module hook: branch blockchain
+BUFFER_SIZE_LINES = 100              # configurable: number of Entry lines
+COMPRESSION_MODEL = "octonion_stub"  # module hook: "smip" when Phase 5 wired
+HYPERINDEX_METHOD = "octonion"       # module hook: octonion hyperindexing
+BLOCKCHAIN_BACKEND = "branch"        # module hook: branch blockchain
 
 
 # ─── Objects ────────────────────────────────────────────────────────────────
@@ -73,13 +73,39 @@ class EntryObject:
     def compress(self, model: str = COMPRESSION_MODEL) -> str:
         """
         L2 compression. Module hook — swap compression backend via Settings.
-        Default: stub (extractive placeholder).
+        Default: octonion_stub — 8-component hash projection, structurally
+        correct for when real sedenion→octonion projection is wired (Phase 5).
         """
-        if model == "stub":
-            # Stub: truncate to first 128 chars of each
-            self._compressed = self.prompt.to_line()[:128] + " | " + self.response.to_line()[:128]
+        p_text = self.prompt.to_line()
+        r_text = self.response.to_line()
+
+        if model in ("stub", "octonion_stub"):
+            # Hash the full exchange, then derive 8 octonion components.
+            # Sedenion dims e8-e15 are volatile and order-dependent — they
+            # are deliberately NOT included here. Only the stable octonion
+            # core (e0-e7) is preserved. Real SMIP replaces this in Phase 5.
+            raw  = f"{p_text}|||{r_text}|||{self.timestamp}"
+            h    = hashlib.sha256(raw.encode()).hexdigest()
+            segs = [h[i*8:(i+1)*8] for i in range(8)]
+            coords = tuple(int(s, 16) for s in segs)
+            # Normalise each component to [0,1) for compact representation
+            norm   = tuple(c / (0xFFFFFFFF + 1) for c in coords)
+            self._compressed = json.dumps({
+                "o": norm,           # octonion e0..e7 projection
+                "p": p_text[:64],    # prompt fingerprint (head)
+                "r": r_text[:64],    # response fingerprint (head)
+                "t": self.timestamp,
+            }, separators=(',', ':'))
+        elif model == "smip":
+            # Hook: real sedenion→octonion projection via ValaQuenta (Phase 5)
+            try:
+                from Ainulindale.ValaQuenta.engine.smnnip_tower import smnnip_tower
+                coords = smnnip_tower.octonion_projection(p_text + r_text)
+                self._compressed = json.dumps({"o": list(coords), "t": self.timestamp},
+                                              separators=(',', ':'))
+            except Exception as e:
+                raise NotImplementedError(f"SMIP octonion projection failed: {e}")
         else:
-            # Hook: call Philadelphos/Ainur compression module here
             raise NotImplementedError(f"Compression model '{model}' not yet wired")
         return self._compressed
 

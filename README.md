@@ -199,6 +199,163 @@ Philadelphos is the conversational surface — the Face that talks. The other te
 
 ---
 
+## System Requirements
+
+| | Minimum | Recommended |
+|---|---|---|
+| **OS** | Ubuntu 22.04 LTS / Debian 12 | Ubuntu 24.04 LTS |
+| **CPU** | Any x86_64, 2+ cores | Intel i5 Skylake or newer |
+| **RAM** | 4 GiB | 8 GiB |
+| **GPU** | OpenGL 3.3 (Intel HD) | OpenGL 4.6 |
+| **Python** | 3.10 | 3.12 |
+| **Storage** | 2 GiB free | 10 GiB free (corpus + HyperWebster lexicon) |
+| **Network** | Required (first run: NLTK WordNet download) | — |
+
+Ptolemy runs on the device. No cloud dependency. No inference server. A laptop with an Intel integrated GPU is sufficient for the full system.
+
+---
+
+## Installation
+
+**Quick path — Ubuntu 24.04 LTS:**
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/michaelrendier/Ptolemy ~/Ptolemy
+cd ~/Ptolemy
+
+# 2. Run the setup script (apt first, pip3 fallback — no venv)
+chmod +x ptolemy_setup-apt_pip3.sh
+./ptolemy_setup-apt_pip3.sh
+```
+
+The script installs in six steps:
+
+| Step | What it does |
+|---|---|
+| 1 | Core system packages — git, curl, build-essential, cmake, sqlite3, openssh-server |
+| 2 | Python packages — lxml, flask, requests, numpy, scipy, wikipedia-api, PyGithub |
+| 3 | Node.js LTS via NodeSource apt repository |
+| 4 | Claude Code via npm (user-level, no sudo required) |
+| 5 | Clones Ptolemy + Ainulindalë (reads tokens from `~/.bashrc`) |
+| 6 | Enables SSH server for multi-machine KVM access |
+
+**Environment variables** — required before running the script. Add to `~/.bashrc`:
+
+```bash
+export ANTHROPIC_API_KEY="your_key_here"   # Claude Code
+export PTOL_TOKEN="your_token_here"        # GitHub Ptolemy repo (fine-scoped PAT)
+export AINUR_TOKEN="your_token_here"       # GitHub Ainulindalë repo (classic PAT)
+export PATH="$HOME/.npm-global/bin:$PATH"  # Claude Code binary
+```
+
+```bash
+source ~/.bashrc   # apply to current session
+```
+
+**PyQt6** — the primary GUI framework. Install via pip if not pulled by the setup script:
+
+```bash
+pip3 install --break-system-packages PyQt6 PyQt6-Qt6 PyQt6-sip
+```
+
+**vispy** — OpenGL canvas for Alexandria and Archimedes faces (320k+ vertex renders):
+
+```bash
+pip3 install --break-system-packages vispy
+```
+
+**NLTK + WordNet** — required for HyperWebster lexicon build (one-time, ~5 min):
+
+```bash
+pip3 install --break-system-packages nltk mpmath
+python3 -c "import nltk; nltk.download('wordnet')"
+```
+
+**QTermWidget** (optional, shell backend) — requires CMake build from source. See [INSTALL.md](INSTALL.md).
+
+Full platform-specific installation (Ubuntu, Arch, Gentoo, RHEL), venv variant, and third-party source builds: **[INSTALL.md](INSTALL.md)**
+
+---
+
+## Running Ptolemy
+
+```bash
+cd ~/Ptolemy
+python3 Ptolemy3.py
+```
+
+Ptolemy launches as a full-screen Qt desktop shell. The scene renders black with a system tray icon. All interaction is through the **Philadelphos** command widget — press any key or click the shell overlay to activate it.
+
+---
+
+## Usage
+
+### Philadelphos Command Shell
+
+The Philadelphos shell is the primary interface. Each command is prefixed with a single character that routes it to the correct Face.
+
+| Prefix | Destination | Example |
+|---|---|---|
+| `>` | Python REPL (live execution in Ptolemy context) | `> import math; math.pi` |
+| `$` | Bash shell (subprocess, stdout returned) | `$ ls -la ~/Ptolemy` |
+| `#` | Root shell (gksudo, system-level commands) | `# systemctl restart ssh` |
+| `~` | DerivationEngine / HyperWebster semantic layer | `~ tree` |
+| `ptol out` | Exit Ptolemy | `ptol out` |
+
+### `~` — Semantic Layer Commands
+
+The `~` prefix routes to the DerivationEngine. Full sub-command set:
+
+| Command | Action |
+|---|---|
+| `~ <word or phrase>` | Resolve text to its Riemann zero address; show σ, γ, prime coordinates |
+| `~ faces <text>` | Show all known faces at this word's Riemann zero |
+| `~ domain <name>` | Set active semantic domain for subsequent queries |
+| `~ corpus <path>` | Ingest a file or directory into the lexicon |
+| `~ parallel <text>` | Resolve cross-language semantic alignment |
+| `~ lexicon` | Display current lexicon state |
+| `~ clear` | Clear active domain context |
+| `~ help` | Show full command reference |
+
+### HyperWebster — Standalone CLI
+
+The HyperWebster can also be run as a standalone process from any terminal:
+
+```bash
+python3 ~/Ptolemy/hyperwebster.py word <text>       # resolve a word or phrase
+python3 ~/Ptolemy/hyperwebster.py faces <text>       # all faces at this zero
+python3 ~/Ptolemy/hyperwebster.py point <path>       # ingest a file or directory
+python3 ~/Ptolemy/hyperwebster.py stats              # lexicon statistics
+python3 ~/Ptolemy/hyperwebster.py zeros              # show the zero table (γ₁..γₙ)
+python3 ~/Ptolemy/hyperwebster.py build              # build full lexicon from WordNet (~10 min)
+```
+
+The lexicon is stored at `~/.hyperwebster/lexicon.json`. Once built, it persists across sessions. Every word maps to a Riemann zero address on the critical line Re(s) = ½. σ is forced by Noether balance — it is never assigned.
+
+Example output:
+
+```
+word: tree
+  n  = 5
+  γ  = 32.935062  (imaginary part of ζ zero #5)
+  σ  = 0.500000   (Noether-forced — not assigned)
+  E  = 4.000      (surface energy)
+  addr  = 5:noun.plant
+```
+
+### Claude Code Integration
+
+If Claude Code is installed, the HyperWebster is available as a slash command:
+
+```
+/hyperwebster word <text>
+/hyperwebster stats
+/hyperwebster zeros
+```
+
+---
+
 ## Documentation
 
 | Document | Contents |

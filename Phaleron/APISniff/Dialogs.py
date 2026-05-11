@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import QObject
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6.QtCore import QObject
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QMessageBox
 # TODO:BUILD — replace formlayout with PGui dialog (formlayout removed)
 from ast import literal_eval
 import datetime

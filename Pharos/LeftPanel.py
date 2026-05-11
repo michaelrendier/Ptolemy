@@ -5,11 +5,15 @@ __author__ = 'rendier'
 # Tab 0: File tree (directories only, low overhead)
 # Tab 1: Archimedes equation/constant browser
 
-from PyQt5.QtCore import Qt, QDir, pyqtSignal
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QTabWidget,
-                             QTreeView, QFileSystemModel,
+from PyQt6.QtCore import Qt, QDir, pyqtSignal
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QTabWidget,
+                             QTreeView,
                              QTreeWidget, QTreeWidgetItem, QLabel)
+try:
+    from PyQt6.QtWidgets import QFileSystemModel
+except ImportError:
+    from PyQt6.QtGui import QFileSystemModel
 import importlib, inspect, os
 
 _ARCH_ROOT = os.path.join(os.path.dirname(__file__), '..', 'Archimedes', 'Maths')
@@ -24,7 +28,7 @@ class FilePanel(QWidget):
         super().__init__(parent)
         self.model = QFileSystemModel(self)
         self.model.setRootPath(QDir.homePath())
-        self.model.setFilter(QDir.AllDirs | QDir.NoDotAndDotDot)
+        self.model.setFilter(QDir.Filter.AllDirs | QDir.Filter.NoDotAndDotDot)
 
         self.tree = QTreeView(self)
         self.tree.setModel(self.model)
@@ -102,7 +106,7 @@ class ArchimedesPanel(QWidget):
             cat_node = self._get_or_create_child(py_root, cat)
             leaf_name = display_name.split('/')[-1]
             leaf = QTreeWidgetItem(cat_node, [leaf_name])
-            leaf.setData(0, Qt.UserRole, {'type': 'module', 'path': mod_path})
+            leaf.setData(0, Qt.ItemDataRole.UserRole, {'type': 'module', 'path': mod_path})
 
             # try to enumerate public names
             try:
@@ -114,7 +118,7 @@ class ArchimedesPanel(QWidget):
                     if callable(obj) or isinstance(obj, (int, float, str)):
                         entry = QTreeWidgetItem(leaf, [name])
                         val = obj if not callable(obj) else '(fn)'
-                        entry.setData(0, Qt.UserRole, {
+                        entry.setData(0, Qt.ItemDataRole.UserRole, {
                             'type': 'constant' if not callable(obj) else 'function',
                             'name': name,
                             'value': str(val),
@@ -122,8 +126,8 @@ class ArchimedesPanel(QWidget):
                             'category': cat,
                         })
                         entry.setToolTip(0, str(val))
-            except Exception:
-                pass
+            except Exception as _e:
+                print(f'[LeftPanel] import {mod_path}: {_e}')
 
         # ── UFformulary (directory listing only — files are large) ───────────
         uf_root = QTreeWidgetItem(self.tree, ['Archimedes :: UFformulary'])
@@ -138,7 +142,7 @@ class ArchimedesPanel(QWidget):
                 ext_node = QTreeWidgetItem(uf_root, [f'.{ext} ({len(files)})'])
                 for fname in files:
                     fitem = QTreeWidgetItem(ext_node, [fname])
-                    fitem.setData(0, Qt.UserRole, {
+                    fitem.setData(0, Qt.ItemDataRole.UserRole, {
                         'type': 'ufm_file',
                         'name': fname,
                         'path': os.path.join(uf_dir, fname),
@@ -187,6 +191,6 @@ class LeftPanel(QWidget):
         self.setWindowOpacity(1.0 if focused else 0.30)
 
     def _on_arch_activate(self, item, _col):
-        data = item.data(0, Qt.UserRole)
+        data = item.data(0, Qt.ItemDataRole.UserRole)
         if data:
             self.arch_item_activated.emit(data)

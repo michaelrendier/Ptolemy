@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Callable, Dict, List, Optional
 
-from PyQt5.QtCore import QObject, QThread, QMutex, QMutexLocker, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, QMutex, QMutexLocker, pyqtSignal
 
 try:
     from Pharos.PtolDmesg import dmesg as _dmesg
@@ -262,12 +262,12 @@ class _DispatchThread(QThread):
         self._bus    = bus
         self._active = True
         self.setObjectName('PtolBus_K0_dispatch')
-        self.setPriority(QThread.HighPriority)
 
     def stop(self):
         self._active = False
 
     def run(self):
+        self.setPriority(QThread.Priority.HighPriority)
         _log('K0 dispatch thread started')
         interval   = self._bus._budget.dispatch_interval_ms / 1000.0
         poll_every = max(1, int(PTOL_BUS_SETTINGS['health_poll_interval'] / interval))

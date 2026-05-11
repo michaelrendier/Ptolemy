@@ -29,6 +29,16 @@ import math
 import struct
 from typing import Optional, Tuple, List
 
+try:
+    from PyQt6.QtCore    import Qt, QThread, pyqtSignal, QObject
+    from PyQt6.QtGui     import QImage, QPixmap
+    from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+                                  QComboBox, QPushButton, QLabel,
+                                  QSizePolicy)
+    _HAS_QT = True
+except ImportError:
+    _HAS_QT = False
+
 # ── Settings ─────────────────────────────────────────────────────────────────
 FRACTAL_SETTINGS = {
     "default_formula": "Mandelbrot",
@@ -248,3 +258,149 @@ class FractalRenderer:
     @classmethod
     def list_formulas(cls) -> List[str]:
         return list(cls.FORMULAS.keys())
+
+
+# ── NoetherField formula (SMMIP Noether current as coloring field) ────────────
+
+class NoetherField(FractalFormula):
+    """
+    Noether Information Current field.
+    Each pixel c is passed through the SMMIP reverse tower (Sedenion → Reals).
+    The resulting Noether current value drives the color field.
+    Connects Alexandria visual output to Archimedes/ValaQuenta math engine.
+    """
+    name = "NoetherField"
+
+    def __init__(self):
+        self._tower = None
+
+    def _get_tower(self):
+        if self._tower is None:
+            try:
+                from Philadelphos.philadelphos_console import ReverseTower
+                self._tower = ReverseTower()
+            except Exception:
+                self._tower = False
+        return self._tower if self._tower else None
+
+    def iterate(self, c: complex, max_iter: int, escape: float) -> Tuple[int, complex]:
+        tower = self._get_tower()
+        if tower is None:
+            # Fallback: Mandelbrot when tower unavailable
+            z = 0j
+            for i in range(max_iter):
+                z = z*z + c
+                if abs(z) > escape:
+                    return i, z
+            return max_iter, z
+
+        import hashlib as _hl
+        # Map complex c → sedenion via SHA encoding of the coordinate string
+        coord_str = f'{c.real:.6f},{c.imag:.6f}'
+        try:
+            from Philadelphos.philadelphos_console import SedenionElement
+            se = SedenionElement.from_text(coord_str)
+            reals, diag = tower.run(se, [coord_str])
+            r = abs(reals[0]) if reals else 0.0
+            # Map Noether current to iteration count for coloring
+            n = int(r * max_iter) % max_iter
+            return n, complex(r, diag.get('survivors', 1))
+        except Exception:
+            return max_iter, c
+
+    def description(self) -> str:
+        return "Noether Current field — SMMIP Sedenion→Reals coloring"
+
+
+# Register NoetherField in FractalRenderer.FORMULAS
+FractalRenderer.FORMULAS['NoetherField'] = NoetherField
+
+
+# ── Render thread ─────────────────────────────────────────────────────────────
+
+if _HAS_QT:
+    class _RenderThread(QThread):
+        finished = pyqtSignal(bytes, int, int)
+
+        def __init__(self, renderer: FractalRenderer, parent=None):
+            super().__init__(parent)
+            self._renderer = renderer
+
+        def run(self):
+            raw = self._renderer.render()
+            self.finished.emit(raw, self._renderer.width, self._renderer.height)
+
+
+    # ── FractalView Qt widget ─────────────────────────────────────────────────
+
+    class FractalView(QWidget):
+        """
+        Qt widget for Alexandria Face fractal display.
+        Formula selector + render button + live canvas.
+        Rendered via off-thread _RenderThread.
+        """
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._renderer = FractalRenderer()
+            self._thread   = None
+            self._build_ui()
+
+        def _build_ui(self):
+            self.setStyleSheet('background: #050510; color: #aaffcc;')
+            self.setMinimumSize(400, 340)
+
+            root = QVBoxLayout(self)
+            root.setContentsMargins(4, 4, 4, 4)
+            root.setSpacing(4)
+
+            # ── Toolbar ───────────────────────────────────────────────────────
+            bar = QHBoxLayout()
+            self._combo = QComboBox()
+            self._combo.addItems(FractalRenderer.list_formulas())
+            self._combo.setStyleSheet(
+                'background: #0a0a20; color: #aaffcc; border: 1px solid #224;')
+            bar.addWidget(self._combo)
+
+            self._render_btn = QPushButton('Render')
+            self._render_btn.setStyleSheet(
+                'background: #0a0a20; color: #aaffcc; border: 1px solid #446;')
+            self._render_btn.setFixedWidth(70)
+            self._render_btn.clicked.connect(self._render)
+            bar.addWidget(self._render_btn)
+
+            self._status = QLabel('Ready')
+            self._status.setStyleSheet('color: #557; font-size: 9px;')
+            bar.addWidget(self._status)
+            bar.addStretch()
+            root.addLayout(bar)
+
+            # ── Canvas ────────────────────────────────────────────────────────
+            self._canvas = QLabel()
+            self._canvas.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._canvas.setSizePolicy(QSizePolicy.Policy.Expanding,
+                                       QSizePolicy.Policy.Expanding)
+            self._canvas.setStyleSheet('background: #020210;')
+            root.addWidget(self._canvas)
+
+        def _render(self):
+            if self._thread and self._thread.isRunning():
+                return
+            formula = self._combo.currentText()
+            self._renderer = FractalRenderer(formula)
+            # Fit resolution to widget size
+            w = max(200, self._canvas.width())
+            h = max(150, self._canvas.height())
+            self._renderer.width  = w
+            self._renderer.height = h
+            self._render_btn.setEnabled(False)
+            self._status.setText(f'Rendering {formula}…')
+            self._thread = _RenderThread(self._renderer, self)
+            self._thread.finished.connect(self._on_done)
+            self._thread.start()
+
+        def _on_done(self, raw: bytes, w: int, h: int):
+            img = QImage(raw, w, h, w * 3, QImage.Format.Format_RGB888)
+            self._canvas.setPixmap(QPixmap.fromImage(img))
+            self._render_btn.setEnabled(True)
+            self._status.setText(f'Done  {w}×{h}')

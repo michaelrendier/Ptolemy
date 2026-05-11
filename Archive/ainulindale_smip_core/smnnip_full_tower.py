@@ -1009,7 +1009,7 @@ def train_tower(text, epochs=15, lr=0.005, cap=300, hidden=24, ctx=4):
     TOWER_BENCH.record("L3 assoc violation", L3.assoc_hist[-1])
     TOWER_BENCH.record("Fano violations",    violations)
 
-    return L0, L1, L2, L3, C
+    return L0, L1, L2, L3, C, chars
 
 
 # ---------------------------------------------------------------------------

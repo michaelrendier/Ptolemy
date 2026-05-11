@@ -37,7 +37,7 @@ Bus threading contract
     face._ptol_bus      PtolBus reference (set by bus on launch)
 """
 
-from PyQt5.QtCore import QThread, QTimer
+from PyQt6.QtCore import QThread, QTimer
 
 
 class PtolFace:
@@ -58,7 +58,20 @@ class PtolFace:
 
     def ptol_start(self):
         """Resume: called on launch and restore from minimize. Start timers."""
-        pass
+        if not self._ptol_id:
+            return
+        ptol = self.ptolemy
+        if ptol:
+            try:
+                ptol.msg_bus.post_face(
+                    self._ptol_id, self.__class__.__name__, [], thread_req=4)
+            except Exception:
+                pass
+            try:
+                from Pharos.PtolDmesg import dmesg
+                dmesg.face_in(self._ptol_id)
+            except Exception:
+                pass
 
     def ptol_stop(self):
         """Suspend: called on minimize. Stop timers."""
@@ -66,7 +79,19 @@ class PtolFace:
 
     def ptol_close(self):
         """Terminate: called on window close. Release resources."""
-        pass
+        if not self._ptol_id:
+            return
+        ptol = self.ptolemy
+        if ptol:
+            try:
+                ptol.msg_bus.unpost_face(self._ptol_id)
+            except Exception:
+                pass
+            try:
+                from Pharos.PtolDmesg import dmesg
+                dmesg.face_out(self._ptol_id)
+            except Exception:
+                pass
 
     # ── Convenience ──────────────────────────────────────────────────────────
 

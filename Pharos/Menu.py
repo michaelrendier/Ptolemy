@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = 'rendier'
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
 
 from collections import OrderedDict
 
@@ -21,7 +21,8 @@ class Menu(QWidget):
 		self.Ptolemy = parent
 		print("MENU PARENT: ", self.Ptolemy)
 
-		self.output = self.Ptolemy.Philadelphos.setOutput
+		_phila = getattr(self.Ptolemy, 'Philadelphos', None)
+		self.output = _phila.setOutput if _phila and hasattr(_phila, 'setOutput') else lambda *a, **kw: None
 		self.crumbs = []
 		self.FILE_MENU_UP = False
 		self.currentDir = dir()
@@ -51,8 +52,8 @@ class Menu(QWidget):
 
 		self.menu = QListWidget()
 		self.menu.setFont(self.Ptolemy.font(12))
-		self.menu.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.menu.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.menu.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+		self.menu.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 		self.menu.currentItemChanged.connect(self.itemselect)  # FIX THIS TODO
 		self.menu.itemClicked.connect(self.itemselect)
 		self.menu.itemDoubleClicked.connect(self.repoplist)
