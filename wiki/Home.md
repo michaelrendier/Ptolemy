@@ -17,6 +17,12 @@
 | [[Philadelphos]] | Ptolemy II Philadelphus | LSH inference, language models, SMNNIP |
 | [[Tesla]] | Nikola Tesla | Device interfacing, sensors |
 
+## Original Work
+
+| Page | Author | Description |
+|---|---|---|
+| [[RedBlueHamiltonian]] | O Captain My Captain | $\hat{H}_{RB}$ — the boundary generator; all Clay Millennium Problems project from it |
+
 ## Masters — Mathematical & Scientific Tributes
 
 | Page | Figure | Contribution to Ptolemy |
