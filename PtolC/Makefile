@@ -8,9 +8,23 @@ TARGET  = ptolemy
 SRCS    = main.c monad.c checkpoint.c tokenizer.c
 OBJS    = $(SRCS:.c=.o)
 
-.PHONY: all clean export
+.PHONY: all clean export corpus full expand
 
 all: $(TARGET)
+
+# ── Corpus: download WordNet + ingest → monad_wordnet.bin ───────────────────
+# Requires Python 3 + NLTK.  Runs in ~6 seconds.
+# Usage: make corpus
+corpus: $(TARGET)
+	@echo "[corpus] checking NLTK wordnet…"
+	@python3 -m nltk.downloader -q wordnet 2>/dev/null || \
+	    (pip install --quiet nltk && python3 -m nltk.downloader -q wordnet)
+	@echo "[corpus] extracting lemmas + definitions (313K lines)…"
+	@python3 tools/dump_wordnet.py | ./$(TARGET) -i -l -
+	@echo "[corpus] done → monad_wordnet.bin"
+
+# ── Full: binary + corpus in one step ───────────────────────────────────────
+full: $(TARGET) corpus
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
@@ -22,9 +36,16 @@ $(TARGET): $(OBJS)
 export:
 	python3 ../Callimachus/checkpoint_export.py
 
+# Expand checkpoint zero field — usage: make expand N=255400
+expand: tools/checkpoint_expand
+	./tools/checkpoint_expand monad_wordnet.bin $(N)
+
+tools/checkpoint_expand: tools/checkpoint_expand.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
 # Remove build artifacts
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) tools/checkpoint_expand
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 main.o:        main.c ptolemy.h monad.h checkpoint.h tokenizer.h
