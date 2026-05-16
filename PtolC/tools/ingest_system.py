@@ -502,18 +502,38 @@ def should_prune(path: str) -> bool:
 # ── Priority file ──────────────────────────────────────────────────────────────
 
 def ingest_priority_file(path: str, ptolemy: str, chunk_lines: int):
+    """
+    Stream a large file in chunk_lines-line slices without loading it into RAM.
+    Each chunk is piped directly to ptolemy -l - and then discarded.
+    """
     if not os.path.isfile(path):
         LOG.info("priority file not ready yet: %s", path)
         return
     size = os.path.getsize(path)
-    LOG.info("priority file: %s  (%.1f MB)", path, size / 1e6)
+    LOG.info("priority file: %s  (%.1f MB) — streaming in %d-line chunks",
+             path, size / 1e6, chunk_lines)
+    chunk_num  = 0
+    buf        = []
+    buf_lines  = 0
     try:
         with open(path, "rb") as f:
-            raw = f.read()
-        chunks = learn_chunked(decode_bytes(raw), ptolemy, chunk_lines)
-        LOG.info("priority file done: %d chunks", chunks)
+            for raw_line in f:
+                buf.append(raw_line.decode("utf-8", errors="replace"))
+                buf_lines += 1
+                if buf_lines >= chunk_lines:
+                    learn_text("".join(buf), ptolemy)
+                    chunk_num += 1
+                    LOG.info("  priority chunk %d  (%.1f MB done)",
+                             chunk_num, f.tell() / 1e6)
+                    buf       = []
+                    buf_lines = 0
+            if buf:
+                learn_text("".join(buf), ptolemy)
+                chunk_num += 1
     except Exception as e:
         LOG.error("priority file error: %s", e)
+        return
+    LOG.info("priority file done: %d chunks", chunk_num)
 
 # ── Main ingest loop ───────────────────────────────────────────────────────────
 
