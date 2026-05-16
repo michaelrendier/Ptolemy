@@ -127,7 +127,7 @@ except ImportError:
 CHUNK_LINES   = 50_000
 DEFAULT_BATCH = 10
 STATE_FILE    = "ingest_state.json"
-PTOLEMY       = "./ptolemy"
+PTOLEMY       = "/usr/bin/ptolemy"
 
 # Global depth — set once from --depth arg, read anywhere in the module.
 # Determines which extraction layers are active (see docstring).
