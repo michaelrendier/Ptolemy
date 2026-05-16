@@ -34,4 +34,14 @@
 #define CKPT_MAGIC           "PTOL"
 #define CKPT_VERSION         1
 
+/* ANSI colour codes — used when stderr/stdout is a tty */
+#define C_RESET    "\033[0m"
+#define C_BOLD     "\033[1m"
+#define C_DIM      "\033[2m"
+#define C_YELLOW   "\033[33m"   /* learn()  */
+#define C_CYAN     "\033[36m"   /* hear()   */
+#define C_GREEN    "\033[32m"   /* speak()  */
+#define C_MAGENTA  "\033[35m"   /* J^mu propagation */
+#define C_WHITE    "\033[97m"   /* numbers  */
+
 #endif /* PTOLEMY_H */

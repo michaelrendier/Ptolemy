@@ -4,6 +4,12 @@
  * learn()  deepens the beta field.
  * hear()   projects text onto the zero basis (internal, called by speak).
  * speak()  computes J^mu (Noether current) and returns ordered words.
+ *
+ * verbose levels:
+ *   0 — silent
+ *   1 — show mathematics (β deepening, J^μ propagation)
+ *   2 — level 1 + ANSI colour (hear=cyan, speak=green, learn=yellow)
+ *   3 — full pipeline: learn + hear + speak all shown simultaneously
  */
 
 #include <stdlib.h>
@@ -11,10 +17,21 @@
 #include <stdint.h>
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "ptolemy.h"
 #include "monad.h"
 #include "tokenizer.h"
+
+/* Global colour enable — set by main() after isatty() check. */
+int g_color = 0;
+
+static const char *CY(void)  { return g_color ? C_YELLOW  : ""; }
+static const char *CC(void)  { return g_color ? C_CYAN    : ""; }
+static const char *CG(void)  { return g_color ? C_GREEN   : ""; }
+static const char *CM(void)  { return g_color ? C_MAGENTA : ""; }
+static const char *CB(void)  { return g_color ? C_BOLD    : ""; }
+static const char *CR(void)  { return g_color ? C_RESET   : ""; }
 
 /* ── Riemann zero generation (mirrors monad.py _generate_zeros) ───────────── */
 
@@ -51,9 +68,6 @@ static void generate_zeros(double *z, int N)
 
 void monad_word_coords(const char *surface, int N, int *idx, double *E)
 {
-    /* Bijective base-95 Horner accumulation.
-     * Chars 32..126 map to positions 1..95.  Result v in [0, inf).
-     * Overflow of uint64_t gives consistent truncation for long words. */
     uint64_t v = 0;
     for (const char *p = surface; *p; p++) {
         unsigned char c = (unsigned char)*p;
@@ -62,7 +76,6 @@ void monad_word_coords(const char *surface, int N, int *idx, double *E)
     }
     if (v > 0) v--;
 
-    /* Golden-ratio hash: seed = (v * phi) mod 1 */
     double seed = fmod((double)v * MONAD_PHI, 1.0);
     if (seed < 0.0) seed += 1.0;
 
@@ -73,7 +86,7 @@ void monad_word_coords(const char *surface, int N, int *idx, double *E)
     *E = MONAD_D_STAR + seed * (MONAD_OMEGA_ZS - MONAD_D_STAR);
 }
 
-/* ── FNV-1a hash for word strings ─────────────────────────────────────────── */
+/* ── FNV-1a hash ──────────────────────────────────────────────────────────── */
 
 static uint32_t fnv1a(const char *s)
 {
@@ -82,7 +95,7 @@ static uint32_t fnv1a(const char *s)
     return h;
 }
 
-/* ── Word map (string → zero_idx) ────────────────────────────────────────── */
+/* ── Word map ────────────────────────────────────────────────────────────── */
 
 int monad_wm_get(const Monad *m, const char *word, int *idx, double *E)
 {
@@ -93,9 +106,8 @@ int monad_wm_get(const Monad *m, const char *word, int *idx, double *E)
         WMSlot *s = &m->wm[slot];
         if (!s->key) break;
         if (strcmp(s->key, word) == 0) {
-            /* Use stored idx; recompute E from coords for accuracy */
-            int   dummy_idx;
-            monad_word_coords(word, m->N, &dummy_idx, E);
+            int dummy;
+            monad_word_coords(word, m->N, &dummy, E);
             *idx = (int)s->idx;
             return 1;
         }
@@ -107,7 +119,6 @@ int monad_wm_get(const Monad *m, const char *word, int *idx, double *E)
 
 void monad_wm_set(Monad *m, const char *word, uint32_t idx)
 {
-    /* Rehash at 65% load */
     if (m->wm_size * 100 >= m->wm_cap * 65) {
         int      new_cap = m->wm_cap * 2;
         WMSlot  *new_wm  = calloc(new_cap, sizeof(WMSlot));
@@ -135,19 +146,15 @@ void monad_wm_set(Monad *m, const char *word, uint32_t idx)
             m->wm_size++;
             return;
         }
-        if (strcmp(s->key, word) == 0) {
-            s->idx = idx;  /* update */
-            return;
-        }
+        if (strcmp(s->key, word) == 0) { s->idx = idx; return; }
         slot = (slot + 1) & mask;
     }
 }
 
-/* ── A matrix (sparse, open addressing) ──────────────────────────────────── */
+/* ── A matrix ────────────────────────────────────────────────────────────── */
 
 static uint32_t a_key(int i, int j)
 {
-    /* Normalise i < j, encode as (i<<15)|j (both < 32768). */
     if (i > j) { int t = i; i = j; j = t; }
     return ((uint32_t)i << 15) | (uint32_t)j;
 }
@@ -155,10 +162,9 @@ static uint32_t a_key(int i, int j)
 void monad_a_add(Monad *m, int i, int j, double delta)
 {
     if (i == j) return;
-    uint32_t key  = a_key(i, j);
-    if (key == 0) return;  /* invalid */
+    uint32_t key = a_key(i, j);
+    if (key == 0) return;
 
-    /* Rehash at 65% load */
     if (m->am_size * 100 >= m->am_cap * 65) {
         int    new_cap = m->am_cap * 2;
         ASlot *new_am  = calloc(new_cap, sizeof(ASlot));
@@ -178,16 +184,8 @@ void monad_a_add(Monad *m, int i, int j, double delta)
     uint32_t slot = key & mask;
     for (int k = 0; k < m->am_cap; k++) {
         ASlot *s = &m->am[slot];
-        if (s->key == 0) {
-            s->key = key;
-            s->val = delta;
-            m->am_size++;
-            return;
-        }
-        if (s->key == key) {
-            s->val += delta;
-            return;
-        }
+        if (s->key == 0) { s->key = key; s->val = delta; m->am_size++; return; }
+        if (s->key == key) { s->val += delta; return; }
         slot = (slot + 1) & mask;
     }
 }
@@ -211,8 +209,8 @@ double monad_a_get(const Monad *m, int i, int j)
 Monad *monad_create(int N)
 {
     Monad *m = calloc(1, sizeof(Monad));
-    m->N                 = N;
-    m->ground            = fabs(MONAD_L_GROUND) / N;
+    m->N                  = N;
+    m->ground             = fabs(MONAD_L_GROUND) / N;
     m->emission_threshold = fabs(MONAD_L_GROUND) * 2.0;
 
     m->zeros = malloc(N * sizeof(double));
@@ -220,10 +218,9 @@ Monad *monad_create(int N)
     m->age   = calloc(N, sizeof(int));
     m->vocab = calloc(N, sizeof(VocabEntry));
 
-    m->wm_cap = 65536;  /* 64K — grows on demand */
+    m->wm_cap = 65536;
     m->wm     = calloc(m->wm_cap, sizeof(WMSlot));
-
-    m->am_cap = 131072;  /* 128K — grows on demand */
+    m->am_cap = 131072;
     m->am     = calloc(m->am_cap, sizeof(ASlot));
 
     return m;
@@ -232,70 +229,54 @@ Monad *monad_create(int N)
 void monad_destroy(Monad *m)
 {
     if (!m) return;
-    free(m->zeros);
-    free(m->beta);
-    free(m->age);
-    free(m->vocab);
-    for (int i = 0; i < m->wm_cap; i++)
-        if (m->wm[i].key) free(m->wm[i].key);
-    free(m->wm);
-    free(m->am);
-    free(m);
+    free(m->zeros); free(m->beta); free(m->age); free(m->vocab);
+    for (int i = 0; i < m->wm_cap; i++) if (m->wm[i].key) free(m->wm[i].key);
+    free(m->wm); free(m->am); free(m);
 }
 
 void monad_ground_init(Monad *m)
 {
     generate_zeros(m->zeros, m->N);
-    for (int i = 0; i < m->N; i++) {
-        m->beta[i] = m->ground;
-        m->age[i]  = 0;
-    }
+    for (int i = 0; i < m->N; i++) { m->beta[i] = m->ground; m->age[i] = 0; }
 }
 
 /* ── learn() ──────────────────────────────────────────────────────────────── */
 
-void monad_learn(Monad *m, const char *text)
+void monad_learn(Monad *m, const char *text, int verbose)
 {
-    /* Split on sentence boundaries, then tokenise each sentence.
-     * Co-activating adjacent tokens couple through A. */
-
-    /* We work sentence by sentence: scan for '.', '!', '?', '\n' */
     const char *p   = text;
     int         len = strlen(text);
     char       *sbuf = malloc(len + 2);
 
     while (*p) {
-        /* collect sentence */
         int slen = 0;
-        while (*p && *p != '.' && *p != '!' && *p != '?' && *p != '\n') {
+        while (*p && *p != '.' && *p != '!' && *p != '?' && *p != '\n')
             sbuf[slen++] = *p++;
-        }
-        if (*p) p++;  /* skip delimiter */
+        if (*p) p++;
         sbuf[slen] = '\0';
-        if (slen == 0) continue;
+        if (slen < 2) continue;
 
         int    ntok = 0;
         char **toks = tok_split(sbuf, &ntok);
+        if (ntok == 0) { tok_free(toks, ntok); continue; }
 
-        /* Parallel arrays for this sentence's activations */
-        int    *sidx = malloc(ntok * sizeof(int));
-        double *sE   = malloc(ntok * sizeof(double));
-        int     nact = 0;
+        int    *sidx     = malloc(ntok * sizeof(int));
+        double *sE       = malloc(ntok * sizeof(double));
+        double *old_beta = malloc(ntok * sizeof(double));
+        int     nact     = 0;
 
         for (int t = 0; t < ntok; t++) {
             const char *word = toks[t];
-            int    idx; double E;
-
-            /* Look up in word map; if absent, compute and insert */
-            monad_wm_get(m, word, &idx, &E);  /* sets idx/E via coords if not found */
+            int idx; double E;
+            monad_wm_get(m, word, &idx, &E);
             monad_wm_set(m, word, (uint32_t)idx);
 
-            /* Deepen beta */
+            old_beta[nact] = m->beta[idx];
+
             double nb = m->beta[idx] + E * MONAD_ALPHA_LEARN;
             if (nb > MONAD_BETA_SAT) nb = MONAD_BETA_SAT;
             m->beta[idx] = nb;
 
-            /* Update vocab: highest-E representative per zero wins */
             if (!m->vocab[idx].present || E > m->vocab[idx].E) {
                 strncpy(m->vocab[idx].word, word, MAX_WORD_LEN - 1);
                 m->vocab[idx].word[MAX_WORD_LEN - 1] = '\0';
@@ -303,25 +284,56 @@ void monad_learn(Monad *m, const char *text)
                 m->vocab[idx].present = 1;
             }
 
-            sidx[nact] = idx;
-            sE[nact]   = E;
-            nact++;
+            sidx[nact] = idx; sE[nact] = E; nact++;
             m->word_count++;
         }
 
-        /* Gauge connections: w = E_i*E_j / |gamma_i - gamma_j| */
+        /* ── Verbose: learn output ───────────────────────────────────────── */
+        if (verbose >= 1) {
+            fprintf(stderr, "%s%s[learn]%s ",
+                    CB(), CY(), CR());
+            if (slen > 72)
+                fprintf(stderr, "\"%.*s...\"\n", 72, sbuf);
+            else
+                fprintf(stderr, "\"%s\"\n", sbuf);
+
+            for (int t = 0; t < nact; t++) {
+                double delta = m->beta[sidx[t]] - old_beta[t];
+                fprintf(stderr,
+                    "  %s%-18s%s z#%-6d  γ=%s%-11.3f%s  E=%s%.4f%s"
+                    "  β: %.6f → %.6f  %sΔβ=+%.6f%s\n",
+                    CB(), toks[t], CR(),
+                    sidx[t],
+                    CB(), m->zeros[sidx[t]], CR(),
+                    CB(), sE[t], CR(),
+                    old_beta[t], m->beta[sidx[t]],
+                    CY(), delta, CR());
+            }
+        }
+
+        /* Gauge connections */
         for (int i = 0; i < nact; i++) {
             for (int j = i + 1; j < nact; j++) {
                 if (sidx[i] == sidx[j]) continue;
                 double dist = fabs(m->zeros[sidx[i]] - m->zeros[sidx[j]]);
                 if (dist < 1e-4) dist = 1e-4;
                 double w = sE[i] * sE[j] / dist;
+
+                if (verbose >= 1) {
+                    fprintf(stderr,
+                        "  %sA%s[%d↔%d] +=%s %.4e%s"
+                        "  (|Δγ|=%s%.2f%s  E_i·E_j=%s%.4f%s)\n",
+                        CM(), CR(), sidx[i], sidx[j],
+                        CY(), w, CR(),
+                        CB(), dist, CR(),
+                        CB(), sE[i]*sE[j], CR());
+                }
+
                 monad_a_add(m, sidx[i], sidx[j], w);
             }
         }
 
-        free(sidx);
-        free(sE);
+        free(sidx); free(sE); free(old_beta);
         tok_free(toks, ntok);
     }
 
@@ -332,19 +344,47 @@ void monad_learn(Monad *m, const char *text)
 
 typedef struct { int idx; double E; } Activation;
 
-static Activation *monad_hear_raw(Monad *m, const char *query, int *n_out)
+static Activation *monad_hear_raw(Monad *m, const char *query, int *n_out,
+                                   int verbose)
 {
     int    ntok = 0;
     char **toks = tok_split(query, &ntok);
     Activation *act = malloc((ntok + 1) * sizeof(Activation));
     *n_out = 0;
+
+    if (verbose >= 1 && ntok > 0)
+        fprintf(stderr, "%s%s[hear]%s  \"%s\"\n", CB(), CC(), CR(), query);
+
     for (int t = 0; t < ntok; t++) {
         int idx; double E;
         monad_wm_get(m, toks[t], &idx, &E);
+
+        double beta = m->beta[idx];
+        double w    = exp(-MONAD_LAMBDA * m->age[idx]);
+        double Jp   = beta * E * E * w;
+
+        if (verbose >= 1) {
+            int known = monad_wm_get(m, toks[t], &idx, &E);
+            fprintf(stderr,
+                "  %s%-18s%s z#%-6d  γ=%s%-11.3f%s  σ=%s0.5%s"
+                "  E=%s%.4f%s  β=%s%.6f%s  w=%s%.4f%s"
+                "  %sJ_p=%.4f%s  %s\n",
+                CB(), toks[t], CR(),
+                idx,
+                CB(), m->zeros[idx], CR(),
+                CB(), CR(),
+                CB(), E, CR(),
+                CC(), beta, CR(),
+                CB(), w, CR(),
+                CM(), Jp, CR(),
+                known ? "" : "[new]");
+        }
+
         act[(*n_out)].idx = idx;
         act[(*n_out)].E   = E;
         (*n_out)++;
     }
+
     tok_free(toks, ntok);
     return act;
 }
@@ -359,15 +399,25 @@ static int jcmp(const void *a, const void *b)
     return (da < db) ? 1 : (da > db) ? -1 : 0;
 }
 
-char *monad_speak(Monad *m, const char *query, int max_tokens)
+/* Top-N A propagation contributions for verbose display */
+#define VPROP_MAX 8
+typedef struct { int from, to; double contrib; } VProp;
+static int vpcmp(const void *a, const void *b)
+{
+    double da = ((VProp *)a)->contrib;
+    double db = ((VProp *)b)->contrib;
+    return (da < db) ? 1 : (da > db) ? -1 : 0;
+}
+
+char *monad_speak(Monad *m, const char *query, int max_tokens, int verbose)
 {
     int n_act = 0;
     Activation *psi;
 
     if (query && query[0]) {
-        psi = monad_hear_raw(m, query, &n_act);
+        psi = monad_hear_raw(m, query, &n_act, verbose);
     } else {
-        /* Spontaneous emission: top beta zeros */
+        /* Spontaneous emission */
         int cap = m->N < 200 ? m->N : 200;
         psi = malloc(cap * sizeof(Activation));
         for (int i = 0; i < cap; i++) {
@@ -375,6 +425,9 @@ char *monad_speak(Monad *m, const char *query, int max_tokens)
             psi[i].E   = m->vocab[i].present ? m->vocab[i].E : MONAD_D_STAR;
         }
         n_act = cap;
+        if (verbose >= 1)
+            fprintf(stderr, "%s%s[speak]%s spontaneous emission\n",
+                    CB(), CG(), CR());
     }
 
     /* Dense J field */
@@ -389,7 +442,11 @@ char *monad_speak(Monad *m, const char *query, int max_tokens)
         J[idx] += m->beta[idx] * E * E * w;
     }
 
-    /* Propagate through A (one step, in-place — mirrors Python) */
+    /* Propagate through A with verbose collection */
+    VProp vprop[VPROP_MAX];
+    int   nvp = 0;
+    double min_vp = 0.0;
+
     for (int k = 0; k < m->am_cap; k++) {
         if (m->am[k].key == 0) continue;
         int    i   = (int)(m->am[k].key >> 15);
@@ -397,23 +454,72 @@ char *monad_speak(Monad *m, const char *query, int max_tokens)
         double aw  = m->am[k].val;
         double wi  = exp(-MONAD_LAMBDA * m->age[i]);
         double wj  = exp(-MONAD_LAMBDA * m->age[j]);
-        if (J[i] > 0.0)
-            J[j] += J[i] * aw * m->beta[j] * wj;
-        if (J[j] > 0.0)
-            J[i] += J[j] * aw * m->beta[i] * wi;
+
+        if (J[i] > 0.0) {
+            double contrib = J[i] * aw * m->beta[j] * wj;
+            J[j] += contrib;
+            if (verbose >= 1 && contrib > min_vp) {
+                if (nvp < VPROP_MAX) {
+                    vprop[nvp++] = (VProp){i, j, contrib};
+                } else {
+                    /* Replace smallest */
+                    int mi = 0;
+                    for (int x = 1; x < VPROP_MAX; x++)
+                        if (vprop[x].contrib < vprop[mi].contrib) mi = x;
+                    if (contrib > vprop[mi].contrib)
+                        vprop[mi] = (VProp){i, j, contrib};
+                    min_vp = vprop[mi].contrib;
+                }
+            }
+        }
+        if (J[j] > 0.0) {
+            double contrib = J[j] * aw * m->beta[i] * wi;
+            J[i] += contrib;
+        }
     }
 
-    /* Collect (idx, J) pairs that have vocab entries */
-    int     njv  = 0;
-    JEntry *jv   = malloc(m->N * sizeof(JEntry));
+    /* Verbose: J^mu propagation */
+    if (verbose >= 1 && nvp > 0) {
+        qsort(vprop, nvp, sizeof(VProp), vpcmp);
+        fprintf(stderr, "%s%s[J^μ propagation — top %d]%s\n",
+                CB(), CM(), nvp, CR());
+        for (int k = 0; k < nvp; k++) {
+            int fi = vprop[k].from, ti = vprop[k].to;
+            const char *fw = m->vocab[fi].present ? m->vocab[fi].word : "?";
+            const char *tw = m->vocab[ti].present ? m->vocab[ti].word : "?";
+            fprintf(stderr,
+                "  z#%d(%s%s%s) → z#%d(%s%s%s)"
+                "  contrib=%s%.4e%s"
+                "  A=%.4e  β[%d]=%.4f\n",
+                fi, CB(), fw, CR(),
+                ti, CB(), tw, CR(),
+                CM(), vprop[k].contrib, CR(),
+                monad_a_get(m, fi, ti), ti, m->beta[ti]);
+        }
+    }
+
+    /* Collect and sort (idx, J) pairs with vocab entries */
+    int     njv = 0;
+    JEntry *jv  = malloc((size_t)m->N * sizeof(JEntry));
     for (int i = 0; i < m->N; i++) {
         if (J[i] > 0.0 && m->vocab[i].present) {
-            jv[njv].idx = i;
-            jv[njv].J   = J[i];
-            njv++;
+            jv[njv].idx = i; jv[njv].J = J[i]; njv++;
         }
     }
     qsort(jv, njv, sizeof(JEntry), jcmp);
+
+    /* Verbose: ranking */
+    if (verbose >= 1 && njv > 0) {
+        int show = njv < 12 ? njv : 12;
+        fprintf(stderr, "%s%s[ranking — top %d]%s\n", CB(), CG(), show, CR());
+        for (int k = 0; k < show; k++) {
+            fprintf(stderr, "  %2d. %s%-18s%s z#%-6d  J=%s%.4e%s\n",
+                    k+1,
+                    CB(), m->vocab[jv[k].idx].word, CR(),
+                    jv[k].idx,
+                    CG(), jv[k].J, CR());
+        }
+    }
 
     /* Build response string */
     int   out_cap = max_tokens * (MAX_WORD_LEN + 1) + 4;
@@ -427,14 +533,11 @@ char *monad_speak(Monad *m, const char *query, int max_tokens)
         written++;
     }
 
-    /* Advance all ages, reset activated zeros — mirrors _advance_age() */
+    /* Advance age */
     for (int i = 0; i < m->N; i++) m->age[i]++;
     for (int k = 0; k < n_act; k++) m->age[psi[k].idx] = 0;
 
-    free(J);
-    free(jv);
-    free(psi);
-
+    free(J); free(jv); free(psi);
     return out;
 }
 
@@ -443,19 +546,19 @@ char *monad_speak(Monad *m, const char *query, int max_tokens)
 void monad_status(const Monad *m, FILE *out)
 {
     int vocab_count = 0;
-    double deepest = 0.0;
-    int    deepest_idx = 0;
+    double deepest = 0.0; int deepest_idx = 0;
     for (int i = 0; i < m->N; i++) {
         if (m->vocab[i].present) vocab_count++;
         if (m->beta[i] > deepest) { deepest = m->beta[i]; deepest_idx = i; }
     }
     fprintf(out,
         "[monad] N=%d  vocab=%d  A_edges=%d  word_count=%d\n"
-        "        ground=%.8f  deepest_beta=%.4f (zero #%d γ=%.4f)\n"
-        "        wm_load=%d/%d  am_load=%d/%d\n",
+        "        ground=%.8f  deepest_β=%.4f (z#%d  γ=%.4f  \"%s\")\n"
+        "        σ=0.5 (Noether forcing)  wm=%d/%d  am=%d/%d\n",
         m->N, vocab_count, m->am_size, m->word_count,
         m->ground, deepest, deepest_idx,
         (deepest_idx < m->N) ? m->zeros[deepest_idx] : 0.0,
+        m->vocab[deepest_idx].present ? m->vocab[deepest_idx].word : "?",
         m->wm_size, m->wm_cap, m->am_size, m->am_cap);
 }
 
@@ -465,8 +568,7 @@ void monad_lookup(const Monad *m, const char *word, FILE *out)
     int    known = monad_wm_get(m, word, &idx, &E);
     double beta  = m->beta[idx];
     double gamma = (idx < m->N) ? m->zeros[idx] : 0.0;
-    /* sigma is always 0.5 by Noether forcing */
     fprintf(out,
-        "  %-24s → zero #%-6d  γ=%-10.4f  σ=0.5  E=%.4f  β=%.4f  %s\n",
+        "  %-24s z#%-6d  γ=%-11.4f  σ=0.5  E=%.4f  β=%.6f  %s\n",
         word, idx, gamma, E, beta, known ? "[known]" : "[new]");
 }

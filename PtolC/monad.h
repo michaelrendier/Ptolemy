@@ -78,13 +78,15 @@ void   monad_ground_init(Monad *m);
 
 /* ── Core API ─────────────────────────────────────────────────────────────── */
 
-/* Deepen the β field from text.  Text is discarded after processing. */
-void   monad_learn(Monad *m, const char *text);
+/* Deepen the β field from text.  Text is discarded after processing.
+ * verbose 0=silent  1=math  2=math+colour  3=full pipeline */
+void   monad_learn(Monad *m, const char *text, int verbose);
 
 /* Return malloc'd string of top Noether-current words for query.
  * max_tokens: maximum words in response.
+ * verbose 0=silent  1=hear+J math  2=+colour  3=full
  * Caller owns returned string.  Returns "" (not NULL) on empty field. */
-char  *monad_speak(Monad *m, const char *query, int max_tokens);
+char  *monad_speak(Monad *m, const char *query, int max_tokens, int verbose);
 
 /* ── Word addressing ──────────────────────────────────────────────────────── */
 

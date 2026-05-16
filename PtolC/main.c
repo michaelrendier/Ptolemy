@@ -1,36 +1,73 @@
 /*
  * PtolC/main.c — ptolemy command-line binary.
  *
- * Usage:
- *   ptolemy -l <file>         learn from file (plain text)
- *   ptolemy -l <url>          learn from URL  (via curl)
- *   ptolemy -l -              learn from stdin
- *   ptolemy -h <prompt>       hear: query the field → speak
- *   ptolemy -s                status
- *   ptolemy -q <word>         lookup a single word
- *   ptolemy -c <checkpoint>   specify checkpoint path (default: see below)
- *   ptolemy -n                dry run: do not save checkpoint after -l
+ * Primary flags:
+ *   -l <file|url|->   learn from file, URL (via curl), or stdin
+ *   -h <prompt>       hear → speak
+ *   -s                status  (or speak math if verbose >= 1)
+ *   -q <word>         lookup a single word
+ *   -V                version
  *
- * Multiple -l and -h flags may be combined in one invocation.
- * Checkpoint is saved after all -l operations unless -n is set.
+ * Verbosity modifier (stackable, combinable with primary flags):
+ *   -v  / --verbose   level 1: show mathematics (β, J^μ, A edges)
+ *   -lv / -hv / -sv   primary + level 1 verbose
+ *   -vv               level 2: + ANSI colour (hear=cyan, speak=green, learn=yellow)
+ *   -vvv              level 3: full pipeline — for -h shows learn+hear+speak
+ *
+ * Other flags:
+ *   -c <path>         checkpoint path (overrides env/auto-search)
+ *   -n                no-save: do not write checkpoint after -l
  *
  * Checkpoint search order:
  *   1. -c flag
- *   2. PTOLEMY_CHECKPOINT env var
- *   3. ./monad_wordnet.bin  (beside binary)
- *   4. ../Callimachus/data/monad_wordnet.bin  (from PtolC/ build dir)
+ *   2. $PTOLEMY_CHECKPOINT env var
+ *   3. ./monad_wordnet.bin
+ *   4. ../Callimachus/data/monad_wordnet.bin
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "ptolemy.h"
 #include "monad.h"
 #include "checkpoint.h"
 
-/* ── Helpers ──────────────────────────────────────────────────────────────── */
+/* Defined in monad.c — set here after isatty() check */
+extern int g_color;
+
+#define PTOLEMY_VERSION "1.0.0"
+
+/* ── Arg parsing ──────────────────────────────────────────────────────────── */
+
+typedef struct {
+    char primary;   /* 'l','h','s','q','c','n','V', 0=none */
+    int  v;         /* verbose count (number of 'v' chars) */
+} Arg;
+
+static Arg parse_arg(const char *a)
+{
+    Arg r = {0, 0};
+    if (!a || a[0] != '-') return r;
+    if (a[1] == '-') {
+        if (strcmp(a+2, "verbose") == 0) r.v = 1;
+        return r;
+    }
+    for (const char *p = a + 1; *p; p++) {
+        switch (*p) {
+            case 'v': r.v++; break;
+            case 'l': case 'h': case 's': case 'q':
+            case 'c': case 'n': case 'V':
+                r.primary = *p; break;
+            default: break;
+        }
+    }
+    return r;
+}
+
+/* ── I/O helpers ──────────────────────────────────────────────────────────── */
 
 static char *read_file(const char *path)
 {
@@ -65,10 +102,9 @@ static char *read_stdin(void)
 
 static char *read_url(const char *url)
 {
-    /* Validate URL has no single quotes to prevent shell injection */
     for (const char *p = url; *p; p++) {
         if (*p == '\'') {
-            fprintf(stderr, "[ptolemy] URL contains single quote — refusing\n");
+            fprintf(stderr, "[ptolemy] URL contains single quote — refused\n");
             return NULL;
         }
     }
@@ -76,7 +112,7 @@ static char *read_url(const char *url)
     snprintf(cmd, sizeof(cmd), "curl -sf '%s'", url);
     FILE *pipe = popen(cmd, "r");
     if (!pipe) {
-        fprintf(stderr, "[ptolemy] popen failed for URL %s\n", url);
+        fprintf(stderr, "[ptolemy] curl failed for %s\n", url);
         return NULL;
     }
     size_t cap = 131072, len = 0;
@@ -95,19 +131,18 @@ static const char *find_checkpoint(const char *flag_path)
 {
     static char found[4096];
     const char *env_path = getenv("PTOLEMY_CHECKPOINT");
-    const char *candidates[] = {
+    const char *cands[4] = {
         flag_path,
         env_path,
         "monad_wordnet.bin",
         "../Callimachus/data/monad_wordnet.bin",
     };
-    int n = (int)(sizeof(candidates) / sizeof(candidates[0]));
-    for (int i = 0; i < n; i++) {
-        if (!candidates[i] || !candidates[i][0]) continue;
-        FILE *t = fopen(candidates[i], "rb");
+    for (int i = 0; i < 4; i++) {
+        if (!cands[i] || !cands[i][0]) continue;
+        FILE *t = fopen(cands[i], "rb");
         if (t) {
             fclose(t);
-            strncpy(found, candidates[i], sizeof(found) - 1);
+            strncpy(found, cands[i], sizeof(found) - 1);
             found[sizeof(found) - 1] = '\0';
             return found;
         }
@@ -115,63 +150,104 @@ static const char *find_checkpoint(const char *flag_path)
     return NULL;
 }
 
+static void print_version(void)
+{
+    printf("ptolemy %s — H_hat_RB Field Engine\n", PTOLEMY_VERSION);
+    printf("  Riemann zeros  N=%d\n", MONAD_N_DEFAULT);
+    printf("  σ = ½          (Noether forcing: J(σ,E)=0 iff σ=½)\n");
+    printf("  β_sat = %.3f   L_ground = %.3f\n", MONAD_BETA_SAT, MONAD_L_GROUND);
+    printf("  CLAUDE-SMMNIP-00729-56714-24600\n");
+}
+
+static void print_usage(void)
+{
+    fprintf(stderr,
+        "ptolemy %s — H_hat_RB Field Engine\n\n"
+        "  -l <file|url|->  learn from file, URL, or stdin\n"
+        "  -h <prompt>      hear → Noether response\n"
+        "  -s               status  (or spontaneous speak if verbose)\n"
+        "  -q <word>        lookup: zero, σ, E, β\n"
+        "  -V               version\n\n"
+        "Verbosity (stackable, combinable):\n"
+        "  -v / --verbose   level 1: β deepening, J^μ propagation, A edges\n"
+        "  -vv              level 2: level 1 + ANSI colour\n"
+        "  -vvv             level 3: full pipeline (all three engines)\n"
+        "  -lv  -hv  -sv    combined primary + verbose\n\n"
+        "Other:\n"
+        "  -c <path>        checkpoint path\n"
+        "  -n               no-save after -l\n\n"
+        "Checkpoint: -c → $PTOLEMY_CHECKPOINT → ./monad_wordnet.bin"
+        " → ../Callimachus/data/monad_wordnet.bin\n",
+        PTOLEMY_VERSION);
+}
+
 /* ── Main ─────────────────────────────────────────────────────────────────── */
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr,
-            "ptolemy — H_hat_RB field engine\n\n"
-            "  -l <file|url|->  learn from file, URL, or stdin\n"
-            "  -h <prompt>      hear: query → Noether response\n"
-            "  -q <word>        lookup word: zero, sigma, beta\n"
-            "  -s               status\n"
-            "  -c <path>        checkpoint path\n"
-            "  -n               no-save (dry run for -l)\n"
-            "\ncheckpoint search: -c flag → PTOLEMY_CHECKPOINT → "
-            "./monad_wordnet.bin → ../Callimachus/data/monad_wordnet.bin\n");
-        return 1;
-    }
+    if (argc < 2) { print_usage(); return 1; }
 
+    /* ── Pre-scan: verbose level, checkpoint path, no-save ─────────────── */
+    int         verbose   = 0;
     const char *ckpt_flag = NULL;
     int         no_save   = 0;
-    int         learned   = 0;
 
-    /* Pre-scan for -c and -n */
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-c") == 0 && i + 1 < argc)
-            ckpt_flag = argv[++i];
-        else if (strcmp(argv[i], "-n") == 0)
-            no_save = 1;
+        if (!argv[i] || argv[i][0] != '-') continue;
+        if (strcmp(argv[i], "--verbose") == 0) {
+            if (verbose < 1) verbose = 1;
+            continue;
+        }
+        Arg a = parse_arg(argv[i]);
+        if (a.v > verbose) verbose = a.v;
+        if (a.primary == 'c' && i + 1 < argc) ckpt_flag = argv[++i];
+        if (a.primary == 'n') no_save = 1;
     }
 
-    const char *ckpt_path = find_checkpoint(ckpt_flag);
+    /* ── Colour: enable when stderr and stdout are both ttys ────────────── */
+    g_color = (verbose >= 2) && isatty(fileno(stderr)) && isatty(fileno(stdout));
 
-    /* Create and initialise monad */
+    /* ── Load monad ─────────────────────────────────────────────────────── */
+    const char *ckpt_path = find_checkpoint(ckpt_flag);
     Monad *m = monad_create(MONAD_N_DEFAULT);
     monad_ground_init(m);
 
     if (ckpt_path) {
-        if (checkpoint_load(m, ckpt_path) != 0) {
-            fprintf(stderr, "[ptolemy] warning: checkpoint load failed; using ground state\n");
-        }
+        checkpoint_load(m, ckpt_path);
     } else {
-        fprintf(stderr, "[ptolemy] no checkpoint found; starting from σ=0 ground state\n"
-                        "          run Callimachus/wordnet_init.py then checkpoint_export.py\n");
+        fprintf(stderr,
+            "[ptolemy] no checkpoint found — ground state  σ=0\n"
+            "          run: python3 Callimachus/wordnet_init.py\n"
+            "          then: python3 Callimachus/checkpoint_export.py\n");
     }
 
-    /* Process arguments in order */
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-c") == 0) { i++; continue; }
-        if (strcmp(argv[i], "-n") == 0) continue;
+    /* ── Process arguments in order ─────────────────────────────────────── */
+    int learned = 0;
 
-        if (strcmp(argv[i], "-l") == 0 && i + 1 < argc) {
-            const char *src = argv[++i];
-            char *text = NULL;
+    for (int i = 1; i < argc; i++) {
+        if (!argv[i] || argv[i][0] != '-') continue;
+        if (strcmp(argv[i], "--verbose") == 0) continue;
+
+        Arg a = parse_arg(argv[i]);
+
+        /* -V : version */
+        if (a.primary == 'V') {
+            print_version();
+            continue;
+        }
+
+        /* -c / -n : handled in pre-scan */
+        if (a.primary == 'c') { i++; continue; }
+        if (a.primary == 'n') continue;
+
+        /* -l : learn ─────────────────────────────────────────────────── */
+        if (a.primary == 'l' && i + 1 < argc) {
+            const char *src  = argv[++i];
+            char       *text = NULL;
 
             if (strcmp(src, "-") == 0) {
                 text = read_stdin();
-            } else if (strncmp(src, "http://", 7) == 0 ||
+            } else if (strncmp(src, "http://",  7) == 0 ||
                        strncmp(src, "https://", 8) == 0) {
                 fprintf(stderr, "[ptolemy] fetching %s ...\n", src);
                 text = read_url(src);
@@ -180,60 +256,80 @@ int main(int argc, char *argv[])
             }
 
             if (text) {
-                size_t tlen = strlen(text);
-                fprintf(stderr, "[ptolemy] learning from %s  (%zu bytes)\n", src, tlen);
-                monad_learn(m, text);
+                int lv = (verbose >= 1) ? verbose : a.v;
+                fprintf(stderr, "[ptolemy] learning %s  (%zu bytes)\n",
+                        src, strlen(text));
+                monad_learn(m, text, lv);
                 free(text);
                 learned = 1;
-                monad_status(m, stderr);
+                if (lv == 0) monad_status(m, stderr);
             }
             continue;
         }
 
-        if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+        /* -h : hear → speak ──────────────────────────────────────────── */
+        if (a.primary == 'h' && i + 1 < argc) {
             const char *query = argv[++i];
+            int hv = (verbose >= 1) ? verbose : a.v;
 
-            /* Print hear activations */
-            fprintf(stderr, "\n[hear] %s\n", query);
-            /* Re-implement a quick per-word breakdown */
-            {
-                int    ntok = 0;
-                char **toks = NULL;
-                /* Inline split for display */
-                /* Use monad_lookup for each token found in query */
-                char  query_copy[4096];
-                strncpy(query_copy, query, sizeof(query_copy) - 1);
-                char *tok = strtok(query_copy, " \t\r\n");
+            if (hv == 0) {
+                /* Non-verbose: brief lookup + speak */
+                char  qcopy[4096];
+                char *tok;
+                strncpy(qcopy, query, sizeof(qcopy) - 1);
+                tok = strtok(qcopy, " \t\r\n");
                 while (tok) {
                     monad_lookup(m, tok, stderr);
                     tok = strtok(NULL, " \t\r\n");
                 }
-                (void)ntok; (void)toks;
             }
 
-            char *response = monad_speak(m, query, 50);
-            printf("[speak] %s\n", response);
+            char *response = monad_speak(m, query, 50, hv);
+            printf("%s\n", response);
             free(response);
             continue;
         }
 
-        if (strcmp(argv[i], "-q") == 0 && i + 1 < argc) {
-            monad_lookup(m, argv[++i], stdout);
-            continue;
-        }
-
-        if (strcmp(argv[i], "-s") == 0) {
+        /* -s : status / verbose speak ────────────────────────────────── */
+        if (a.primary == 's') {
+            int sv = (verbose >= 1) ? verbose : a.v;
+            if (sv >= 1) {
+                /* Verbose -s: spontaneous speak with math */
+                fprintf(stderr,
+                    "%s%s[speak]%s spontaneous emission from field state\n",
+                    g_color ? C_BOLD : "", g_color ? C_GREEN : "",
+                    g_color ? C_RESET : "");
+                char *response = monad_speak(m, "", 50, sv);
+                printf("%s\n", response);
+                free(response);
+            }
             monad_status(m, stdout);
             continue;
         }
 
-        fprintf(stderr, "[ptolemy] unknown argument: %s\n", argv[i]);
+        /* -q : word lookup ───────────────────────────────────────────── */
+        if (a.primary == 'q' && i + 1 < argc) {
+            monad_lookup(m, argv[++i], stdout);
+            continue;
+        }
+
+        /* Bare -v / -vv / -vvv with no primary: spontaneous speak */
+        if (a.primary == 0 && a.v > 0) {
+            int bv = a.v > verbose ? a.v : verbose;
+            char *response = monad_speak(m, "", 50, bv);
+            printf("%s\n", response);
+            free(response);
+            continue;
+        }
+
+        if (a.primary != 0)
+            fprintf(stderr, "[ptolemy] flag -%c: missing argument\n", a.primary);
     }
 
-    /* Save checkpoint if we learned anything */
+    /* ── Save if learned ─────────────────────────────────────────────────── */
     if (learned && !no_save) {
-        const char *save_path = ckpt_path ? ckpt_path : "monad_wordnet.bin";
-        checkpoint_save(m, save_path, 0.0);
+        const char *save = ckpt_path ? ckpt_path : "monad_wordnet.bin";
+        checkpoint_save(m, save, 0.0);
     }
 
     monad_destroy(m);
