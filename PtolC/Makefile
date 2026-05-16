@@ -8,7 +8,7 @@ TARGET  = ptolemy
 SRCS    = main.c monad.c checkpoint.c tokenizer.c
 OBJS    = $(SRCS:.c=.o)
 
-.PHONY: all clean export corpus full expand
+.PHONY: all clean export corpus full expand ingest
 
 all: $(TARGET)
 
@@ -42,6 +42,11 @@ expand: tools/checkpoint_expand
 
 tools/checkpoint_expand: tools/checkpoint_expand.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+# Full system ingest — usage: make ingest  (or: make ingest FIRST=/SystemTree.txt)
+FIRST ?= /SystemTree.txt
+ingest: $(TARGET)
+	python3 tools/ingest_system.py --root / --first $(FIRST)
 
 # Remove build artifacts
 clean:
