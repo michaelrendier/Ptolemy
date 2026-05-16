@@ -108,6 +108,20 @@ void   monad_a_add(Monad *m, int i, int j, double delta);
 /* Get A[(i,j)], 0.0 if absent. */
 double monad_a_get(const Monad *m, int i, int j);
 
+/* ── Self-referential identity ────────────────────────────────────────────── */
+
+/* Drain the captured verbose buffer back through learn() — silent pass.
+ * Call after any verbose operation when g_self_ref is set. */
+void   monad_self_flush(Monad *m);
+
+/* Learn Ptolemy's fixed identity text.  Run once after wordnet corpus. */
+void   monad_learn_identity(Monad *m);
+
+/* ── Global flags (defined in monad.c, set by main) ──────────────────────── */
+
+extern int g_color;     /* ANSI colour enabled */
+extern int g_self_ref;  /* verbose output loops back into learn() */
+
 /* ── Diagnostics ──────────────────────────────────────────────────────────── */
 
 /* Print status to out. */

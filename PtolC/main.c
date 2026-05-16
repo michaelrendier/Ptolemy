@@ -35,8 +35,7 @@
 #include "monad.h"
 #include "checkpoint.h"
 
-/* Defined in monad.c — set here after isatty() check */
-extern int g_color;
+/* g_color and g_self_ref are defined in monad.c — set here by main() */
 
 #define PTOLEMY_VERSION "1.0.0"
 
@@ -59,7 +58,7 @@ static Arg parse_arg(const char *a)
         switch (*p) {
             case 'v': r.v++; break;
             case 'l': case 'h': case 's': case 'q':
-            case 'c': case 'n': case 'V':
+            case 'c': case 'n': case 'V': case 'i':
                 r.primary = *p; break;
             default: break;
         }
@@ -153,9 +152,13 @@ static const char *find_checkpoint(const char *flag_path)
 static void print_version(void)
 {
     printf("ptolemy %s — H_hat_RB Field Engine\n", PTOLEMY_VERSION);
-    printf("  Riemann zeros  N=%d\n", MONAD_N_DEFAULT);
-    printf("  σ = ½          (Noether forcing: J(σ,E)=0 iff σ=½)\n");
-    printf("  β_sat = %.3f   L_ground = %.3f\n", MONAD_BETA_SAT, MONAD_L_GROUND);
+    printf("  Riemann zeros   N=%d\n", MONAD_N_DEFAULT);
+    printf("  σ = ½           Noether forcing: J(σ,E)=0 iff σ=½\n");
+    printf("  β_sat = %.3f    L_ground = %.3f\n", MONAD_BETA_SAT, MONAD_L_GROUND);
+    printf("  φ = %.16f\n", MONAD_PHI);
+    printf("  D* = %.5f       Ω_ζΣ = %.5f\n", MONAD_D_STAR, MONAD_OMEGA_ZS);
+    printf("  Self-referential: -vvv pipes verbose → learn()\n");
+    printf("  Identity:         --identity / -i  (run once after corpus)\n");
     printf("  CLAUDE-SMMNIP-00729-56714-24600\n");
 }
 
@@ -167,11 +170,13 @@ static void print_usage(void)
         "  -h <prompt>      hear → Noether response\n"
         "  -s               status  (or spontaneous speak if verbose)\n"
         "  -q <word>        lookup: zero, σ, E, β\n"
+        "  -i / --identity  learn Ptolemy's identity text (run once)\n"
         "  -V               version\n\n"
         "Verbosity (stackable, combinable):\n"
         "  -v / --verbose   level 1: β deepening, J^μ propagation, A edges\n"
         "  -vv              level 2: level 1 + ANSI colour\n"
-        "  -vvv             level 3: full pipeline (all three engines)\n"
+        "  -vvv             level 3: full pipeline + self-referential loop\n"
+        "                   (verbose output is fed back through learn())\n"
         "  -lv  -hv  -sv    combined primary + verbose\n\n"
         "Other:\n"
         "  -c <path>        checkpoint path\n"
@@ -204,8 +209,9 @@ int main(int argc, char *argv[])
         if (a.primary == 'n') no_save = 1;
     }
 
-    /* ── Colour: enable when stderr and stdout are both ttys ────────────── */
-    g_color = (verbose >= 2) && isatty(fileno(stderr)) && isatty(fileno(stdout));
+    /* ── Colour and self-referential mode ──────────────────────────────── */
+    g_color    = (verbose >= 2) && isatty(fileno(stderr)) && isatty(fileno(stdout));
+    g_self_ref = (verbose >= 3);
 
     /* ── Load monad ─────────────────────────────────────────────────────── */
     const char *ckpt_path = find_checkpoint(ckpt_flag);
@@ -240,6 +246,15 @@ int main(int argc, char *argv[])
         if (a.primary == 'c') { i++; continue; }
         if (a.primary == 'n') continue;
 
+        /* -i / --identity : learn Ptolemy's identity ────────────────── */
+        if (a.primary == 'i' ||
+            (argv[i][0]=='-' && argv[i][1]=='-' && strcmp(argv[i]+2,"identity")==0)) {
+            monad_learn_identity(m);
+            monad_self_flush(m);
+            learned = 1;
+            continue;
+        }
+
         /* -l : learn ─────────────────────────────────────────────────── */
         if (a.primary == 'l' && i + 1 < argc) {
             const char *src  = argv[++i];
@@ -260,6 +275,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "[ptolemy] learning %s  (%zu bytes)\n",
                         src, strlen(text));
                 monad_learn(m, text, lv);
+                monad_self_flush(m);
                 free(text);
                 learned = 1;
                 if (lv == 0) monad_status(m, stderr);
@@ -273,7 +289,6 @@ int main(int argc, char *argv[])
             int hv = (verbose >= 1) ? verbose : a.v;
 
             if (hv == 0) {
-                /* Non-verbose: brief lookup + speak */
                 char  qcopy[4096];
                 char *tok;
                 strncpy(qcopy, query, sizeof(qcopy) - 1);
@@ -287,6 +302,8 @@ int main(int argc, char *argv[])
             char *response = monad_speak(m, query, 50, hv);
             printf("%s\n", response);
             free(response);
+            monad_self_flush(m);
+            if (g_self_ref) learned = 1;  /* save after self-ref cycle */
             continue;
         }
 
@@ -294,14 +311,11 @@ int main(int argc, char *argv[])
         if (a.primary == 's') {
             int sv = (verbose >= 1) ? verbose : a.v;
             if (sv >= 1) {
-                /* Verbose -s: spontaneous speak with math */
-                fprintf(stderr,
-                    "%s%s[speak]%s spontaneous emission from field state\n",
-                    g_color ? C_BOLD : "", g_color ? C_GREEN : "",
-                    g_color ? C_RESET : "");
                 char *response = monad_speak(m, "", 50, sv);
                 printf("%s\n", response);
                 free(response);
+                monad_self_flush(m);
+                if (g_self_ref) learned = 1;
             }
             monad_status(m, stdout);
             continue;
@@ -319,6 +333,8 @@ int main(int argc, char *argv[])
             char *response = monad_speak(m, "", 50, bv);
             printf("%s\n", response);
             free(response);
+            monad_self_flush(m);
+            if (g_self_ref) learned = 1;
             continue;
         }
 
