@@ -230,13 +230,25 @@ class Research(QWidget):
 
 		self.tabs.setCurrentIndex(i)
 
-		# More difficult! We only want to update the url when it's from the
-		# correct tab
 		browser.urlChanged.connect(lambda url, browser=browser:
 								   self.update_urlbar(url, browser))
 
 		browser.loadFinished.connect(lambda _, i=i, browser=browser:
 									 self.tabs.setTabText(i, browser.page().title()))
+
+		# Every page that loads feeds the Monad — no queue, no archive step.
+		# toPlainText is async; the callback fires when Qt has the text ready.
+		browser.loadFinished.connect(lambda ok, browser=browser:
+									 browser.page().toPlainText(self._enqueue_page_text)
+									 if ok else None)
+
+	def _enqueue_page_text(self, text: str):
+		"""Feed page plain-text to the Monad. Called async by toPlainText()."""
+		if not text or len(text.strip()) < 20:
+			return
+		learner = getattr(self.Ptolemy, 'monad_learner', None)
+		if learner is not None:
+			learner.enqueue(text)
 
 	def tab_open_doubleclick(self, i):
 		if i == -1:  # No tab under the click
@@ -436,8 +448,19 @@ class ResearchThread(QThread):
 		try:
 			file = self.opener.open(url)
 			page = file.read().decode()
-			# page = urllib.request.urlopen(url).read().decode()
 			print('Page Downloaded')
+
+			# Feed plain text to the Monad immediately — the Monad is the memory.
+			# BeautifulSoup strips tags; separator=' ' keeps word boundaries intact.
+			try:
+				_soup = BeautifulSoup(page, 'html.parser')
+				_plain = _soup.get_text(separator=' ', strip=True)
+				_learner = getattr(getattr(self.Research, 'Ptolemy', None),
+								   'monad_learner', None)
+				if _learner and _plain:
+					_learner.enqueue(_plain)
+			except Exception:
+				pass
 
 		except HTTPError:
 			self.researchHTTPError.emit(['HTTP Error', '404 Error\nPage Not Found.'])
