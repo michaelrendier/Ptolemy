@@ -121,6 +121,10 @@ PTOLEMY       = "./ptolemy"
 PRUNE_DIRS = frozenset([
     "/proc", "/sys", "/dev", "/run/lock",
     "/snap", "/var/run", "/tmp",
+    # AppArmor kernel interfaces — death trap. Reads can block indefinitely under
+    # mandatory access control mediation. /sys already covers most, but be explicit.
+    "/sys/kernel/security",
+    "/run/apparmor",
 ])
 
 LOG = logging.getLogger("ingest")
@@ -515,20 +519,20 @@ def ingest_tree(root: str, ptolemy: str, state: dict, state_path: str,
 #   4. Provide --fstab /path/to/fstab for each image (drives type selection)
 # ════════════════════════════════════════════════════════════════════════════════
 
-# # Partition types to never mount
+# # Partition filesystem types to never mount.
+# # efivars / EFI System Partition (vfat) are WANTED — do not add them here.
 # _SKIP_FSTYPES = frozenset([
-#     "vfat",        # EFI System Partition — efivars, UEFI NVRAM, secure boot keys
-#     "swap",        # raw swap — no text
-#     "BitLocker",   # encrypted
-#     "crypto_LUKS", # encrypted
+#     "swap",        # raw swap — no text content
+#     "BitLocker",   # encrypted — needs key
+#     "crypto_LUKS", # encrypted — needs key
+#     "securityfs",  # AppArmor kernel security interface — DEATH TRAP.
+#                    # Reads on AppArmor securityfs paths block under MAC mediation.
+#                    # Never mount. Never traverse. Walk away.
 # ])
 #
-# # EFI System Partition GUID (GPT)
-# _EFI_GUID = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
-#
-# # Partition labels that are always EFI/firmware — skip regardless of detected type
-# _SKIP_LABELS = frozenset(["EFI", "EFI System", "ESP", "efivars",
-#                            "BIOS Boot", "BIOS_GRUB"])
+# # Partition labels that map to AppArmor or other traps — skip regardless of fstype.
+# # EFI/efivars labels are NOT in this list — that data is wanted.
+# _SKIP_LABELS = frozenset(["AppArmor", "apparmor", "security"])
 #
 #
 # def _losetup_attach(image_path: str) -> str:
@@ -575,21 +579,18 @@ def ingest_tree(root: str, ptolemy: str, state: dict, state_path: str,
 #         return []
 #
 #
-# def _is_efi_partition(p: dict) -> bool:
+# def _skip_partition(p: dict) -> bool:
 #     """
-#     True for EFI System Partition or efivars — always skip.
-#     efivars contains raw UEFI NVRAM: secure boot keys, boot order, firmware
-#     settings.  There is too much sensitive information in this partition
-#     to ingest safely.
+#     True if this partition should never be mounted.
+#     AppArmor securityfs = death trap (blocks on MAC mediation reads).
+#     Encrypted partitions = unreadable without key.
+#     efivars / EFI System Partition = WANTED, not skipped.
 #     """
-#     fstype   = (p.get("fstype")   or "").lower()
-#     label    = (p.get("label")    or "").upper()
-#     parttype = (p.get("parttype") or "").upper()
+#     fstype = (p.get("fstype") or "").lower()
+#     label  = (p.get("label")  or "").lower()
 #     if fstype in {f.lower() for f in _SKIP_FSTYPES}:
 #         return True
-#     if any(skip.upper() in label for skip in _SKIP_LABELS):
-#         return True
-#     if _EFI_GUID.upper() in parttype:
+#     if any(skip.lower() in label for skip in _SKIP_LABELS):
 #         return True
 #     return False
 #
@@ -605,12 +606,19 @@ def ingest_tree(root: str, ptolemy: str, state: dict, state_path: str,
 #
 #     -t comma syntax: mount(8) "Multiple types can be specified in a
 #     comma-separated list" (no spaces). Mount tries each in order, stops at
-#     first success. Example: -t ext4,f2fs,erofs,squashfs
+#     first success. Example: -t ext4,f2fs,erofs,squashfs,vfat
 #     This is the walk-the-hallway output: one combined -t string built from
 #     everything blkid detected in the probe pass.
 #
-#     EFI/efivars: always skipped. Contains raw UEFI NVRAM — secure boot keys,
-#     boot order, firmware variables. Flag it, log it, never mount it.
+#     efivars / EFI System Partition (vfat): WANTED. Mount it, ingest it.
+#     Contains UEFI boot entries, grub config, firmware variable store.
+#     That is exactly the kind of low-level system knowledge the field wants.
+#
+#     AppArmor / securityfs: DEATH TRAP. Never mount. Never traverse.
+#     Reads on AppArmor kernel interface paths block under MAC mediation —
+#     the script will hang waiting for a security decision that never returns.
+#     securityfs is in _SKIP_FSTYPES. Any partition labelled "apparmor" or
+#     "security" is in _SKIP_LABELS. Belt and suspenders.
 #
 #     Android notes (pending fstab per image):
 #       system.img  — ext4 (older) or erofs/squashfs (Android 10+)
@@ -640,15 +648,15 @@ def ingest_tree(root: str, ptolemy: str, state: dict, state_path: str,
 #                 _losetup_detach(loop_dev); loop_dev = None
 #                 continue
 #
-#             # Build the combined -t string from all non-EFI detected types
+#             # Build the combined -t string from all mountable partitions
 #             all_types    = [p["fstype"] for p in partitions
-#                             if p["fstype"] and not _is_efi_partition(p)]
+#                             if p["fstype"] and not _skip_partition(p)]
 #             unique_types = list(dict.fromkeys(all_types))   # dedup, preserve order
 #             combined_t   = ",".join(unique_types) if unique_types else "auto"
 #             LOG.info("  partitions: %d  combined -t: %s", len(partitions), combined_t)
 #
 #             for p in partitions:
-#                 status = "SKIP efivars" if _is_efi_partition(p) else "ok"
+#                 status = "SKIP apparmor/encrypted" if _skip_partition(p) else "ok"
 #                 LOG.info("  [%s] %s  fstype=%s  size=%s  label=%s",
 #                          status, p["dev"], p["fstype"], p["size"], p["label"])
 #
@@ -661,8 +669,8 @@ def ingest_tree(root: str, ptolemy: str, state: dict, state_path: str,
 #             img_stem = os.path.splitext(os.path.basename(image_path))[0]
 #
 #             for i, p in enumerate(partitions):
-#                 if _is_efi_partition(p):
-#                     LOG.info("  skip efivars: %s (%s)", p["dev"], p["fstype"])
+#                 if _skip_partition(p):
+#                     LOG.info("  skip apparmor/encrypted: %s (%s)", p["dev"], p["fstype"])
 #                     continue
 #
 #                 # mount --mkdir creates /mnt/hallway/<img>/<pN> automatically
