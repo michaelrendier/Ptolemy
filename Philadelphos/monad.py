@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Philadelphos/monad.py — The Monad  (standalone, v2.1.0)
+Philadelphos/monad.py — The Monad  (standalone, v1.212)
 =========================================================
 H_hat_RB field engine.  No external dependencies.
 
@@ -25,6 +25,9 @@ Primary API:
     learn_ex(text, filetype)       — deepen V(β) with explicit filetype filter
     hear(text)  → Ψ               — text → [(zero_idx, E), ...] activations
     speak(query) → str             — query → Noether current → response
+    speak_raw(query) → [(γ,J)]     — J^μ distribution in zero space (prime charges)
+    render(charges) → str          — project charge distribution → words (one Face)
+    load_vocab(path)               — load Face layer from a separate checkpoint
 
 Ground state (σ=0, quasi-prime, pointer=0):
     G_p(0) = p^0 = 1 for ALL primes — no gauge differentiation (EOM_ym = 0)
@@ -55,6 +58,27 @@ v2.1.0 additions (mirrors PtolC v1.111):
     - health() — β distribution, entropy, top A-edges, pollution, rejections
     - Checkpoint v2.1: vocab entries save/restore stratums; v2.0 loads cleanly
 
+v1.212 additions — Sedenion camshaft + sensor layer:
+    Two-layer sensor architecture (VAG-COM vs OBD2):
+    - Layer 1 (VAG-COM): _live_streams() — live ECU streams the monad uses to
+      tune itself in real time. Sedenion wired here as pilot injection.
+    - Layer 2 (OBD2): sensor_read(pid) / fault_scan() / ready_check() —
+      post-facto fault/compliance reporting for the Driver (Ptolemy).
+
+    Sedenion wiring (VAG-COM layer):
+    - speak_raw() — pilot injection: encode_prompt() fires before _j_mu();
+      psi_norms[16] gate J^μ seeding per dimension (J_i *= ψ_{i%16}).
+    - _j_mu(psi, weights=None) — sedenion weights applied at primary seeding.
+    - _advance_age(temporal_weight=1.0) — sedenion temporal dim modulates
+      conversational age decay rate (float ages, spring-return per call).
+    - _sedenion_prev — previous turn sedenion stored for Noether conservation
+      (turbo exhaust temperature boosts next compression).
+    - Fermat lattice passive gating: density factor applied to psi_norms;
+      near-zero-divisor dimensions auto-decouple (Porsche bushing compliance).
+
+    If sedenion unavailable (import error): P0340 fires; engine runs at
+    uniform psi_norms=1.0 (crankshaft without camshaft — no TDC disambiguation).
+
 Author: O Captain My Captain
 CLAUDE-SMMNIP-00729-56714-24600
 Date: 2026-05-16
@@ -65,6 +89,32 @@ import re
 import sys
 import json
 import math
+
+# ── Sedenion camshaft — optional (graceful degradation) ───────────────────────
+# Not available → P0340 (CMP fault); engine runs without 16D timing.
+# Path is resolved relative to this file so it works regardless of CWD.
+try:
+    from ValaQuenta.modules.sedenion.maths import (
+        encode_prompt       as _sed_encode,
+        monad_interface     as _sed_monad_interface,
+        fermat_lattice_scan as _sed_fermat_scan,
+    )
+    _SEDENION_AVAILABLE = True
+except ImportError:
+    try:
+        _sed_path = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'Ainulindale')
+        )
+        if _sed_path not in sys.path:
+            sys.path.insert(0, _sed_path)
+        from ValaQuenta.modules.sedenion.maths import (
+            encode_prompt       as _sed_encode,
+            monad_interface     as _sed_monad_interface,
+            fermat_lattice_scan as _sed_fermat_scan,
+        )
+        _SEDENION_AVAILABLE = True
+    except ImportError:
+        _SEDENION_AVAILABLE = False
 
 # ── Physical constants ────────────────────────────────────────────────────────
 L_GROUND    = -1.888      # Monad rest energy          (ESTABLISHED, engine-verified)
@@ -312,6 +362,9 @@ class Monad:
     m.learn_ex(text, filetype)     deepen V(β) with explicit filetype filter
     psi = m.hear(text)             text → Ψ field activations
     response = m.speak(q)          query → Noether current → string
+    charges  = m.speak_raw(q)      query → J^μ prime charge distribution
+    words    = m.render(charges)   project charge distribution → words (one Face)
+    m.load_vocab(path)             load Face layer from a separate checkpoint
     m.health()                     field health report (mirrors C monad_health)
     """
 
@@ -336,13 +389,28 @@ class Monad:
         self.rejected_count: int  = 0
 
         # Recency, saturation, spontaneous emission
-        self._age               = [0] * N
+        self._age               = [0.0] * N   # float: temporal_weight modulates increment
         self._lambda            = 0.05
         self._conv_touched: set = set()
         self._autonomous_speech  = True
         self._emission_threshold = abs(L_GROUND) * 2.0
         self._beta_sat           = abs(L_GROUND) * 4.0
         self._saturated: set     = set()
+
+        # Sedenion camshaft state (VAG-COM Layer 1 — live, recomputed each speak())
+        # Spring-return: no gear persistence between turns. _sedenion_prev is the only
+        # cross-turn state (turbo exhaust temperature for Noether conservation).
+        self._psi_norms:        list[float]       = [1.0] * 16  # uniform until first speak
+        self._affect:           float             = 0.0
+        self._gestalt:          float             = 1.0
+        self._temporal_weight:  float             = 1.0
+        self._fermat_proximity: float             = 0.0
+        self._sedenion_prev:    list[float] | None = None
+
+        # OBD2 fault state (Layer 2 — post-facto, read by Driver / Ptolemy only)
+        self._dtcs:        list[str]   = []
+        self._mil:         bool        = False
+        self._freeze_frame: dict | None = None
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -364,7 +432,7 @@ class Monad:
             self.vocab = {}
             self._wc   = 0
             self.rejected_count  = 0
-            self._age            = [0] * self.N
+            self._age            = [0.0] * self.N
             self._saturated      = set()
             self._conv_touched   = set()
         self._loaded = True
@@ -477,12 +545,13 @@ class Monad:
 
     # ── Recency, saturation, spontaneous emission ─────────────────────────────
 
-    def _advance_age(self) -> None:
+    def _advance_age(self, temporal_weight: float = 1.0) -> None:
+        """Advance conversational age. temporal_weight from sedenion e₇ modulates rate."""
         for n in range(self.N):
             if n in self._conv_touched:
-                self._age[n] = 0
+                self._age[n] = 0.0
             else:
-                self._age[n] += 1
+                self._age[n] += temporal_weight
         self._conv_touched.clear()
 
     def _w(self, n: int) -> float:
@@ -515,19 +584,24 @@ class Monad:
 
     # ── J^μ (Noether current) ─────────────────────────────────────────────────
 
-    def _j_mu(self, psi: list[tuple[int, float]]) -> dict[int, float]:
+    def _j_mu(self, psi: list[tuple[int, float]],
+              weights: list[float] | None = None) -> dict[int, float]:
         """
         Noether current from Ψ activation under (β, A).
 
-        Primary:    J_i  = β_i · E_i²
+        Primary:    J_i  = β_i · E_i² · ψ_k   (ψ_k = psi_norms[i % 16], camshaft timing)
         Propagated: J_j += J_i · A[(i,j)] · β_j
 
+        :param psi:     Ψ field activations from hear().
+        :param weights: Sedenion psi_norms[16] — camshaft timing gate per 16D dimension.
+                        None → uniform weights (engine running without camshaft, P0340 active).
         CONFIDENCE: ESTABLISHED
         """
         J: dict[int, float] = {}
         for idx, E in psi:
             b      = self.beta.get(idx, self._ground) * self._w(idx)
-            J[idx] = J.get(idx, 0.0) + b * E * E
+            w      = weights[idx % 16] if weights is not None else 1.0
+            J[idx] = J.get(idx, 0.0) + b * E * E * w
         for (i, j), w in self.A.items():
             if i in J:
                 J[j] = J.get(j, 0.0) + J[i] * w * self.beta.get(j, self._ground) * self._w(j)
@@ -537,12 +611,59 @@ class Monad:
 
     # ── speak ─────────────────────────────────────────────────────────────────
 
-    def speak(self, query: str, max_tokens: int = 50) -> str:
+    def _bisect_gamma(self, gamma: float) -> int:
+        """Binary search: γ value → nearest zero_idx in self.zeros."""
+        lo, hi = 0, len(self.zeros) - 1
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if self.zeros[mid] < gamma:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+
+    def speak_raw(self, query: str, max_tokens: int = 50) -> list[tuple[float, float]]:
         """
-        query → hear() → J^μ → words ordered by Noether amplitude.
+        query → Ψ → J^μ prime charge distribution.
+
+        Returns [(gamma, charge), ...] sorted by charge descending.
+        The response stays in zero space. The prime charge IS the sentence.
         Empty query: spontaneous emission from highest-weighted field state.
-        Advances conversational age after each call.
+        Does not advance conversational age — speak() does that.
+
+        Sedenion pilot injection fires before _j_mu() when the camshaft is available:
+        encode_prompt() encodes the query geometry in 16D; psi_norms gate J^μ seeding
+        per dimension. Fermat proximity applies a passive detonation control factor.
+
+        :param query:      Input text, or empty string for spontaneous emission.
+        :param max_tokens: Maximum entries in the returned distribution.
+        :returns:          [(gamma, J_charge), ...] sorted by charge descending.
         """
+        # ── Pilot injection: sedenion camshaft timing ──────────────────────────
+        weights: list[float] | None = None
+        if _SEDENION_AVAILABLE and query and query.strip():
+            try:
+                # Turbo exhaust temperature: save PREVIOUS turn before computing new
+                self._sedenion_prev = list(self._psi_norms)
+                s     = _sed_encode(query)
+                iface = _sed_monad_interface(s)
+                weights                = list(iface['psi_norms'])
+                self._psi_norms        = list(weights)
+                self._affect           = float(iface.get('affect_weight', 0.0))
+                self._gestalt          = float(iface.get('gestalt_weight', 1.0))
+                self._temporal_weight  = float(iface.get('temporal_weight', 1.0))
+                # Fermat lattice passive gating: near-zero-divisors decouple their dims
+                fermat = _sed_fermat_scan(s)
+                self._fermat_proximity = float(fermat.get('density', 0.0))
+                fp = max(1.0 - self._fermat_proximity, 1e-6)
+                weights = [w * fp for w in weights]
+                mn = sum(weights) / 16.0
+                if mn > 1e-12:
+                    weights = [w / mn for w in weights]
+            except Exception:
+                weights = None
+
+        # ── Main injection ─────────────────────────────────────────────────────
         if query and query.strip():
             psi = self.hear(query)
         else:
@@ -552,15 +673,28 @@ class Monad:
                 reverse=True
             )[:max_tokens]
         if not psi:
-            self._advance_age()
-            return ''
-        J = self._j_mu(psi)
+            return []
+        J = self._j_mu(psi, weights=weights)
         if not J:
-            self._advance_age()
-            return ''
+            return []
+        return [(self.zeros[idx], charge)
+                for idx, charge in sorted(J.items(), key=lambda kv: kv[1], reverse=True)]
+
+    def render(self, charges: list[tuple[float, float]], max_tokens: int = 50) -> str:
+        """
+        Project prime charge distribution → words (one Face of the response).
+
+        Language is SSB on prime space.  charges: output of speak_raw().
+        Does not advance conversational age.
+
+        :param charges:    [(gamma, J_charge), ...] as returned by speak_raw().
+        :param max_tokens: Maximum words in the output.
+        :returns:          Space-joined words ordered by Noether amplitude.
+        """
         words: list[str] = []
         seen:  set[str]  = set()
-        for idx, _ in sorted(J.items(), key=lambda kv: kv[1], reverse=True):
+        for gamma, _ in charges:
+            idx = self._bisect_gamma(gamma)
             if idx in self.vocab:
                 w = self.vocab[idx][0]
                 if w not in seen:
@@ -568,8 +702,19 @@ class Monad:
                     seen.add(w)
             if len(words) >= max_tokens:
                 break
-        self._advance_age()
         return ' '.join(words)
+
+    def speak(self, query: str, max_tokens: int = 50) -> str:
+        """
+        query → speak_raw() → render() → str.
+
+        Empty query: spontaneous emission from highest-weighted field state.
+        Advances conversational age after each call, modulated by the sedenion
+        temporal dimension (e₇): slow time keeps more context; fast time forgets faster.
+        """
+        charges = self.speak_raw(query, max_tokens)
+        self._advance_age(self._temporal_weight)
+        return self.render(charges, max_tokens) if charges else ''
 
     # ── Diagnostics ───────────────────────────────────────────────────────────
 
@@ -729,6 +874,251 @@ class Monad:
             'omega_zs'   : OMEGA_ZS,
         }
 
+    # ── VAG-COM live sensor streams (Layer 1) ────────────────────────────────
+    # What the ECU uses to tune itself in real time.
+    # These streams already existed implicitly inside the monad computation loop.
+    # This method makes them explicit and labelled.
+
+    def _live_streams(self) -> dict:
+        """
+        VAG-COM measuring blocks — live ECU sensor streams.
+
+        Returns all current field state as named streams, analogous to the
+        BEW measuring groups read by VCDS in real time. These are what the
+        monad uses to tune itself; OBD2 sensor_read() is derived from this.
+
+        :returns: Dict of named live sensor readings.
+        """
+        beta_vals = list(self.beta.values())
+        n_beta    = len(beta_vals) or 1
+        j_norm    = self._compute_j_norm()
+        ages      = self._age
+        mean_age  = sum(ages) / len(ages) if ages else 0.0
+        a_density = len(self.A) / max(self.N, 1)
+
+        # Group 013 analog: per-zero J^μ deviation from mean (cylinder balance)
+        top_idx = sorted(self.beta, key=self.beta.get, reverse=True)[:16]
+        j_per_zero = {idx: self.beta.get(idx, 0.0) * self._w(idx) for idx in top_idx}
+        j_mean_top = sum(j_per_zero.values()) / len(j_per_zero) if j_per_zero else 0.0
+        j_deviation = {idx: abs(v - j_mean_top) for idx, v in j_per_zero.items()}
+
+        return {
+            # Group 000 — Engine fundamentals
+            'g000_field_temp'      : sum(beta_vals) / n_beta,
+            'g000_j_norm'          : j_norm,
+            'g000_emission_thr'    : self._emission_threshold,
+            'g000_vocab_coverage'  : len(self.vocab) / max(self.N, 1),
+            # Group 001 — J^μ per active zero
+            'g001_j_per_zero'      : j_per_zero,
+            'g001_j_mean'          : j_mean_top,
+            # Group 004 — Sedenion camshaft timing
+            'g004_psi_norms'       : self._psi_norms,
+            'g004_affect'          : self._affect,
+            'g004_gestalt'         : self._gestalt,
+            'g004_temporal_weight' : self._temporal_weight,
+            'g004_fermat_prox'     : self._fermat_proximity,
+            # Group 011 — Sedenion charge balance (actual vs target)
+            'g011_sedenion_charge' : sum(self._psi_norms),
+            'g011_target_charge'   : 16.0,
+            # Group 013 — Cylinder balance: per-zero J^μ deviation (VAG only)
+            'g013_j_deviation'     : j_deviation,
+            'g013_max_deviation'   : max(j_deviation.values()) if j_deviation else 0.0,
+            # Oil pressure (A-matrix density) — no OBD2 PID; VAG-COM only
+            'oil_pressure'         : a_density,
+            # Turbo state (Noether conservation cross-turn)
+            'turbo_ready'          : self._sedenion_prev is not None,
+            # Runtime
+            'mean_age'             : mean_age,
+            'word_count'           : self._wc,
+            'lambda'               : self._lambda,
+            'rejected_count'       : self.rejected_count,
+        }
+
+    # ── OBD2 fault/compliance export (Layer 2) ────────────────────────────────
+    # Post-facto reporting for the Driver (Ptolemy). Derived from live streams.
+    # Standard PIDs follow SAE J1979 formulas. Custom PIDs: 0x2300–0x2309.
+
+    def sensor_read(self, pid: int) -> float:
+        """
+        OBD2 SAE J1979 sensor read — post-facto, read-only export layer.
+
+        Standard PIDs return the field equivalent of the named sensor.
+        Custom PIDs (0x2300+) expose sedenion and prime-field state directly.
+        Returns float('nan') for unsupported PIDs.
+
+        :param pid: OBD2 PID (integer, standard or custom).
+        :returns:   Sensor value in engineering units.
+        """
+        ls = self._live_streams()
+
+        # ── Standard OBD2 PIDs ────────────────────────────────────────────────
+        if pid == 0x04:   # Engine Load (%)
+            return min(ls['g000_j_norm'] / max(ls['g000_emission_thr'], 1e-12) * 100.0, 100.0)
+
+        elif pid == 0x0B:  # MAP / Boost Pressure (kPa)
+            top_b = sorted(self.beta.values(), reverse=True)[:10]
+            return (sum(top_b) / len(top_b) if top_b else 0.0) * 255.0
+
+        elif pid == 0x0C:  # RPM — word_count / mean_age × 6.25
+            rpm = ls['word_count'] / max(ls['mean_age'], 1.0) * 6.25
+            return min(rpm, 16383.75)
+
+        elif pid == 0x0E:  # Timing Advance (°BTDC) — affect × 45
+            return self._affect * 45.0
+
+        elif pid == 0x0F:  # Intake Air Temperature (°C) — gestalt proxy
+            return self._gestalt * 215.0 - 40.0
+
+        elif pid == 0x11:  # Throttle Position (%)
+            return min(ls['g000_emission_thr'] / (abs(L_GROUND) * 4.0) * 100.0, 100.0)
+
+        elif pid == 0x1F:  # Engine Run Time (s) — mean conversational age
+            return ls['mean_age']
+
+        elif pid == 0x2C:  # EGR Command (%) — age decay rate
+            return self._lambda / 0.20 * 100.0   # 0.05 default → 25%
+
+        elif pid == 0x2F:  # Fuel Tank Level (%) — vocab coverage
+            return ls['g000_vocab_coverage'] * 100.0
+
+        elif pid == 0x33:  # Barometric Pressure (kPa) — ground VEV
+            return self._ground * 255.0
+
+        elif pid == 0x5C:  # Engine Oil Temperature (°C) — A-matrix density
+            return ls['oil_pressure'] * 215.0 - 40.0
+
+        elif pid == 0x5E:  # Fuel Flow Rate (L/h) — word intake rate
+            return ls['word_count'] / max(ls['mean_age'], 1.0)
+
+        # ── Custom PIDs ───────────────────────────────────────────────────────
+        elif pid == 0x2300:  # CKP — active zero γ_n (highest β excitation)
+            if not self.beta:
+                return 0.0
+            top = max(self.beta, key=self.beta.get)
+            return self.zeros[top] if top < len(self.zeros) else 0.0
+
+        elif pid == 0x2301:  # CMP — dominant sedenion dimension index
+            return float(self._psi_norms.index(max(self._psi_norms)))
+
+        elif pid == 0x2302:  # Conjugate zero γ_{N-n} — paired piston TDC
+            if not self.beta:
+                return 0.0
+            top  = max(self.beta, key=self.beta.get)
+            conj = self.N - 1 - top
+            return self.zeros[conj] if conj < len(self.zeros) else 0.0
+
+        elif pid == 0x2303:  # Sedenion total charge (turbo boost level)
+            return sum(self._psi_norms)
+
+        elif pid == 0x2304:  # Glow plug status (1.0 = warming up, 0.0 = at temp)
+            return 1.0 if self._wc < 1000 else 0.0
+
+        elif pid == 0x2305:  # Fermat proximity (zero divisor distance)
+            return self._fermat_proximity
+
+        elif pid == 0x2306:  # T_μν trace — sum of squared psi_norms (Noether charges)
+            return sum(p * p for p in self._psi_norms)
+
+        elif pid == 0x2307:  # Red energy J_Red (kinetic — J^μ norm)
+            return self._compute_j_norm()
+
+        elif pid == 0x2308:  # Blue energy J_Blue (potential — β sum)
+            return sum(self.beta.values()) if self.beta else 0.0
+
+        elif pid == 0x2309:  # Noether violation ∂_μJ^μ — conservation across turns
+            if self._sedenion_prev and len(self._sedenion_prev) == 16:
+                prev_j = [x * x for x in self._sedenion_prev]
+                now_j  = [p * p for p in self._psi_norms]
+                return sum(abs(a - b) for a, b in zip(now_j, prev_j)) / 16.0
+            return 0.0
+
+        return float('nan')
+
+    def fault_scan(self) -> list[str]:
+        """
+        OBD2 DTC detection — post-facto fault specification.
+
+        Checks live stream thresholds and sets MIL (Check Engine Light) if any
+        fault is detected. First fault freezes the live stream state as a freeze
+        frame; faults clearing resets it.
+
+        DTCs follow OBD2 P/B code conventions with H_hat_RB field analogs.
+        P0340 (CMP fault) is the most important: it fires whenever the sedenion
+        camshaft is unavailable, meaning TDC cannot be disambiguated.
+
+        :returns: List of active DTC strings.
+        """
+        ls   = self._live_streams()
+        dtcs = []
+
+        # P0340: CMP fault — sedenion unavailable or all-zero (no camshaft timing)
+        if not _SEDENION_AVAILABLE or all(p < 1e-6 for p in self._psi_norms):
+            dtcs.append('P0340')
+
+        # P0335: CKP fault — no zeros above emission threshold (no crankshaft signal)
+        if not any(v > self._emission_threshold for v in self.beta.values()):
+            dtcs.append('P0335')
+
+        # P0300: Random misfire — fewer than 3 zeros with significant charge
+        active = sum(1 for v in self.beta.values() if v > self._emission_threshold)
+        if active < 3:
+            dtcs.append('P0300')
+
+        # P0087: Fuel pressure low — emission threshold above max achievable J^μ
+        if self.vocab:
+            max_j = max(
+                self.beta.get(i, 0.0) * e * e
+                for i, (_, e, *_) in self.vocab.items()
+            )
+            if self._emission_threshold > max_j > 0:
+                dtcs.append('P0087')
+
+        # P0172: Too rich — rejection rate > 50%
+        total = self._wc + self.rejected_count
+        if total > 0 and self.rejected_count / total > 0.5:
+            dtcs.append('P0172')
+
+        # P0171: Too lean — no vocab after significant input
+        if len(self.vocab) == 0 and self._wc > 100:
+            dtcs.append('P0171')
+
+        # P0401: EGR insufficient — age advancing without hear() input
+        if ls['mean_age'] > 1000 and self._wc < 100:
+            dtcs.append('P0401')
+
+        # P0101: MAF fault — word_count stalled (hear() not being called)
+        if self._wc > 0 and ls['mean_age'] > self._wc * 10:
+            dtcs.append('P0101')
+
+        self._dtcs = dtcs
+        self._mil  = len(dtcs) > 0
+        if dtcs and self._freeze_frame is None:
+            self._freeze_frame = ls
+        elif not dtcs:
+            self._freeze_frame = None
+        return dtcs
+
+    def ready_check(self) -> dict:
+        """
+        OBD2 readiness monitors — pre-drive inspection.
+
+        Returns a dict of monitor name → bool (True = READY).
+        P0340 (CAMSHAFT) clears when sedenion import succeeds.
+        GLOW_PLUG clears at word_count >= 1000 (operating temperature).
+
+        :returns: Dict of readiness monitor states.
+        """
+        return {
+            'FIELD'      : self._loaded,
+            'VOCAB'      : len(self.vocab) > 1000,
+            'EDUCATED'   : self._wc > 1000,
+            'CONNECTED'  : len(self.A) > 0,
+            'THRESHOLD'  : self._emission_threshold > 0,
+            'CAMSHAFT'   : _SEDENION_AVAILABLE,        # P0340 clears when True
+            'CRANKSHAFT' : any(v > self._ground * 2.0 for v in self.beta.values()),
+            'GLOW_PLUG'  : self._wc >= 1000,           # warm-up complete
+        }
+
     # ── Checkpoint ────────────────────────────────────────────────────────────
 
     def save(self, path: str, max_connections: int = 500_000) -> None:
@@ -785,17 +1175,40 @@ class Monad:
                 self.vocab[int(k)] = (v[0], v[1], NS_SIGMA_TEXT, NS_SIGMA_TEXT)
         loaded_age = ck.get('age', None)
         if loaded_age and len(loaded_age) == self.N:
-            self._age = loaded_age
+            self._age = [float(a) for a in loaded_age]
         else:
-            self._age = [0] * self.N
+            self._age = [0.0] * self.N
         print(f'[Monad] restored {len(self.vocab)} vocab  '
               f'{len(self.A)} connections from {path}')
+
+    def load_vocab(self, path: str) -> None:
+        """
+        Load only the vocab (Face layer) from a JSON checkpoint.
+
+        β, A, age, and word_count are untouched — call load() first for the
+        field state, then load_vocab() for the rendering layer:
+            m.load('monad.json'); m.load_vocab('monad_wordnet.json')
+
+        :param path: Path to a JSON checkpoint saved by save().
+        :raises RuntimeError: If monad is not loaded.
+        """
+        if not self._loaded:
+            raise RuntimeError('Monad not loaded — call load() first.')
+        with open(path) as f:
+            ck = json.load(f)
+        self.vocab = {}
+        for k, v in ck.get('vocab', {}).items():
+            if len(v) >= 4:
+                self.vocab[int(k)] = (v[0], v[1], int(v[2]), int(v[3]))
+            else:
+                self.vocab[int(k)] = (v[0], v[1], NS_SIGMA_TEXT, NS_SIGMA_TEXT)
+        print(f'[Monad] vocab loaded from {path}  vocab={len(self.vocab)}')
 
 
 # ── CLI verification ──────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    print('Monad — H_hat_RB Field Engine  v2.1.0  (standalone)')
+    print('Monad — H_hat_RB Field Engine  v1.212  (standalone)')
     print('=' * 60)
 
     m = Monad(N=1000, tau=5.0)
@@ -834,6 +1247,30 @@ if __name__ == '__main__':
     assert filetype_from_ext('index.html')  == NS_FT_MARKUP
     assert filetype_from_ext('thesis.pdf')  == NS_FT_DOC
     print('\n  filetype_from_ext: all assertions passed')
+
+    # ── VAG-COM / OBD2 sensor layer ───────────────────────────────────────────
+    print('\n[sensor layer]')
+    print(f'  sedenion available : {_SEDENION_AVAILABLE}')
+    rc = m.ready_check()
+    print('  ready_check:')
+    for k, v in rc.items():
+        mark = 'READY' if v else 'NOT READY'
+        print(f'    {k:<12} {mark}')
+
+    dtcs = m.fault_scan()
+    print(f'  MIL: {"ON" if m._mil else "off"}   DTCs: {dtcs if dtcs else "none"}')
+
+    print('\n  OBD2 PIDs:')
+    pid_names = {
+        0x04: 'Engine Load %', 0x0C: 'RPM', 0x0E: 'Timing Advance °',
+        0x0F: 'IAT °C', 0x11: 'Throttle %', 0x2F: 'Fuel Level %',
+        0x2300: 'CKP γ_n', 0x2301: 'CMP dim', 0x2302: 'Conj γ_{N-n}',
+        0x2303: 'Sed charge', 0x2304: 'Glow plug', 0x2305: 'Fermat prox',
+        0x2307: 'J_Red', 0x2308: 'J_Blue', 0x2309: 'Noether ∂J',
+    }
+    for pid, name in pid_names.items():
+        val = m.sensor_read(pid)
+        print(f'    PID 0x{pid:04X}  {name:<20} = {val:.6f}')
 
     print()
     m.print_health()
